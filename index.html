@@ -1065,6 +1065,89 @@
       </div>
     </div>
 
+    <div
+      id="install-banner"
+      class="hidden fixed inset-x-4 bottom-4 z-[110] pointer-events-none"
+      aria-live="polite"
+    >
+      <div
+        class="pointer-events-auto mx-auto max-w-sm rounded-[1.5rem] border border-slate-200/80 bg-white/95 p-4 shadow-2xl backdrop-blur-xl dark:border-slate-700 dark:bg-slate-800/95"
+      >
+        <div class="flex items-start gap-3">
+          <div
+            class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-600/20"
+            aria-hidden="true"
+          >
+            <svg
+              class="h-5 w-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 16V4m0 12l-4-4m4 4l4-4m5 7v1a2 2 0 01-2 2H5a2 2 0 01-2-2v-1"
+              ></path>
+            </svg>
+          </div>
+          <div class="min-w-0 flex-1 text-right">
+            <div class="flex items-start justify-between gap-2">
+              <div>
+                <p
+                  id="install-banner-title"
+                  class="text-sm font-black text-slate-900 dark:text-white"
+                >
+                  &#1492;&#1514;&#1511;&#1503; &#1488;&#1514; &#1492;&#1500;&#1493;&#1495; &#1492;&#1497;&#1492;&#1493;&#1491;&#1497;
+                </p>
+                <p
+                  id="install-banner-text"
+                  class="mt-1 text-sm leading-5 text-slate-500 dark:text-slate-300"
+                >
+                  &#1490;&#1497;&#1513;&#1492; &#1502;&#1492;&#1497;&#1512;&#1492; &#1502;&#1492;&#1496;&#1500;&#1508;&#1493;&#1503; &#1489;&#1500;&#1495;&#1497;&#1510;&#1492; &#1488;&#1495;&#1514;
+                </p>
+              </div>
+              <button
+                id="install-banner-dismiss"
+                class="rounded-full p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-200"
+                aria-label="&#1505;&#1490;&#1493;&#1512; &#1492;&#1510;&#1506;&#1514; &#1492;&#1514;&#1511;&#1504;&#1492;"
+              >
+                <svg
+                  class="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M6 18L18 6M6 6l12 12"
+                  ></path>
+                </svg>
+              </button>
+            </div>
+            <div class="mt-3 flex items-center justify-end gap-2">
+              <button
+                id="install-banner-secondary"
+                class="hidden rounded-full px-4 py-2 text-sm font-bold text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-white"
+              >
+                &#1500;&#1488; &#1506;&#1499;&#1513;&#1497;&#1493;
+              </button>
+              <button
+                id="install-banner-action"
+                class="rounded-full bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-lg shadow-blue-600/20 transition-colors hover:bg-blue-700"
+              >
+                &#1492;&#1514;&#1511;&#1503;
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <script>
       // --- Navbar Scroll Logic ---
       window.addEventListener("scroll", () => {
@@ -1124,6 +1207,11 @@
       let GPS_COORDS = JSON.parse(localStorage.getItem("moadim_gps")) || null;
       let compassListener = null;
       let CALENDAR_DISPLAY_DATE = new Date();
+      let deferredInstallPrompt = null;
+
+      const INSTALL_DISMISS_KEY = "moadim_install_prompt_dismissed_at";
+      const INSTALL_INSTALLED_KEY = "moadim_pwa_installed";
+      const INSTALL_DISMISS_TTL = 1000 * 60 * 60 * 24 * 14;
 
       const daysOfWeek = [
         "ראשון",
@@ -1198,6 +1286,180 @@
         );
         document.getElementById("theme-icon-sun").classList.toggle("hidden");
         document.getElementById("theme-icon-moon").classList.toggle("hidden");
+      }
+
+
+
+      function isStandaloneMode() {
+        return (
+          window.matchMedia("(display-mode: standalone)").matches ||
+          window.navigator.standalone === true
+        );
+      }
+
+      function isMobileInstallContext() {
+        return (
+          /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+          window.matchMedia("(max-width: 768px)").matches
+        );
+      }
+
+      function isIosSafariInstallable() {
+        const ua = navigator.userAgent;
+        const isIos = /iPhone|iPad|iPod/i.test(ua);
+        const isWebkit = /WebKit/i.test(ua);
+        const isOtherIosBrowser =
+          /CriOS|FxiOS|EdgiOS|OPiOS|YaBrowser/i.test(ua);
+        return isIos && isWebkit && !isOtherIosBrowser && !isStandaloneMode();
+      }
+
+      function hasRecentlyDismissedInstall() {
+        const dismissedAt = parseInt(
+          localStorage.getItem(INSTALL_DISMISS_KEY) || "",
+          10,
+        );
+        return (
+          Number.isFinite(dismissedAt) &&
+          Date.now() - dismissedAt < INSTALL_DISMISS_TTL
+        );
+      }
+
+      function hasInstalledAppState() {
+        return (
+          isStandaloneMode() ||
+          localStorage.getItem(INSTALL_INSTALLED_KEY) === "1"
+        );
+      }
+
+      function hideInstallBanner() {
+        const banner = document.getElementById("install-banner");
+        if (banner) banner.classList.add("hidden");
+      }
+
+      function dismissInstallBanner(remember = true) {
+        if (remember) {
+          localStorage.setItem(INSTALL_DISMISS_KEY, String(Date.now()));
+        }
+        hideInstallBanner();
+      }
+
+      function markAppInstalled() {
+        localStorage.setItem(INSTALL_INSTALLED_KEY, "1");
+        localStorage.removeItem(INSTALL_DISMISS_KEY);
+        hideInstallBanner();
+      }
+
+      function showInstallBanner(mode) {
+        const banner = document.getElementById("install-banner");
+        const title = document.getElementById("install-banner-title");
+        const text = document.getElementById("install-banner-text");
+        const action = document.getElementById("install-banner-action");
+        const secondary = document.getElementById("install-banner-secondary");
+        if (!banner || !title || !text || !action || !secondary) return;
+
+        if (mode === "native") {
+          title.textContent = "\u05d4\u05ea\u05e7\u05df \u05d0\u05ea \u05d4\u05dc\u05d5\u05d7 \u05d4\u05d9\u05d4\u05d5\u05d3\u05d9";
+          text.textContent = "\u05d2\u05d9\u05e9\u05d4 \u05de\u05d4\u05d9\u05e8\u05d4 \u05de\u05d4\u05d8\u05dc\u05e4\u05d5\u05df \u05d1\u05dc\u05d7\u05d9\u05e6\u05d4 \u05d0\u05d7\u05ea";
+          action.textContent = "\u05d4\u05ea\u05e7\u05df";
+          secondary.classList.remove("hidden");
+        } else if (mode === "ios") {
+          title.textContent = "\u05d4\u05d5\u05e1\u05e3 \u05dc\u05de\u05e1\u05da \u05d4\u05d1\u05d9\u05ea";
+          text.textContent = "\u05d1\u05d0\u05d9\u05d9\u05e4\u05d5\u05df \u05d0\u05e4\u05e9\u05e8 \u05dc\u05d4\u05d5\u05e1\u05d9\u05e3 \u05dc\u05de\u05e1\u05da \u05d4\u05d1\u05d9\u05ea \u05d3\u05e8\u05da \u05db\u05e4\u05ea\u05d5\u05e8 \u05d4\u05e9\u05d9\u05ea\u05d5\u05e3 \u05d5\u05d0\u05d6 '\u05d4\u05d5\u05e1\u05e3 \u05dc\u05de\u05e1\u05da \u05d4\u05d1\u05d9\u05ea'";
+          action.textContent = "\u05d4\u05d1\u05e0\u05ea\u05d9";
+          secondary.classList.add("hidden");
+        } else {
+          return;
+        }
+
+        banner.dataset.mode = mode;
+        banner.classList.remove("hidden");
+      }
+
+      async function handleInstallAction() {
+        const banner = document.getElementById("install-banner");
+        const mode = banner ? banner.dataset.mode : "";
+        if (mode === "ios") {
+          dismissInstallBanner(true);
+          return;
+        }
+
+        if (!deferredInstallPrompt) return;
+
+        const promptEvent = deferredInstallPrompt;
+        deferredInstallPrompt = null;
+        hideInstallBanner();
+
+        try {
+          await promptEvent.prompt();
+          const result = await promptEvent.userChoice;
+          if (result.outcome !== "accepted") {
+            localStorage.setItem(INSTALL_DISMISS_KEY, String(Date.now()));
+          }
+        } catch (err) {
+          console.error(err);
+        }
+      }
+
+      function maybeShowInstallBanner() {
+        if (
+          !isMobileInstallContext() ||
+          hasInstalledAppState() ||
+          hasRecentlyDismissedInstall()
+        ) {
+          hideInstallBanner();
+          return;
+        }
+
+        if (deferredInstallPrompt) {
+          showInstallBanner("native");
+          return;
+        }
+
+        if (isIosSafariInstallable()) {
+          showInstallBanner("ios");
+          return;
+        }
+
+        hideInstallBanner();
+      }
+
+      function initInstallPrompt() {
+        const dismissButton = document.getElementById("install-banner-dismiss");
+        const secondaryButton = document.getElementById(
+          "install-banner-secondary",
+        );
+        const actionButton = document.getElementById("install-banner-action");
+        if (!dismissButton || !secondaryButton || !actionButton) return;
+
+        dismissButton.addEventListener("click", () => dismissInstallBanner());
+        secondaryButton.addEventListener("click", () =>
+          dismissInstallBanner(),
+        );
+        actionButton.addEventListener("click", handleInstallAction);
+
+        window.addEventListener("beforeinstallprompt", (event) => {
+          event.preventDefault();
+          deferredInstallPrompt = event;
+          maybeShowInstallBanner();
+        });
+
+        window.addEventListener("appinstalled", () => {
+          markAppInstalled();
+        });
+
+        if (isStandaloneMode()) {
+          markAppInstalled();
+          return;
+        }
+
+        maybeShowInstallBanner();
+      }
+
+      function registerServiceWorker() {
+        if (!("serviceWorker" in navigator)) return;
+        window.addEventListener("load", () => {
+          navigator.serviceWorker.register("/sw.js").catch(console.error);
+        });
       }
 
       function initApp() {

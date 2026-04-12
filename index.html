@@ -2454,6 +2454,7 @@
       function toggleSettings() {
         const m = document.getElementById("settings-modal");
         if (m.classList.contains("hidden")) {
+          updateNotifStatusUI();
           m.classList.remove("hidden");
           setTimeout(() => {
             m.classList.remove("opacity-0");
@@ -2475,6 +2476,32 @@
           },
         );
         localStorage.setItem("moadim_notif_prefs", JSON.stringify(prefs));
+      }
+
+      function shouldShowHolidayTimes(eventItem) {
+        if (!eventItem || eventItem.type !== "major") return false;
+
+        const combined = [
+          eventItem.name || "",
+          eventItem.heb || "",
+          eventItem.titleStr || "",
+        ].join(" | ");
+        const normalized = combined.toLowerCase();
+
+        const isCholHamoed =
+          normalized.includes("chol hamoed") ||
+          combined.includes("חול המועד") ||
+          combined.includes('חוה"מ') ||
+          combined.includes("חוה׳מ");
+
+        const isLightHoliday =
+          normalized.includes("hanukkah") ||
+          normalized.includes("chanukah") ||
+          normalized.includes("purim") ||
+          combined.includes("חנוכה") ||
+          combined.includes("פורים");
+
+        return !isCholHamoed && !isLightHoliday;
       }
 
       async function saveSettings() {
@@ -2701,10 +2728,22 @@
             const elId = `fast-times-${e.date}`;
             extraTimesHtml = `<div id="${elId}" class="mt-3 flex flex-wrap gap-2 text-xs" aria-live="polite">מחשב זמני צום...</div>`;
             fetchFastTimes(e.name, e.date, elId);
-          } else if (e.type === "major" && !e.name.includes("Chol Hamoed")) {
-            const elId = `holiday-times-${e.date}`;
-            extraTimesHtml = `<div id="${elId}" class="mt-3 flex flex-wrap gap-2 text-xs" aria-live="polite">מחשב זמני חג...</div>`;
-            fetchHolidayTimes(e.name, e.date, elId);
+          } else if (e.type === "major" && shouldShowHolidayTimes(e)) {
+            const isExclude =
+              e.name.includes("חוה") ||
+              e.name.includes("חול המועד") ||
+              e.name.includes("חנוכה") ||
+              e.name.includes("פורים") ||
+              (e.titleStr &&
+                (e.titleStr.includes("Chol Hamoed") ||
+                  e.titleStr.includes("Hanukkah") ||
+                  e.titleStr.includes("Chanukah") ||
+                  e.titleStr.includes("Purim")));
+            if (!isExclude) {
+              const elId = `holiday-times-${e.date}`;
+              extraTimesHtml = `<div id="${elId}" class="mt-3 flex flex-wrap gap-2 text-xs" aria-live="polite">מחשב זמני חג...</div>`;
+              fetchHolidayTimes(e.name, e.date, elId);
+            }
           }
 
           c.innerHTML += `
@@ -2852,6 +2891,7 @@
       // --- Web Notifications Logic ---
       function requestNotificationPermission() {
         if (!("Notification" in window)) {
+          updateNotifStatusUI();
           alert("הדפדפן שלך אינו תומך בהתראות פוש.");
           return;
         }
@@ -2867,18 +2907,32 @@
       }
 
       function updateNotifStatusUI() {
-        const granted = Notification.permission === "granted";
+        const granted =
+          "Notification" in window && Notification.permission === "granted";
         const btn = document.getElementById("notif-master-toggle");
         const options = document.getElementById("notif-options");
         if (!btn || !options) return;
 
+        // מונע ממערכת התרגום לדרוס את הכפתור בכל פעם שמחליפים שפה
+        btn.removeAttribute("data-i18n-key");
+
+        // אתחול העיצוב הדינאמי של הכפתור
+        btn.className =
+          "text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-colors shadow-sm";
+        btn.classList.remove(
+          "bg-red-500",
+          "hover:bg-red-600",
+          "bg-green-500",
+          "hover:bg-green-600",
+        );
+
         if (granted) {
-          btn.textContent = CURRENT_LANG === "he" ? "פעיל" : "Active";
-          btn.classList.replace("bg-blue-600", "bg-emerald-500");
+          btn.classList.add("bg-green-500", "hover:bg-green-600");
+          btn.textContent = "פעיל";
           options.classList.remove("opacity-50", "pointer-events-none");
         } else {
-          btn.textContent = CURRENT_LANG === "he" ? "הפעל" : "Enable";
-          btn.classList.replace("bg-emerald-500", "bg-blue-600");
+          btn.classList.add("bg-red-500", "hover:bg-red-600");
+          btn.textContent = "כבוי";
           options.classList.add("opacity-50", "pointer-events-none");
         }
 

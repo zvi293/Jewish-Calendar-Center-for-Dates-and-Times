@@ -205,8 +205,8 @@
       .gradient-bg {
         background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
       }
-      .bg-ocean {
-        background: linear-gradient(180deg, #0284c7 0%, #38bdf8 100%);
+      .bg-blue-elegant {
+        background: linear-gradient(180deg, #1d4ed8 0%, #1e3a8a 100%);
       }
       .compass-ring {
         background: radial-gradient(
@@ -868,6 +868,7 @@
         <p class="text-slate-400 text-sm mb-10">
           כוון את המכשיר למציאת כיוון התפילה
         </p>
+
         <div
           class="relative w-64 h-64 mb-8 flex items-center justify-center"
           aria-hidden="true"
@@ -900,6 +901,7 @@
             class="absolute w-4 h-4 bg-white rounded-full z-10 shadow-[0_0_10px_rgba(255,255,255,0.5)]"
           ></div>
         </div>
+
         <p
           id="compass-status"
           class="text-blue-300 font-bold bg-blue-900/30 px-6 py-3 rounded-2xl w-full"
@@ -1229,6 +1231,92 @@
         month: "long",
       });
 
+      const omerDaysWords = [
+        "",
+        "יוֹם אֶחָד",
+        "שְׁנֵי יָמִים",
+        "שְׁלֹשָׁה יָמִים",
+        "אַרְבָּעָה יָמִים",
+        "חֲמִשָּׁה יָמִים",
+        "שִׁשָּׁה יָמִים",
+        "שִׁבְעָה יָמִים",
+        "שְׁמוֹנָה יָמִים",
+        "תִּשְׁעָה יָמִים",
+        "עֲשָׂרָה יָמִים",
+        "אַחַד עָשָׂר יוֹם",
+        "שְׁנֵים עָשָׂר יוֹם",
+        "שְׁלֹשָׁה עָשָׂר יוֹם",
+        "אַרְבָּעָה עָשָׂר יוֹם",
+        "חֲמִשָּׁה עָשָׂר יוֹם",
+        "שִׁשָּׁה עָשָׂר יוֹם",
+        "שִׁבְעָה עָשָׂר יוֹם",
+        "שְׁמוֹנָה עָשָׂר יוֹם",
+        "תִּשְׁעָה עָשָׂר יוֹם",
+        "עֶשְׂרִים יוֹם",
+        "אֶחָד וְעֶשְׂרִים יוֹם",
+        "שְׁנַיִם וְעֶשְׂרִים יוֹם",
+        "שְׁלֹשָׁה וְעֶשְׂרִים יוֹם",
+        "אַרְבָּעָה וְעֶשְׂרִים יוֹם",
+        "חֲמִשָּׁה וְעֶשְׂרִים יוֹם",
+        "שִׁשָּׁה וְעֶשְׂרִים יוֹם",
+        "שִׁבְעָה וְעֶשְׂרִים יוֹם",
+        "שְׁמוֹנָה וְעֶשְׂרִים יוֹם",
+        "תִּשְׁעָה וְעֶשְׂרִים יוֹם",
+        "שְׁלֹשִׁים יוֹם",
+        "אֶחָד וּשְׁלֹשִׁים יוֹם",
+        "שְׁנַיִם וּשְׁלֹשִׁים יוֹם",
+        "שְׁלֹשָׁה וּשְׁלֹשִׁים יוֹם",
+        "אַרְבָּעָה וּשְׁלֹשִׁים יוֹם",
+        "חֲמִשָּׁה וּשְׁלֹשִׁים יוֹם",
+        "שִׁשָּׁה וּשְׁלֹשִׁים יוֹם",
+        "שִׁבְעָה וּשְׁלֹשִׁים יוֹם",
+        "שְׁמוֹנָה וּשְׁלֹשִׁים יוֹם",
+        "תִּשְׁעָה וּשְׁלֹשִׁים יוֹם",
+        "אַרְבָּעִים יוֹם",
+        "אֶחָד וְאַרְבָּעִים יוֹם",
+        "שְׁנַיִם וְאַרְבָּעִים יוֹם",
+        "שְׁלֹשָׁה וְאַרְבָּעִים יוֹם",
+        "אַרְבָּעָה וְאַרְבָּעִים יוֹם",
+        "חֲמִשָּׁה וְאַרְבָּעִים יוֹם",
+        "שִׁשָּׁה וְאַרְבָּעִים יוֹם",
+        "שִׁבְעָה וְאַרְבָּעִים יוֹם",
+        "שְׁמוֹנָה וְאַרְבָּעִים יוֹם",
+        "תִּשְׁעָה וְאַרְבָּעִים יוֹם",
+      ];
+
+      const omerWeeksWords = [
+        "",
+        "שָׁבוּעַ אֶחָד",
+        "שְׁנֵי שָׁבוּעוֹת",
+        "שְׁלֹשָׁה שָׁבוּעוֹת",
+        "אַרְבָּעָה שָׁבוּעוֹת",
+        "חֲמִשָּׁה שָׁבוּעוֹת",
+        "שִׁשָּׁה שָׁבוּעוֹת",
+        "שִׁבְעָה שָׁבוּעוֹת",
+      ];
+
+      const omerDaysRemainder = [
+        "",
+        "וְיוֹם אֶחָד",
+        "וּשְׁנֵי יָמִים",
+        "וּשְׁלֹשָׁה יָמִים",
+        "וְאַרְבָּעָה יָמִים",
+        "וַחֲמִשָּׁה יָמִים",
+        "וְשִׁשָּׁה יָמִים",
+      ];
+
+      function generateOmerText(day) {
+        if (day < 1 || day > 49) return "";
+        let text = `הַיּוֹם ${omerDaysWords[day]} לָעֹמֶר`;
+        if (day >= 7) {
+          const w = Math.floor(day / 7);
+          const d = day % 7;
+          text += `, שֶׁהֵם ${omerWeeksWords[w]}`;
+          if (d > 0) text += ` ${omerDaysRemainder[d]}`;
+        }
+        return text + ".";
+      }
+
       function shareApp() {
         if (navigator.share) {
           navigator
@@ -1256,26 +1344,25 @@
 
         if (theme === "dark") {
           html.classList.add("dark");
-          header.classList.remove("bg-ocean");
+          header.classList.remove("bg-blue-elegant");
           header.classList.add("gradient-bg");
           iconSun.classList.remove("hidden");
-        } else if (theme === "ocean") {
+        } else if (theme === "blue") {
           html.classList.remove("dark");
           header.classList.remove("gradient-bg");
-          header.classList.add("bg-ocean");
+          header.classList.add("bg-blue-elegant");
           iconMoon.classList.remove("hidden");
         } else {
-          // light (default)
           html.classList.remove("dark");
-          header.classList.remove("bg-ocean");
+          header.classList.remove("bg-blue-elegant");
           header.classList.add("gradient-bg");
           iconWave.classList.remove("hidden");
         }
       }
 
       function toggleTheme() {
-        if (CURRENT_THEME === "light") CURRENT_THEME = "ocean";
-        else if (CURRENT_THEME === "ocean") CURRENT_THEME = "dark";
+        if (CURRENT_THEME === "light") CURRENT_THEME = "blue";
+        else if (CURRENT_THEME === "blue") CURRENT_THEME = "dark";
         else CURRENT_THEME = "light";
 
         localStorage.setItem("moadim_theme", CURRENT_THEME);
@@ -1337,32 +1424,6 @@
         if (GEO_LOCATION === "GPS" && GPS_COORDS)
           return `geo=pos&latitude=${GPS_COORDS.lat}&longitude=${GPS_COORDS.lon}&tzid=Asia/Jerusalem`;
         return `geonameid=${GEO_LOCATION}`;
-      }
-
-      function generateOmerText(day) {
-        if (day === 1) return "יוֹם אֶחָד לָעֹמֶר";
-        if (day === 2) return "שְׁנֵי יָמִים לָעֹמֶר";
-        let text = `${day} יוֹם`;
-        const w = Math.floor(day / 7);
-        const d = day % 7;
-        if (w > 0) {
-          text += `, שֶׁהֵם `;
-          if (w === 1) text += `שָׁבוּעַ אֶחָד`;
-          else if (w === 2) text += `שְׁנֵי שָׁבוּעוֹת`;
-          else if (w === 3) text += `שְׁלֹשָׁה שָׁבוּעוֹת`;
-          else if (w === 4) text += `אַרְבָּעָה שָׁבוּעוֹת`;
-          else if (w === 5) text += `חֲמִשָּׁה שָׁבוּעוֹת`;
-          else if (w === 6) text += `שִׁשָּׁה שָׁבוּעוֹת`;
-          else if (w === 7) text += `שִׁבְעָה שָׁבוּעוֹת`;
-
-          if (d === 1) text += ` וְיוֹם אֶחָד`;
-          else if (d === 2) text += ` וּשְׁנֵי יָמִים`;
-          else if (d === 3) text += ` וּשְׁלֹשָׁה יָמִים`;
-          else if (d === 4) text += ` וְאַרְבָּעָה יָמִים`;
-          else if (d === 5) text += ` וַחֲמִשָּׁה יָמִים`;
-          else if (d === 6) text += ` וְשִׁשָּׁה יָמִים`;
-        }
-        return `הַיּוֹם ${text} לָעֹמֶר`;
       }
 
       function openOmerModal() {
@@ -1432,15 +1493,10 @@
             document.getElementById("omer-day-num").textContent =
               CURRENT_OMER_DAY;
             document.getElementById("omer-full-text").textContent =
-              `היום ${CURRENT_OMER_DAY} ימים לעומר`;
-            const w = Math.floor(CURRENT_OMER_DAY / 7),
-              d = CURRENT_OMER_DAY % 7;
-            let desc = w > 0 ? `${w} שבועות` : "";
-            if (w > 0 && d > 0) desc += " ו-";
-            if (d > 0) desc += `${d} ימים`;
-            document.getElementById("omer-weeks").textContent = desc
-              ? `שהם ${desc}.`
-              : "";
+              generateOmerText(CURRENT_OMER_DAY).split(", ")[0];
+            const parts = generateOmerText(CURRENT_OMER_DAY).split(", ");
+            document.getElementById("omer-weeks").textContent =
+              parts.length > 1 ? parts[1] : "";
           } else {
             omerContainer.classList.add("hidden");
             omerContainer.classList.remove("flex");
@@ -1461,7 +1517,8 @@
             );
           }
 
-          renderZmanimGrid(zData);
+          // Fetch Shabbat and Zmanim using adjusted Jewish Date!
+          await fetchZmanimAndShabbat(isoForHebcal);
 
           const cy = dateForHebcal.getFullYear();
           const [y1, y2] = await Promise.all([
@@ -1688,22 +1745,25 @@
             c = "--:--",
             h = "--:--",
             eTitle = "";
-          sData.items.forEach((i) => {
-            if (i.category === "parashat") {
-              p = i.hebrew;
-              eTitle = i.title;
-            }
-            if (i.category === "candles")
-              c = new Date(i.date).toLocaleTimeString("he-IL", {
-                hour: "2-digit",
-                minute: "2-digit",
-              });
-            if (i.category === "havdalah")
-              h = new Date(i.date).toLocaleTimeString("he-IL", {
-                hour: "2-digit",
-                minute: "2-digit",
-              });
-          });
+
+          if (sData && sData.items) {
+            sData.items.forEach((i) => {
+              if (i.category === "parashat") {
+                p = i.hebrew;
+                eTitle = i.title;
+              }
+              if (i.category === "candles")
+                c = new Date(i.date).toLocaleTimeString("he-IL", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                });
+              if (i.category === "havdalah")
+                h = new Date(i.date).toLocaleTimeString("he-IL", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                });
+            });
+          }
 
           document.getElementById("stat-parasha").textContent = p;
           document.getElementById("parasha-link").href =
@@ -2127,7 +2187,7 @@
                         </div>
                         <div class="flex md:flex-col items-center justify-between w-full md:w-auto md:items-end md:justify-center border-t border-slate-100 dark:border-slate-700 md:border-t-0 pt-3 md:pt-0 mt-2 md:mt-0">
                             <div class="bg-${color}-50 dark:bg-${color}-500/20 text-${color}-700 dark:text-${color}-300 px-4 py-1.5 md:py-2 rounded-xl text-sm font-black md:mb-2" aria-label="זמן נותר">${diff <= 0 ? "היום" : `בעוד ${diff} ימים`}</div>
-                            <button onclick="downloadICS('${str}')" class="flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500 hover:text-blue-600 font-bold uppercase tracking-widest transition-colors bg-slate-50 dark:bg-slate-900/50 hover:bg-blue-50 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-blue-200" aria-label="סנכרן את ${e.name} ליומן סמסונג">
+                            <button onclick="downloadICS('${str}')" class="flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500 hover:text-blue-600 font-bold uppercase tracking-widest transition-colors bg-slate-50 dark:bg-slate-900/50 hover:bg-blue-50 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-blue-200" aria-label="סנכרן את ${e.name} ליומן">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg> סנכרן
                             </button>
                         </div>

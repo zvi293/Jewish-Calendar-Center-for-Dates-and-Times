@@ -201,11 +201,9 @@
         font-size: 0.85rem;
         padding-bottom: 0.5rem;
       }
-
       .gradient-bg {
         background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
       }
-      /* עיצוב אוקיינוס נעים וקריא */
       .bg-ocean-readable {
         background: linear-gradient(135deg, #0284c7 0%, #1d4ed8 100%);
       }
@@ -215,6 +213,17 @@
           transparent 50%,
           rgba(255, 255, 255, 0.05) 50%
         );
+      }
+
+      /* Sefaria Reader Styles */
+      #sefaria-modal-content p {
+        font-size: 1.15rem;
+        margin-bottom: 1rem;
+        color: inherit;
+      }
+      #sefaria-modal-content .text-left {
+        text-align: left;
+        direction: ltr;
       }
     </style>
   </head>
@@ -303,6 +312,31 @@
           </svg>
         </button>
         <button
+          onclick="cycleLanguage()"
+          class="nav-action-btn relative bg-white/10 backdrop-blur-md border border-white/20 text-white p-2.5 rounded-full hover:bg-white/20 transition-all shadow-lg"
+          title="החלף שפה / Change Language"
+          aria-label="החלף שפה"
+        >
+          <svg
+            class="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M3 12h18M12 3a9.003 9.003 0 010 18M12 3c-1.8 0-3.5 3.5-3.5 9s1.7 9 3.5 9s3.5-3.5 3.5-9s-1.7-9-3.5-9z"
+            ></path>
+          </svg>
+          <span
+            id="lang-indicator"
+            class="absolute -top-1 -right-1 bg-blue-600 text-white text-[9px] font-black w-4 h-4 flex items-center justify-center rounded-full shadow"
+            >HE</span
+          >
+        </button>
+        <button
           onclick="openCompass()"
           class="nav-action-btn bg-white/10 backdrop-blur-md border border-white/20 text-white p-2.5 rounded-full hover:bg-white/20 transition-all shadow-lg"
           title="מצפן לירושלים"
@@ -364,9 +398,12 @@
           </svg>
           <span
             class="text-xs font-bold uppercase tracking-wider hidden md:inline"
+            data-i18n-key="sync_all"
             >סנכרן את הלוח ליומן שלך</span
           >
-          <span class="text-xs font-bold uppercase tracking-wider md:hidden"
+          <span
+            class="text-xs font-bold uppercase tracking-wider md:hidden"
+            data-i18n-key="sync_mobile"
             >סנכרן ליומן</span
           >
         </button>
@@ -423,13 +460,17 @@
         <h1
           class="text-5xl md:text-7xl font-extrabold text-white mb-10 tracking-tighter"
         >
-          הלוח <span class="text-blue-300">היהודי</span>
+          <span data-i18n-key="app_title_1">הלוח</span>
+          <span class="text-blue-300" data-i18n-key="app_title_2">היהודי</span>
         </h1>
 
         <div id="loading-state" class="py-10 text-center" aria-live="polite">
           <div class="loader mb-4"></div>
-          <p class="text-blue-200 font-bold animate-pulse">
-            מסנכרן נתונים עם לוח השנה העולמי...
+          <p
+            class="text-blue-200 font-bold animate-pulse"
+            data-i18n-key="loading"
+          >
+            מסנכרן נתונים...
           </p>
         </div>
 
@@ -442,6 +483,7 @@
           >
             <h2
               class="text-blue-300 text-[10px] md:text-xs font-bold mb-1 uppercase tracking-widest opacity-90"
+              data-i18n-key="today_date"
             >
               היום בתאריך
             </h2>
@@ -464,6 +506,7 @@
           >
             <h2
               class="text-blue-300 text-[10px] md:text-xs font-bold mb-1 uppercase tracking-widest opacity-90"
+              data-i18n-key="moon_close"
             >
               ברכת הלבנה הקרובה
             </h2>
@@ -480,6 +523,7 @@
           >
             <h2
               class="text-blue-300 text-[10px] md:text-xs font-bold mb-1 uppercase tracking-widest opacity-90"
+              data-i18n-key="next_event"
             >
               המועד הבא
             </h2>
@@ -496,15 +540,14 @@
           >
             <h2
               class="text-blue-300 text-[10px] md:text-xs font-bold uppercase tracking-widest opacity-90 mb-1"
+              data-i18n-key="upcoming_shab"
             >
               שבת קרובה
             </h2>
-            <a
+            <button
               id="parasha-link"
-              href="#"
-              target="_blank"
-              rel="noopener"
-              class="text-white text-base md:text-lg font-bold mb-1 leading-tight hover:text-blue-200 transition-colors flex items-center gap-1 group"
+              onclick="event.preventDefault()"
+              class="text-white text-base md:text-lg font-bold mb-1 leading-tight hover:text-blue-200 transition-colors flex items-center gap-1 group w-fit"
             >
               <span id="stat-parasha">פרשת...</span>
               <svg
@@ -520,7 +563,7 @@
                   d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
                 ></path>
               </svg>
-            </a>
+            </button>
             <p
               id="stat-shabbat-times"
               class="text-blue-100 text-xs md:text-sm font-semibold opacity-90"
@@ -535,20 +578,19 @@
           class="hidden mt-4 glass-card rounded-[2rem] p-5 flex-col items-center text-sm text-blue-100 gap-4 opacity-0 transition-opacity duration-500 w-full max-w-4xl mx-auto"
           aria-label="זמני הלכה"
         >
-          <a
+          <button
             id="daf-yomi-link"
-            href="#"
-            target="_blank"
-            rel="noopener"
+            onclick="event.preventDefault()"
             class="flex items-center justify-center gap-2 font-bold text-white bg-blue-600/40 hover:bg-blue-600/60 transition-colors px-6 py-2 rounded-xl border border-blue-400/30 w-auto group shadow-md"
           >
             <span>📖 הדף היומי:</span>
             <span id="daf-yomi-text">מחשב...</span>
-          </a>
+          </button>
 
           <div class="w-full border-t border-blue-400/20 pt-4">
             <h2
               class="text-center font-bold text-blue-300 mb-4 tracking-widest"
+              data-i18n-key="zmanim"
             >
               זמני היום
             </h2>
@@ -582,7 +624,7 @@
               d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
             ></path>
           </svg>
-          פתח לוח שנה חודשי
+          <span data-i18n-key="cal_btn">פתח לוח שנה חודשי</span>
         </button>
       </div>
     </header>
@@ -601,6 +643,7 @@
             type="search"
             id="mainSearch"
             placeholder="חפש חג, צום או זמן..."
+            data-i18n-key="search_place"
             class="w-full bg-slate-50 dark:bg-slate-900 dark:text-white border border-transparent dark:border-slate-700 rounded-2xl py-4 pr-14 pl-6 text-lg outline-none focus:ring-2 focus:ring-blue-500 transition-all"
             aria-label="חיפוש"
           />
@@ -630,6 +673,7 @@
             id="btn-all"
             class="chip active bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-6 py-2 rounded-xl font-bold whitespace-nowrap"
             aria-pressed="true"
+            data-i18n-key="filter_all"
           >
             הכל
           </button>
@@ -638,6 +682,7 @@
             id="btn-major"
             class="chip bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-6 py-2 rounded-xl font-bold whitespace-nowrap"
             aria-pressed="false"
+            data-i18n-key="filter_holidays"
           >
             חגים
           </button>
@@ -646,6 +691,7 @@
             id="btn-fast"
             class="chip bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-6 py-2 rounded-xl font-bold whitespace-nowrap"
             aria-pressed="false"
+            data-i18n-key="filter_fasts"
           >
             צומות
           </button>
@@ -654,6 +700,7 @@
             id="btn-rosh-chodesh"
             class="chip bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-6 py-2 rounded-xl font-bold whitespace-nowrap"
             aria-pressed="false"
+            data-i18n-key="filter_rosh"
           >
             ראשי חודשים
           </button>
@@ -662,6 +709,7 @@
             id="btn-moon"
             class="chip bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-6 py-2 rounded-xl font-bold whitespace-nowrap"
             aria-pressed="false"
+            data-i18n-key="filter_moon"
           >
             קידוש לבנה
           </button>
@@ -676,6 +724,7 @@
         <div class="text-center md:text-right">
           <h2
             class="text-blue-200 text-sm font-bold uppercase tracking-widest mb-1"
+            data-i18n-key="omer_title"
           >
             ספירת העומר
           </h2>
@@ -689,6 +738,7 @@
             onclick="openOmerModal()"
             class="bg-white/20 hover:bg-white/30 text-white px-5 py-2 rounded-xl text-sm font-bold transition-colors"
             aria-haspopup="dialog"
+            data-i18n-key="omer_btn"
           >
             לנוסח הברכה והספירה המלא
           </button>
@@ -717,7 +767,7 @@
       aria-labelledby="omer-modal-title"
     >
       <div
-        class="bg-white dark:bg-slate-800 w-full max-w-xl max-h-[85vh] overflow-y-auto rounded-[2rem] shadow-[0_0_50px_rgba(0,0,0,0.5)] p-6 md:p-8 text-center relative flex flex-col items-center"
+        class="bg-white dark:bg-slate-800 w-full max-w-xl max-h-[85vh] overflow-y-auto rounded-[2rem] shadow-[0_0_50px_rgba(0,0,0,0.5)] p-6 md:p-8 text-center relative flex flex-col items-center scrollbar-hide"
       >
         <button
           onclick="closeOmerModal()"
@@ -742,6 +792,7 @@
         <h2
           id="omer-modal-title"
           class="text-2xl font-black text-slate-800 dark:text-white mb-6"
+          data-i18n-key="omer_title"
         >
           ספירת העומר
         </h2>
@@ -831,6 +882,77 @@
     </div>
 
     <div
+      id="sefaria-modal"
+      class="fixed inset-0 z-[120] bg-slate-900/90 backdrop-blur-md hidden flex items-center justify-center p-4 opacity-0 transition-opacity duration-300"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div
+        class="bg-white dark:bg-slate-800 w-full max-w-2xl h-[85vh] overflow-hidden rounded-[2rem] shadow-[0_0_50px_rgba(0,0,0,0.5)] flex flex-col relative"
+      >
+        <div
+          class="p-6 pb-4 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900"
+        >
+          <button
+            onclick="closeSefariaModal()"
+            class="text-slate-400 hover:text-slate-600 dark:hover:text-white bg-white dark:bg-slate-800 shadow-sm p-2.5 rounded-full transition-colors"
+            aria-label="סגור"
+          >
+            <svg
+              class="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              ></path>
+            </svg>
+          </button>
+          <h2
+            id="sefaria-modal-title"
+            class="text-xl md:text-2xl font-black text-slate-800 dark:text-white text-right"
+          >
+            קריאה
+          </h2>
+        </div>
+        <div
+          id="sefaria-modal-content"
+          class="p-6 md:p-8 overflow-y-auto flex-1 text-right text-lg leading-loose text-slate-700 dark:text-slate-300 font-serif scrollbar-hide"
+        ></div>
+        <div
+          class="p-4 bg-slate-50 dark:bg-slate-900/80 border-t border-slate-100 dark:border-slate-700"
+        >
+          <a
+            id="sefaria-credit-link"
+            href="https://www.sefaria.org.il/"
+            target="_blank"
+            rel="noopener"
+            class="text-sm font-bold text-blue-500 hover:text-blue-600 transition-colors flex justify-center items-center gap-2"
+          >
+            <svg
+              class="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+              ></path>
+            </svg>
+            הטקסט באדיבות Sefaria.org (ברישיון פתוח)
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div
       id="compass-modal"
       class="fixed inset-0 z-[100] bg-slate-900/95 backdrop-blur-md hidden flex items-center justify-center p-4 opacity-0 transition-opacity duration-300"
       role="dialog"
@@ -863,6 +985,7 @@
         <h2
           id="compass-modal-title"
           class="text-2xl font-black text-white mb-1"
+          data-i18n-key="compass"
         >
           מצפן לירושלים
         </h2>
@@ -929,7 +1052,7 @@
       aria-labelledby="settings-modal-title"
     >
       <div
-        class="bg-white dark:bg-slate-800 w-full max-w-md rounded-[2rem] shadow-2xl p-6 md:p-8 transform scale-95 transition-transform duration-300 relative"
+        class="bg-white dark:bg-slate-800 w-full max-w-md max-h-[90vh] overflow-y-auto rounded-[2rem] shadow-2xl p-6 md:p-8 transform scale-95 transition-transform duration-300 relative scrollbar-hide"
       >
         <button
           onclick="toggleSettings()"
@@ -954,31 +1077,49 @@
         <h2
           id="settings-modal-title"
           class="text-2xl font-black mb-6 text-slate-800 dark:text-white flex items-center gap-2"
+          data-i18n-key="settings_title"
         >
           הגדרות אישיות
         </h2>
         <div class="space-y-6">
           <div>
             <label
-              for="settings-city"
               class="block text-sm font-bold text-slate-500 dark:text-slate-400 mb-2"
               >מיקום לחישוב זמנים ושבת</label
             >
-            <select
-              id="settings-city"
-              onchange="saveSettings()"
-              class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
-              aria-label="בחר עיר"
+            <div class="relative">
+              <input
+                type="text"
+                id="settings-city-search"
+                placeholder="הקלד שם עיר (באנגלית או עברית)..."
+                class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                oninput="handleCitySearch(event)"
+              />
+              <ul
+                id="city-search-results"
+                class="absolute z-50 w-full mt-1 max-h-48 overflow-y-auto bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl hidden scrollbar-hide"
+              ></ul>
+            </div>
+            <div
+              class="mt-2 flex justify-between items-center text-sm text-slate-500"
             >
-              <option value="293918">פתח תקווה</option>
-              <option value="281184">ירושלים</option>
-              <option value="293397">תל אביב</option>
-              <option value="294801">חיפה</option>
-              <option value="295530">באר שבע</option>
-              <option value="293322">טבריה</option>
-              <option value="GPS">📍 אתר את המיקום שלי (GPS)</option>
-            </select>
+              <span
+                >עיר נוכחית:
+                <span
+                  id="current-city-name"
+                  class="font-bold text-blue-600 dark:text-blue-400"
+                  >פתח תקווה</span
+                ></span
+              >
+            </div>
+            <button
+              onclick="useGPS()"
+              class="mt-3 w-full bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold py-2.5 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors text-sm flex items-center justify-center gap-2"
+            >
+              📍 השתמש במיקום שלי (GPS)
+            </button>
           </div>
+
           <div>
             <label
               for="settings-method"
@@ -987,7 +1128,6 @@
             >
             <select
               id="settings-method"
-              onchange="saveSettings()"
               class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
               aria-label="בחר שיטת חישוב"
             >
@@ -995,9 +1135,93 @@
               <option value="GRA">הגר"א ובעל התניא</option>
             </select>
           </div>
+
+          <div class="pt-4 border-t border-slate-100 dark:border-slate-700">
+            <div class="flex items-center justify-between mb-4">
+              <span
+                class="font-bold text-slate-800 dark:text-white"
+                data-i18n-key="notif_settings_title"
+                >התראות דפדפן (פוש)</span
+              >
+              <button
+                id="notif-master-toggle"
+                onclick="requestNotificationPermission()"
+                class="bg-blue-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-colors shadow-sm"
+                data-i18n-key="notif_enable"
+              >
+                הפעל
+              </button>
+            </div>
+            <div
+              id="notif-options"
+              class="space-y-3 text-sm text-slate-600 dark:text-slate-300 opacity-50 pointer-events-none transition-opacity"
+            >
+              <label class="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  id="notif_shabbat"
+                  onchange="saveNotifPrefs()"
+                  class="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span data-i18n-key="notif_shab">כניסת שבת (חצי שעה לפני)</span>
+              </label>
+              <label class="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  id="notif_holiday"
+                  onchange="saveNotifPrefs()"
+                  class="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span data-i18n-key="notif_hol">כניסת חג (חצי שעה לפני)</span>
+              </label>
+              <label class="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  id="notif_fast"
+                  onchange="saveNotifPrefs()"
+                  class="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span data-i18n-key="notif_fast">סיום צום (חצי שעה לפני)</span>
+              </label>
+              <label class="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  id="notif_omer"
+                  onchange="saveNotifPrefs()"
+                  class="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span data-i18n-key="notif_omer"
+                  >ספירת העומר (בצאת הכוכבים)</span
+                >
+              </label>
+              <label class="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  id="notif_levana"
+                  onchange="saveNotifPrefs()"
+                  class="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span data-i18n-key="notif_levana"
+                  >ברכת הלבנה (תחילת/סוף זמן)</span
+                >
+              </label>
+              <label class="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  id="notif_daf"
+                  onchange="saveNotifPrefs()"
+                  class="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span data-i18n-key="notif_daf"
+                  >הדף היומי (תזכורת בוקר 08:00)</span
+                >
+              </label>
+            </div>
+          </div>
+
           <button
-            onclick="toggleSettings()"
-            class="w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl hover:bg-blue-700 mt-4 transition-colors"
+            onclick="saveSettings()"
+            class="w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl hover:bg-blue-700 transition-colors"
           >
             שמור וסגור
           </button>
@@ -1123,6 +1347,145 @@
     </div>
 
     <script>
+      // --- Caching Logic for API Calls (Offline-First Strategy) ---
+      async function fetchHebcalWithCache(url) {
+        const cacheKey = "hebcal_cache_" + url;
+        const cachedStr = localStorage.getItem(cacheKey);
+        const now = Date.now();
+
+        if (cachedStr) {
+          try {
+            const cachedData = JSON.parse(cachedStr);
+            // Valid for 12 hours
+            if (now - cachedData.timestamp < 12 * 60 * 60 * 1000) {
+              // Stale-while-revalidate background update
+              if (navigator.onLine) {
+                fetch(url)
+                  .then((r) => r.json())
+                  .then((data) => {
+                    localStorage.setItem(
+                      cacheKey,
+                      JSON.stringify({ timestamp: Date.now(), data }),
+                    );
+                  })
+                  .catch(() => {});
+              }
+              return cachedData.data;
+            }
+          } catch (e) {}
+        }
+
+        try {
+          const res = await fetch(url);
+          const data = await res.json();
+          localStorage.setItem(
+            cacheKey,
+            JSON.stringify({ timestamp: now, data }),
+          );
+          return data;
+        } catch (err) {
+          if (cachedStr) return JSON.parse(cachedStr).data;
+          throw err;
+        }
+      }
+
+      // --- Translations (i18n) ---
+      const i18nDict = {
+        he: {
+          app_title_1: "הלוח",
+          app_title_2: "היהודי",
+          loading: "מסנכרן נתונים...",
+          today_date: "היום בתאריך",
+          moon_close: "ברכת הלבנה הקרובה",
+          next_event: "המועד הבא",
+          upcoming_shab: "שבת קרובה",
+          zmanim: "זמני היום",
+          cal_btn: "פתח לוח שנה חודשי",
+          search_place: "חפש חג, צום או זמן...",
+          filter_all: "הכל",
+          filter_holidays: "חגים",
+          filter_fasts: "צומות",
+          filter_rosh: "ראשי חודשים",
+          filter_moon: "קידוש לבנה",
+          omer_title: "ספירת העומר",
+          omer_btn: "לנוסח הברכה והספירה המלא",
+          sync_all: "סנכרן את הלוח ליומן שלך",
+          sync_mobile: "סנכרן ליומן",
+          settings_title: "הגדרות אישיות",
+          compass: "מצפן לירושלים",
+          notif_settings_title: "התראות דפדפן (פוש)",
+          notif_enable: "הפעל",
+          notif_shab: "כניסת שבת (חצי שעה לפני)",
+          notif_hol: "כניסת חג (חצי שעה לפני)",
+          notif_fast: "סיום צום (חצי שעה לפני)",
+          notif_omer: "ספירת העומר (בצאת הכוכבים)",
+          notif_levana: "ברכת הלבנה (תחילת/סוף זמן)",
+          notif_daf: "הדף היומי (תזכורת בוקר 08:00)",
+        },
+        en: {
+          app_title_1: "Jewish",
+          app_title_2: "Calendar",
+          loading: "Syncing data...",
+          today_date: "Today's Date",
+          moon_close: "Upcoming Kiddush Levana",
+          next_event: "Next Event",
+          upcoming_shab: "Upcoming Shabbat",
+          zmanim: "Daily Zmanim",
+          cal_btn: "Open Monthly Calendar",
+          search_place: "Search holiday, fast...",
+          filter_all: "All",
+          filter_holidays: "Holidays",
+          filter_fasts: "Fasts",
+          filter_rosh: "Rosh Chodesh",
+          filter_moon: "Levana",
+          omer_title: "Omer Count",
+          omer_btn: "Full Blessing Text",
+          sync_all: "Sync Calendar to Device",
+          sync_mobile: "Sync Cal",
+          settings_title: "Settings",
+          compass: "Compass to Jerusalem",
+          notif_settings_title: "Push Notifications",
+          notif_enable: "Enable",
+          notif_shab: "Shabbat (30 mins before)",
+          notif_hol: "Holiday (30 mins before)",
+          notif_fast: "Fast Ends (30 mins before)",
+          notif_omer: "Omer Count (At Nightfall)",
+          notif_levana: "Kiddush Levana (Start/End)",
+          notif_daf: "Daf Yomi (Morning at 08:00)",
+        },
+        fr: {
+          app_title_1: "Calendrier",
+          app_title_2: "Juif",
+          loading: "Synchronisation...",
+          today_date: "Date du Jour",
+          moon_close: "Prochain Kiddouch Levana",
+          next_event: "Prochain Événement",
+          upcoming_shab: "Prochain Chabbat",
+          zmanim: "Zmanim du Jour",
+          cal_btn: "Ouvrir le Calendrier",
+          search_place: "Rechercher une fête...",
+          filter_all: "Tout",
+          filter_holidays: "Fêtes",
+          filter_fasts: "Jeûnes",
+          filter_rosh: "Roch Hodech",
+          filter_moon: "Levana",
+          omer_title: "Compte du Omer",
+          omer_btn: "Texte Complet",
+          sync_all: "Synchroniser avec l'agenda",
+          sync_mobile: "Sync",
+          settings_title: "Paramètres",
+          compass: "Boussole",
+          notif_settings_title: "Notifications Push",
+          notif_enable: "Activer",
+          notif_shab: "Chabbat (30 min avant)",
+          notif_hol: "Fête (30 min avant)",
+          notif_fast: "Fin du Jeûne (30 min avant)",
+          notif_omer: "Compte du Omer (À la nuit)",
+          notif_levana: "Kiddouch Levana (Début/Fin)",
+          notif_daf: "Daf Yomi (Matin à 08:00)",
+        },
+      };
+
       // --- Navbar Scroll Logic ---
       window.addEventListener("scroll", () => {
         const navButtons = document.querySelectorAll(".nav-action-btn");
@@ -1182,6 +1545,7 @@
       let compassListener = null;
       let CALENDAR_DISPLAY_DATE = new Date();
       let CURRENT_THEME = localStorage.getItem("moadim_theme") || "light";
+      let CURRENT_LANG = localStorage.getItem("moadim_lang") || "he";
 
       const daysOfWeek = [
         "ראשון",
@@ -1330,6 +1694,32 @@
         }
       }
 
+      function applyTranslations() {
+        const t = i18nDict[CURRENT_LANG] || i18nDict["he"];
+        document.querySelectorAll("[data-i18n-key]").forEach((el) => {
+          const key = el.getAttribute("data-i18n-key");
+          if (t[key]) {
+            if (el.tagName === "INPUT") el.placeholder = t[key];
+            else el.textContent = t[key];
+          }
+        });
+      }
+
+      function cycleLanguage() {
+        if (CURRENT_LANG === "he") CURRENT_LANG = "en";
+        else if (CURRENT_LANG === "en") CURRENT_LANG = "fr";
+        else CURRENT_LANG = "he";
+
+        localStorage.setItem("moadim_lang", CURRENT_LANG);
+        document.getElementById("lang-indicator").textContent =
+          CURRENT_LANG.toUpperCase();
+        document.documentElement.lang = CURRENT_LANG;
+        document.documentElement.dir = CURRENT_LANG === "he" ? "rtl" : "ltr";
+
+        applyTranslations();
+        fetchLiveCalendarData();
+      }
+
       function applyTheme(theme) {
         const html = document.documentElement;
         const header = document.getElementById("hero-section");
@@ -1371,8 +1761,17 @@
       function initApp() {
         applyTheme(CURRENT_THEME);
 
-        document.getElementById("settings-city").value = GEO_LOCATION;
+        document.getElementById("lang-indicator").textContent =
+          CURRENT_LANG.toUpperCase();
+        document.documentElement.lang = CURRENT_LANG;
+        document.documentElement.dir = CURRENT_LANG === "he" ? "rtl" : "ltr";
+        applyTranslations();
+
         document.getElementById("settings-method").value = ZMANIM_METHOD;
+        document.getElementById("current-city-name").textContent =
+          localStorage.getItem("moadim_city_name") || "פתח תקווה";
+
+        updateNotifStatusUI();
 
         const cachedEvents = localStorage.getItem("moadim_cached_events");
         if (cachedEvents) {
@@ -1412,13 +1811,6 @@
         return zmanim[m] || { s: "18:00", e: "05:00" };
       }
 
-      function makeSefariaLink(englishTitle) {
-        if (!englishTitle) return "#";
-        let clean = englishTitle.replace("Parashat ", "").replace(" ", "_");
-        if (/\d/.test(clean)) clean = clean.replace("_", ".");
-        return `https://www.sefaria.org.il/${clean}?lang=he`;
-      }
-
       function getGeoParams() {
         if (GEO_LOCATION === "GPS" && GPS_COORDS)
           return `geo=pos&latitude=${GPS_COORDS.lat}&longitude=${GPS_COORDS.lon}&tzid=Asia/Jerusalem`;
@@ -1439,22 +1831,64 @@
         setTimeout(() => m.classList.add("hidden"), 300);
       }
 
+      // --- Sefaria Modal Logic ---
+      async function openSefariaModal(hebTitle, enRef) {
+        if (!enRef) return;
+        let cleanRef = enRef.replace("Parashat ", "").replace(/ /g, "_");
+        if (/\d/.test(cleanRef)) cleanRef = cleanRef.replace("_", "."); // For Daf Yomi
+
+        const m = document.getElementById("sefaria-modal");
+        document.getElementById("sefaria-modal-title").textContent = hebTitle;
+        document.getElementById("sefaria-modal-content").innerHTML =
+          '<div class="animate-pulse text-center mt-10">טוען טקסט ממסד הנתונים...</div>';
+        document.getElementById("sefaria-credit-link").href =
+          `https://www.sefaria.org.il/${cleanRef}?lang=he`;
+
+        m.classList.remove("hidden");
+        setTimeout(() => m.classList.remove("opacity-0"), 10);
+
+        try {
+          const data = await fetchHebcalWithCache(
+            `https://www.sefaria.org/api/texts/${cleanRef}?context=0`,
+          );
+          let textHtml = "";
+          if (data.he && data.he.length > 0) {
+            textHtml = data.he.map((p) => `<p>${p}</p>`).join("");
+          } else if (data.text && data.text.length > 0) {
+            textHtml = data.text
+              .map((p) => `<p class="text-left" dir="ltr">${p}</p>`)
+              .join("");
+          } else {
+            textHtml =
+              "<p class='text-center text-rose-500 font-bold mt-10'>לא נמצא טקסט עבור מועד זה במאגר הפתוח.</p>";
+          }
+          document.getElementById("sefaria-modal-content").innerHTML = textHtml;
+        } catch (e) {
+          document.getElementById("sefaria-modal-content").innerHTML =
+            "<p class='text-center text-rose-500 font-bold mt-10'>שגיאה בטעינת הטקסט. אנא בדוק חיבור לאינטרנט.</p>";
+        }
+      }
+
+      function closeSefariaModal() {
+        const m = document.getElementById("sefaria-modal");
+        m.classList.add("opacity-0");
+        setTimeout(() => m.classList.add("hidden"), 300);
+      }
+
       async function fetchLiveCalendarData() {
         try {
           const now = new Date();
 
-          // Use exact local Gregorian date for UI
           const todayDateUI = new Date();
           const gy = todayDateUI.getFullYear();
           const gm = String(todayDateUI.getMonth() + 1).padStart(2, "0");
           const gd = String(todayDateUI.getDate()).padStart(2, "0");
           const todayLocalIso = `${gy}-${gm}-${gd}`;
 
-          // Fetch Zmanim First to determine if it's after Tzeit Hakochavim
-          const zRes = await fetch(
+          // Fetch Zmanim with caching
+          const zData = await fetchHebcalWithCache(
             `https://www.hebcal.com/zmanim?cfg=json&${getGeoParams()}&date=${todayLocalIso}`,
           );
-          const zData = await zRes.json();
           const tzeitStr = zData.times.tzeit7083deg;
 
           let isAfterTzeit = false;
@@ -1467,21 +1901,22 @@
           dateForHebcal.setHours(0, 0, 0, 0);
 
           if (isAfterTzeit) {
-            dateForHebcal.setDate(dateForHebcal.getDate() + 1); // Advance Jewish day if after nightfall
+            dateForHebcal.setDate(dateForHebcal.getDate() + 1);
             const ty = dateForHebcal.getFullYear();
             const tm = String(dateForHebcal.getMonth() + 1).padStart(2, "0");
             const td = String(dateForHebcal.getDate()).padStart(2, "0");
             hebrewDateFetchIso = `${ty}-${tm}-${td}`;
           }
 
-          const dateRes = await fetch(
+          const dateData = await fetchHebcalWithCache(
             `https://www.hebcal.com/converter?cfg=json&date=${hebrewDateFetchIso}&g2h=1&strict=1`,
           );
-          const dateData = await dateRes.json();
 
-          document.getElementById("stat-today").textContent = dateData.hebrew;
+          document.getElementById("stat-today").textContent =
+            CURRENT_LANG === "he"
+              ? dateData.hebrew
+              : getHebrewDateString(dateForHebcal) || dateData.hebrew;
 
-          // STRICTLY KEEP GREGORIAN DATE AS TODAY
           document.getElementById("stat-today-gregorian").textContent =
             todayDateUI.toLocaleDateString("he-IL", {
               day: "2-digit",
@@ -1522,29 +1957,30 @@
             omerContainer.classList.remove("flex");
           }
 
-          const dafRes = await fetch(
+          const dafData = await fetchHebcalWithCache(
             `https://www.hebcal.com/hebcal?v=1&cfg=json&F=on&start=${hebrewDateFetchIso}&end=${hebrewDateFetchIso}`,
           );
-          const dafData = await dafRes.json();
           const dafEvent = (dafData.items || []).find(
             (i) => i.category === "dafyomi",
           );
           if (dafEvent) {
-            document.getElementById("daf-yomi-text").textContent =
-              dafEvent.hebrew.replace("דף יומי: ", "");
-            document.getElementById("daf-yomi-link").href = makeSefariaLink(
-              dafEvent.title,
-            );
+            const displayDaf =
+              CURRENT_LANG === "he"
+                ? dafEvent.hebrew.replace("דף יומי: ", "")
+                : dafEvent.title;
+            document.getElementById("daf-yomi-text").textContent = displayDaf;
+            document.getElementById("daf-yomi-link").onclick = (e) => {
+              e.preventDefault();
+              openSefariaModal(displayDaf, dafEvent.title);
+            };
           }
 
           renderZmanimGrid(zData);
 
-          // Fetch Shabbat using current ISO to anchor correctly
-          const sRes = await fetch(
+          const sData = await fetchHebcalWithCache(
             `https://www.hebcal.com/shabbat?cfg=json&${getGeoParams()}&m=50&date=${todayLocalIso}`,
           );
-          const sData = await sRes.json();
-          let p = "שבת",
+          let p = CURRENT_LANG === "he" ? "שבת" : "Shabbat",
             c = "--:--",
             h = "--:--",
             eTitle = "";
@@ -1563,32 +1999,36 @@
           if (sData && sData.items) {
             sData.items.forEach((i) => {
               if (i.category === "parashat") {
-                p = i.hebrew;
+                p = CURRENT_LANG === "he" ? i.hebrew : i.title;
                 eTitle = i.title;
               }
               if (
                 i.category === "candles" &&
                 i.title &&
                 i.title.includes("Candle")
-              )
+              ) {
+                window.SHABBAT_CANDLES_TIME = new Date(i.date);
                 c = formatTimeStr(i.date);
+              }
               if (i.category === "havdalah") h = formatTimeStr(i.date);
             });
           }
           document.getElementById("stat-parasha").textContent = p;
-          document.getElementById("parasha-link").href =
-            makeSefariaLink(eTitle);
+          document.getElementById("parasha-link").onclick = (e) => {
+            e.preventDefault();
+            openSefariaModal(p, eTitle);
+          };
           document.getElementById("stat-shabbat-times").textContent =
             `כניסה: ${c} | יציאה: ${h}`;
 
           const cy = dateForHebcal.getFullYear();
           const [y1, y2] = await Promise.all([
-            fetch(
+            fetchHebcalWithCache(
               `https://www.hebcal.com/hebcal?v=1&cfg=json&year=${cy}&i=on&maj=on&min=on&nx=on&mf=on&ss=on&mod=on`,
-            ).then((r) => r.json()),
-            fetch(
+            ),
+            fetchHebcalWithCache(
               `https://www.hebcal.com/hebcal?v=1&cfg=json&year=${cy + 1}&i=on&maj=on&min=on&nx=on&mf=on&ss=on&mod=on`,
-            ).then((r) => r.json()),
+            ),
           ]);
 
           let newEvents = [];
@@ -1635,13 +2075,26 @@
             let type = "minor",
               icon = "📅";
 
+            // Identify Holiday Candles for Push Notifications
+            if (
+              ev.category === "candles" &&
+              ev.date.startsWith(todayLocalIso)
+            ) {
+              if (new Date(ev.date).getDay() !== 5) {
+                window.HOLIDAY_CANDLES_TIME = new Date(ev.date);
+              }
+            }
+
             if (ev.category === "roshchodesh") {
-              let rcName = ev.hebrew;
+              let rcName = CURRENT_LANG === "he" ? ev.hebrew : ev.title;
               if (rcCounts[ev.hebrew] > 1) {
                 const countSoFar = newEvents.filter(
                   (x) => x.originalName === ev.hebrew,
                 ).length;
-                rcName = `${ev.hebrew} - יום ${countSoFar === 0 ? "א'" : "ב'"}`;
+                rcName =
+                  CURRENT_LANG === "he"
+                    ? `${ev.hebrew} - יום ${countSoFar === 0 ? "א'" : "ב'"}`
+                    : `${ev.title} Day ${countSoFar + 1}`;
               }
 
               if (
@@ -1667,7 +2120,10 @@
                 endL.setDate(endL.getDate() + 14);
 
                 if (endL >= dateForHebcal) {
-                  const name = `קידוש לבנה - ${ev.hebrew.replace("ראש חודש ", "").split(" (")[0].trim()}`;
+                  const name =
+                    CURRENT_LANG === "he"
+                      ? `קידוש לבנה - ${ev.hebrew.replace("ראש חודש ", "").split(" (")[0].trim()}`
+                      : `Kiddush Levana - ${ev.title}`;
                   const dStr =
                     startL > dateForHebcal
                       ? startL.toISOString().split("T")[0]
@@ -1678,6 +2134,10 @@
                   ) {
                     const startZman = getApproxZmanim(startL).s;
                     const endZman = getApproxZmanim(endL).e;
+                    window.LEVANA_START_DATE = startL
+                      .toISOString()
+                      .split("T")[0];
+                    window.LEVANA_END_DATE = endL.toISOString().split("T")[0];
 
                     const levanaHTML = `
                         <div class="mt-2.5 flex flex-col gap-1.5 text-xs md:text-sm bg-slate-50 dark:bg-slate-900/50 p-2.5 rounded-xl border border-slate-100 dark:border-slate-700">
@@ -1724,15 +2184,17 @@
               else if (ev.title.includes("Tu BiShvat")) icon = "🌳";
             } else return;
 
+            const evName = CURRENT_LANG === "he" ? ev.hebrew : ev.title;
             if (
-              !newEvents.some((x) => x.name === ev.hebrew && x.date === ev.date)
+              !newEvents.some((x) => x.name === evName && x.date === ev.date)
             ) {
               newEvents.push({
-                name: ev.hebrew,
+                name: evName,
                 date: ev.date,
                 type: type,
                 heb: ev.hebrew,
                 icon: icon,
+                titleStr: ev.title,
               });
             }
           });
@@ -1790,18 +2252,6 @@
         }, 50);
       }
 
-      async function fetchZmanimAndShabbat(dateIso) {
-        try {
-          const zRes = await fetch(
-            `https://www.hebcal.com/zmanim?cfg=json&${getGeoParams()}&date=${dateIso}`,
-          );
-          const zData = await zRes.json();
-          renderZmanimGrid(zData);
-        } catch (e) {
-          console.error(e);
-        }
-      }
-
       function renderZmanimGrid(zData) {
         const ft = (iso) =>
           iso
@@ -1829,6 +2279,10 @@
         const plag = ft(zData.times.plagHaMincha);
         const shkia = ft(zData.times.sunset);
         const tzeit = ft(zData.times.tzeit7083deg);
+
+        // Save Tzeit for Omer Push Notifications
+        if (zData.times.tzeit7083deg)
+          window.TZEIT_TIME = new Date(zData.times.tzeit7083deg);
 
         document.getElementById("zmanim-details").innerHTML = `
               <div class="bg-blue-900/40 border border-blue-400/20 rounded-xl p-2.5"><span class="text-blue-300/80 text-[11px] md:text-xs block mb-1">עלות השחר</span><span class="font-black text-base md:text-lg text-white">${alot}</span></div>
@@ -1859,33 +2313,35 @@
             prevDay.setDate(prevDay.getDate() - 1);
             let prevIso = prevDay.toISOString().split("T")[0];
             let [resPrev, resCurr] = await Promise.all([
-              fetch(
+              fetchHebcalWithCache(
                 `https://www.hebcal.com/zmanim?cfg=json&${getGeoParams()}&date=${prevIso}`,
-              ).then((r) => r.json()),
-              fetch(
+              ),
+              fetchHebcalWithCache(
                 `https://www.hebcal.com/zmanim?cfg=json&${getGeoParams()}&date=${dateStr}`,
-              ).then((r) => r.json()),
+              ),
             ]);
             startStr = new Date(resPrev.times.sunset).toLocaleTimeString(
               "he-IL",
               { hour: "2-digit", minute: "2-digit" },
             );
-            endStr = new Date(resCurr.times.tzeit7083deg).toLocaleTimeString(
-              "he-IL",
-              { hour: "2-digit", minute: "2-digit" },
-            );
+            window.FAST_END_TIME = new Date(resCurr.times.tzeit7083deg);
+            endStr = window.FAST_END_TIME.toLocaleTimeString("he-IL", {
+              hour: "2-digit",
+              minute: "2-digit",
+            });
           } else {
-            let res = await fetch(
+            let res = await fetchHebcalWithCache(
               `https://www.hebcal.com/zmanim?cfg=json&${getGeoParams()}&date=${dateStr}`,
-            ).then((r) => r.json());
+            );
             startStr = new Date(res.times.alotHaShachar).toLocaleTimeString(
               "he-IL",
               { hour: "2-digit", minute: "2-digit" },
             );
-            endStr = new Date(res.times.tzeit7083deg).toLocaleTimeString(
-              "he-IL",
-              { hour: "2-digit", minute: "2-digit" },
-            );
+            window.FAST_END_TIME = new Date(res.times.tzeit7083deg);
+            endStr = window.FAST_END_TIME.toLocaleTimeString("he-IL", {
+              hour: "2-digit",
+              minute: "2-digit",
+            });
           }
 
           const el = document.getElementById(elementId);
@@ -1904,12 +2360,12 @@
           prevDay.setDate(prevDay.getDate() - 1);
           let prevIso = prevDay.toISOString().split("T")[0];
           let [resPrev, resCurr] = await Promise.all([
-            fetch(
+            fetchHebcalWithCache(
               `https://www.hebcal.com/zmanim?cfg=json&${getGeoParams()}&date=${prevIso}`,
-            ).then((r) => r.json()),
-            fetch(
+            ),
+            fetchHebcalWithCache(
               `https://www.hebcal.com/zmanim?cfg=json&${getGeoParams()}&date=${dateStr}`,
-            ).then((r) => r.json()),
+            ),
           ]);
           let startStr = new Date(resPrev.times.sunset).toLocaleTimeString(
             "he-IL",
@@ -1930,6 +2386,71 @@
         }
       }
 
+      // --- Global City Search ---
+      let citySearchTimeout;
+      async function handleCitySearch(e) {
+        const q = e.target.value;
+        const ul = document.getElementById("city-search-results");
+        if (q.length < 2) {
+          ul.classList.add("hidden");
+          return;
+        }
+        clearTimeout(citySearchTimeout);
+        citySearchTimeout = setTimeout(async () => {
+          try {
+            const res = await fetch(
+              `https://www.hebcal.com/complete?q=${encodeURIComponent(q)}`,
+            );
+            const data = await res.json();
+            ul.innerHTML = "";
+            data.forEach((item) => {
+              const li = document.createElement("li");
+              li.className =
+                "p-3 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer border-b border-slate-100 dark:border-slate-700 text-sm transition-colors text-right";
+              li.textContent = item.value;
+              li.onclick = () => {
+                GEO_LOCATION = item.id;
+                localStorage.setItem("moadim_city", GEO_LOCATION);
+                localStorage.setItem("moadim_city_name", item.value);
+                document.getElementById("current-city-name").textContent =
+                  item.value;
+                ul.classList.add("hidden");
+                e.target.value = "";
+              };
+              ul.appendChild(li);
+            });
+            ul.classList.remove("hidden");
+          } catch (err) {
+            console.error(err);
+          }
+        }, 400);
+      }
+
+      function useGPS() {
+        if ("geolocation" in navigator) {
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              GPS_COORDS = {
+                lat: pos.coords.latitude,
+                lon: pos.coords.longitude,
+              };
+              localStorage.setItem("moadim_gps", JSON.stringify(GPS_COORDS));
+              GEO_LOCATION = "GPS";
+              localStorage.setItem("moadim_city", "GPS");
+              localStorage.setItem("moadim_city_name", "מיקום נוכחי (GPS)");
+              document.getElementById("current-city-name").textContent =
+                "מיקום נוכחי (GPS)";
+              document
+                .getElementById("city-search-results")
+                .classList.add("hidden");
+            },
+            (err) => {
+              alert("לא הצלחנו לאתר מיקום, נחזור להגדרה הקודמת.");
+            },
+          );
+        }
+      }
+
       function toggleSettings() {
         const m = document.getElementById("settings-modal");
         if (m.classList.contains("hidden")) {
@@ -1945,37 +2466,21 @@
         }
       }
 
+      function saveNotifPrefs() {
+        const prefs = {};
+        ["shabbat", "holiday", "fast", "omer", "levana", "daf"].forEach(
+          (id) => {
+            const el = document.getElementById("notif_" + id);
+            if (el) prefs[id] = el.checked;
+          },
+        );
+        localStorage.setItem("moadim_notif_prefs", JSON.stringify(prefs));
+      }
+
       async function saveSettings() {
-        const loc = document.getElementById("settings-city").value;
         ZMANIM_METHOD = document.getElementById("settings-method").value;
         localStorage.setItem("moadim_method", ZMANIM_METHOD);
-
-        if (loc === "GPS") {
-          if ("geolocation" in navigator) {
-            navigator.geolocation.getCurrentPosition(
-              (pos) => {
-                GPS_COORDS = {
-                  lat: pos.coords.latitude,
-                  lon: pos.coords.longitude,
-                };
-                localStorage.setItem("moadim_gps", JSON.stringify(GPS_COORDS));
-                GEO_LOCATION = "GPS";
-                localStorage.setItem("moadim_city", "GPS");
-                fetchLiveCalendarData(); // Refresh everything for new location
-                toggleSettings();
-              },
-              (err) => {
-                alert("לא הצלחנו לאתר מיקום, נחזור להגדרה הקודמת.");
-                document.getElementById("settings-city").value = GEO_LOCATION;
-              },
-            );
-            return;
-          }
-        }
-
-        GEO_LOCATION = loc;
-        localStorage.setItem("moadim_city", loc);
-        fetchLiveCalendarData(); // Refresh everything for new location
+        fetchLiveCalendarData();
         toggleSettings();
       }
 
@@ -2173,7 +2678,8 @@
         const filtered = ALL_EVENTS.filter(
           (e) =>
             (filter === "all" || e.type === filter) &&
-            (e.name.includes(search) || e.heb.includes(search)),
+            (e.name.includes(search) ||
+              (e.titleStr && e.titleStr.includes(search))),
         );
 
         filtered.forEach((e) => {
@@ -2206,22 +2712,23 @@
                         <div class="flex items-center gap-4 md:gap-6 w-full md:w-auto">
                             <div class="w-14 h-14 md:w-16 md:h-16 shrink-0 bg-${color}-50 dark:bg-${color}-500/20 text-2xl md:text-3xl flex items-center justify-center rounded-2xl md:rounded-3xl shadow-inner border border-${color}-100 dark:border-${color}-500/30" aria-hidden="true">${e.icon}</div>
                             <div class="flex-1">
-                                <h3 class="font-bold text-slate-900 dark:text-white text-xl md:text-2xl mb-1">${e.name}</h3>
+                                <h3 class="font-bold text-slate-900 dark:text-white text-xl md:text-2xl mb-1 cursor-pointer hover:text-blue-500 transition-colors" onclick="openSefariaModal('${e.name}', '${e.titleStr || e.name}')">${e.name}</h3>
                                 <div class="text-slate-500 dark:text-slate-400 font-medium text-sm md:text-base">${dateDisplay}</div>
                                 ${extraTimesHtml}
                                 ${e.levanaString ? `${e.levanaString}` : ""}
                             </div>
                         </div>
                         <div class="flex md:flex-col items-center justify-between w-full md:w-auto md:items-end md:justify-center border-t border-slate-100 dark:border-slate-700 md:border-t-0 pt-3 md:pt-0 mt-2 md:mt-0">
-                            <div class="bg-${color}-50 dark:bg-${color}-500/20 text-${color}-700 dark:text-${color}-300 px-4 py-1.5 md:py-2 rounded-xl text-sm font-black md:mb-2" aria-label="זמן נותר">${diff <= 0 ? "היום" : `בעוד ${diff} ימים`}</div>
-                            <button onclick="downloadICS('${str}')" class="flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500 hover:text-blue-600 font-bold uppercase tracking-widest transition-colors bg-slate-50 dark:bg-slate-900/50 hover:bg-blue-50 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-blue-200" aria-label="סנכרן את ${e.name} ליומן">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg> סנכרן
+                            <div class="bg-${color}-50 dark:bg-${color}-500/20 text-${color}-700 dark:text-${color}-300 px-4 py-1.5 md:py-2 rounded-xl text-sm font-black md:mb-2" aria-label="זמן נותר">${diff <= 0 ? (CURRENT_LANG === "he" ? "היום" : "Today") : CURRENT_LANG === "he" ? `בעוד ${diff} ימים` : `In ${diff} Days`}</div>
+                            <button onclick="downloadICS('${str}')" class="flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500 hover:text-blue-600 font-bold uppercase tracking-widest transition-colors bg-slate-50 dark:bg-slate-900/50 hover:bg-blue-50 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-blue-200">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg> <span data-i18n-key="sync_mobile">סנכרן</span>
                             </button>
                         </div>
                     </article>`;
         });
         if (!filtered.length)
           c.innerHTML = `<div class="text-center py-10 text-slate-400 font-bold text-lg" role="alert">לא נמצאו מועדים תואמים.</div>`;
+        applyTranslations(); // Re-apply dynamically rendered text
       }
 
       function applyFilter(t) {
@@ -2341,6 +2848,143 @@
                     </div>`;
         }
       }
+
+      // --- Web Notifications Logic ---
+      function requestNotificationPermission() {
+        if (!("Notification" in window)) {
+          alert("הדפדפן שלך אינו תומך בהתראות פוש.");
+          return;
+        }
+        Notification.requestPermission().then((permission) => {
+          updateNotifStatusUI();
+          if (permission === "granted") {
+            new Notification(SITE_NAME, {
+              body: "התראות זמנים הופעלו בהצלחה!",
+              icon: "/icon-192.png",
+            });
+          }
+        });
+      }
+
+      function updateNotifStatusUI() {
+        const granted = Notification.permission === "granted";
+        const btn = document.getElementById("notif-master-toggle");
+        const options = document.getElementById("notif-options");
+        if (!btn || !options) return;
+
+        if (granted) {
+          btn.textContent = CURRENT_LANG === "he" ? "פעיל" : "Active";
+          btn.classList.replace("bg-blue-600", "bg-emerald-500");
+          options.classList.remove("opacity-50", "pointer-events-none");
+        } else {
+          btn.textContent = CURRENT_LANG === "he" ? "הפעל" : "Enable";
+          btn.classList.replace("bg-emerald-500", "bg-blue-600");
+          options.classList.add("opacity-50", "pointer-events-none");
+        }
+
+        const prefs = JSON.parse(
+          localStorage.getItem("moadim_notif_prefs") || "{}",
+        );
+        ["shabbat", "holiday", "fast", "omer", "levana", "daf"].forEach(
+          (id) => {
+            const el = document.getElementById("notif_" + id);
+            if (el) el.checked = prefs[id] !== false; // true by default if not set
+          },
+        );
+      }
+
+      setInterval(() => {
+        if (Notification.permission !== "granted") return;
+        const prefs = JSON.parse(
+          localStorage.getItem("moadim_notif_prefs") || "{}",
+        );
+        const now = new Date();
+        const todayStr = now.toISOString().split("T")[0];
+
+        const fireNotification = (id, title, body) => {
+          const key = `notif_fired_${id}_${todayStr}`;
+          if (!localStorage.getItem(key)) {
+            new Notification(title, { body: body, icon: "/icon-192.png" });
+            localStorage.setItem(key, "1");
+          }
+        };
+
+        const getDiffMins = (targetTime) =>
+          targetTime ? (targetTime - now) / 60000 : null;
+
+        if (prefs.shabbat !== false && window.SHABBAT_CANDLES_TIME) {
+          const diffMins = getDiffMins(window.SHABBAT_CANDLES_TIME);
+          if (diffMins !== null && diffMins > 0 && diffMins <= 30)
+            fireNotification(
+              "shabbat",
+              SITE_NAME,
+              "הדלקת נרות שבת בעוד כחצי שעה!",
+            );
+        }
+
+        if (prefs.holiday !== false && window.HOLIDAY_CANDLES_TIME) {
+          const diffMins = getDiffMins(window.HOLIDAY_CANDLES_TIME);
+          if (diffMins !== null && diffMins > 0 && diffMins <= 30)
+            fireNotification("holiday", SITE_NAME, "כניסת החג בעוד כחצי שעה!");
+        }
+
+        if (prefs.fast !== false && window.FAST_END_TIME) {
+          const diffMins = getDiffMins(window.FAST_END_TIME);
+          if (diffMins !== null && diffMins > 0 && diffMins <= 30)
+            fireNotification("fast", SITE_NAME, "הצום מסתיים בעוד כחצי שעה!");
+        }
+
+        if (
+          prefs.omer !== false &&
+          window.TZEIT_TIME &&
+          CURRENT_OMER_DAY >= 0 &&
+          CURRENT_OMER_DAY < 49
+        ) {
+          const diffMins = (now - window.TZEIT_TIME) / 60000;
+          if (diffMins >= 0 && diffMins <= 30)
+            fireNotification(
+              "omer",
+              SITE_NAME,
+              "צאת הכוכבים: הגיע הזמן לספירת העומר!",
+            );
+        }
+
+        if (prefs.daf !== false) {
+          if (
+            now.getHours() === 8 &&
+            now.getMinutes() >= 0 &&
+            now.getMinutes() <= 30
+          ) {
+            const dafName =
+              document.getElementById("daf-yomi-text").textContent;
+            if (dafName && dafName !== "מחשב..." && dafName !== "Loading...") {
+              fireNotification(
+                "daf",
+                "הדף היומי",
+                `הדף היומי להיום: ${dafName}`,
+              );
+            }
+          }
+        }
+
+        if (prefs.levana !== false && window.TZEIT_TIME) {
+          const diffMins = (now - window.TZEIT_TIME) / 60000;
+          if (diffMins >= 0 && diffMins <= 30) {
+            if (window.LEVANA_START_DATE === todayStr)
+              fireNotification(
+                "levana_start",
+                "קידוש לבנה",
+                "החל מהערב ניתן לברך ברכת הלבנה!",
+              );
+            if (window.LEVANA_END_DATE === todayStr)
+              fireNotification(
+                "levana_end",
+                "קידוש לבנה",
+                "הזדמנות אחרונה: מחר מסתיים זמן קידוש לבנה!",
+              );
+          }
+        }
+      }, 60000);
 
       initApp();
     </script>

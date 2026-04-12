@@ -205,8 +205,9 @@
       .gradient-bg {
         background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
       }
-      .bg-blue-elegant {
-        background: linear-gradient(180deg, #1d4ed8 0%, #1e3a8a 100%);
+      /* עיצוב אוקיינוס נעים וקריא */
+      .bg-ocean-readable {
+        background: linear-gradient(135deg, #0284c7 0%, #1d4ed8 100%);
       }
       .compass-ring {
         background: radial-gradient(
@@ -868,7 +869,6 @@
         <p class="text-slate-400 text-sm mb-10">
           כוון את המכשיר למציאת כיוון התפילה
         </p>
-
         <div
           class="relative w-64 h-64 mb-8 flex items-center justify-center"
           aria-hidden="true"
@@ -901,7 +901,6 @@
             class="absolute w-4 h-4 bg-white rounded-full z-10 shadow-[0_0_10px_rgba(255,255,255,0.5)]"
           ></div>
         </div>
-
         <p
           id="compass-status"
           class="text-blue-300 font-bold bg-blue-900/30 px-6 py-3 rounded-2xl w-full"
@@ -1311,7 +1310,7 @@
         if (day >= 7) {
           const w = Math.floor(day / 7);
           const d = day % 7;
-          text += `, שֶׁהֵם ${omerWeeksWords[w]}`;
+          text = `הַיּוֹם ${omerDaysWords[day]} לָעֹמֶר, שֶׁהֵם ${omerWeeksWords[w]}`;
           if (d > 0) text += ` ${omerDaysRemainder[d]}`;
         }
         return text + ".";
@@ -1344,17 +1343,17 @@
 
         if (theme === "dark") {
           html.classList.add("dark");
-          header.classList.remove("bg-blue-elegant");
+          header.classList.remove("bg-ocean-readable");
           header.classList.add("gradient-bg");
           iconSun.classList.remove("hidden");
         } else if (theme === "blue") {
           html.classList.remove("dark");
           header.classList.remove("gradient-bg");
-          header.classList.add("bg-blue-elegant");
+          header.classList.add("bg-ocean-readable");
           iconMoon.classList.remove("hidden");
         } else {
           html.classList.remove("dark");
-          header.classList.remove("bg-blue-elegant");
+          header.classList.remove("bg-ocean-readable");
           header.classList.add("gradient-bg");
           iconWave.classList.remove("hidden");
         }
@@ -1443,34 +1442,48 @@
       async function fetchLiveCalendarData() {
         try {
           const now = new Date();
-          const todayForZmanim = new Date();
-          todayForZmanim.setHours(0, 0, 0, 0);
-          const todayIsoForZmanim = todayForZmanim.toISOString().split("T")[0];
+
+          // Use exact local Gregorian date for UI
+          const todayDateUI = new Date();
+          const gy = todayDateUI.getFullYear();
+          const gm = String(todayDateUI.getMonth() + 1).padStart(2, "0");
+          const gd = String(todayDateUI.getDate()).padStart(2, "0");
+          const todayLocalIso = `${gy}-${gm}-${gd}`;
 
           // Fetch Zmanim First to determine if it's after Tzeit Hakochavim
           const zRes = await fetch(
-            `https://www.hebcal.com/zmanim?cfg=json&${getGeoParams()}&date=${todayIsoForZmanim}`,
+            `https://www.hebcal.com/zmanim?cfg=json&${getGeoParams()}&date=${todayLocalIso}`,
           );
           const zData = await zRes.json();
           const tzeitStr = zData.times.tzeit7083deg;
 
+          let isAfterTzeit = false;
+          if (tzeitStr && now >= new Date(tzeitStr)) {
+            isAfterTzeit = true;
+          }
+
+          let hebrewDateFetchIso = todayLocalIso;
           let dateForHebcal = new Date();
           dateForHebcal.setHours(0, 0, 0, 0);
 
-          if (tzeitStr && now >= new Date(tzeitStr)) {
+          if (isAfterTzeit) {
             dateForHebcal.setDate(dateForHebcal.getDate() + 1); // Advance Jewish day if after nightfall
+            const ty = dateForHebcal.getFullYear();
+            const tm = String(dateForHebcal.getMonth() + 1).padStart(2, "0");
+            const td = String(dateForHebcal.getDate()).padStart(2, "0");
+            hebrewDateFetchIso = `${ty}-${tm}-${td}`;
           }
-          const isoForHebcal = dateForHebcal.toISOString().split("T")[0];
 
           const dateRes = await fetch(
-            `https://www.hebcal.com/converter?cfg=json&date=${isoForHebcal}&g2h=1&strict=1`,
+            `https://www.hebcal.com/converter?cfg=json&date=${hebrewDateFetchIso}&g2h=1&strict=1`,
           );
           const dateData = await dateRes.json();
 
-          document.getElementById("stat-today").textContent =
-            getHebrewDateString(dateForHebcal) || dateData.hebrew;
+          document.getElementById("stat-today").textContent = dateData.hebrew;
+
+          // STRICTLY KEEP GREGORIAN DATE AS TODAY
           document.getElementById("stat-today-gregorian").textContent =
-            dateForHebcal.toLocaleDateString("he-IL", {
+            todayDateUI.toLocaleDateString("he-IL", {
               day: "2-digit",
               month: "2-digit",
               year: "numeric",
@@ -1487,23 +1500,30 @@
           });
 
           const omerContainer = document.getElementById("omer-container");
-          if (CURRENT_OMER_DAY > 0) {
+          if (CURRENT_OMER_DAY > 0 && CURRENT_OMER_DAY <= 49) {
             omerContainer.classList.remove("hidden");
             omerContainer.classList.add("flex");
             document.getElementById("omer-day-num").textContent =
               CURRENT_OMER_DAY;
             document.getElementById("omer-full-text").textContent =
-              generateOmerText(CURRENT_OMER_DAY).split(", ")[0];
-            const parts = generateOmerText(CURRENT_OMER_DAY).split(", ");
-            document.getElementById("omer-weeks").textContent =
-              parts.length > 1 ? parts[1] : "";
+              `היום ${omerDaysWords[CURRENT_OMER_DAY]} לעומר`;
+
+            let desc = "";
+            if (CURRENT_OMER_DAY >= 7) {
+              const w = Math.floor(CURRENT_OMER_DAY / 7);
+              const d = CURRENT_OMER_DAY % 7;
+              desc = `שהם ${omerWeeksWords[w]}`;
+              if (d > 0) desc += ` ${omerDaysRemainder[d]}`;
+              desc += ".";
+            }
+            document.getElementById("omer-weeks").textContent = desc;
           } else {
             omerContainer.classList.add("hidden");
             omerContainer.classList.remove("flex");
           }
 
           const dafRes = await fetch(
-            `https://www.hebcal.com/hebcal?v=1&cfg=json&F=on&start=${isoForHebcal}&end=${isoForHebcal}`,
+            `https://www.hebcal.com/hebcal?v=1&cfg=json&F=on&start=${hebrewDateFetchIso}&end=${hebrewDateFetchIso}`,
           );
           const dafData = await dafRes.json();
           const dafEvent = (dafData.items || []).find(
@@ -1517,8 +1537,49 @@
             );
           }
 
-          // Fetch Shabbat and Zmanim using adjusted Jewish Date!
-          await fetchZmanimAndShabbat(isoForHebcal);
+          renderZmanimGrid(zData);
+
+          // Fetch Shabbat using current ISO to anchor correctly
+          const sRes = await fetch(
+            `https://www.hebcal.com/shabbat?cfg=json&${getGeoParams()}&m=50&date=${todayLocalIso}`,
+          );
+          const sData = await sRes.json();
+          let p = "שבת",
+            c = "--:--",
+            h = "--:--",
+            eTitle = "";
+
+          const formatTimeStr = (iso) => {
+            if (!iso) return "--:--";
+            const d = new Date(iso);
+            return isNaN(d)
+              ? "--:--"
+              : d.toLocaleTimeString("he-IL", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                });
+          };
+
+          if (sData && sData.items) {
+            sData.items.forEach((i) => {
+              if (i.category === "parashat") {
+                p = i.hebrew;
+                eTitle = i.title;
+              }
+              if (
+                i.category === "candles" &&
+                i.title &&
+                i.title.includes("Candle")
+              )
+                c = formatTimeStr(i.date);
+              if (i.category === "havdalah") h = formatTimeStr(i.date);
+            });
+          }
+          document.getElementById("stat-parasha").textContent = p;
+          document.getElementById("parasha-link").href =
+            makeSefariaLink(eTitle);
+          document.getElementById("stat-shabbat-times").textContent =
+            `כניסה: ${c} | יציאה: ${h}`;
 
           const cy = dateForHebcal.getFullYear();
           const [y1, y2] = await Promise.all([
@@ -1736,40 +1797,6 @@
           );
           const zData = await zRes.json();
           renderZmanimGrid(zData);
-
-          const sRes = await fetch(
-            `https://www.hebcal.com/shabbat?cfg=json&${getGeoParams()}&m=50`,
-          );
-          const sData = await sRes.json();
-          let p = "שבת",
-            c = "--:--",
-            h = "--:--",
-            eTitle = "";
-
-          if (sData && sData.items) {
-            sData.items.forEach((i) => {
-              if (i.category === "parashat") {
-                p = i.hebrew;
-                eTitle = i.title;
-              }
-              if (i.category === "candles")
-                c = new Date(i.date).toLocaleTimeString("he-IL", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                });
-              if (i.category === "havdalah")
-                h = new Date(i.date).toLocaleTimeString("he-IL", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                });
-            });
-          }
-
-          document.getElementById("stat-parasha").textContent = p;
-          document.getElementById("parasha-link").href =
-            makeSefariaLink(eTitle);
-          document.getElementById("stat-shabbat-times").textContent =
-            `כניסה: ${c} | יציאה: ${h}`;
         } catch (e) {
           console.error(e);
         }

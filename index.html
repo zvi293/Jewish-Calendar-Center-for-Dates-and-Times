@@ -1,0 +1,2060 @@
+<!doctype html>
+<html lang="he" dir="rtl" class="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+
+    <!-- Primary Meta Tags -->
+    <title>הלוח היהודי - מרכז המועדים והזמנים | לוח שנה עברי חכם</title>
+    <meta
+      name="title"
+      content="הלוח היהודי - מרכז המועדים והזמנים | לוח שנה עברי חכם"
+    />
+    <meta
+      name="description"
+      content="הלוח היהודי החכם ביותר: זמני שבת והלכה מדויקים, מועדי ישראל, ספירת העומר, ברכת הלבנה, צומות, וסנכרון מלא ליומן סמסונג ולכל יומן אישי."
+    />
+    <meta
+      name="keywords"
+      content="לוח שנה עברי, מועדי ישראל, זמני שבת, כניסת שבת, יציאת שבת, זמני היום, ספירת העומר, ברכת הלבנה, חגים יהודיים, צומות, לוח שנה ליומן סמסונג, לוח שנה חכם"
+    />
+    <meta name="author" content="הלוח היהודי" />
+    <meta name="robots" content="index, follow" />
+    <meta name="language" content="Hebrew" />
+    <meta name="theme-color" content="#0f172a" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
+    <link rel="canonical" href="https://your-website-url.com" />
+
+    <!-- Favicon & App Icons (Magen David) -->
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='120' fill='%230f172a'/><path d='M256 120L374 324H138Z M256 392L374 188H138Z' fill='none' stroke='%233b82f6' stroke-width='36' stroke-linejoin='round'/></svg>"
+    />
+    <link
+      rel="apple-touch-icon"
+      href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='120' fill='%230f172a'/><path d='M256 120L374 324H138Z M256 392L374 188H138Z' fill='none' stroke='%233b82f6' stroke-width='36' stroke-linejoin='round'/></svg>"
+    />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://your-website-url.com" />
+    <meta property="og:title" content="הלוח היהודי - מרכז המועדים והזמנים" />
+    <meta
+      property="og:description"
+      content="מערכת חכמה לניהול זמן יהודי, סנכרון מועדים ליומן, זמני הלכה ופרשת שבוע."
+    />
+    <meta
+      property="og:image"
+      content="https://images.unsplash.com/photo-1544687595-654dbcc1266e?q=80&w=1200&auto=format&fit=crop"
+    />
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://your-website-url.com" />
+    <meta
+      property="twitter:title"
+      content="הלוח היהודי - מרכז המועדים והזמנים"
+    />
+    <meta
+      property="twitter:description"
+      content="מערכת חכמה לניהול זמן יהודי, סנכרון מועדים ליומן, זמני הלכה ופרשת שבוע."
+    />
+    <meta
+      property="twitter:image"
+      content="https://images.unsplash.com/photo-1544687595-654dbcc1266e?q=80&w=1200&auto=format&fit=crop"
+    />
+
+    <!-- Schema.org Markup -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "הלוח היהודי - מרכז המועדים והזמנים",
+        "description": "מערכת חכמה לניהול זמן יהודי, סנכרון מועדים ליומן, זמני הלכה ופרשת שבוע.",
+        "applicationCategory": "ProductivityApplication",
+        "operatingSystem": "All",
+        "inLanguage": "he",
+        "url": "https://your-website-url.com"
+      }
+    </script>
+
+    <link id="manifest-link" rel="manifest" href="" />
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = { darkMode: "class", theme: { extend: {} } };
+    </script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Assistant:wght@200;400;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        font-family: "Assistant", sans-serif;
+        transition:
+          background-color 0.5s ease,
+          color 0.5s ease;
+      }
+      .glass-card {
+        background: rgba(255, 255, 255, 0.07);
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+      }
+      .glass-card:hover {
+        background: rgba(255, 255, 255, 0.1);
+        transform: translateY(-2px);
+      }
+      .chip.active {
+        background-color: #2563eb;
+        color: white;
+        box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
+        border-color: #2563eb;
+      }
+      .event-card {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .event-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.1);
+      }
+      .loader {
+        border: 4px solid rgba(255, 255, 255, 0.1);
+        border-top: 4px solid #3b82f6;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto;
+      }
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+      .scrollbar-hide::-webkit-scrollbar {
+        display: none;
+      }
+      .scrollbar-hide {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+      select option {
+        background-color: #1e293b;
+        color: white;
+      }
+      .cal-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 6px;
+      }
+      .cal-header {
+        text-align: center;
+        font-weight: bold;
+        font-size: 0.85rem;
+        padding-bottom: 0.5rem;
+      }
+
+      .gradient-bg {
+        background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+      }
+      .compass-ring {
+        background: radial-gradient(
+          circle,
+          transparent 50%,
+          rgba(255, 255, 255, 0.05) 50%
+        );
+      }
+    </style>
+  </head>
+  <body
+    class="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200 pb-24"
+  >
+    <!-- Top Action Bar -->
+    <div
+      class="fixed top-0 left-0 right-0 z-50 px-4 py-3 flex justify-between items-center pointer-events-none"
+    >
+      <div class="pointer-events-auto flex gap-2">
+        <button
+          onclick="toggleSettings()"
+          class="bg-white/10 backdrop-blur-md border border-white/20 text-white p-2.5 rounded-full hover:bg-white/20 transition-all shadow-lg"
+          title="הגדרות אישיות"
+          aria-label="הגדרות"
+        >
+          <svg
+            class="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+            ></path>
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+            ></path>
+          </svg>
+        </button>
+        <button
+          onclick="toggleTheme()"
+          class="bg-white/10 backdrop-blur-md border border-white/20 text-white p-2.5 rounded-full hover:bg-white/20 transition-all shadow-lg"
+          title="תצוגת יום/לילה"
+          aria-label="החלף עיצוב"
+        >
+          <svg
+            id="theme-icon-moon"
+            class="w-5 h-5 hidden"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
+            ></path>
+          </svg>
+          <svg
+            id="theme-icon-sun"
+            class="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707M16.071 16.071l.707.707M7.929 7.929l.707.707M12 8a4 4 0 100 8 4 4 0 000-8z"
+            ></path>
+          </svg>
+        </button>
+        <button
+          onclick="openCompass()"
+          class="bg-white/10 backdrop-blur-md border border-white/20 text-white p-2.5 rounded-full hover:bg-white/20 transition-all shadow-lg"
+          title="מצפן לירושלים"
+          aria-label="מצפן"
+        >
+          <svg
+            class="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+            ></path>
+          </svg>
+        </button>
+        <button
+          onclick="shareApp()"
+          class="bg-white/10 backdrop-blur-md border border-white/20 text-white p-2.5 rounded-full hover:bg-white/20 transition-all shadow-lg"
+          title="שתף את האתר"
+          aria-label="שתף"
+        >
+          <svg
+            class="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
+            ></path>
+          </svg>
+        </button>
+      </div>
+      <div class="pointer-events-auto">
+        <button
+          onclick="downloadBulkICS()"
+          class="bg-blue-600 backdrop-blur-md border border-blue-500 text-white py-2 px-4 rounded-full hover:bg-blue-700 transition-all shadow-lg flex items-center gap-2"
+          aria-label="סנכרן הכל"
+        >
+          <svg
+            class="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+            ></path>
+          </svg>
+          <span
+            class="text-xs font-bold uppercase tracking-wider hidden md:inline"
+            >סנכרן את הלוח ליומן שלך</span
+          >
+          <span class="text-xs font-bold uppercase tracking-wider md:hidden"
+            >סנכרן ליומן</span
+          >
+        </button>
+      </div>
+    </div>
+
+    <!-- Hero Section -->
+    <header
+      id="hero-section"
+      class="gradient-bg pt-20 md:pt-24 pb-32 px-4 relative overflow-hidden"
+    >
+      <div class="absolute inset-0 z-0 opacity-10">
+        <svg
+          class="w-full h-full"
+          viewBox="0 0 100 100"
+          preserveAspectRatio="none"
+        >
+          <path d="M0 100 C 30 20 70 20 100 100 Z" fill="white"></path>
+        </svg>
+      </div>
+
+      <div class="relative z-10 max-w-5xl mx-auto text-center">
+        <a
+          href="https://nz-web.com/"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-white/10 border border-white/20 text-blue-50 text-xs md:text-sm font-bold hover:bg-white/20 hover:text-white transition-all mb-6 shadow-[0_0_20px_rgba(59,130,246,0.3)] backdrop-blur-md group"
+          aria-label="בניית אתר"
+        >
+          <span class="relative flex h-2.5 w-2.5">
+            <span
+              class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-300 opacity-75"
+            ></span>
+            <span
+              class="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-400"
+            ></span>
+          </span>
+          לבניית אתר פרימיום משלכם
+          <svg
+            class="w-4 h-4 mr-1 transform group-hover:-translate-x-1 transition-transform"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M10 19l-7-7m0 0l7-7m-7 7h18"
+            ></path>
+          </svg>
+        </a>
+
+        <h1
+          class="text-5xl md:text-7xl font-extrabold text-white mb-10 tracking-tighter"
+        >
+          הלוח <span class="text-blue-300">היהודי</span>
+        </h1>
+
+        <div id="loading-state" class="py-10 text-center" aria-live="polite">
+          <div class="loader mb-4"></div>
+          <p class="text-blue-200 font-bold animate-pulse">
+            מסנכרן נתונים עם לוח השנה העולמי...
+          </p>
+        </div>
+
+        <!-- Dashboard -->
+        <div
+          id="dashboard-state"
+          class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 hidden opacity-0 transition-opacity duration-500"
+        >
+          <article
+            class="glass-card p-5 md:p-8 rounded-[2rem] text-right flex flex-col justify-center"
+          >
+            <h2
+              class="text-blue-300 text-[10px] md:text-xs font-bold mb-1 uppercase tracking-widest opacity-90"
+            >
+              היום בתאריך
+            </h2>
+            <p
+              id="stat-today"
+              class="text-white text-lg md:text-2xl font-bold leading-tight"
+            >
+              --
+            </p>
+            <p
+              id="stat-today-gregorian"
+              class="text-blue-100 text-xs md:text-sm mt-1 opacity-80 font-medium"
+            >
+              --
+            </p>
+          </article>
+
+          <article
+            class="glass-card p-5 md:p-8 rounded-[2rem] text-right flex flex-col justify-center"
+          >
+            <h2
+              class="text-blue-300 text-[10px] md:text-xs font-bold mb-1 uppercase tracking-widest opacity-90"
+            >
+              ברכת הלבנה הקרובה
+            </h2>
+            <p
+              id="stat-moon"
+              class="text-white text-lg md:text-xl font-bold leading-tight"
+            >
+              --
+            </p>
+          </article>
+
+          <article
+            class="glass-card p-5 md:p-8 rounded-[2rem] text-right flex flex-col justify-center"
+          >
+            <h2
+              class="text-blue-300 text-[10px] md:text-xs font-bold mb-1 uppercase tracking-widest opacity-90"
+            >
+              המועד הבא
+            </h2>
+            <p
+              id="stat-next"
+              class="text-white text-lg md:text-xl font-bold leading-tight"
+            >
+              --
+            </p>
+          </article>
+
+          <article
+            class="glass-card p-5 md:p-6 rounded-[2rem] text-right flex flex-col justify-center relative"
+          >
+            <h2
+              class="text-blue-300 text-[10px] md:text-xs font-bold uppercase tracking-widest opacity-90 mb-1"
+            >
+              שבת קרובה
+            </h2>
+            <a
+              id="parasha-link"
+              href="#"
+              target="_blank"
+              rel="noopener"
+              class="text-white text-base md:text-lg font-bold mb-1 leading-tight hover:text-blue-200 transition-colors flex items-center gap-1 group"
+            >
+              <span id="stat-parasha">פרשת...</span>
+              <svg
+                class="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                ></path>
+              </svg>
+            </a>
+            <p
+              id="stat-shabbat-times"
+              class="text-blue-100 text-xs md:text-sm font-semibold opacity-90"
+            >
+              כניסה: --:-- | יציאה: --:--
+            </p>
+          </article>
+        </div>
+
+        <!-- Halachic Banner (Always Open) -->
+        <aside
+          id="halacha-banner"
+          class="hidden mt-4 glass-card rounded-[2rem] p-5 flex-col items-center text-sm text-blue-100 gap-4 opacity-0 transition-opacity duration-500 w-full max-w-2xl mx-auto"
+          aria-label="זמני הלכה"
+        >
+          <a
+            id="daf-yomi-link"
+            href="#"
+            target="_blank"
+            rel="noopener"
+            class="flex items-center justify-center gap-2 font-bold text-white bg-blue-600/40 hover:bg-blue-600/60 transition-colors px-6 py-2 rounded-xl border border-blue-400/30 w-auto group shadow-md"
+          >
+            <span>📖 הדף היומי:</span>
+            <span id="daf-yomi-text">מחשב...</span>
+          </a>
+
+          <div class="w-full border-t border-blue-400/20 pt-4">
+            <h2
+              class="text-center font-bold text-blue-300 mb-3 tracking-widest"
+            >
+              זמני היום
+            </h2>
+            <div
+              id="zmanim-details"
+              class="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 text-right w-full"
+            >
+              <div class="col-span-2 md:col-span-4 text-center animate-pulse">
+                מחשב זמנים...
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        <button
+          id="btn-open-calendar"
+          onclick="openCalendar()"
+          class="hidden mx-auto mt-6 bg-white/10 hover:bg-white/20 border border-white/30 text-white px-8 py-3 rounded-2xl font-bold transition-all items-center justify-center gap-2 backdrop-blur-md opacity-0"
+          aria-haspopup="dialog"
+        >
+          <svg
+            class="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+            ></path>
+          </svg>
+          פתח לוח שנה חודשי
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="max-w-4xl mx-auto px-4 -mt-16 relative z-20">
+      <!-- Search & Filters -->
+      <nav
+        class="bg-white dark:bg-slate-800 p-6 md:p-8 rounded-[2.5rem] shadow-2xl border border-slate-100 dark:border-slate-700 mb-8 transition-colors"
+        aria-label="סינון וחיפוש"
+      >
+        <div class="relative mb-6">
+          <input
+            type="search"
+            id="mainSearch"
+            placeholder="חפש חג, צום או זמן..."
+            class="w-full bg-slate-50 dark:bg-slate-900 dark:text-white border border-transparent dark:border-slate-700 rounded-2xl py-4 pr-14 pl-6 text-lg outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+            aria-label="חיפוש"
+          />
+          <svg
+            class="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 h-6 w-6"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            />
+          </svg>
+        </div>
+
+        <div
+          class="flex gap-2 overflow-x-auto pb-2 scrollbar-hide"
+          role="group"
+          aria-label="סינון אירועים"
+        >
+          <button
+            onclick="applyFilter('all')"
+            id="btn-all"
+            class="chip active bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-6 py-2 rounded-xl font-bold whitespace-nowrap"
+            aria-pressed="true"
+          >
+            הכל
+          </button>
+          <button
+            onclick="applyFilter('major')"
+            id="btn-major"
+            class="chip bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-6 py-2 rounded-xl font-bold whitespace-nowrap"
+            aria-pressed="false"
+          >
+            חגים
+          </button>
+          <button
+            onclick="applyFilter('fast')"
+            id="btn-fast"
+            class="chip bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-6 py-2 rounded-xl font-bold whitespace-nowrap"
+            aria-pressed="false"
+          >
+            צומות
+          </button>
+          <button
+            onclick="applyFilter('rosh-chodesh')"
+            id="btn-rosh-chodesh"
+            class="chip bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-6 py-2 rounded-xl font-bold whitespace-nowrap"
+            aria-pressed="false"
+          >
+            ראשי חודשים
+          </button>
+          <button
+            onclick="applyFilter('moon')"
+            id="btn-moon"
+            class="chip bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-6 py-2 rounded-xl font-bold whitespace-nowrap"
+            aria-pressed="false"
+          >
+            קידוש לבנה
+          </button>
+        </div>
+      </nav>
+
+      <!-- Omer Card -->
+      <section
+        id="omer-container"
+        class="hidden mb-10 bg-blue-600 p-8 rounded-[2rem] shadow-lg text-white flex-col md:flex-row items-center justify-between gap-6"
+        aria-label="ספירת העומר"
+      >
+        <div class="text-center md:text-right">
+          <h2
+            class="text-blue-200 text-sm font-bold uppercase tracking-widest mb-1"
+          >
+            ספירת העומר
+          </h2>
+          <p id="omer-full-text" class="text-3xl md:text-4xl font-black mb-1">
+            ...
+          </p>
+          <p id="omer-weeks" class="text-blue-100 opacity-90 italic mb-3">
+            ...
+          </p>
+          <button
+            onclick="openOmerModal()"
+            class="bg-white/20 hover:bg-white/30 text-white px-5 py-2 rounded-xl text-sm font-bold transition-colors"
+            aria-haspopup="dialog"
+          >
+            לנוסח הברכה והספירה המלא
+          </button>
+        </div>
+        <div
+          class="flex items-center justify-center w-24 h-24 bg-white/20 backdrop-blur-md rounded-full border-4 border-white/30 text-5xl font-black shrink-0"
+          id="omer-day-num"
+          aria-hidden="true"
+        >
+          -
+        </div>
+      </section>
+
+      <div
+        id="resultsGrid"
+        class="space-y-4 md:space-y-5 pb-20"
+        aria-live="polite"
+      ></div>
+    </main>
+
+    <!-- Omer Modal -->
+    <div
+      id="omer-modal"
+      class="fixed inset-0 z-[100] bg-slate-900/90 backdrop-blur-md hidden flex items-center justify-center p-4 opacity-0 transition-opacity duration-300"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="omer-modal-title"
+    >
+      <div
+        class="bg-white dark:bg-slate-800 w-full max-w-lg rounded-[2rem] shadow-[0_0_50px_rgba(0,0,0,0.5)] p-8 text-center relative flex flex-col items-center"
+      >
+        <button
+          onclick="closeOmerModal()"
+          class="absolute top-6 left-6 text-slate-400 hover:text-slate-600 dark:hover:text-white bg-slate-100 dark:bg-slate-700 p-3 rounded-full transition-colors"
+          aria-label="סגור"
+        >
+          <svg
+            class="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M6 18L18 6M6 6l12 12"
+            ></path>
+          </svg>
+        </button>
+        <h2
+          id="omer-modal-title"
+          class="text-2xl font-black text-slate-800 dark:text-white mb-6"
+        >
+          ספירת העומר
+        </h2>
+
+        <div class="text-right w-full space-y-6">
+          <div>
+            <h3 class="text-sm font-bold text-blue-500 mb-2">לשם יחוד:</h3>
+            <p
+              class="text-slate-600 dark:text-slate-300 text-sm leading-relaxed"
+            >
+              הִנְנִי מוּכָן וּמְזוּמָּן לְקַיֵּם מִצְוַת עֲשֵׂה שֶׁל סְפִירַת
+              הָעֹמֶר, כְּמוֹ שֶׁכָּתוּב בַּתּוֹרָה: וּסְפַרְתֶּם לָכֶם
+              מִמָּחֳרַת הַשַּׁבָּת מִיּוֹם הֲבִיאֲכֶם אֶת עֹמֶר הַתְּנוּפָה
+              שֶׁבַע שַׁבָּתוֹת תְּמִימֹת תִּהְיֶינָה. עַד מִמָּחֳרַת הַשַּׁבָּת
+              הַשְּׁבִיעִת תִּסְפְּרוּ חֲמִשִּׁים יוֹם.
+            </p>
+          </div>
+
+          <div
+            class="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-2xl border border-blue-100 dark:border-blue-800/50"
+          >
+            <p
+              class="text-lg font-bold text-slate-800 dark:text-white mb-3 text-center"
+            >
+              בָּרוּךְ אַתָּה ה' אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, אֲשֶׁר קִדְּשָׁנוּ
+              בְּמִצְוֹתָיו וְצִוָּנוּ עַל סְפִירַת הָעֹמֶר.
+            </p>
+            <p
+              id="omer-modal-text"
+              class="text-2xl md:text-3xl font-black text-blue-600 dark:text-blue-400 text-center leading-tight"
+            >
+              --
+            </p>
+          </div>
+
+          <div>
+            <p
+              class="text-slate-600 dark:text-slate-300 text-sm leading-relaxed text-center"
+            >
+              הָרַחֲמָן הוּא יַחֲזִיר לָנוּ עֲבוֹדַת בֵּית הַמִּקְדָּשׁ
+              לִמְקוֹמָהּ, בִּמְהֵרָה בְיָמֵינוּ אָמֵן סֶלָה.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Compass Modal -->
+    <div
+      id="compass-modal"
+      class="fixed inset-0 z-[100] bg-slate-900/95 backdrop-blur-md hidden flex items-center justify-center p-4 opacity-0 transition-opacity duration-300"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="compass-modal-title"
+    >
+      <div
+        class="bg-slate-800 w-full max-w-sm rounded-[3rem] shadow-[0_0_50px_rgba(0,0,0,0.5)] p-8 border border-white/10 text-center relative flex flex-col items-center"
+      >
+        <button
+          onclick="closeCompass()"
+          class="absolute top-6 left-6 text-slate-400 hover:text-white bg-white/5 p-3 rounded-full transition-colors"
+          aria-label="סגור"
+        >
+          <svg
+            class="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M6 18L18 6M6 6l12 12"
+            ></path>
+          </svg>
+        </button>
+        <h2
+          id="compass-modal-title"
+          class="text-2xl font-black text-white mb-1"
+        >
+          מצפן לירושלים
+        </h2>
+        <p class="text-slate-400 text-sm mb-10">
+          כוון את המכשיר למציאת כיוון התפילה
+        </p>
+
+        <div
+          class="relative w-64 h-64 mb-8 flex items-center justify-center"
+          aria-hidden="true"
+        >
+          <div
+            id="compass-ring"
+            class="absolute inset-0 rounded-full border-4 border-blue-500/20 compass-ring transition-transform duration-100 ease-out flex items-center justify-center"
+          >
+            <div
+              class="absolute top-2 w-3 h-3 bg-blue-500 rounded-full shadow-[0_0_15px_rgba(59,130,246,0.8)]"
+            ></div>
+            <div class="absolute top-6 text-blue-400/50 font-bold text-xs">
+              צפון מזהה
+            </div>
+          </div>
+          <div
+            id="compass-arrow"
+            class="absolute w-12 h-40 origin-bottom pb-20 transition-transform duration-100 ease-out"
+            style="transform: rotate(0deg)"
+          >
+            <svg
+              class="w-full h-full text-rose-500 drop-shadow-[0_0_15px_rgba(244,63,94,0.4)]"
+              fill="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path d="M12 2L4 22L12 17L20 22L12 2Z"></path>
+            </svg>
+          </div>
+          <div
+            class="absolute w-4 h-4 bg-white rounded-full z-10 shadow-[0_0_10px_rgba(255,255,255,0.5)]"
+          ></div>
+        </div>
+
+        <p
+          id="compass-status"
+          class="text-blue-300 font-bold bg-blue-900/30 px-6 py-3 rounded-2xl w-full"
+          aria-live="polite"
+        >
+          ממתין לחיישנים...<br /><span
+            class="text-[10px] font-normal opacity-70"
+            >(דורש אישור במכשיר נייד)</span
+          >
+        </p>
+        <button
+          id="btn-compass-permission"
+          class="hidden mt-4 bg-blue-600 text-white px-6 py-3 rounded-xl font-bold w-full"
+          onclick="requestCompassPermission()"
+        >
+          אשר גישה לחיישני כיוון
+        </button>
+      </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div
+      id="settings-modal"
+      class="fixed inset-0 z-[100] bg-slate-900/80 backdrop-blur-sm hidden flex items-center justify-center p-4 opacity-0 transition-opacity duration-300"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="settings-modal-title"
+    >
+      <div
+        class="bg-white dark:bg-slate-800 w-full max-w-md rounded-[2rem] shadow-2xl p-6 md:p-8 transform scale-95 transition-transform duration-300 relative"
+      >
+        <button
+          onclick="toggleSettings()"
+          class="absolute top-6 left-6 text-slate-400 hover:text-slate-600 dark:hover:text-white bg-slate-100 dark:bg-slate-700 p-2 rounded-full"
+          aria-label="סגור"
+        >
+          <svg
+            class="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M6 18L18 6M6 6l12 12"
+            ></path>
+          </svg>
+        </button>
+        <h2
+          id="settings-modal-title"
+          class="text-2xl font-black mb-6 text-slate-800 dark:text-white flex items-center gap-2"
+        >
+          הגדרות אישיות
+        </h2>
+        <div class="space-y-6">
+          <div>
+            <label
+              for="settings-city"
+              class="block text-sm font-bold text-slate-500 dark:text-slate-400 mb-2"
+              >מיקום לחישוב זמנים ושבת</label
+            >
+            <select
+              id="settings-city"
+              onchange="saveSettings()"
+              class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
+              aria-label="בחר עיר"
+            >
+              <option value="293918">פתח תקווה</option>
+              <option value="281184">ירושלים</option>
+              <option value="293397">תל אביב</option>
+              <option value="294801">חיפה</option>
+              <option value="295530">באר שבע</option>
+              <option value="293322">טבריה</option>
+              <option value="GPS">📍 אתר את המיקום שלי (GPS)</option>
+            </select>
+          </div>
+          <div>
+            <label
+              for="settings-method"
+              class="block text-sm font-bold text-slate-500 dark:text-slate-400 mb-2"
+              >שיטת חישוב זמני היום</label
+            >
+            <select
+              id="settings-method"
+              onchange="saveSettings()"
+              class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
+              aria-label="בחר שיטת חישוב"
+            >
+              <option value="GRA">הגר"א ובעל התניא (רגיל)</option>
+              <option value="MGA">מגן אברהם (מחמיר)</option>
+            </select>
+          </div>
+          <button
+            onclick="toggleSettings()"
+            class="w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl hover:bg-blue-700 mt-4 transition-colors"
+          >
+            שמור וסגור
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Calendar Modal -->
+    <div
+      id="calendar-modal"
+      class="fixed inset-0 z-[100] bg-slate-900/80 backdrop-blur-sm hidden flex items-center justify-center p-2 md:p-4 opacity-0 transition-opacity duration-300"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="cal-month-title"
+    >
+      <div
+        class="bg-slate-50 dark:bg-slate-900 w-full max-w-4xl rounded-[2rem] shadow-2xl overflow-hidden transform scale-95 transition-transform duration-300 flex flex-col max-h-[95vh]"
+      >
+        <div
+          class="bg-slate-900 text-white p-5 flex justify-between items-center shadow-md"
+        >
+          <div class="flex items-center gap-2 md:gap-4">
+            <button
+              onclick="changeMonth(-1)"
+              class="bg-white/10 hover:bg-white/20 p-2 rounded-full transition-colors"
+              aria-label="חודש קודם"
+            >
+              <svg
+                class="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 5l7 7-7 7"
+                ></path>
+              </svg>
+            </button>
+
+            <div class="text-center min-w-[100px] md:min-w-[120px]">
+              <h2 class="text-xl md:text-3xl font-black" id="cal-month-title">
+                לוח שנה
+              </h2>
+              <p
+                class="text-blue-300 text-xs md:text-sm mt-1"
+                id="cal-month-heb"
+              >
+                --
+              </p>
+            </div>
+
+            <button
+              onclick="changeMonth(1)"
+              class="bg-white/10 hover:bg-white/20 p-2 rounded-full transition-colors"
+              aria-label="חודש הבא"
+            >
+              <svg
+                class="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M15 19l-7-7 7-7"
+                ></path>
+              </svg>
+            </button>
+
+            <button
+              onclick="resetMonth()"
+              class="hidden md:block bg-blue-600 hover:bg-blue-500 text-xs font-bold px-3 py-1.5 rounded-lg ml-2 transition-colors"
+              aria-label="חזור להיום"
+            >
+              היום
+            </button>
+          </div>
+          <button
+            onclick="closeCalendar()"
+            class="bg-white/10 hover:bg-white/20 p-2 rounded-full transition-colors"
+            aria-label="סגור"
+          >
+            <svg
+              class="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              ></path>
+            </svg>
+          </button>
+        </div>
+        <div class="p-3 md:p-6 overflow-y-auto flex-1">
+          <div class="cal-grid mb-2" role="row">
+            <div class="cal-header text-rose-500" role="columnheader">א'</div>
+            <div class="cal-header dark:text-slate-400" role="columnheader">
+              ב'
+            </div>
+            <div class="cal-header dark:text-slate-400" role="columnheader">
+              ג'
+            </div>
+            <div class="cal-header dark:text-slate-400" role="columnheader">
+              ד'
+            </div>
+            <div class="cal-header dark:text-slate-400" role="columnheader">
+              ה'
+            </div>
+            <div class="cal-header dark:text-slate-400" role="columnheader">
+              ו'
+            </div>
+            <div class="cal-header text-blue-500" role="columnheader">ש'</div>
+          </div>
+          <div id="cal-days-grid" class="cal-grid" role="grid"></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // --- Core Variables & Setup ---
+      const manifestJSON = {
+        name: "הלוח היהודי",
+        short_name: "הלוח היהודי",
+        start_url: window.location.href,
+        display: "standalone",
+        background_color: "#0f172a",
+        theme_color: "#0f172a",
+        orientation: "portrait",
+        icons: [
+          {
+            src: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='120' fill='%230f172a'/><path d='M256 120L374 324H138Z M256 392L374 188H138Z' fill='none' stroke='%233b82f6' stroke-width='36' stroke-linejoin='round'/></svg>",
+            sizes: "512x512",
+            type: "image/svg+xml",
+            purpose: "any maskable",
+          },
+        ],
+      };
+      const manifestBlob = new Blob([JSON.stringify(manifestJSON)], {
+        type: "application/json",
+      });
+      document.getElementById("manifest-link").href =
+        URL.createObjectURL(manifestBlob);
+
+      const TODAY = new Date();
+      TODAY.setHours(0, 0, 0, 0);
+      let ALL_EVENTS = [];
+      let CURRENT_OMER_DAY = 0;
+      let GEO_LOCATION = localStorage.getItem("moadim_city") || "293918";
+      let ZMANIM_METHOD = localStorage.getItem("moadim_method") || "GRA";
+      let GPS_COORDS = JSON.parse(localStorage.getItem("moadim_gps")) || null;
+      let compassListener = null;
+      let CALENDAR_DISPLAY_DATE = new Date(); // Added for month navigation
+
+      const daysOfWeek = [
+        "ראשון",
+        "שני",
+        "שלישי",
+        "רביעי",
+        "חמישי",
+        "שישי",
+        "שבת",
+      ];
+      const hebDaysLetters = [
+        "",
+        "א'",
+        "ב'",
+        "ג'",
+        "ד'",
+        "ה'",
+        "ו'",
+        "ז'",
+        "ח'",
+        "ט'",
+        "י'",
+        'י"א',
+        'י"ב',
+        'י"ג',
+        'י"ד',
+        'ט"ו',
+        'ט"ז',
+        'י"ז',
+        'י"ח',
+        'י"ט',
+        "כ'",
+        'כ"א',
+        'כ"ב',
+        'כ"ג',
+        'כ"ד',
+        'כ"ה',
+        'כ"ו',
+        'כ"ז',
+        'כ"ח',
+        'כ"ט',
+        "ל'",
+      ];
+      const hebDateFormatter = new Intl.DateTimeFormat("he-IL-u-ca-hebrew", {
+        day: "numeric",
+        month: "long",
+      });
+
+      function shareApp() {
+        const title = "הלוח היהודי";
+        const text =
+          "מערכת חכמה לניהול זמן יהודי, זמני הלכה וסנכרון ליומן. כנס לראות:";
+        const url = window.location.href;
+
+        if (navigator.share) {
+          navigator
+            .share({ title: title, text: text, url: url })
+            .catch(console.error);
+        } else {
+          navigator.clipboard.writeText(`${text} ${url}`).then(() => {
+            alert("הקישור הועתק ללוח בצירוף טקסט קצר. אפשר להדביק בוואטסאפ!");
+          });
+        }
+      }
+
+      function toggleTheme() {
+        document.documentElement.classList.toggle("dark");
+        localStorage.setItem(
+          "moadim_theme",
+          document.documentElement.classList.contains("dark")
+            ? "dark"
+            : "light",
+        );
+        document.getElementById("theme-icon-sun").classList.toggle("hidden");
+        document.getElementById("theme-icon-moon").classList.toggle("hidden");
+      }
+
+      function initApp() {
+        if (
+          localStorage.getItem("moadim_theme") === "dark" ||
+          (!("moadim_theme" in localStorage) &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches)
+        ) {
+          document.documentElement.classList.add("dark");
+          document.getElementById("theme-icon-sun").classList.add("hidden");
+          document.getElementById("theme-icon-moon").classList.remove("hidden");
+        }
+
+        document.getElementById("settings-city").value = GEO_LOCATION;
+        document.getElementById("settings-method").value = ZMANIM_METHOD;
+
+        const cachedEvents = localStorage.getItem("moadim_cached_events");
+        if (cachedEvents) {
+          ALL_EVENTS = JSON.parse(cachedEvents);
+          showDashboard();
+          render();
+        }
+        fetchLiveCalendarData();
+      }
+
+      function getHebrewDateString(date) {
+        try {
+          return hebDateFormatter
+            .format(date)
+            .replace(/\d+/, (m) => hebDaysLetters[parseInt(m)] || m);
+        } catch (e) {
+          return "";
+        }
+      }
+
+      function getApproxZmanim(date) {
+        const m = date.getMonth() + 1;
+        const zmanim = {
+          1: { s: "17:15", e: "05:20" },
+          2: { s: "17:40", e: "05:00" },
+          3: { s: "18:00", e: "04:30" },
+          4: { s: "19:20", e: "04:50" },
+          5: { s: "19:45", e: "04:30" },
+          6: { s: "20:10", e: "04:15" },
+          7: { s: "20:10", e: "04:30" },
+          8: { s: "19:40", e: "04:50" },
+          9: { s: "18:50", e: "05:10" },
+          10: { s: "18:10", e: "05:30" },
+          11: { s: "17:00", e: "05:00" },
+          12: { s: "16:50", e: "05:10" },
+        };
+        return zmanim[m] || { s: "18:00", e: "05:00" };
+      }
+
+      function makeSefariaLink(englishTitle) {
+        if (!englishTitle) return "#";
+        let clean = englishTitle.replace("Parashat ", "").replace(" ", "_");
+        if (/\d/.test(clean)) clean = clean.replace("_", ".");
+        return `https://www.sefaria.org.il/${clean}?lang=he`;
+      }
+
+      function getGeoParams() {
+        if (GEO_LOCATION === "GPS" && GPS_COORDS)
+          return `geo=pos&latitude=${GPS_COORDS.lat}&longitude=${GPS_COORDS.lon}&tzid=Asia/Jerusalem`;
+        return `geonameid=${GEO_LOCATION}`;
+      }
+
+      function generateOmerText(day) {
+        if (day === 1) return "יוֹם אֶחָד לָעֹמֶר";
+        if (day === 2) return "שְׁנֵי יָמִים לָעֹמֶר";
+        let text = `${day} יוֹם`;
+        const w = Math.floor(day / 7);
+        const d = day % 7;
+        if (w > 0) {
+          text += `, שֶׁהֵם `;
+          if (w === 1) text += `שָׁבוּעַ אֶחָד`;
+          else if (w === 2) text += `שְׁנֵי שָׁבוּעוֹת`;
+          else if (w === 3) text += `שְׁלֹשָׁה שָׁבוּעוֹת`;
+          else if (w === 4) text += `אַרְבָּעָה שָׁבוּעוֹת`;
+          else if (w === 5) text += `חֲמִשָּׁה שָׁבוּעוֹת`;
+          else if (w === 6) text += `שִׁשָּׁה שָׁבוּעוֹת`;
+          else if (w === 7) text += `שִׁבְעָה שָׁבוּעוֹת`;
+
+          if (d === 1) text += ` וְיוֹם אֶחָד`;
+          else if (d === 2) text += ` וּשְׁנֵי יָמִים`;
+          else if (d === 3) text += ` וּשְׁלֹשָׁה יָמִים`;
+          else if (d === 4) text += ` וְאַרְבָּעָה יָמִים`;
+          else if (d === 5) text += ` וַחֲמִשָּׁה יָמִים`;
+          else if (d === 6) text += ` וְשִׁשָּׁה יָמִים`;
+        }
+        return `הַיּוֹם ${text} לָעֹמֶר`;
+      }
+
+      function openOmerModal() {
+        document.getElementById("omer-modal-text").textContent =
+          generateOmerText(CURRENT_OMER_DAY);
+        const m = document.getElementById("omer-modal");
+        m.classList.remove("hidden");
+        setTimeout(() => m.classList.remove("opacity-0"), 10);
+      }
+
+      function closeOmerModal() {
+        const m = document.getElementById("omer-modal");
+        m.classList.add("opacity-0");
+        setTimeout(() => m.classList.add("hidden"), 300);
+      }
+
+      async function fetchLiveCalendarData() {
+        try {
+          const todayIso = TODAY.toISOString().split("T")[0];
+          const dateRes = await fetch(
+            `https://www.hebcal.com/converter?cfg=json&date=${todayIso}&g2h=1&strict=1`,
+          );
+          const dateData = await dateRes.json();
+
+          document.getElementById("stat-today").textContent =
+            getHebrewDateString(TODAY) || dateData.hebrew;
+          document.getElementById("stat-today-gregorian").textContent =
+            TODAY.toLocaleDateString("he-IL", {
+              day: "2-digit",
+              month: "2-digit",
+              year: "numeric",
+            });
+
+          (dateData.events || []).forEach((e) => {
+            if (e.includes("Omer")) {
+              const match = e.match(/(\d+)/);
+              if (match && !isNaN(parseInt(match[1]))) {
+                CURRENT_OMER_DAY = parseInt(match[1]);
+                document
+                  .getElementById("omer-container")
+                  .classList.remove("hidden");
+                document.getElementById("omer-container").classList.add("flex");
+                document.getElementById("omer-day-num").textContent =
+                  CURRENT_OMER_DAY;
+                document.getElementById("omer-full-text").textContent =
+                  `היום ${CURRENT_OMER_DAY} ימים לעומר`;
+                const w = Math.floor(CURRENT_OMER_DAY / 7),
+                  d = CURRENT_OMER_DAY % 7;
+                let desc = w > 0 ? `${w} שבועות` : "";
+                if (w > 0 && d > 0) desc += " ו-";
+                if (d > 0) desc += `${d} ימים`;
+                document.getElementById("omer-weeks").textContent = desc
+                  ? `שהם ${desc}.`
+                  : "";
+              }
+            }
+          });
+
+          const dafRes = await fetch(
+            `https://www.hebcal.com/hebcal?v=1&cfg=json&F=on&start=${todayIso}&end=${todayIso}`,
+          );
+          const dafData = await dafRes.json();
+          const dafEvent = (dafData.items || []).find(
+            (i) => i.category === "dafyomi",
+          );
+          if (dafEvent) {
+            document.getElementById("daf-yomi-text").textContent =
+              dafEvent.hebrew.replace("דף יומי: ", "");
+            document.getElementById("daf-yomi-link").href = makeSefariaLink(
+              dafEvent.title,
+            );
+          }
+
+          await fetchZmanimAndShabbat(todayIso);
+
+          const cy = TODAY.getFullYear();
+          const [y1, y2] = await Promise.all([
+            fetch(
+              `https://www.hebcal.com/hebcal?v=1&cfg=json&year=${cy}&i=on&maj=on&min=on&nx=on&mf=on&ss=on&mod=on`,
+            ).then((r) => r.json()),
+            fetch(
+              `https://www.hebcal.com/hebcal?v=1&cfg=json&year=${cy + 1}&i=on&maj=on&min=on&nx=on&mf=on&ss=on&mod=on`,
+            ).then((r) => r.json()),
+          ]);
+
+          let newEvents = [];
+          const rcCounts = {};
+          [...y1.items, ...y2.items].forEach((ev) => {
+            if (ev.category === "roshchodesh")
+              rcCounts[ev.hebrew] = (rcCounts[ev.hebrew] || 0) + 1;
+          });
+
+          [...y1.items, ...y2.items].forEach((ev) => {
+            const eventDate = new Date(ev.date);
+            eventDate.setHours(0, 0, 0, 0);
+            if (eventDate < TODAY && ev.category !== "roshchodesh") return;
+
+            const forbidden = [
+              "Atzmaut",
+              "Herzl",
+              "Zikaron",
+              "Shoah",
+              "Rabin",
+              "Aliyah",
+              "Family",
+              "Sigd",
+              "Zionism",
+              "Jabotinsky",
+              "עצמאות",
+              "הרצל",
+              "זיכרון",
+              "שואה",
+              "רבין",
+              "סיגד",
+              "ז'בוטינסקי",
+            ];
+            if (
+              forbidden.some(
+                (w) =>
+                  (ev.title && ev.title.includes(w)) ||
+                  (ev.hebrew && ev.hebrew.includes(w)),
+              )
+            )
+              return;
+
+            let type = "minor",
+              icon = "📅";
+
+            if (ev.category === "roshchodesh") {
+              let rcName = ev.hebrew;
+              if (rcCounts[ev.hebrew] > 1) {
+                const countSoFar = newEvents.filter(
+                  (x) => x.originalName === ev.hebrew,
+                ).length;
+                rcName = `${ev.hebrew} - יום ${countSoFar === 0 ? "א'" : "ב'"}`;
+              }
+
+              if (
+                !newEvents.some((x) => x.name === rcName && x.date === ev.date)
+              ) {
+                newEvents.push({
+                  name: rcName,
+                  originalName: ev.hebrew,
+                  date: ev.date,
+                  type: "rosh-chodesh",
+                  heb: rcName,
+                  icon: "🌑",
+                });
+              }
+
+              if (
+                newEvents.filter((x) => x.originalName === ev.hebrew).length ===
+                1
+              ) {
+                const startL = new Date(ev.date);
+                startL.setDate(startL.getDate() + 3);
+                const endL = new Date(ev.date);
+                endL.setDate(endL.getDate() + 14);
+
+                if (endL >= TODAY) {
+                  const name = `קידוש לבנה - ${ev.hebrew.replace("ראש חודש ", "").split(" (")[0].trim()}`;
+                  const dStr =
+                    startL > TODAY
+                      ? startL.toISOString().split("T")[0]
+                      : TODAY.toISOString().split("T")[0];
+
+                  if (
+                    !newEvents.some((x) => x.name === name && x.type === "moon")
+                  ) {
+                    const startZman = getApproxZmanim(startL).s;
+                    const endZman = getApproxZmanim(endL).e;
+
+                    const levanaHTML = `
+                                    <div class="mt-2.5 flex flex-col gap-1.5 text-xs md:text-sm bg-slate-50 dark:bg-slate-900/50 p-2.5 rounded-xl border border-slate-100 dark:border-slate-700">
+                                        <div class="flex items-center justify-between"><div class="flex items-center gap-2"><div class="w-2 h-2 rounded-full bg-emerald-400"></div><span class="font-bold text-slate-700 dark:text-slate-300">תחילת זמן:</span> ${daysOfWeek[startL.getDay()]} | ${getHebrewDateString(startL)}</div><span class="font-black text-emerald-600 dark:text-emerald-400 ml-2 text-left" dir="ltr">${startZman}</span></div>
+                                        <div class="flex items-center justify-between"><div class="flex items-center gap-2"><div class="w-2 h-2 rounded-full bg-rose-400"></div><span class="font-bold text-slate-700 dark:text-slate-300">סוף זמן:</span> ${daysOfWeek[endL.getDay()]} | ${getHebrewDateString(endL)}</div><span class="font-black text-rose-600 dark:text-rose-400 ml-2 text-left" dir="ltr">${endZman}</span></div>
+                                    </div>`;
+
+                    newEvents.push({
+                      name: name,
+                      date: dStr,
+                      endDate: endL.toISOString().split("T")[0],
+                      type: "moon",
+                      heb:
+                        startL > TODAY
+                          ? "זמן הברכה יתחיל בקרוב"
+                          : "ניתן לברך כעת",
+                      icon: "🌙",
+                      levanaString: levanaHTML,
+                    });
+                  }
+                }
+              }
+              return;
+            }
+
+            if (eventDate < TODAY) return;
+
+            if (ev.category === "fast" || /Tzom|Ta'anit|Tisha/.test(ev.title)) {
+              type = "fast";
+              icon = "⚖️";
+            } else if (ev.category === "holiday") {
+              type = ev.subcat === "major" ? "major" : "minor";
+              if (ev.title.includes("Pesach")) icon = "🍷";
+              else if (ev.title.includes("Rosh Hashana")) icon = "🍎";
+              else if (ev.title.includes("Yom Kippur")) {
+                icon = "🕊️";
+                type = "fast";
+              } else if (ev.title.includes("Sukkot")) icon = "🌿";
+              else if (ev.title.includes("Hanukkah")) icon = "🕎";
+              else if (ev.title.includes("Purim")) icon = "🎭";
+              else if (ev.title.includes("Shavuot")) icon = "📜";
+              else if (ev.title.includes("Lag B'Omer")) icon = "🔥";
+              else if (ev.title.includes("Tu B'Av")) icon = "💖";
+              else if (ev.title.includes("Tu BiShvat")) icon = "🌳";
+            } else return;
+
+            if (
+              !newEvents.some((x) => x.name === ev.hebrew && x.date === ev.date)
+            ) {
+              newEvents.push({
+                name: ev.hebrew,
+                date: ev.date,
+                type: type,
+                heb: ev.hebrew,
+                icon: icon,
+              });
+            }
+          });
+
+          ALL_EVENTS = newEvents
+            .filter((e) => new Date(e.date).setHours(0, 0, 0, 0) >= TODAY)
+            .sort((a, b) => new Date(a.date) - new Date(b.date));
+          localStorage.setItem(
+            "moadim_cached_events",
+            JSON.stringify(ALL_EVENTS),
+          );
+
+          showDashboard();
+
+          const nextH = ALL_EVENTS.find(
+            (e) => e.type === "major" || e.type === "fast",
+          );
+          if (nextH)
+            document.getElementById("stat-next").innerHTML =
+              `${nextH.name} <br><span class="text-sm font-normal opacity-80">(בעוד ${getDaysDiff(nextH.date)} ימים)</span>`;
+
+          const nextM = ALL_EVENTS.find((e) => e.type === "moon");
+          if (nextM)
+            document.getElementById("stat-moon").innerHTML =
+              `${nextM.name.replace("קידוש לבנה - ", "")} <br><span class="text-sm font-normal opacity-80">(בעוד ${getDaysDiff(nextM.date)} ימים)</span>`;
+
+          render();
+          buildMonthCalendar();
+        } catch (err) {
+          console.error(err);
+          if (ALL_EVENTS.length === 0)
+            document.getElementById("loading-state").innerHTML =
+              '<p class="text-red-400 font-bold">לא ניתן למשוך נתונים כעת. בדוק חיבור אינטרנט.</p>';
+        }
+      }
+
+      function showDashboard() {
+        document.getElementById("loading-state").classList.add("hidden");
+        const dash = document.getElementById("dashboard-state");
+        const banner = document.getElementById("halacha-banner");
+        const btn = document.getElementById("btn-open-calendar");
+        dash.classList.remove("hidden");
+        banner.classList.remove("hidden");
+        banner.classList.add("flex");
+        btn.classList.remove("hidden");
+        btn.classList.add("flex");
+        setTimeout(() => {
+          dash.classList.remove("opacity-0");
+          banner.classList.remove("opacity-0");
+          btn.classList.remove("opacity-0");
+        }, 50);
+      }
+
+      async function fetchZmanimAndShabbat(dateIso) {
+        document.getElementById("stat-shabbat-times").innerHTML =
+          '<span class="animate-pulse">מחשב...</span>';
+        const detailsGrid = document.getElementById("zmanim-details");
+        detailsGrid.innerHTML =
+          '<div class="col-span-2 md:col-span-4 text-center animate-pulse">מחשב זמנים...</div>';
+
+        try {
+          const zRes = await fetch(
+            `https://www.hebcal.com/zmanim?cfg=json&${getGeoParams()}&date=${dateIso}`,
+          );
+          const zData = await zRes.json();
+          const ft = (iso) =>
+            iso
+              ? new Date(iso).toLocaleTimeString("he-IL", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })
+              : "--:--";
+
+          const alot = ft(zData.times.alotHaShachar);
+          const netz = ft(zData.times.sunrise);
+          const shma = ft(
+            ZMANIM_METHOD === "MGA"
+              ? zData.times.sofZmanShmaMGA
+              : zData.times.sofZmanShma,
+          );
+          const tfilla = ft(
+            ZMANIM_METHOD === "MGA"
+              ? zData.times.sofZmanTfillaMGA
+              : zData.times.sofZmanTfilla,
+          );
+          const chatzot = ft(zData.times.chatzot);
+          const mincha = ft(zData.times.minchaGedola);
+          const shkia = ft(zData.times.sunset);
+          const tzeit = ft(zData.times.tzeit7083deg);
+
+          detailsGrid.innerHTML = `
+                    <div class="bg-blue-900/40 border border-blue-400/20 rounded-xl p-2"><span class="text-blue-300/70 text-[10px] block">עלות השחר</span><span class="font-bold text-sm text-white">${alot}</span></div>
+                    <div class="bg-blue-900/40 border border-blue-400/20 rounded-xl p-2"><span class="text-blue-300/70 text-[10px] block">הנץ החמה</span><span class="font-bold text-sm text-white">${netz}</span></div>
+                    <div class="bg-blue-900/40 border border-blue-400/20 rounded-xl p-2"><span class="text-blue-300/70 text-[10px] block">סוף ק"ש (${ZMANIM_METHOD})</span><span class="font-bold text-sm text-white">${shma}</span></div>
+                    <div class="bg-blue-900/40 border border-blue-400/20 rounded-xl p-2"><span class="text-blue-300/70 text-[10px] block">סוף תפילה (${ZMANIM_METHOD})</span><span class="font-bold text-sm text-white">${tfilla}</span></div>
+                    <div class="bg-blue-900/40 border border-blue-400/20 rounded-xl p-2"><span class="text-blue-300/70 text-[10px] block">חצות היום</span><span class="font-bold text-sm text-white">${chatzot}</span></div>
+                    <div class="bg-blue-900/40 border border-blue-400/20 rounded-xl p-2"><span class="text-blue-300/70 text-[10px] block">מנחה גדולה</span><span class="font-bold text-sm text-white">${mincha}</span></div>
+                    <div class="bg-blue-900/40 border border-blue-400/20 rounded-xl p-2"><span class="text-blue-300/70 text-[10px] block">שקיעה</span><span class="font-bold text-sm text-white">${shkia}</span></div>
+                    <div class="bg-blue-900/40 border border-blue-400/20 rounded-xl p-2"><span class="text-blue-300/70 text-[10px] block">צאת הכוכבים</span><span class="font-bold text-sm text-white">${tzeit}</span></div>
+                `;
+
+          const sRes = await fetch(
+            `https://www.hebcal.com/shabbat?cfg=json&${getGeoParams()}&m=50`,
+          );
+          const sData = await sRes.json();
+          let p = "שבת",
+            c = "--:--",
+            h = "--:--",
+            eTitle = "";
+          sData.items.forEach((i) => {
+            if (i.category === "parashat") {
+              p = i.hebrew;
+              eTitle = i.title;
+            }
+            if (i.category === "candles") c = ft(i.date);
+            if (i.category === "havdalah") h = ft(i.date);
+          });
+
+          document.getElementById("stat-parasha").textContent = p;
+          document.getElementById("parasha-link").href =
+            makeSefariaLink(eTitle);
+          document.getElementById("stat-shabbat-times").textContent =
+            `כניסה: ${c} | יציאה: ${h}`;
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      async function fetchFastTimes(name, dateStr, elementId) {
+        try {
+          let isMajorFast =
+            name.includes("Kippur") ||
+            name.includes("Av") ||
+            name.includes("כיפור") ||
+            name.includes("באב");
+          let startStr = "",
+            endStr = "";
+
+          if (isMajorFast) {
+            let prevDay = new Date(dateStr);
+            prevDay.setDate(prevDay.getDate() - 1);
+            let prevIso = prevDay.toISOString().split("T")[0];
+            let [resPrev, resCurr] = await Promise.all([
+              fetch(
+                `https://www.hebcal.com/zmanim?cfg=json&${getGeoParams()}&date=${prevIso}`,
+              ).then((r) => r.json()),
+              fetch(
+                `https://www.hebcal.com/zmanim?cfg=json&${getGeoParams()}&date=${dateStr}`,
+              ).then((r) => r.json()),
+            ]);
+            startStr = new Date(resPrev.times.sunset).toLocaleTimeString(
+              "he-IL",
+              { hour: "2-digit", minute: "2-digit" },
+            );
+            endStr = new Date(resCurr.times.tzeit7083deg).toLocaleTimeString(
+              "he-IL",
+              { hour: "2-digit", minute: "2-digit" },
+            );
+          } else {
+            let res = await fetch(
+              `https://www.hebcal.com/zmanim?cfg=json&${getGeoParams()}&date=${dateStr}`,
+            ).then((r) => r.json());
+            startStr = new Date(res.times.alotHaShachar).toLocaleTimeString(
+              "he-IL",
+              { hour: "2-digit", minute: "2-digit" },
+            );
+            endStr = new Date(res.times.tzeit7083deg).toLocaleTimeString(
+              "he-IL",
+              { hour: "2-digit", minute: "2-digit" },
+            );
+          }
+
+          const el = document.getElementById(elementId);
+          if (el) {
+            el.innerHTML = `<span class="bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300 px-2 py-1 rounded-lg border border-rose-200 dark:border-rose-800">תחילת צום: <strong dir="ltr">${startStr}</strong></span> <span class="bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300 px-2 py-1 rounded-lg border border-rose-200 dark:border-rose-800">סיום צום: <strong dir="ltr">${endStr}</strong></span>`;
+          }
+        } catch (err) {
+          const el = document.getElementById(elementId);
+          if (el) el.innerHTML = "";
+        }
+      }
+
+      function toggleSettings() {
+        const m = document.getElementById("settings-modal");
+        if (m.classList.contains("hidden")) {
+          m.classList.remove("hidden");
+          setTimeout(() => {
+            m.classList.remove("opacity-0");
+            m.children[0].classList.remove("scale-95");
+          }, 10);
+        } else {
+          m.classList.add("opacity-0");
+          m.children[0].classList.add("scale-95");
+          setTimeout(() => m.classList.add("hidden"), 300);
+        }
+      }
+
+      async function saveSettings() {
+        const loc = document.getElementById("settings-city").value;
+        ZMANIM_METHOD = document.getElementById("settings-method").value;
+        localStorage.setItem("moadim_method", ZMANIM_METHOD);
+
+        if (loc === "GPS") {
+          if ("geolocation" in navigator) {
+            navigator.geolocation.getCurrentPosition(
+              (pos) => {
+                GPS_COORDS = {
+                  lat: pos.coords.latitude,
+                  lon: pos.coords.longitude,
+                };
+                localStorage.setItem("moadim_gps", JSON.stringify(GPS_COORDS));
+                GEO_LOCATION = "GPS";
+                localStorage.setItem("moadim_city", "GPS");
+                fetchZmanimAndShabbat(TODAY.toISOString().split("T")[0]);
+                render();
+                toggleSettings();
+              },
+              (err) => {
+                alert("לא הצלחנו לאתר מיקום, נחזור להגדרה הקודמת.");
+                document.getElementById("settings-city").value = GEO_LOCATION;
+              },
+            );
+            return;
+          }
+        }
+
+        GEO_LOCATION = loc;
+        localStorage.setItem("moadim_city", loc);
+        fetchZmanimAndShabbat(TODAY.toISOString().split("T")[0]);
+        render();
+        toggleSettings();
+      }
+
+      function getBearing(lat1, lon1, lat2, lon2) {
+        const toRad = (deg) => (deg * Math.PI) / 180;
+        const toDeg = (rad) => (rad * 180) / Math.PI;
+        const dLon = toRad(lon2 - lon1);
+        lat1 = toRad(lat1);
+        lat2 = toRad(lat2);
+        const y = Math.sin(dLon) * Math.cos(lat2);
+        const x =
+          Math.cos(lat1) * Math.sin(lat2) -
+          Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
+        return (toDeg(Math.atan2(y, x)) + 360) % 360;
+      }
+
+      function openCompass() {
+        const m = document.getElementById("compass-modal");
+        m.classList.remove("hidden");
+        setTimeout(() => m.classList.remove("opacity-0"), 10);
+        startCompass();
+      }
+
+      function closeCompass() {
+        const m = document.getElementById("compass-modal");
+        m.classList.add("opacity-0");
+        setTimeout(() => m.classList.add("hidden"), 300);
+        if (compassListener) {
+          window.removeEventListener(
+            "deviceorientationabsolute",
+            compassListener,
+          );
+          window.removeEventListener("deviceorientation", compassListener);
+        }
+      }
+
+      function startCompass() {
+        if (
+          typeof DeviceOrientationEvent !== "undefined" &&
+          typeof DeviceOrientationEvent.requestPermission === "function"
+        ) {
+          document
+            .getElementById("btn-compass-permission")
+            .classList.remove("hidden");
+          document.getElementById("compass-status").textContent =
+            "נדרש אישור חיישנים";
+        } else {
+          bindCompass();
+        }
+      }
+
+      function requestCompassPermission() {
+        DeviceOrientationEvent.requestPermission()
+          .then((res) => {
+            if (res === "granted") {
+              document
+                .getElementById("btn-compass-permission")
+                .classList.add("hidden");
+              bindCompass();
+            }
+          })
+          .catch(console.error);
+      }
+
+      function bindCompass() {
+        document.getElementById("compass-status").textContent =
+          "מאתר כיוון לירושלים...";
+        const handler = (e) => {
+          let alpha = e.webkitCompassHeading || Math.abs(e.alpha - 360);
+          if (alpha) {
+            const lat1 = GPS_COORDS ? GPS_COORDS.lat : 32.084;
+            const lon1 = GPS_COORDS ? GPS_COORDS.lon : 34.8878;
+            const bearing = getBearing(lat1, lon1, 31.771959, 35.217018);
+            const rotation = bearing - alpha;
+
+            document.getElementById("compass-ring").style.transform =
+              `rotate(${-alpha}deg)`;
+            document.getElementById("compass-arrow").style.transform =
+              `rotate(${rotation}deg)`;
+
+            const normalizedRot = Math.abs(rotation % 360);
+            if (normalizedRot < 15 || normalizedRot > 345) {
+              document.getElementById("compass-status").textContent =
+                "מכוון לירושלים! ✨";
+              document
+                .getElementById("compass-status")
+                .classList.replace("text-blue-300", "text-emerald-400");
+              document
+                .getElementById("compass-arrow")
+                .children[0].classList.replace(
+                  "text-rose-500",
+                  "text-emerald-500",
+                );
+            } else {
+              document.getElementById("compass-status").textContent =
+                "סובב את המכשיר...";
+              document
+                .getElementById("compass-status")
+                .classList.replace("text-emerald-400", "text-blue-300");
+              document
+                .getElementById("compass-arrow")
+                .children[0].classList.replace(
+                  "text-emerald-500",
+                  "text-rose-500",
+                );
+            }
+          }
+        };
+        if ("ondeviceorientationabsolute" in window)
+          window.addEventListener("deviceorientationabsolute", handler, true);
+        else window.addEventListener("deviceorientation", handler, true);
+        compassListener = handler;
+      }
+
+      function getDaysDiff(d) {
+        const t = new Date(d);
+        t.setHours(0, 0, 0, 0);
+        return Math.ceil((t - TODAY) / 86400000);
+      }
+
+      function buildIcsContent(events) {
+        let lines = [
+          "BEGIN:VCALENDAR",
+          "VERSION:2.0",
+          "PRODID:-//Jewish Moadim App//HE",
+          "CALSCALE:GREGORIAN",
+        ];
+        events.forEach((e) => {
+          const d = new Date(e.date);
+          const dateStr = d
+            .toISOString()
+            .replace(/-|:|\.\d+/g, "")
+            .slice(0, 8);
+          const nextDay = new Date(d);
+          nextDay.setDate(nextDay.getDate() + 1);
+          const nextDateStr = nextDay
+            .toISOString()
+            .replace(/-|:|\.\d+/g, "")
+            .slice(0, 8);
+          lines.push(
+            "BEGIN:VEVENT",
+            `UID:${Date.now()}_${Math.random().toString(36).substring(2)}@moadim.app`,
+            `DTSTAMP:${dateStr}T000000Z`,
+            `DTSTART;VALUE=DATE:${dateStr}`,
+            `DTEND;VALUE=DATE:${nextDateStr}`,
+            `SUMMARY:${e.name}`,
+            `DESCRIPTION:סונכרן ממרכז המועדים והזמנים`,
+            "BEGIN:VALARM",
+            "TRIGGER:-PT24H",
+            "ACTION:DISPLAY",
+            `DESCRIPTION:תזכורת: מחר ${e.name}`,
+            "END:VALARM",
+            "END:VEVENT",
+          );
+        });
+        lines.push("END:VCALENDAR");
+        return lines.join("\r\n");
+      }
+
+      function downloadBulkICS() {
+        const toSync = ALL_EVENTS.filter(
+          (e) => e.type === "major" || e.type === "fast" || e.type === "minor",
+        );
+        if (!toSync.length) return alert("אין אירועים לסנכרון.");
+        triggerDownload(buildIcsContent(toSync), `לוח_ישראל_מלא.ics`);
+      }
+
+      function downloadICS(eventStr) {
+        const e = JSON.parse(decodeURIComponent(eventStr));
+        triggerDownload(buildIcsContent([e]), `${e.name}.ics`);
+      }
+
+      function triggerDownload(content, filename) {
+        if (navigator.vibrate) navigator.vibrate(50);
+        const blob = new Blob([content], {
+          type: "text/calendar;charset=utf-8",
+        });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.href = url;
+        link.setAttribute("download", filename);
+        document.body.appendChild(link);
+        link.click();
+        setTimeout(() => {
+          document.body.removeChild(link);
+          window.URL.revokeObjectURL(url);
+        }, 100);
+      }
+
+      function render(filter = "all", search = "") {
+        const c = document.getElementById("resultsGrid");
+        c.innerHTML = "";
+        const filtered = ALL_EVENTS.filter(
+          (e) =>
+            (filter === "all" || e.type === filter) &&
+            (e.name.includes(search) || e.heb.includes(search)),
+        );
+
+        filtered.forEach((e) => {
+          const diff = getDaysDiff(e.date),
+            color =
+              {
+                major: "blue",
+                fast: "rose",
+                moon: "purple",
+                "rosh-chodesh": "emerald",
+                minor: "slate",
+              }[e.type] || "slate";
+          const str = encodeURIComponent(JSON.stringify(e));
+
+          const dateDisplay = `${daysOfWeek[new Date(e.date).getDay()]} | ${new Date(e.date).toLocaleDateString("he-IL")} | <span class="text-slate-800 dark:text-slate-200 font-bold">${getHebrewDateString(new Date(e.date))}</span>`;
+
+          let fastTimesHtml = "";
+          if (e.type === "fast") {
+            const elId = `fast-times-${e.date}`;
+            fastTimesHtml = `<div id="${elId}" class="mt-2 flex flex-wrap gap-2 text-xs" aria-live="polite">מחשב זמני צום...</div>`;
+            fetchFastTimes(e.name, e.date, elId);
+          }
+
+          c.innerHTML += `
+                    <article class="event-card bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-5 md:p-7 rounded-[2rem] flex flex-col md:flex-row items-center justify-between gap-4" tabindex="0">
+                        <div class="flex items-center gap-4 md:gap-6 w-full md:w-auto">
+                            <div class="w-14 h-14 md:w-16 md:h-16 shrink-0 bg-${color}-50 dark:bg-${color}-500/20 text-2xl md:text-3xl flex items-center justify-center rounded-2xl md:rounded-3xl shadow-inner border border-${color}-100 dark:border-${color}-500/30" aria-hidden="true">${e.icon}</div>
+                            <div class="flex-1">
+                                <h3 class="font-bold text-slate-900 dark:text-white text-xl md:text-2xl mb-1">${e.name}</h3>
+                                <div class="text-slate-500 dark:text-slate-400 font-medium text-sm md:text-base">${dateDisplay}</div>
+                                ${fastTimesHtml}
+                                ${e.levanaString ? `${e.levanaString}` : ""}
+                            </div>
+                        </div>
+                        <div class="flex md:flex-col items-center justify-between w-full md:w-auto md:items-end md:justify-center border-t border-slate-100 dark:border-slate-700 md:border-t-0 pt-3 md:pt-0 mt-2 md:mt-0">
+                            <div class="bg-${color}-50 dark:bg-${color}-500/20 text-${color}-700 dark:text-${color}-300 px-4 py-1.5 md:py-2 rounded-xl text-sm font-black md:mb-2" aria-label="זמן נותר">${diff <= 0 ? "היום" : `בעוד ${diff} ימים`}</div>
+                            <button onclick="downloadICS('${str}')" class="flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500 hover:text-blue-600 font-bold uppercase tracking-widest transition-colors bg-slate-50 dark:bg-slate-900/50 hover:bg-blue-50 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-blue-200" aria-label="סנכרן את ${e.name} ליומן">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg> סנכרן
+                            </button>
+                        </div>
+                    </article>`;
+        });
+        if (!filtered.length)
+          c.innerHTML = `<div class="text-center py-10 text-slate-400 font-bold text-lg" role="alert">לא נמצאו מועדים תואמים.</div>`;
+      }
+
+      function applyFilter(t) {
+        if (navigator.vibrate) navigator.vibrate(20);
+        document.querySelectorAll(".chip").forEach((c) => {
+          c.classList.remove(
+            "active",
+            "bg-blue-600",
+            "text-white",
+            "border-blue-600",
+          );
+          c.setAttribute("aria-pressed", "false");
+        });
+        const btn = document.getElementById(`btn-${t}`);
+        btn.classList.add(
+          "active",
+          "bg-blue-600",
+          "text-white",
+          "border-blue-600",
+        );
+        btn.setAttribute("aria-pressed", "true");
+        render(t, document.getElementById("mainSearch").value);
+      }
+      document
+        .getElementById("mainSearch")
+        .addEventListener("input", (e) => render("all", e.target.value));
+
+      // --- Calendar Navigation Methods ---
+      function changeMonth(offset) {
+        CALENDAR_DISPLAY_DATE.setMonth(
+          CALENDAR_DISPLAY_DATE.getMonth() + offset,
+        );
+        buildMonthCalendar();
+      }
+
+      function resetMonth() {
+        CALENDAR_DISPLAY_DATE = new Date();
+        buildMonthCalendar();
+      }
+
+      function openCalendar() {
+        if (navigator.vibrate) navigator.vibrate(20);
+        CALENDAR_DISPLAY_DATE = new Date();
+        buildMonthCalendar();
+        const m = document.getElementById("calendar-modal");
+        m.classList.remove("hidden");
+        setTimeout(() => {
+          m.classList.remove("opacity-0");
+          m.querySelector("div").classList.remove("scale-95");
+        }, 10);
+      }
+
+      function closeCalendar() {
+        const m = document.getElementById("calendar-modal");
+        m.classList.add("opacity-0");
+        m.querySelector("div").classList.add("scale-95");
+        setTimeout(() => {
+          m.classList.add("hidden");
+        }, 300);
+      }
+
+      function buildMonthCalendar() {
+        const d = CALENDAR_DISPLAY_DATE,
+          y = d.getFullYear(),
+          m = d.getMonth();
+        document.getElementById("cal-month-title").textContent =
+          d.toLocaleDateString("he-IL", { month: "long", year: "numeric" });
+        try {
+          document.getElementById("cal-month-heb").textContent =
+            new Intl.DateTimeFormat("he-IL-u-ca-hebrew", {
+              month: "long",
+              year: "numeric",
+            }).format(d);
+        } catch (e) {}
+        const lastDay = new Date(y, m + 1, 0),
+          grid = document.getElementById("cal-days-grid");
+        grid.innerHTML = "";
+        for (let i = 0; i < new Date(y, m, 1).getDay(); i++)
+          grid.innerHTML += `<div class="bg-slate-100/50 dark:bg-slate-800/50 rounded-xl border border-transparent" aria-hidden="true"></div>`;
+
+        for (let i = 1; i <= lastDay.getDate(); i++) {
+          const cDate = new Date(y, m, i),
+            dStr = cDate.toISOString().split("T")[0],
+            isToday =
+              i === TODAY.getDate() &&
+              m === TODAY.getMonth() &&
+              y === TODAY.getFullYear();
+          let hebDayStr = "";
+          try {
+            const parts = new Intl.DateTimeFormat("en-US-u-ca-hebrew", {
+              day: "numeric",
+            }).formatToParts(cDate);
+            const dp = parts.find((p) => p.type === "day");
+            if (dp && !isNaN(parseInt(dp.value)))
+              hebDayStr = hebDaysLetters[parseInt(dp.value)] || dp.value;
+          } catch (e) {}
+
+          const evs = ALL_EVENTS.filter((e) => e.date === dStr);
+          let evHtml = "";
+          evs.forEach((e) => {
+            const c =
+              {
+                major: "bg-blue-500",
+                fast: "bg-rose-500",
+                moon: "bg-purple-500",
+                "rosh-chodesh": "bg-emerald-500",
+                minor: "bg-slate-500",
+              }[e.type] || "bg-slate-500";
+            evHtml += `<div class="${c} text-white text-[9px] md:text-xs px-1.5 py-0.5 rounded-md truncate shadow-sm w-full font-medium tracking-wide" title="${e.name}">${e.name.replace("קידוש לבנה - ", "")}</div>`;
+          });
+
+          grid.innerHTML += `
+                    <div class="h-20 md:h-28 p-1.5 md:p-2.5 bg-white dark:bg-slate-800 rounded-xl border ${isToday ? "border-blue-500 ring-2 ring-blue-500/20 shadow-md" : "border-slate-200 dark:border-slate-700"} flex flex-col transition-all" role="gridcell">
+                        <div class="flex justify-between items-start mb-1 px-1">
+                            <span class="text-xs md:text-sm font-bold text-blue-800 dark:text-blue-400" aria-label="תאריך עברי ${hebDayStr}">${hebDayStr}</span>
+                            <span class="text-sm md:text-base font-black ${isToday ? "text-blue-600 dark:text-blue-400" : "text-slate-700 dark:text-slate-300"}" aria-label="תאריך לועזי ${i}">${i}</span>
+                        </div>
+                        <div class="flex-1 overflow-y-auto flex flex-col gap-1 scrollbar-hide px-0.5 pb-1">${evHtml}</div>
+                    </div>`;
+        }
+      }
+
+      initApp();
+    </script>
+  </body>
+</html>

@@ -162,6 +162,28 @@
         transform: translateY(-5px);
         box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.1);
       }
+      .notification-toggle-row {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        min-width: 8.5rem;
+        flex-shrink: 0;
+        justify-content: flex-end;
+      }
+      #notif-master-status {
+        min-width: 4.75rem;
+        text-align: center;
+        white-space: nowrap;
+      }
+      #notif-master-toggle {
+        direction: ltr;
+      }
+      html[dir="rtl"] .notification-toggle-row {
+        flex-direction: row-reverse;
+      }
+      html[dir="ltr"] .notification-toggle-row {
+        flex-direction: row;
+      }
       .loader {
         border: 4px solid rgba(255, 255, 255, 0.1);
         border-top: 4px solid #3b82f6;
@@ -1137,20 +1159,35 @@
           </div>
 
           <div class="pt-4 border-t border-slate-100 dark:border-slate-700">
-            <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center justify-between gap-3 mb-4">
               <span
                 class="font-bold text-slate-800 dark:text-white"
                 data-i18n-key="notif_settings_title"
                 >התראות דפדפן (פוש)</span
               >
-              <button
-                id="notif-master-toggle"
-                onclick="requestNotificationPermission()"
-                class="bg-blue-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-colors shadow-sm"
-                data-i18n-key="notif_enable"
+              <div
+                id="notif-master-control"
+                class="notification-toggle-row"
               >
-                הפעל
-              </button>
+                <span
+                  id="notif-master-status"
+                  class="text-xs font-bold text-slate-600 dark:text-slate-300"
+                  >כבוי</span
+                >
+                <button
+                  id="notif-master-toggle"
+                  type="button"
+                  role="switch"
+                  aria-checked="false"
+                  onclick="toggleNotificationsMaster()"
+                  class="relative inline-flex h-6 w-11 items-center rounded-full bg-slate-300 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500/30"
+                >
+                  <span
+                    id="notif-master-toggle-knob"
+                    class="inline-block h-5 w-5 translate-x-0.5 transform rounded-full bg-white shadow transition-transform duration-200"
+                  ></span>
+                </button>
+              </div>
             </div>
             <div
               id="notif-options"
@@ -1702,6 +1739,11 @@
             if (el.tagName === "INPUT") el.placeholder = t[key];
             else el.textContent = t[key];
           }
+          return;
+          // stripped stray alert
+          /*
+            alert("ההתראות חסומות בדפדפן. אפשר לשנות זאת בהגדרות הדפדפן.");
+          */
         });
       }
 
@@ -1717,6 +1759,7 @@
         document.documentElement.dir = CURRENT_LANG === "he" ? "rtl" : "ltr";
 
         applyTranslations();
+        updateNotifStatusUI();
         fetchLiveCalendarData();
       }
 
@@ -2889,13 +2932,69 @@
       }
 
       // --- Web Notifications Logic ---
+      const NOTIF_MASTER_KEY = "moadim_notifications_enabled";
+
+      function getNotifMasterPreference() {
+        return localStorage.getItem(NOTIF_MASTER_KEY) === "true";
+      }
+
+      function setNotifMasterPreference(enabled) {
+        localStorage.setItem(NOTIF_MASTER_KEY, enabled ? "true" : "false");
+      }
+
+      function getNotifStatusLabel(enabled) {
+        if (CURRENT_LANG === "en") return enabled ? "On" : "Off";
+        if (CURRENT_LANG === "fr") return enabled ? "Actif" : "Inactif";
+        return enabled ? "פעיל" : "כבוי";
+      }
+
+      function isNotifMasterActive() {
+        return (
+          getNotifMasterPreference() &&
+          "Notification" in window &&
+          Notification.permission === "granted"
+        );
+      }
+
+      function toggleNotificationsMaster() {
+        if (isNotifMasterActive()) {
+          setNotifMasterPreference(false);
+          updateNotifStatusUI();
+          return;
+        }
+
+        if (!("Notification" in window)) {
+          setNotifMasterPreference(false);
+          updateNotifStatusUI();
+          alert("הדפדפן שלך אינו תומך בהתראות פוש.");
+          return;
+        }
+
+        if (Notification.permission === "granted") {
+          setNotifMasterPreference(true);
+          updateNotifStatusUI();
+          return;
+        }
+
+        if (Notification.permission === "denied") {
+          setNotifMasterPreference(false);
+          updateNotifStatusUI();
+          alert("ההתראות חסומות בדפדפן. אפשר לשנות זאת בהגדרות הדפדפן.");
+          return;
+        }
+
+        requestNotificationPermission();
+      }
+
       function requestNotificationPermission() {
         if (!("Notification" in window)) {
+          setNotifMasterPreference(false);
           updateNotifStatusUI();
           alert("הדפדפן שלך אינו תומך בהתראות פוש.");
           return;
         }
         Notification.requestPermission().then((permission) => {
+          setNotifMasterPreference(permission === "granted");
           updateNotifStatusUI();
           if (permission === "granted") {
             new Notification(SITE_NAME, {
@@ -2907,32 +3006,32 @@
       }
 
       function updateNotifStatusUI() {
-        const granted =
-          "Notification" in window && Notification.permission === "granted";
+        const enabled = isNotifMasterActive();
         const btn = document.getElementById("notif-master-toggle");
+        const knob = document.getElementById("notif-master-toggle-knob");
+        const status = document.getElementById("notif-master-status");
+        const control = document.getElementById("notif-master-control");
         const options = document.getElementById("notif-options");
-        if (!btn || !options) return;
+        if (!btn || !knob || !status || !control || !options) return;
 
-        // מונע ממערכת התרגום לדרוס את הכפתור בכל פעם שמחליפים שפה
-        btn.removeAttribute("data-i18n-key");
-
-        // אתחול העיצוב הדינאמי של הכפתור
         btn.className =
-          "text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-colors shadow-sm";
-        btn.classList.remove(
-          "bg-red-500",
-          "hover:bg-red-600",
-          "bg-green-500",
-          "hover:bg-green-600",
-        );
+          "relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500/30";
+        btn.classList.remove("bg-slate-300", "bg-green-500", "dark:bg-slate-600");
+        knob.className =
+          "inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform duration-200";
+        knob.classList.remove("translate-x-0.5", "translate-x-5");
+        btn.setAttribute("aria-checked", enabled ? "true" : "false");
+        control.className = "notification-toggle-row";
 
-        if (granted) {
-          btn.classList.add("bg-green-500", "hover:bg-green-600");
-          btn.textContent = "פעיל";
+        if (enabled) {
+          btn.classList.add("bg-green-500");
+          knob.classList.add("translate-x-5");
+          status.textContent = getNotifStatusLabel(true);
           options.classList.remove("opacity-50", "pointer-events-none");
         } else {
-          btn.classList.add("bg-red-500", "hover:bg-red-600");
-          btn.textContent = "כבוי";
+          btn.classList.add("bg-slate-300", "dark:bg-slate-600");
+          knob.classList.add("translate-x-0.5");
+          status.textContent = getNotifStatusLabel(false);
           options.classList.add("opacity-50", "pointer-events-none");
         }
 
@@ -2942,13 +3041,19 @@
         ["shabbat", "holiday", "fast", "omer", "levana", "daf"].forEach(
           (id) => {
             const el = document.getElementById("notif_" + id);
-            if (el) el.checked = prefs[id] !== false; // true by default if not set
+            if (el) {
+              el.checked = prefs[id] !== false;
+              el.disabled = !enabled;
+            }
           },
         );
+        return;
       }
 
       setInterval(() => {
+        if (!("Notification" in window)) return;
         if (Notification.permission !== "granted") return;
+        if (!getNotifMasterPreference()) return;
         const prefs = JSON.parse(
           localStorage.getItem("moadim_notif_prefs") || "{}",
         );

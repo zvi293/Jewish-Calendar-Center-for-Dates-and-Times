@@ -1446,7 +1446,7 @@
           sync_all: "סנכרן את הלוח ליומן שלך",
           sync_mobile: "סנכרן ליומן",
           settings_title: "הגדרות אישיות",
-          compass: "מצפן לירושלים",
+          compass: "מצפן כיוון תפילה",
           notif_settings_title: "התראות דפדפן (פוש)",
           notif_enable: "הפעל",
           notif_shab: "כניסת שבת (חצי שעה לפני)",
@@ -1477,7 +1477,7 @@
           sync_all: "Sync Calendar to Device",
           sync_mobile: "Sync Cal",
           settings_title: "Settings",
-          compass: "Compass to Jerusalem",
+          compass: "Prayer Direction Compass",
           notif_settings_title: "Push Notifications",
           notif_enable: "Enable",
           notif_shab: "Shabbat (30 mins before)",
@@ -1508,7 +1508,7 @@
           sync_all: "Synchroniser avec l'agenda",
           sync_mobile: "Sync",
           settings_title: "Paramètres",
-          compass: "Boussole",
+          compass: "Boussole de Priere",
           notif_settings_title: "Notifications Push",
           notif_enable: "Activer",
           notif_shab: "Chabbat (30 min avant)",
@@ -2564,6 +2564,61 @@
         return (toDeg(Math.atan2(y, x)) + 360) % 360;
       }
 
+      const COMPASS_JERUSALEM_TARGET = { lat: 31.771959, lon: 35.217018 };
+      const COMPASS_WESTERN_WALL_TARGET = { lat: 31.776221, lon: 35.234464 };
+
+      function getDistanceKm(lat1, lon1, lat2, lon2) {
+        const toRad = (deg) => (deg * Math.PI) / 180;
+        const r = 6371;
+        const dLat = toRad(lat2 - lat1);
+        const dLon = toRad(lon2 - lon1);
+        const a =
+          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+          Math.cos(toRad(lat1)) *
+            Math.cos(toRad(lat2)) *
+            Math.sin(dLon / 2) *
+            Math.sin(dLon / 2);
+        return 2 * r * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      }
+
+      function isInJerusalem(lat, lon) {
+        return (
+          getDistanceKm(lat, lon, 31.778, 35.235) <= 10
+        );
+      }
+
+      function isInIsrael(lat, lon) {
+        return lat >= 29.4 && lat <= 33.5 && lon >= 34.2 && lon <= 35.9;
+      }
+
+      function getCompassTarget(lat, lon) {
+        if (typeof lat !== "number" || typeof lon !== "number") {
+          return {
+            ...COMPASS_JERUSALEM_TARGET,
+            label: "ירושלים",
+          };
+        }
+
+        if (isInJerusalem(lat, lon)) {
+          return {
+            ...COMPASS_WESTERN_WALL_TARGET,
+            label: "הכותל",
+          };
+        }
+
+        if (isInIsrael(lat, lon)) {
+          return {
+            ...COMPASS_JERUSALEM_TARGET,
+            label: "ירושלים",
+          };
+        }
+
+        return {
+          ...COMPASS_JERUSALEM_TARGET,
+          label: "ארץ ישראל",
+        };
+      }
+
       function openCompass() {
         const m = document.getElementById("compass-modal");
         m.classList.remove("hidden");
@@ -2613,14 +2668,17 @@
       }
 
       function bindCompass() {
-        document.getElementById("compass-status").textContent =
-          "מאתר כיוון לירושלים...";
+        const setCompassStatus = (text) => {
+          document.getElementById("compass-status").textContent = text;
+        };
+        setCompassStatus("מאתר כיוון התפילה...");
         const handler = (e) => {
           let alpha = e.webkitCompassHeading || Math.abs(e.alpha - 360);
           if (alpha) {
             const lat1 = GPS_COORDS ? GPS_COORDS.lat : 32.084;
             const lon1 = GPS_COORDS ? GPS_COORDS.lon : 34.8878;
-            const bearing = getBearing(lat1, lon1, 31.771959, 35.217018);
+            const target = getCompassTarget(lat1, lon1);
+            const bearing = getBearing(lat1, lon1, target.lat, target.lon);
             const rotation = bearing - alpha;
 
             document.getElementById("compass-ring").style.transform =
@@ -2630,8 +2688,9 @@
 
             const normalizedRot = Math.abs(rotation % 360);
             if (normalizedRot < 15 || normalizedRot > 345) {
-              document.getElementById("compass-status").textContent =
-                "מכוון לירושלים! ✨";
+              document
+                .getElementById("compass-status")
+                .textContent = `מכוון ל${target.label}! ✨`;
               document
                 .getElementById("compass-status")
                 .classList.replace("text-blue-300", "text-emerald-400");
@@ -2642,8 +2701,9 @@
                   "text-emerald-500",
                 );
             } else {
-              document.getElementById("compass-status").textContent =
-                "סובב את המכשיר...";
+              document
+                .getElementById("compass-status")
+                .textContent = "סובב את המכשיר...";
               document
                 .getElementById("compass-status")
                 .classList.replace("text-emerald-400", "text-blue-300");

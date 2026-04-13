@@ -208,6 +208,9 @@
         -ms-overflow-style: none;
         scrollbar-width: none;
       }
+      html[dir="ltr"] #settings-modal-title {
+        padding-left: 3.5rem;
+      }
       select option {
         background-color: #1e293b;
         color: white;
@@ -679,7 +682,6 @@
             </div>
           </div>
         </aside>
-
       </div>
     </header>
 
@@ -812,6 +814,20 @@
         aria-live="polite"
       ></div>
     </main>
+
+    <footer class="px-4 pb-8">
+      <div
+        class="max-w-6xl mx-auto border-t border-slate-200 dark:border-slate-800 pt-6 flex justify-center"
+      >
+        <a
+          href="credits.html"
+          class="inline-flex items-center justify-center rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-5 py-2.5 text-sm font-bold text-slate-700 dark:text-slate-200 transition-colors hover:border-blue-300 hover:text-blue-600 dark:hover:border-blue-500 dark:hover:text-blue-400"
+          data-i18n-key="footer_credits"
+        >
+          קרדיטים
+        </a>
+      </div>
+    </footer>
 
     <div
       id="omer-modal"
@@ -1050,16 +1066,24 @@
           class="relative w-64 h-64 mb-8 flex items-center justify-center"
           aria-hidden="true"
         >
-          <span id="compass-dir-n" class="compass-direction-label compass-direction-n"
+          <span
+            id="compass-dir-n"
+            class="compass-direction-label compass-direction-n"
             >צפון</span
           >
-          <span id="compass-dir-e" class="compass-direction-label compass-direction-e"
+          <span
+            id="compass-dir-e"
+            class="compass-direction-label compass-direction-e"
             >מזרח</span
           >
-          <span id="compass-dir-s" class="compass-direction-label compass-direction-s"
+          <span
+            id="compass-dir-s"
+            class="compass-direction-label compass-direction-s"
             >דרום</span
           >
-          <span id="compass-dir-w" class="compass-direction-label compass-direction-w"
+          <span
+            id="compass-dir-w"
+            class="compass-direction-label compass-direction-w"
             >מערב</span
           >
           <div
@@ -1069,7 +1093,9 @@
             <div
               class="absolute top-2 w-3 h-3 bg-blue-500 rounded-full shadow-[0_0_15px_rgba(59,130,246,0.8)]"
             ></div>
-            <div class="hidden absolute top-6 text-blue-400/50 font-bold text-xs">
+            <div
+              class="hidden absolute top-6 text-blue-400/50 font-bold text-xs"
+            >
               צפון מזהה
             </div>
           </div>
@@ -1151,12 +1177,14 @@
           <div>
             <label
               class="block text-sm font-bold text-slate-500 dark:text-slate-400 mb-2"
+              data-i18n-key="settings_city_label"
               >מיקום לחישוב זמנים ושבת</label
             >
             <div class="relative">
               <input
                 type="text"
                 id="settings-city-search"
+                data-i18n-key="settings_city_placeholder"
                 placeholder="הקלד שם עיר (באנגלית או עברית)..."
                 class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                 oninput="handleCitySearch(event)"
@@ -1180,6 +1208,7 @@
             </div>
             <button
               onclick="useGPS()"
+              data-i18n-key="settings_use_gps"
               class="mt-3 w-full bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold py-2.5 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors text-sm flex items-center justify-center gap-2"
             >
               📍 השתמש במיקום שלי (GPS)
@@ -1189,6 +1218,7 @@
           <div>
             <label
               for="settings-method"
+              data-i18n-key="settings_method_label"
               class="block text-sm font-bold text-slate-500 dark:text-slate-400 mb-2"
               >שיטת חישוב זמני היום</label
             >
@@ -1407,7 +1437,8 @@
             </button>
             <button
               onclick="resetMonth()"
-              class="hidden md:block bg-blue-600 hover:bg-blue-500 text-xs font-bold px-3 py-1.5 rounded-lg ml-2 transition-colors"
+              data-i18n-key="calendar_today_btn"
+              class="bg-blue-600 hover:bg-blue-500 text-xs font-bold px-3 py-1.5 rounded-lg ml-2 transition-colors"
               aria-label="חזור להיום"
             >
               היום
@@ -1607,6 +1638,423 @@
           notif_tefillin: "Rappel pour mettre les Téfilines (08:30)",
         },
       };
+
+      Object.assign(i18nDict.he, {
+        settings_city_label: "׳׳™׳§׳•׳ ׳׳—׳™׳©׳•׳‘ ׳–׳׳ ׳™׳ ׳•׳©׳‘׳×",
+        settings_city_placeholder:
+          "׳”׳§׳׳“ ׳©׳ ׳¢׳™׳¨ (׳‘׳׳ ׳’׳׳™׳× ׳׳• ׳¢׳‘׳¨׳™׳×)...",
+        settings_current_city_label: "׳¢׳™׳¨ ׳ ׳•׳›׳—׳™׳×:",
+        settings_use_gps: "נ“ ׳”׳©׳×׳׳© ׳‘׳׳™׳§׳•׳ ׳©׳׳™ (GPS)",
+        settings_method_label: "׳©׳™׳˜׳× ׳—׳™׳©׳•׳‘ ׳–׳׳ ׳™ ׳”׳™׳•׳",
+        calendar_today_btn: "׳”׳™׳•׳",
+        footer_credits: "׳§׳¨׳“׳™׳˜׳™׳",
+      });
+      Object.assign(i18nDict.en, {
+        settings_city_label: "City for zmanim and Shabbat",
+        settings_city_placeholder: "Type a city name (English or Hebrew)...",
+        settings_current_city_label: "Current city:",
+        settings_use_gps: "Use my location (GPS)",
+        settings_method_label: "Daily zmanim calculation method",
+        calendar_today_btn: "Today",
+        footer_credits: "Credits",
+      });
+      Object.assign(i18nDict.fr, {
+        settings_city_label: "Ville pour les zmanim et le Chabbat",
+        settings_city_placeholder:
+          "Tapez un nom de ville (anglais ou hֳ©breu)...",
+        settings_current_city_label: "Ville actuelle :",
+        settings_use_gps: "Utiliser ma position (GPS)",
+        settings_method_label: "Mֳ©thode de calcul des zmanim",
+        calendar_today_btn: "Aujourd'hui",
+        footer_credits: "Crֳ©dits",
+      });
+
+      Object.assign(i18nDict.he, {
+        settings_city_label: "מיקום לחישוב זמנים ושבת",
+        settings_city_placeholder: "הקלד שם עיר (באנגלית או בעברית)...",
+        settings_current_city_label: "עיר נוכחית:",
+        settings_use_gps: "השתמש במיקום שלי (GPS)📍",
+        settings_method_label: "שיטת חישוב זמני היום",
+        calendar_today_btn: "היום",
+        footer_credits: "קרדיטים",
+      });
+      Object.assign(i18nDict.fr, {
+        footer_credits: "Crédits",
+      });
+
+      const dynamicUiDict = {
+        he: {
+          locale: "he-IL",
+          calendarLocale: "he-IL",
+          hebrewCalendarLocale: "he-IL-u-ca-hebrew",
+          weekdayHeaders: ["׳'", "׳‘'", "׳’'", "׳“'", "׳”'", "׳•'", "׳©'"],
+          weekdayNames: [
+            "׳¨׳׳©׳•׳",
+            "׳©׳ ׳™",
+            "׳©׳׳™׳©׳™",
+            "׳¨׳‘׳™׳¢׳™",
+            "׳—׳׳™׳©׳™",
+            "׳©׳™׳©׳™",
+            "׳©׳‘׳×",
+          ],
+          today: "׳”׳™׳•׳",
+          inDays: (days) => `׳‘׳¢׳•׳“ ${days} ׳™׳׳™׳`,
+          noResults: "׳׳ ׳ ׳׳¦׳׳• ׳׳•׳¢׳“׳™׳ ׳×׳•׳׳׳™׳.",
+          shabbatEnter: "׳›׳ ׳™׳¡׳× ׳©׳‘׳×",
+          shabbatExit: "׳™׳¦׳™׳׳× ׳©׳‘׳×",
+          holidayEnter: "׳›׳ ׳™׳¡׳× ׳—׳’",
+          holidayExit: "׳™׳¦׳™׳׳× ׳—׳’",
+          fastStart: "׳×׳—׳™׳׳× ׳¦׳•׳",
+          fastEnd: "׳¡׳™׳•׳ ׳¦׳•׳",
+          currentCityLabel: "׳¢׳™׳¨ ׳ ׳•׳›׳—׳™׳×:",
+          gpsCity: "׳׳™׳§׳•׳ ׳ ׳•׳›׳—׳™ (GPS)",
+          gpsError:
+            "׳׳ ׳”׳¦׳׳—׳ ׳• ׳׳׳×׳¨ ׳׳™׳§׳•׳, ׳ ׳—׳–׳•׳¨ ׳׳”׳’׳“׳¨׳” ׳”׳§׳•׳“׳׳×.",
+          loadingFastTimes: "׳׳—׳©׳‘ ׳–׳׳ ׳™ ׳¦׳•׳...",
+          loadingHolidayTimes: "׳׳—׳©׳‘ ׳–׳׳ ׳™ ׳—׳’...",
+          noDataError:
+            "׳׳ ׳ ׳™׳×׳ ׳׳׳©׳•׳ ׳ ׳×׳•׳ ׳™׳ ׳›׳¢׳×. ׳‘׳“׳•׳§ ׳—׳™׳‘׳•׳¨ ׳׳™׳ ׳˜׳¨׳ ׳˜.",
+          syncEmpty: "׳׳™׳ ׳׳™׳¨׳•׳¢׳™׳ ׳׳¡׳ ׳›׳¨׳•׳.",
+          compassPermission: "׳ ׳“׳¨׳© ׳׳™׳©׳•׳¨ ׳—׳™׳™׳©׳ ׳™׳",
+          compassLocating: "׳׳׳×׳¨ ׳›׳™׳•׳•׳ ׳”׳×׳₪׳™׳׳”...",
+          compassRotate: "׳¡׳•׳‘׳‘ ׳׳× ׳”׳׳›׳©׳™׳¨...",
+          compassButton: "׳׳©׳¨ ׳’׳™׳©׳” ׳׳—׳™׳™׳©׳ ׳™ ׳›׳™׳•׳•׳",
+          compassTargetJerusalem: "׳™׳¨׳•׳©׳׳™׳",
+          compassTargetWall: "׳”׳›׳•׳×׳",
+          compassTargetIsrael: "׳׳¨׳¥ ׳™׳©׳¨׳׳",
+          compassAligned: (label) => `׳׳›׳•׳•׳ ׳${label}! ג¨`,
+          sefariaLoading: "׳˜׳•׳¢׳ ׳˜׳§׳¡׳˜ ׳׳׳¡׳“ ׳”׳ ׳×׳•׳ ׳™׳...",
+          sefariaMissing:
+            "׳׳ ׳ ׳׳¦׳ ׳˜׳§׳¡׳˜ ׳¢׳‘׳•׳¨ ׳׳•׳¢׳“ ׳–׳” ׳‘׳׳׳’׳¨ ׳”׳₪׳×׳•׳—.",
+          sefariaError:
+            "׳©׳’׳™׳׳” ׳‘׳˜׳¢׳™׳ ׳× ׳”׳˜׳§׳¡׳˜. ׳׳ ׳ ׳‘׳“׳•׳§ ׳—׳™׳‘׳•׳¨ ׳׳׳™׳ ׳˜׳¨׳ ׳˜.",
+          sefariaCredit:
+            "׳”׳˜׳§׳¡׳˜ ׳‘׳׳“׳™׳‘׳•׳× Sefaria.org (׳‘׳¨׳™׳©׳™׳•׳ ׳₪׳×׳•׳—)",
+          zmanimLabels: [
+            "׳¢׳׳•׳× ׳”׳©׳—׳¨",
+            "׳”׳ ׳¥ ׳”׳—׳׳”",
+            '׳¡׳•׳£ ׳§"׳©',
+            "׳¡׳•׳£ ׳×׳₪׳™׳׳”",
+            "׳—׳¦׳•׳× ׳™׳•׳ / ׳׳™׳׳”",
+            "׳׳ ׳—׳” ׳’׳“׳•׳׳”",
+            "׳׳ ׳—׳” ׳§׳˜׳ ׳”",
+            "׳₪׳׳’ ׳”׳׳ ׳—׳”",
+            "׳©׳§׳™׳¢׳”",
+            "׳¦׳׳× ׳”׳›׳•׳›׳‘׳™׳",
+          ],
+        },
+        en: {
+          locale: "en-US",
+          calendarLocale: "en-US",
+          hebrewCalendarLocale: "en-US-u-ca-hebrew",
+          weekdayHeaders: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+          weekdayNames: [
+            "Sunday",
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday",
+            "Shabbat",
+          ],
+          today: "Today",
+          inDays: (days) => `In ${days} Days`,
+          noResults: "No matching events found.",
+          shabbatEnter: "Shabbat begins",
+          shabbatExit: "Shabbat ends",
+          holidayEnter: "Holiday begins",
+          holidayExit: "Holiday ends",
+          fastStart: "Fast begins",
+          fastEnd: "Fast ends",
+          currentCityLabel: "Current city:",
+          gpsCity: "Current location (GPS)",
+          gpsError:
+            "Unable to detect location. Restoring the previous setting.",
+          loadingFastTimes: "Calculating fast times...",
+          loadingHolidayTimes: "Calculating holiday times...",
+          noDataError:
+            "Unable to load data right now. Check your internet connection.",
+          syncEmpty: "No events available to sync.",
+          compassPermission: "Sensor permission is required",
+          compassLocating: "Finding prayer direction...",
+          compassRotate: "Rotate the device...",
+          compassButton: "Grant compass sensor access",
+          compassTargetJerusalem: "Jerusalem",
+          compassTargetWall: "Western Wall",
+          compassTargetIsrael: "Land of Israel",
+          compassAligned: (label) => `Aligned to ${label}!`,
+          sefariaLoading: "Loading text from the database...",
+          sefariaMissing:
+            "No text was found for this item in the open database.",
+          sefariaError:
+            "Failed to load the text. Please check your internet connection.",
+          sefariaCredit: "Text courtesy of Sefaria.org (open license)",
+          zmanimLabels: [
+            "Alot HaShachar",
+            "Sunrise",
+            "Latest Shema",
+            "Latest Tefillah",
+            "Chatzot",
+            "Mincha Gedola",
+            "Mincha Ketana",
+            "Plag HaMincha",
+            "Sunset",
+            "Tzeit HaKochavim",
+          ],
+        },
+        fr: {
+          locale: "fr-FR",
+          calendarLocale: "fr-FR",
+          hebrewCalendarLocale: "fr-FR-u-ca-hebrew",
+          weekdayHeaders: [
+            "dim.",
+            "lun.",
+            "mar.",
+            "mer.",
+            "jeu.",
+            "ven.",
+            "sam.",
+          ],
+          weekdayNames: [
+            "dimanche",
+            "lundi",
+            "mardi",
+            "mercredi",
+            "jeudi",
+            "vendredi",
+            "Chabbat",
+          ],
+          today: "Aujourd'hui",
+          inDays: (days) => `Dans ${days} jours`,
+          noResults: "Aucun ֳ©vֳ©nement correspondant.",
+          shabbatEnter: "Entrֳ©e de Chabbat",
+          shabbatExit: "Sortie de Chabbat",
+          holidayEnter: "Entrֳ©e de la fֳ×te",
+          holidayExit: "Sortie de la fֳ×te",
+          fastStart: "Dֳ©but du jeֳ»ne",
+          fastEnd: "Fin du jeֳ»ne",
+          currentCityLabel: "Ville actuelle :",
+          gpsCity: "Position actuelle (GPS)",
+          gpsError:
+            "Impossible de dֳ©tecter la position. Retour au rֳ©glage prֳ©cֳ©dent.",
+          loadingFastTimes: "Calcul des horaires du jeֳ»ne...",
+          loadingHolidayTimes: "Calcul des horaires de la fֳ×te...",
+          noDataError:
+            "Impossible de charger les donnֳ©es pour le moment. Vֳ©rifiez votre connexion Internet.",
+          syncEmpty: "Aucun ֳ©vֳ©nement ֳ  synchroniser.",
+          compassPermission: "L'autorisation des capteurs est requise",
+          compassLocating: "Recherche de la direction de priֳ¨re...",
+          compassRotate: "Tournez l'appareil...",
+          compassButton: "Autoriser l'accֳ¨s aux capteurs",
+          compassTargetJerusalem: "Jֳ©rusalem",
+          compassTargetWall: "Mur occidental",
+          compassTargetIsrael: "Terre d'Israֳ«l",
+          compassAligned: (label) => `Alignֳ© vers ${label} !`,
+          sefariaLoading: "Chargement du texte depuis la base de donnֳ©es...",
+          sefariaMissing:
+            "Aucun texte n'a ֳ©tֳ© trouvֳ© pour cet ֳ©lֳ©ment dans la base ouverte.",
+          sefariaError:
+            "Le chargement du texte a ֳ©chouֳ©. Veuillez vֳ©rifier votre connexion Internet.",
+          sefariaCredit: "Texte fourni par Sefaria.org (licence ouverte)",
+          zmanimLabels: [
+            "Alot HaShachar",
+            "Lever du soleil",
+            "Fin du Chema",
+            "Fin de la Tefila",
+            "Hatsot",
+            "Minha Gedola",
+            "Minha Ketana",
+            "Plag HaMinha",
+            "Coucher du soleil",
+            "Sortie des ֳ©toiles",
+          ],
+        },
+      };
+
+      Object.assign(dynamicUiDict.he, {
+        weekdayHeaders: ["א'", "ב'", "ג'", "ד'", "ה'", "ו'", "ש'"],
+        weekdayNames: [
+          "ראשון",
+          "שני",
+          "שלישי",
+          "רביעי",
+          "חמישי",
+          "שישי",
+          "שבת",
+        ],
+        today: "היום",
+        inDays: (days) => `בעוד ${days} ימים`,
+        noResults: "לא נמצאו מועדים תואמים.",
+        shabbatEnter: "כניסת שבת",
+        shabbatExit: "יציאת שבת",
+        holidayEnter: "כניסת חג",
+        holidayExit: "יציאת חג",
+        fastStart: "תחילת צום",
+        fastEnd: "סיום צום",
+        currentCityLabel: "עיר נוכחית:",
+        gpsCity: "מיקום נוכחי (GPS)",
+        gpsError: "לא הצלחנו לאתר מיקום, נחזור להגדרה הקודמת.",
+        loadingFastTimes: "מחשב זמני צום...",
+        loadingHolidayTimes: "מחשב זמני חג...",
+        noDataError: "לא ניתן למשוך נתונים כעת. בדוק חיבור אינטרנט.",
+        syncEmpty: "אין אירועים לסנכרון.",
+        compassPermission: "נדרש אישור חיישנים",
+        compassLocating: "מאתר כיוון התפילה...",
+        compassRotate: "סובב את המכשיר...",
+        compassButton: "אשר גישה לחיישני כיוון",
+        compassTargetJerusalem: "ירושלים",
+        compassTargetWall: "הכותל",
+        compassTargetIsrael: "ארץ ישראל",
+        compassAligned: (label) => `מכוון ל${label}!`,
+        sefariaLoading: "טוען טקסט ממסד הנתונים...",
+        sefariaMissing: "לא נמצא טקסט עבור מועד זה במאגר הפתוח.",
+        sefariaError: "שגיאה בטעינת הטקסט. אנא בדוק חיבור לאינטרנט.",
+        sefariaCredit: "הטקסט באדיבות Sefaria.org (ברישיון פתוח)",
+        zmanimLabels: [
+          "עלות השחר",
+          "הנץ החמה",
+          'סוף ק"ש',
+          "סוף תפילה",
+          "חצות יום / לילה",
+          "מנחה גדולה",
+          "מנחה קטנה",
+          "פלג המנחה",
+          "שקיעה",
+          "צאת הכוכבים",
+        ],
+      });
+
+      function getDynamicUiText() {
+        return dynamicUiDict[CURRENT_LANG] || dynamicUiDict.he;
+      }
+
+      function getCurrentLocale() {
+        return getDynamicUiText().locale;
+      }
+
+      function formatLocalizedDate(date, options) {
+        return new Intl.DateTimeFormat(getCurrentLocale(), options).format(
+          date,
+        );
+      }
+
+      function formatLocalizedTime(value) {
+        const date = value instanceof Date ? value : new Date(value);
+        return isNaN(date)
+          ? "--:--"
+          : date.toLocaleTimeString(getCurrentLocale(), {
+              hour: "2-digit",
+              minute: "2-digit",
+            });
+      }
+
+      function formatDaysUntilText(days) {
+        const ui = getDynamicUiText();
+        return days <= 0 ? ui.today : ui.inDays(days);
+      }
+
+      function updateCalendarWeekdayHeaders() {
+        const headers = document.querySelectorAll(".cal-grid .cal-header");
+        const labels = getDynamicUiText().weekdayHeaders;
+        headers.forEach((header, index) => {
+          if (labels[index]) header.textContent = labels[index];
+        });
+      }
+
+      function updateCurrentCityLabel() {
+        const cityNameEl = document.getElementById("current-city-name");
+        if (!cityNameEl || !cityNameEl.parentElement) return;
+        const ui = getDynamicUiText();
+        if (GEO_LOCATION === "GPS") cityNameEl.textContent = ui.gpsCity;
+        cityNameEl.parentElement.childNodes[0].nodeValue = `${ui.currentCityLabel} `;
+      }
+
+      function updateCompassStatusText() {
+        const modal = document.getElementById("compass-modal");
+        const status = document.getElementById("compass-status");
+        const button = document.getElementById("btn-compass-permission");
+        if (!modal || modal.classList.contains("hidden") || !status || !button)
+          return;
+
+        const ui = getDynamicUiText();
+        button.textContent = ui.compassButton;
+        if (!button.classList.contains("hidden")) {
+          status.textContent = ui.compassPermission;
+          return;
+        }
+
+        if (status.classList.contains("text-emerald-400")) {
+          let targetLabel = ui.compassTargetJerusalem;
+          if (GPS_COORDS) {
+            if (isInJerusalem(GPS_COORDS.lat, GPS_COORDS.lon)) {
+              targetLabel = ui.compassTargetWall;
+            } else if (!isInIsrael(GPS_COORDS.lat, GPS_COORDS.lon)) {
+              targetLabel = ui.compassTargetIsrael;
+            }
+          }
+          status.textContent = ui.compassAligned(targetLabel);
+          return;
+        }
+
+        status.textContent = compassListener
+          ? ui.compassRotate
+          : ui.compassLocating;
+      }
+
+      function refreshLiveLanguageUI() {
+        document.getElementById("lang-indicator").textContent =
+          CURRENT_LANG.toUpperCase();
+        document.documentElement.lang = CURRENT_LANG;
+        document.documentElement.dir = CURRENT_LANG === "he" ? "rtl" : "ltr";
+        applyTranslations();
+        updateCompassDirectionLabels();
+        updateCalendarWeekdayHeaders();
+        updateCurrentCityLabel();
+        updateNotifStatusUI();
+        updateCompassStatusText();
+
+        const omerModal = document.getElementById("omer-modal");
+        if (omerModal && !omerModal.classList.contains("hidden")) {
+          document.getElementById("omer-modal-text").textContent =
+            generateOmerText(CURRENT_OMER_DAY);
+        }
+
+        const calendarModal = document.getElementById("calendar-modal");
+        if (calendarModal && !calendarModal.classList.contains("hidden")) {
+          buildMonthCalendar();
+        }
+
+        const sefariaContent = document.getElementById("sefaria-modal-content");
+        const sefariaTitle = document.getElementById("sefaria-modal-title");
+        if (sefariaContent) {
+          sefariaContent.classList.toggle("text-left", CURRENT_LANG !== "he");
+          sefariaContent.dir = CURRENT_LANG === "he" ? "rtl" : "ltr";
+        }
+        if (sefariaTitle) {
+          sefariaTitle.classList.toggle("text-right", CURRENT_LANG === "he");
+          sefariaTitle.classList.toggle("text-left", CURRENT_LANG !== "he");
+        }
+      }
+
+      function bindModalBackdropClose(modalId, closeHandler) {
+        const modal = document.getElementById(modalId);
+        if (!modal || modal.dataset.backdropCloseBound === "true") return;
+        modal.addEventListener("click", (event) => {
+          if (event.target === modal) closeHandler();
+        });
+        modal.dataset.backdropCloseBound = "true";
+      }
+
+      function setupModalBackdropClose() {
+        bindModalBackdropClose("settings-modal", () => {
+          const modal = document.getElementById("settings-modal");
+          if (modal && !modal.classList.contains("hidden")) toggleSettings();
+        });
+        bindModalBackdropClose("omer-modal", closeOmerModal);
+        bindModalBackdropClose("sefaria-modal", closeSefariaModal);
+        bindModalBackdropClose("compass-modal", closeCompass);
+        bindModalBackdropClose("calendar-modal", closeCalendar);
+      }
 
       // --- Navbar Scroll Logic ---
       window.addEventListener("scroll", () => {
@@ -1833,21 +2281,20 @@
         updateCompassDirectionLabels();
       }
 
-      function cycleLanguage() {
+      async function cycleLanguage() {
         if (CURRENT_LANG === "he") CURRENT_LANG = "en";
         else if (CURRENT_LANG === "en") CURRENT_LANG = "fr";
         else CURRENT_LANG = "he";
 
         localStorage.setItem("moadim_lang", CURRENT_LANG);
-        document.getElementById("lang-indicator").textContent =
-          CURRENT_LANG.toUpperCase();
-        document.documentElement.lang = CURRENT_LANG;
-        document.documentElement.dir = CURRENT_LANG === "he" ? "rtl" : "ltr";
-
-        applyTranslations();
-        updateCompassDirectionLabels();
-        updateNotifStatusUI();
-        fetchLiveCalendarData();
+        refreshLiveLanguageUI();
+        render(
+          document.querySelector(".chip.active")?.id?.replace("btn-", "") ||
+            "all",
+          document.getElementById("mainSearch").value,
+        );
+        buildMonthCalendar();
+        await fetchLiveCalendarData();
       }
 
       function updateCompassDirectionLabels() {
@@ -1908,18 +2355,14 @@
 
       function initApp() {
         applyTheme(CURRENT_THEME);
-
-        document.getElementById("lang-indicator").textContent =
-          CURRENT_LANG.toUpperCase();
-        document.documentElement.lang = CURRENT_LANG;
-        document.documentElement.dir = CURRENT_LANG === "he" ? "rtl" : "ltr";
-        applyTranslations();
-        updateCompassDirectionLabels();
+        refreshLiveLanguageUI();
+        setupModalBackdropClose();
 
         document.getElementById("settings-method").value = ZMANIM_METHOD;
         document.getElementById("current-city-name").textContent =
           localStorage.getItem("moadim_city_name") || "פתח תקווה";
 
+        updateCurrentCityLabel();
         updateNotifStatusUI();
 
         const cachedEvents = localStorage.getItem("moadim_cached_events");
@@ -1983,15 +2426,21 @@
       // --- Sefaria Modal Logic ---
       async function openSefariaModal(hebTitle, enRef) {
         if (!enRef) return;
+        const ui = getDynamicUiText();
         let cleanRef = enRef.replace("Parashat ", "").replace(/ /g, "_");
         if (/\d/.test(cleanRef)) cleanRef = cleanRef.replace("_", "."); // For Daf Yomi
 
         const m = document.getElementById("sefaria-modal");
-        document.getElementById("sefaria-modal-title").textContent = hebTitle;
+        document.getElementById("sefaria-modal-title").textContent =
+          CURRENT_LANG === "he" ? hebTitle : enRef;
         document.getElementById("sefaria-modal-content").innerHTML =
           '<div class="animate-pulse text-center mt-10">טוען טקסט ממסד הנתונים...</div>';
         document.getElementById("sefaria-credit-link").href =
           `https://www.sefaria.org.il/${cleanRef}?lang=he`;
+        document.getElementById("sefaria-modal-content").innerHTML =
+          `<div class="animate-pulse text-center mt-10">${ui.sefariaLoading}</div>`;
+        document.getElementById("sefaria-credit-link").textContent =
+          ui.sefariaCredit;
 
         m.classList.remove("hidden");
         setTimeout(() => m.classList.remove("opacity-0"), 10);
@@ -2027,6 +2476,7 @@
       async function fetchLiveCalendarData() {
         try {
           const now = new Date();
+          const ui = getDynamicUiText();
 
           const todayDateUI = new Date();
           const gy = todayDateUI.getFullYear();
@@ -2067,7 +2517,7 @@
               : getHebrewDateString(dateForHebcal) || dateData.hebrew;
 
           document.getElementById("stat-today-gregorian").textContent =
-            todayDateUI.toLocaleDateString("he-IL", {
+            todayDateUI.toLocaleDateString(getCurrentLocale(), {
               day: "2-digit",
               month: "2-digit",
               year: "numeric",
@@ -2139,7 +2589,7 @@
             const d = new Date(iso);
             return isNaN(d)
               ? "--:--"
-              : d.toLocaleTimeString("he-IL", {
+              : d.toLocaleTimeString(getCurrentLocale(), {
                   hour: "2-digit",
                   minute: "2-digit",
                 });
@@ -2169,6 +2619,11 @@
           };
           document.getElementById("stat-shabbat-times").textContent =
             `כניסה: ${c} | יציאה: ${h}`;
+
+          if (CURRENT_LANG !== "he") {
+            document.getElementById("stat-shabbat-times").textContent =
+              `${ui.shabbatEnter}: ${c} | ${ui.shabbatExit}: ${h}`;
+          }
 
           const cy = dateForHebcal.getFullYear();
           const [y1, y2] = await Promise.all([
@@ -2374,6 +2829,14 @@
             document.getElementById("stat-moon").innerHTML =
               `${nextM.name.replace("קידוש לבנה - ", "")} <br><span class="text-sm font-normal opacity-80">(בעוד ${getDaysDiff(nextM.date)} ימים)</span>`;
 
+          if (nextH && CURRENT_LANG !== "he") {
+            document.getElementById("stat-next").innerHTML =
+              `${nextH.name} <br><span class="text-sm font-normal opacity-80">(${formatDaysUntilText(getDaysDiff(nextH.date))})</span>`;
+          }
+          if (nextM && CURRENT_LANG !== "he") {
+            document.getElementById("stat-moon").innerHTML =
+              `${nextM.name.replace("׳§׳™׳“׳•׳© ׳׳‘׳ ׳” - ", "")} <br><span class="text-sm font-normal opacity-80">(${formatDaysUntilText(getDaysDiff(nextM.date))})</span>`;
+          }
           render();
           buildMonthCalendar();
         } catch (err) {
@@ -2404,7 +2867,7 @@
       function renderZmanimGrid(zData) {
         const ft = (iso) =>
           iso
-            ? new Date(iso).toLocaleTimeString("he-IL", {
+            ? new Date(iso).toLocaleTimeString(getCurrentLocale(), {
                 hour: "2-digit",
                 minute: "2-digit",
               })
@@ -2445,10 +2908,18 @@
               <div class="bg-blue-900/40 border border-blue-400/20 rounded-xl p-2.5"><span class="text-blue-300/80 text-[11px] md:text-xs block mb-1">שקיעה</span><span class="font-black text-base md:text-lg text-white">${shkia}</span></div>
               <div class="bg-blue-900/40 border border-blue-400/20 rounded-xl p-2.5"><span class="text-blue-300/80 text-[11px] md:text-xs block mb-1">צאת הכוכבים</span><span class="font-black text-base md:text-lg text-white">${tzeit}</span></div>
           `;
+        const ui = getDynamicUiText();
+        document
+          .querySelectorAll("#zmanim-details > div > span:first-child")
+          .forEach((label, index) => {
+            if (ui.zmanimLabels[index])
+              label.textContent = ui.zmanimLabels[index];
+          });
       }
 
       async function fetchFastTimes(name, dateStr, elementId) {
         try {
+          const ui = getDynamicUiText();
           let isMajorFast =
             name.includes("Kippur") ||
             name.includes("Av") ||
@@ -2469,32 +2940,24 @@
                 `https://www.hebcal.com/zmanim?cfg=json&${getGeoParams()}&date=${dateStr}`,
               ),
             ]);
-            startStr = new Date(resPrev.times.sunset).toLocaleTimeString(
-              "he-IL",
-              { hour: "2-digit", minute: "2-digit" },
-            );
+            startStr = formatLocalizedTime(resPrev.times.sunset);
             window.FAST_END_TIME = new Date(resCurr.times.tzeit7083deg);
-            endStr = window.FAST_END_TIME.toLocaleTimeString("he-IL", {
-              hour: "2-digit",
-              minute: "2-digit",
-            });
+            endStr = formatLocalizedTime(window.FAST_END_TIME);
           } else {
             let res = await fetchHebcalWithCache(
               `https://www.hebcal.com/zmanim?cfg=json&${getGeoParams()}&date=${dateStr}`,
             );
-            startStr = new Date(res.times.alotHaShachar).toLocaleTimeString(
-              "he-IL",
-              { hour: "2-digit", minute: "2-digit" },
-            );
+            startStr = formatLocalizedTime(res.times.alotHaShachar);
             window.FAST_END_TIME = new Date(res.times.tzeit7083deg);
-            endStr = window.FAST_END_TIME.toLocaleTimeString("he-IL", {
-              hour: "2-digit",
-              minute: "2-digit",
-            });
+            endStr = formatLocalizedTime(window.FAST_END_TIME);
           }
 
           const el = document.getElementById(elementId);
           if (el) {
+            if (CURRENT_LANG !== "he") {
+              el.innerHTML = `<span class="bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300 px-2 py-1 rounded-lg border border-rose-200 dark:border-rose-800">${ui.fastStart}: <strong dir="ltr">${startStr}</strong></span> <span class="bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300 px-2 py-1 rounded-lg border border-rose-200 dark:border-rose-800">${ui.fastEnd}: <strong dir="ltr">${endStr}</strong></span>`;
+              return;
+            }
             el.innerHTML = `<span class="bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300 px-2 py-1 rounded-lg border border-rose-200 dark:border-rose-800">תחילת צום: <strong dir="ltr">${startStr}</strong></span> <span class="bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300 px-2 py-1 rounded-lg border border-rose-200 dark:border-rose-800">סיום צום: <strong dir="ltr">${endStr}</strong></span>`;
           }
         } catch (err) {
@@ -2505,6 +2968,7 @@
 
       async function fetchHolidayTimes(name, dateStr, elementId) {
         try {
+          const ui = getDynamicUiText();
           let prevDay = new Date(dateStr);
           prevDay.setDate(prevDay.getDate() - 1);
           let prevIso = prevDay.toISOString().split("T")[0];
@@ -2516,17 +2980,15 @@
               `https://www.hebcal.com/zmanim?cfg=json&${getGeoParams()}&date=${dateStr}`,
             ),
           ]);
-          let startStr = new Date(resPrev.times.sunset).toLocaleTimeString(
-            "he-IL",
-            { hour: "2-digit", minute: "2-digit" },
-          );
-          let endStr = new Date(resCurr.times.tzeit7083deg).toLocaleTimeString(
-            "he-IL",
-            { hour: "2-digit", minute: "2-digit" },
-          );
+          let startStr = formatLocalizedTime(resPrev.times.sunset);
+          let endStr = formatLocalizedTime(resCurr.times.tzeit7083deg);
 
           const el = document.getElementById(elementId);
           if (el) {
+            if (CURRENT_LANG !== "he") {
+              el.innerHTML = `<span class="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-lg border border-blue-200 dark:border-blue-800">${ui.holidayEnter}: <strong dir="ltr">${startStr}</strong></span> <span class="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-lg border border-blue-200 dark:border-blue-800">${ui.holidayExit}: <strong dir="ltr">${endStr}</strong></span>`;
+              return;
+            }
             el.innerHTML = `<span class="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-lg border border-blue-200 dark:border-blue-800">כניסת חג: <strong dir="ltr">${startStr}</strong></span> <span class="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-lg border border-blue-200 dark:border-blue-800">יציאת חג: <strong dir="ltr">${endStr}</strong></span>`;
           }
         } catch (err) {
@@ -2618,12 +3080,18 @@
 
       function saveNotifPrefs() {
         const prefs = {};
-        ["shabbat", "holiday", "fast", "omer", "levana", "daf", "tefillin"].forEach(
-          (id) => {
-            const el = document.getElementById("notif_" + id);
-            if (el) prefs[id] = el.checked;
-          },
-        );
+        [
+          "shabbat",
+          "holiday",
+          "fast",
+          "omer",
+          "levana",
+          "daf",
+          "tefillin",
+        ].forEach((id) => {
+          const el = document.getElementById("notif_" + id);
+          if (el) prefs[id] = el.checked;
+        });
         localStorage.setItem("moadim_notif_prefs", JSON.stringify(prefs));
       }
 
@@ -2691,9 +3159,7 @@
       }
 
       function isInJerusalem(lat, lon) {
-        return (
-          getDistanceKm(lat, lon, 31.778, 35.235) <= 10
-        );
+        return getDistanceKm(lat, lon, 31.778, 35.235) <= 10;
       }
 
       function isInIsrael(lat, lon) {
@@ -2701,6 +3167,7 @@
       }
 
       function getCompassTarget(lat, lon) {
+        const ui = getDynamicUiText();
         if (typeof lat !== "number" || typeof lon !== "number") {
           return {
             ...COMPASS_JERUSALEM_TARGET,
@@ -2797,9 +3264,8 @@
 
             const normalizedRot = Math.abs(rotation % 360);
             if (normalizedRot < 15 || normalizedRot > 345) {
-              document
-                .getElementById("compass-status")
-                .textContent = `מכוון ל${target.label}! ✨`;
+              document.getElementById("compass-status").textContent =
+                `מכוון ל${target.label}! ✨`;
               document
                 .getElementById("compass-status")
                 .classList.replace("text-blue-300", "text-emerald-400");
@@ -2810,9 +3276,8 @@
                   "text-emerald-500",
                 );
             } else {
-              document
-                .getElementById("compass-status")
-                .textContent = "סובב את המכשיר...";
+              document.getElementById("compass-status").textContent =
+                "סובב את המכשיר...";
               document
                 .getElementById("compass-status")
                 .classList.replace("text-emerald-400", "text-blue-300");
@@ -2910,6 +3375,7 @@
 
       function render(filter = "all", search = "") {
         const c = document.getElementById("resultsGrid");
+        const ui = getDynamicUiText();
         c.innerHTML = "";
         const filtered = ALL_EVENTS.filter(
           (e) =>
@@ -2930,7 +3396,7 @@
               }[e.type] || "slate";
           const str = encodeURIComponent(JSON.stringify(e));
 
-          const dateDisplay = `${daysOfWeek[new Date(e.date).getDay()]} | ${new Date(e.date).toLocaleDateString("he-IL")} | <span class="text-slate-800 dark:text-slate-200 font-bold">${getHebrewDateString(new Date(e.date))}</span>`;
+          const dateDisplay = `${ui.weekdayNames[new Date(e.date).getDay()]} | ${formatLocalizedDate(new Date(e.date), { day: "2-digit", month: "2-digit", year: "numeric" })} | <span class="text-slate-800 dark:text-slate-200 font-bold">${getHebrewDateString(new Date(e.date))}</span>`;
 
           let extraTimesHtml = "";
           if (e.type === "fast") {
@@ -2973,9 +3439,15 @@
                             </button>
                         </div>
                     </article>`;
+          const latestCard = c.lastElementChild;
+          const countdownEl = latestCard?.querySelector("[aria-label]");
+          if (countdownEl) countdownEl.textContent = formatDaysUntilText(diff);
         });
         if (!filtered.length)
           c.innerHTML = `<div class="text-center py-10 text-slate-400 font-bold text-lg" role="alert">לא נמצאו מועדים תואמים.</div>`;
+        if (!filtered.length && CURRENT_LANG !== "he") {
+          c.innerHTML = `<div class="text-center py-10 text-slate-400 font-bold text-lg" role="alert">${ui.noResults}</div>`;
+        }
         applyTranslations(); // Re-apply dynamically rendered text
       }
 
@@ -3037,14 +3509,19 @@
       }
 
       function buildMonthCalendar() {
+        const ui = getDynamicUiText();
         const d = CALENDAR_DISPLAY_DATE,
           y = d.getFullYear(),
           m = d.getMonth();
+        updateCalendarWeekdayHeaders();
         document.getElementById("cal-month-title").textContent =
-          d.toLocaleDateString("he-IL", { month: "long", year: "numeric" });
+          d.toLocaleDateString(ui.calendarLocale, {
+            month: "long",
+            year: "numeric",
+          });
         try {
           document.getElementById("cal-month-heb").textContent =
-            new Intl.DateTimeFormat("he-IL-u-ca-hebrew", {
+            new Intl.DateTimeFormat(ui.hebrewCalendarLocale, {
               month: "long",
               year: "numeric",
             }).format(d);
@@ -3208,15 +3685,21 @@
         const prefs = JSON.parse(
           localStorage.getItem("moadim_notif_prefs") || "{}",
         );
-        ["shabbat", "holiday", "fast", "omer", "levana", "daf", "tefillin"].forEach(
-          (id) => {
-            const el = document.getElementById("notif_" + id);
-            if (el) {
-              el.checked = prefs[id] !== false;
-              el.disabled = !enabled;
-            }
-          },
-        );
+        [
+          "shabbat",
+          "holiday",
+          "fast",
+          "omer",
+          "levana",
+          "daf",
+          "tefillin",
+        ].forEach((id) => {
+          const el = document.getElementById("notif_" + id);
+          if (el) {
+            el.checked = prefs[id] !== false;
+            el.disabled = !enabled;
+          }
+        });
         return;
       }
 

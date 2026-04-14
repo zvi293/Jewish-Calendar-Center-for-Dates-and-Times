@@ -3908,7 +3908,7 @@
                 "rosh-chodesh": "emerald",
                 minor: "slate",
               }[e.type] || "slate";
-          const str = encodeURIComponent(JSON.stringify(e));
+          const str = encodeURIComponent(JSON.stringify(e)).replace(/'/g, '%27');
 
           const dateDisplay = `${ui.weekdayNames[new Date(e.date).getDay()]} | ${formatLocalizedDate(new Date(e.date), { day: "2-digit", month: "2-digit", year: "numeric" })} | <span class="text-slate-800 dark:text-slate-200 font-bold">${getHebrewDateString(new Date(e.date))}</span>`;
 

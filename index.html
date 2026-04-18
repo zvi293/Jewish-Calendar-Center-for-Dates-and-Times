@@ -55,8 +55,8 @@
       href="https://jewishcalendar.netlify.app/"
     />
 
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='120' fill='%230f172a'/%3E%3Cpath d='M256 112L371 312H141Z' fill='none' stroke='%23dbeafe' stroke-width='32' stroke-linejoin='round'/%3E%3Cpath d='M256 400L371 200H141Z' fill='none' stroke='%23dbeafe' stroke-width='32' stroke-linejoin='round'/%3E%3Ccircle cx='256' cy='256' r='18' fill='%23ffffff'/%3E%3C/svg%3E" type="image/svg+xml" />
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
-    <link rel="shortcut icon" href="favicon.svg" />
     <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
 
@@ -560,6 +560,47 @@
         transform: translateY(-50%);
       }
 
+      /* ── Font size scaling ── */
+      html.fs-1 { font-size: 108% !important; }
+      html.fs-2 { font-size: 116% !important; }
+      /* Prevent card overflow on larger font */
+      html.fs-1 .zman-card, html.fs-2 .zman-card { overflow: hidden; }
+
+      /* ── Prayer Grid ── */
+      .prayer-btn {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.35rem;
+        background: rgba(255,255,255,0.07);
+        border: 1px solid rgba(255,255,255,0.12);
+        border-radius: 1.25rem;
+        padding: 0.75rem 0.5rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        color: white;
+        min-height: 72px;
+      }
+      .prayer-btn:hover {
+        background: rgba(99,102,241,0.25);
+        border-color: rgba(129,140,248,0.5);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(99,102,241,0.2);
+      }
+      .prayer-icon { font-size: 1.4rem; line-height: 1; }
+      .prayer-label {
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-align: center;
+        line-height: 1.2;
+        color: rgba(226,232,240,0.9);
+      }
+      @media (min-width: 768px) {
+        .prayer-label { font-size: 0.8rem; }
+        .prayer-icon  { font-size: 1.6rem; }
+      }
+
       /* ── Sefaria Reader Styles ── */
       #sefaria-modal-content p {
         font-size: 1.15rem;
@@ -569,6 +610,83 @@
       #sefaria-modal-content .text-left {
         text-align: left;
         direction: ltr;
+      }
+
+      /* ── Blue (Sea) Theme – Modal Overrides ── */
+      .theme-blue #sefaria-modal,
+      .theme-blue #omer-modal,
+      .theme-blue #compass-modal,
+      .theme-blue #settings-modal,
+      .theme-blue #calendar-modal {
+        background: rgba(7, 89, 133, 0.88);
+      }
+      .theme-blue #sefaria-modal > div,
+      .theme-blue #omer-modal > div,
+      .theme-blue #compass-modal > div,
+      .theme-blue #settings-modal > div,
+      .theme-blue #calendar-modal > div {
+        background: linear-gradient(135deg, #0c4a6e 0%, #0e7490 100%);
+        box-shadow: 0 0 60px rgba(14, 116, 144, 0.45);
+        color: #e0f2fe;
+      }
+      .theme-blue #sefaria-modal .bg-slate-50,
+      .theme-blue #sefaria-modal [class*="dark:bg-slate-900"] {
+        background: rgba(8, 47, 73, 0.7) !important;
+      }
+      .theme-blue #sefaria-modal .border-slate-100,
+      .theme-blue #omer-modal .border-slate-100 {
+        border-color: rgba(56, 189, 248, 0.2) !important;
+      }
+      .theme-blue #sefaria-modal-title,
+      .theme-blue #omer-modal h2,
+      .theme-blue #omer-modal h3 {
+        color: #e0f2fe !important;
+      }
+      .theme-blue #sefaria-modal-content {
+        color: #bae6fd !important;
+      }
+      .theme-blue #sefaria-modal-content p {
+        color: #bae6fd;
+      }
+      .theme-blue #omer-modal p,
+      .theme-blue #omer-modal span {
+        color: #bae6fd;
+      }
+      .theme-blue #sefaria-modal button,
+      .theme-blue #omer-modal button,
+      .theme-blue #compass-modal button,
+      .theme-blue #settings-modal button,
+      .theme-blue #calendar-modal button {
+        background: rgba(14, 116, 144, 0.5) !important;
+        color: #e0f2fe !important;
+      }
+      .theme-blue #sefaria-modal button:hover,
+      .theme-blue #omer-modal button:hover,
+      .theme-blue #compass-modal button:hover {
+        color: #fff !important;
+      }
+      .theme-blue #sefaria-modal a,
+      .theme-blue #omer-modal a {
+        color: #38bdf8 !important;
+      }
+      .theme-blue #sefaria-modal a:hover,
+      .theme-blue #omer-modal a:hover {
+        color: #7dd3fc !important;
+      }
+      .theme-blue .bg-white.dark\:bg-slate-800 {
+        background: linear-gradient(135deg, #0c4a6e 0%, #0e7490 100%);
+      }
+      .theme-blue .text-slate-800.dark\:text-white {
+        color: #e0f2fe;
+      }
+      .theme-blue .text-slate-700.dark\:text-slate-300 {
+        color: #bae6fd;
+      }
+      .theme-blue .bg-slate-100.dark\:bg-slate-700 {
+        background: rgba(14, 116, 144, 0.5);
+      }
+      .theme-blue .text-slate-400.dark\:hover\:text-white:hover {
+        color: #fff;
       }
 
       /* ── Search Bar Enhancement ── */
@@ -604,6 +722,98 @@
       #dashboard-state article:nth-child(2) { animation-delay: 0.12s; }
       #dashboard-state article:nth-child(3) { animation-delay: 0.19s; }
       #dashboard-state article:nth-child(4) { animation-delay: 0.26s; }
+      #dashboard-state article {
+        min-height: 132px;
+      }
+      .dashboard-shabbat-line {
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 0.32rem;
+        margin-bottom: 0.24rem;
+        direction: rtl;
+      }
+      .dashboard-shabbat-line:last-child {
+        margin-bottom: 0;
+      }
+      .dashboard-shabbat-label {
+        color: rgba(191, 219, 254, 0.72);
+        font-size: 0.82rem;
+        font-weight: 800;
+        white-space: nowrap;
+      }
+      .dashboard-shabbat-value {
+        color: #fff;
+        font-size: 0.95rem;
+        font-weight: 900;
+        line-height: 1.1;
+        letter-spacing: 0.01em;
+      }
+      .dashboard-card-title-tight {
+        margin-bottom: 0.35rem;
+      }
+      .dashboard-card-meta-tight {
+        margin-top: 0.28rem;
+      }
+      .zman-meta {
+        display: block;
+        margin-top: 0.35rem;
+        color: rgba(191, 219, 254, 0.68);
+        font-size: 0.72rem;
+        font-weight: 700;
+        line-height: 1.35;
+      }
+      .prayer-richtext h2,
+      .prayer-richtext h3,
+      .prayer-richtext h4 {
+        color: #c7d2fe;
+        font-weight: 900;
+        margin: 1rem 0 0.45rem;
+      }
+      .prayer-richtext p,
+      .prayer-richtext li {
+        color: #e2e8f0;
+        line-height: 2.02;
+        overflow-wrap: anywhere;
+      }
+      .prayer-richtext ul,
+      .prayer-richtext ol {
+        margin: 0.75rem 0;
+        padding-inline-start: 1.4rem;
+      }
+      .prayer-richtext a {
+        color: #93c5fd;
+        text-decoration: underline;
+      }
+      .prayer-richtext .seasonal-block {
+        background: rgba(59, 130, 246, 0.12);
+        border: 1px solid rgba(96, 165, 250, 0.24);
+        border-radius: 1rem;
+        padding: 0.9rem 1rem;
+        margin-bottom: 0.9rem;
+      }
+      .prayer-richtext .seasonal-block strong {
+        color: #bfdbfe;
+      }
+      .prayer-source-credit {
+        color: #94a3b8;
+        font-size: 0.76rem;
+        line-height: 1.65;
+      }
+      .prayer-source-credit strong {
+        color: #cbd5e1;
+      }
+      @media (max-width: 767px) {
+        #dashboard-state article {
+          min-height: 114px;
+        }
+        .dashboard-shabbat-label {
+          font-size: 0.72rem;
+        }
+        .dashboard-shabbat-value {
+          font-size: 0.9rem;
+        }
+      }
 
       /* ── Sync button pulse ── */
       @keyframes pulse-glow {
@@ -882,16 +1092,7 @@
           <span style="background: linear-gradient(135deg,#93c5fd,#60a5fa,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;" data-i18n-key="app_title_2">היהודי</span>
         </h1>
 
-        <!-- Live Shabbat Countdown Bar -->
-        <div id="shabbat-countdown-wrap" class="hidden mb-8 opacity-0 transition-opacity duration-500">
-          <div id="shabbat-countdown-bar" class="mx-auto max-w-sm">
-            <span class="text-blue-200 text-sm font-bold flex items-center gap-1.5">
-              <span>🕯️</span>
-              <span id="countdown-label">הדלקת נרות בעוד</span>
-            </span>
-            <span id="countdown-display" class="countdown-digit">--:--:--</span>
-          </div>
-        </div>
+        <!-- Shabbat countdown removed per user request -->
 
         <button
           id="btn-open-calendar"
@@ -915,6 +1116,60 @@
           <span data-i18n-key="cal_btn">פתח לוח שנה חודשי</span>
         </button>
 
+        <!-- ══════ גריד תפילות ══════ -->
+        <div id="prayer-grid-wrap" class="hidden mx-auto w-full max-w-4xl mb-6 px-2 opacity-0 transition-opacity duration-500">
+          <!-- שורה ראשית — תמיד מוצגת -->
+          <div class="grid grid-cols-3 gap-2 mb-2">
+            <button onclick="openPrayer('tefillat-haderech','תפילת הדרך','Traveler\'s Prayer')" class="prayer-btn">
+              <span class="prayer-icon">🚗</span><span class="prayer-label">תפילת הדרך</span>
+            </button>
+            <button onclick="openPrayer('birkat-hamazon','ברכת המזון','Birkat Hamazon')" class="prayer-btn">
+              <span class="prayer-icon">🍞</span><span class="prayer-label">ברכת המזון</span>
+            </button>
+            <button onclick="openPrayer('tikkun-haklali','תיקון הכללי','Tikkun HaKlali')" class="prayer-btn">
+              <span class="prayer-icon">📿</span><span class="prayer-label">תיקון הכללי</span>
+            </button>
+          </div>
+          <!-- כפתור עוד -->
+          <div class="flex justify-center mb-2">
+            <button id="prayer-more-btn" onclick="toggleMorePrayers()" class="flex items-center gap-1.5 text-blue-200/70 hover:text-blue-100 text-xs font-bold px-4 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all">
+              <span id="prayer-more-label">עוד תפילות</span>
+              <svg id="prayer-more-chevron" class="w-3 h-3 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+            </button>
+          </div>
+          <!-- רשת מורחבת — מוצגת בלחיצת "עוד" -->
+          <div id="prayer-more-grid" class="hidden grid grid-cols-3 gap-2">
+            <button onclick="openPrayer('shacharit','תפילת שחרית','Shacharit')" class="prayer-btn">
+              <span class="prayer-icon">🌅</span><span class="prayer-label">שחרית</span>
+            </button>
+            <button onclick="openPrayer('mincha','תפילת מנחה','Mincha')" class="prayer-btn">
+              <span class="prayer-icon">🌤️</span><span class="prayer-label">מנחה</span>
+            </button>
+            <button onclick="openPrayer('maariv','תפילת ערבית','Maariv')" class="prayer-btn">
+              <span class="prayer-icon">🌙</span><span class="prayer-label">ערבית</span>
+            </button>
+            <button onclick="openPrayer('birchot-hashachar','ברכות השחר','Birchot HaShachar')" class="prayer-btn">
+              <span class="prayer-icon">☀️</span><span class="prayer-label">ברכות השחר</span>
+            </button>
+            <button onclick="openPrayer('shema','שמע ישראל','Shema')" class="prayer-btn">
+              <span class="prayer-icon">✡️</span><span class="prayer-label">שמע ישראל</span>
+            </button>
+            <button onclick="openPrayer('al-hamichya','ברכת מעין שלוש','Al HaMichya')" class="prayer-btn">
+              <span class="prayer-icon">🍇</span><span class="prayer-label">ברכת מעין שלוש</span>
+            </button>
+            <button onclick="openTehillimPage()" class="prayer-btn">
+              <span class="prayer-icon">📖</span><span class="prayer-label">תהילים</span>
+            </button>
+            <button onclick="openPrayer('kiddush-levana','ברכת לבנה','Kiddush Levana')" class="prayer-btn">
+              <span class="prayer-icon">🌕</span><span class="prayer-label">ברכת לבנה</span>
+            </button>
+            <button onclick="openPrayer('tikkun-chatzot','תיקון חצות','Tikkun Chatzot')" class="prayer-btn">
+              <span class="prayer-icon">🕛</span><span class="prayer-label">תיקון חצות</span>
+            </button>
+          </div>
+        </div>
+        <!-- ══════════════════════════ -->
+
         <div id="loading-state" class="py-10 text-center" aria-live="polite">
           <div class="loader mb-4"></div>
           <p
@@ -929,97 +1184,89 @@
           id="dashboard-state"
           class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 hidden opacity-0 transition-opacity duration-500"
         >
+          <!-- כרטיסייה 1: התאריך היום -->
           <article
-            class="glass-card p-5 md:p-8 rounded-[2rem] text-right flex flex-col justify-center"
+            class="glass-card p-2.5 md:p-3.5 rounded-[2rem] text-right flex flex-col justify-center"
           >
             <h2
-              class="text-blue-300 text-[10px] md:text-xs font-bold mb-1 uppercase tracking-widest opacity-90"
+              class="dashboard-card-title-tight text-blue-300 text-[12px] md:text-[14px] font-bold uppercase tracking-widest opacity-90"
               data-i18n-key="today_date"
             >
-              היום בתאריך
+              התאריך היום
             </h2>
             <p
               id="stat-today"
-              class="text-white text-lg md:text-2xl font-bold leading-tight"
+              class="text-white text-[0.95rem] md:text-lg font-bold leading-tight"
             >
               --
             </p>
             <p
               id="stat-today-gregorian"
-              class="text-blue-100 text-xs md:text-sm mt-1 opacity-80 font-medium"
+              class="dashboard-card-meta-tight text-blue-100 text-[10px] md:text-[11px] opacity-80 font-medium"
             >
               --
             </p>
           </article>
 
+          <!-- כרטיסייה 2: שבת קרובה -->
           <article
-            class="glass-card p-5 md:p-8 rounded-[2rem] text-right flex flex-col justify-center"
+            id="shabbat-card"
+            class="glass-card p-2.5 md:p-3.5 rounded-[2rem] text-right flex flex-col justify-center relative cursor-pointer hover:opacity-90 transition-opacity"
+            onclick="if(window._openShabbatParasha) window._openShabbatParasha()"
           >
             <h2
-              class="text-blue-300 text-[10px] md:text-xs font-bold mb-1 uppercase tracking-widest opacity-90"
+              class="dashboard-card-title-tight text-blue-300 text-[12px] md:text-[14px] font-bold uppercase tracking-widest opacity-90"
+              data-i18n-key="upcoming_shab"
+            >
+              שבת קרובה
+            </h2>
+            <div id="stat-shabbat-times" class="mb-2.5">
+              <p class="text-blue-200/60 text-[13px] font-bold tracking-wider mb-0.5">כניסת שבת</p>
+              <p id="shabbat-enter" class="text-white text-xl md:text-2xl font-black leading-tight mb-2" dir="ltr">--:--</p>
+              <p class="text-blue-200/60 text-[13px] font-bold tracking-wider mb-0.5">יציאת שבת</p>
+              <p id="shabbat-exit" class="text-white text-xl md:text-2xl font-black leading-tight mb-2" dir="ltr">--:--</p>
+            </div>
+            <div class="flex items-center gap-1.5 text-blue-200/90 text-[10px] md:text-[12px] font-bold">
+              <span id="stat-parasha">פרשת...</span>
+              <svg class="w-3 h-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+              </svg>
+            </div>
+          </article>
+
+          <!-- כרטיסייה 3: ברכת הלבנה הקרובה -->
+          <article
+            class="glass-card p-2.5 md:p-3.5 rounded-[2rem] text-right flex flex-col justify-center"
+          >
+            <h2
+              class="dashboard-card-title-tight text-blue-300 text-[12px] md:text-[14px] font-bold uppercase tracking-widest opacity-90"
               data-i18n-key="moon_close"
             >
               ברכת הלבנה הקרובה
             </h2>
             <p
               id="stat-moon"
-              class="text-white text-lg md:text-xl font-bold leading-tight"
+              class="text-white text-[0.95rem] md:text-base font-bold leading-tight"
             >
               --
             </p>
           </article>
 
+          <!-- כרטיסייה 4: המועד הבא -->
           <article
-            class="glass-card p-5 md:p-8 rounded-[2rem] text-right flex flex-col justify-center"
+            class="glass-card p-2.5 md:p-3.5 rounded-[2rem] text-right flex flex-col justify-center"
           >
             <h2
-              class="text-blue-300 text-[10px] md:text-xs font-bold mb-1 uppercase tracking-widest opacity-90"
+              class="dashboard-card-title-tight text-blue-300 text-[12px] md:text-[14px] font-bold uppercase tracking-widest opacity-90"
               data-i18n-key="next_event"
             >
               המועד הבא
             </h2>
             <p
               id="stat-next"
-              class="text-white text-lg md:text-xl font-bold leading-tight"
+              class="text-white text-[0.95rem] md:text-base font-bold leading-tight"
             >
               --
-            </p>
-          </article>
-
-          <article
-            class="glass-card p-5 md:p-6 rounded-[2rem] text-right flex flex-col justify-center relative"
-          >
-            <h2
-              class="text-blue-300 text-[10px] md:text-xs font-bold uppercase tracking-widest opacity-90 mb-1"
-              data-i18n-key="upcoming_shab"
-            >
-              שבת קרובה
-            </h2>
-            <button
-              id="parasha-link"
-              onclick="event.preventDefault()"
-              class="text-white text-base md:text-lg font-bold mb-1 leading-tight hover:text-blue-200 transition-colors flex items-center gap-1 group w-fit"
-            >
-              <span id="stat-parasha">פרשת...</span>
-              <svg
-                class="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                ></path>
-              </svg>
-            </button>
-            <p
-              id="stat-shabbat-times"
-              class="text-blue-100 text-xs md:text-sm font-semibold opacity-90"
-            >
-              כניסה: --:-- | יציאה: --:--
             </p>
           </article>
         </div>
@@ -1566,38 +1813,24 @@
           class="relative w-64 h-64 mb-8 flex items-center justify-center"
           aria-hidden="true"
         >
-          <span
-            id="compass-dir-n"
-            class="compass-direction-label compass-direction-n"
-            >צפון</span
-          >
-          <span
-            id="compass-dir-e"
-            class="compass-direction-label compass-direction-e"
-            >מזרח</span
-          >
-          <span
-            id="compass-dir-s"
-            class="compass-direction-label compass-direction-s"
-            >דרום</span
-          >
-          <span
-            id="compass-dir-w"
-            class="compass-direction-label compass-direction-w"
-            >מערב</span
-          >
+          <!-- compass-ring rotates by -alpha, direction labels inside rotate with it (real compass) -->
           <div
             id="compass-ring"
-            class="absolute inset-0 rounded-full border-4 border-blue-500/20 compass-ring transition-transform duration-100 ease-out flex items-center justify-center"
+            class="absolute inset-0 rounded-full border-4 border-blue-500/20 compass-ring transition-transform duration-100 ease-out"
+            style="position:absolute;"
           >
-            <div
-              class="absolute top-2 w-3 h-3 bg-blue-500 rounded-full shadow-[0_0_15px_rgba(59,130,246,0.8)]"
-            ></div>
-            <div
-              class="hidden absolute top-6 text-blue-400/50 font-bold text-xs"
-            >
-              צפון מזהה
-            </div>
+            <!-- Direction labels INSIDE ring — rotate with the compass rose -->
+            <span id="compass-dir-n" class="compass-direction-label compass-direction-n">צ</span>
+            <span id="compass-dir-e" class="compass-direction-label compass-direction-e">מ</span>
+            <span id="compass-dir-s" class="compass-direction-label compass-direction-s">ד</span>
+            <span id="compass-dir-w" class="compass-direction-label compass-direction-w">ע</span>
+            <!-- North dot marker (always at true north when compass rotates) -->
+            <div class="absolute top-2 w-3 h-3 bg-red-500 rounded-full shadow-[0_0_12px_rgba(239,68,68,0.9)]" style="left:50%;transform:translateX(-50%);"></div>
+            <!-- Cardinal tick marks -->
+            <div style="position:absolute;top:10px;left:50%;width:2px;height:12px;background:rgba(239,68,68,0.6);transform:translateX(-50%);border-radius:2px;"></div>
+            <div style="position:absolute;bottom:10px;left:50%;width:2px;height:12px;background:rgba(148,163,184,0.4);transform:translateX(-50%);border-radius:2px;"></div>
+            <div style="position:absolute;top:50%;right:10px;width:12px;height:2px;background:rgba(148,163,184,0.4);transform:translateY(-50%);border-radius:2px;"></div>
+            <div style="position:absolute;top:50%;left:10px;width:12px;height:2px;background:rgba(148,163,184,0.4);transform:translateY(-50%);border-radius:2px;"></div>
           </div>
           <div
             id="compass-arrow"
@@ -1754,6 +1987,51 @@
                 >HE</span
               >
             </button>
+          </div>
+
+          <!-- בחירת נוסח -->
+          <div>
+            <label
+              for="settings-nusach"
+              class="block text-sm font-bold text-slate-500 dark:text-slate-400 mb-2"
+              >בחירת נוסח</label
+            >
+            <select
+              id="settings-nusach"
+              class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
+              aria-label="בחר נוסח"
+            >
+              <option value="mizrahi">עדות המזרח ⭐</option>
+              <option value="sfard">ספרד</option>
+              <option value="ashkenaz">אשכנז</option>
+              <option value="temani_shami">תימן שאמי</option>
+              <option value="temani_baladi">תימן בלאדי</option>
+            </select>
+          </div>
+
+          <!-- גודל כיתוב -->
+          <div>
+            <label
+              for="settings-font-size"
+              class="block text-sm font-bold text-slate-500 dark:text-slate-400 mb-2"
+              >גודל כיתוב</label
+            >
+            <div class="flex items-center gap-3">
+              <span class="text-xs text-slate-400 font-bold">א</span>
+              <input
+                type="range"
+                id="settings-font-size"
+                min="0"
+                max="2"
+                step="1"
+                value="0"
+                class="flex-1 accent-blue-500"
+                oninput="previewFontSize(this.value)"
+                aria-label="גודל כיתוב"
+              />
+              <span class="text-lg text-slate-500 font-bold">א</span>
+            </div>
+            <p class="text-xs text-slate-400 mt-1 text-center" id="font-size-label">רגיל</p>
           </div>
 
           <div class="pt-4 border-t border-slate-100 dark:border-slate-700">
@@ -1992,6 +2270,7 @@
 
     <script>
       // --- Caching Logic for API Calls (Offline-First Strategy) ---
+      const API_INFLIGHT_CACHE = new Map();
       async function fetchHebcalWithCache(url) {
         const cacheKey = "hebcal_cache_" + url;
         const cachedStr = localStorage.getItem(cacheKey);
@@ -2020,13 +2299,23 @@
         }
 
         try {
-          const res = await fetch(url);
-          const data = await res.json();
-          localStorage.setItem(
-            cacheKey,
-            JSON.stringify({ timestamp: now, data }),
-          );
-          return data;
+          if (API_INFLIGHT_CACHE.has(url)) {
+            return API_INFLIGHT_CACHE.get(url);
+          }
+          const request = fetch(url)
+            .then((res) => res.json())
+            .then((data) => {
+              localStorage.setItem(
+                cacheKey,
+                JSON.stringify({ timestamp: now, data }),
+              );
+              return data;
+            })
+            .finally(() => {
+              API_INFLIGHT_CACHE.delete(url);
+            });
+          API_INFLIGHT_CACHE.set(url, request);
+          return await request;
         } catch (err) {
           if (cachedStr) return JSON.parse(cachedStr).data;
           throw err;
@@ -2039,7 +2328,7 @@
           app_title_1: "הלוח",
           app_title_2: "היהודי",
           loading: "מסנכרן נתונים...",
-          today_date: "היום בתאריך",
+          today_date: "התאריך היום",
           moon_close: "ברכת הלבנה הקרובה",
           next_event: "המועד הבא",
           upcoming_shab: "שבת קרובה",
@@ -2616,6 +2905,8 @@
       let CALENDAR_DISPLAY_DATE = new Date();
       let CURRENT_THEME = localStorage.getItem("moadim_theme") || "light";
       let CURRENT_LANG = localStorage.getItem("moadim_lang") || "he";
+      let CURRENT_NUSACH = localStorage.getItem("moadim_nusach") || "mizrahi";
+      const FS_LABELS = ['רגיל', 'גדול', 'גדול מאוד'];
 
       const daysOfWeek = [
         "ראשון",
@@ -2830,6 +3121,7 @@
 
         if (theme === "dark") {
           html.classList.add("dark");
+          html.classList.remove("theme-blue");
           header.classList.remove("bg-ocean-readable");
           header.classList.add("gradient-bg");
           if (glowWrap) glowWrap.style.opacity = '1';
@@ -2838,6 +3130,7 @@
           if (iconSun)  iconSun.classList.remove("hidden");
         } else if (theme === "blue") {
           html.classList.remove("dark");
+          html.classList.add("theme-blue");
           header.classList.remove("gradient-bg");
           header.classList.add("bg-ocean-readable");
           // CSS rule `.bg-ocean-readable #stars-canvas { opacity:0 }` hides stars automatically
@@ -2848,6 +3141,7 @@
         } else {
           // light — default stars background
           html.classList.remove("dark");
+          html.classList.remove("theme-blue");
           header.classList.remove("bg-ocean-readable");
           header.classList.add("gradient-bg");
           if (glowWrap) glowWrap.style.opacity = '1';
@@ -2874,6 +3168,20 @@
         document.getElementById("settings-method").value = ZMANIM_METHOD;
         document.getElementById("current-city-name").textContent =
           localStorage.getItem("moadim_city_name") || "פתח תקווה";
+
+        // ── Restore nusach ──
+        const nusachEl = document.getElementById("settings-nusach");
+        if (nusachEl) nusachEl.value = CURRENT_NUSACH;
+
+        // ── Restore font size ──
+        const savedFs = parseInt(localStorage.getItem("moadim_fontsize") || "0");
+        applyFontSize(savedFs);
+        const fsEl = document.getElementById("settings-font-size");
+        if (fsEl) {
+          fsEl.value = savedFs;
+          const lbl = document.getElementById("font-size-label");
+          if (lbl) lbl.textContent = FS_LABELS[savedFs] || "רגיל";
+        }
 
         updateCurrentCityLabel();
         updateNotifStatusUI();
@@ -2997,10 +3305,28 @@
           const gd = String(todayDateUI.getDate()).padStart(2, "0");
           const todayLocalIso = `${gy}-${gm}-${gd}`;
 
-          // Fetch Zmanim with caching
-          const zData = await fetchHebcalWithCache(
-            `https://www.hebcal.com/zmanim?cfg=json&${getGeoParams()}&date=${todayLocalIso}`,
-          );
+          const prevDate = new Date(todayDateUI);
+          prevDate.setDate(prevDate.getDate() - 1);
+          const nextDate = new Date(todayDateUI);
+          nextDate.setDate(nextDate.getDate() + 1);
+          const prevIso = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, "0")}-${String(prevDate.getDate()).padStart(2, "0")}`;
+          const nextIso = `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, "0")}-${String(nextDate.getDate()).padStart(2, "0")}`;
+
+          // Fetch zmanim bundle with caching
+          const [zData, prevZData, nextZData] = await Promise.all([
+            fetchHebcalWithCache(
+              `https://www.hebcal.com/zmanim?cfg=json&${getGeoParams()}&date=${todayLocalIso}`,
+            ),
+            fetchHebcalWithCache(
+              `https://www.hebcal.com/zmanim?cfg=json&${getGeoParams()}&date=${prevIso}`,
+            ),
+            fetchHebcalWithCache(
+              `https://www.hebcal.com/zmanim?cfg=json&${getGeoParams()}&date=${nextIso}`,
+            ),
+          ]);
+          zData._prevDay = prevZData;
+          zData._nextDay = nextZData;
+          zData._dateIso = todayLocalIso;
           const tzeitStr = zData.times.tzeit7083deg;
 
           let isAfterTzeit = false;
@@ -3023,6 +3349,12 @@
           const dateData = await fetchHebcalWithCache(
             `https://www.hebcal.com/converter?cfg=json&date=${hebrewDateFetchIso}&g2h=1&strict=1`,
           );
+          window._livePrayerContextData = {
+            dateData,
+            hebrewDateFetchIso,
+            todayLocalIso,
+            displayDate: new Date(dateForHebcal),
+          };
 
           document.getElementById("stat-today").textContent =
             CURRENT_LANG === "he"
@@ -3127,16 +3459,19 @@
             });
           }
           document.getElementById("stat-parasha").textContent = p;
-          document.getElementById("parasha-link").onclick = (e) => {
-            e.preventDefault();
-            openSefariaModal(p, eTitle);
-          };
-          document.getElementById("stat-shabbat-times").textContent =
-            `כניסה: ${c} | יציאה: ${h}`;
-
-          if (CURRENT_LANG !== "he") {
-            document.getElementById("stat-shabbat-times").textContent =
-              `${ui.shabbatEnter}: ${c} | ${ui.shabbatExit}: ${h}`;
+          window._openShabbatParasha = () => openSefariaModal(p, eTitle);
+          const shabbatWrap = document.getElementById("stat-shabbat-times");
+          if (shabbatWrap) {
+            shabbatWrap.innerHTML = `
+              <div class="dashboard-shabbat-line">
+                <span class="dashboard-shabbat-label">כניסת שבת</span>
+                <span id="shabbat-enter" class="dashboard-shabbat-value" dir="ltr">${c}</span>
+              </div>
+              <div class="dashboard-shabbat-line">
+                <span class="dashboard-shabbat-label">יציאת שבת</span>
+                <span id="shabbat-exit" class="dashboard-shabbat-value" dir="ltr">${h}</span>
+              </div>
+            `;
           }
 
           const cy = dateForHebcal.getFullYear();
@@ -3163,23 +3498,22 @@
               return;
 
             const forbidden = [
-              "Atzmaut",
+              // Removed from display: political/minor national figures
               "Herzl",
-              "Zikaron",
-              "Shoah",
               "Rabin",
               "Aliyah",
-              "Family",
+              "Family",        // חג הבנות
               "Sigd",
               "Zionism",
               "Jabotinsky",
-              "עצמאות",
+              "Ben-Gurion",    // יום בן-גוריון
+              "Ben Gurion",
               "הרצל",
-              "זיכרון",
-              "שואה",
               "רבין",
               "סיגד",
               "ז'בוטינסקי",
+              "בן-גוריון",
+              "חג הבנות",
             ];
             if (
               forbidden.some(
@@ -3300,6 +3634,18 @@
               else if (ev.title.includes("Lag B'Omer")) icon = "🔥";
               else if (ev.title.includes("Tu B'Av")) icon = "💖";
               else if (ev.title.includes("Tu BiShvat")) icon = "🌳";
+            } else if (ev.category === "modern" || ev.category === "israel") {
+              // ימי זיכרון ואירועים לאומיים
+              type = "minor";
+              if (ev.title.includes("Shoah") || (ev.hebrew && ev.hebrew.includes("שואה"))) {
+                icon = "🕯️"; type = "fast";
+              } else if (ev.title.includes("Zikaron") || (ev.hebrew && ev.hebrew.includes("זיכרון"))) {
+                icon = "🪖"; type = "fast";
+              } else if (ev.title.includes("Atzmaut") || (ev.hebrew && ev.hebrew.includes("עצמאות"))) {
+                icon = "🇮🇱"; type = "major";
+              } else {
+                icon = "📅";
+              }
             } else return;
 
             const evName = CURRENT_LANG === "he" ? ev.hebrew : ev.title;
@@ -3366,19 +3712,420 @@
         const dash = document.getElementById("dashboard-state");
         const banner = document.getElementById("halacha-banner");
         const btn = document.getElementById("btn-open-calendar");
+        const prayerWrap = document.getElementById("prayer-grid-wrap");
         dash.classList.remove("hidden");
         banner.classList.remove("hidden");
         banner.classList.add("flex");
         btn.classList.remove("hidden");
         btn.classList.add("flex");
+        if (prayerWrap) { prayerWrap.classList.remove("hidden"); }
         setTimeout(() => {
           dash.classList.remove("opacity-0");
           banner.classList.remove("opacity-0");
           btn.classList.remove("opacity-0");
+          if (prayerWrap) prayerWrap.classList.remove("opacity-0");
         }, 50);
       }
 
+      // ══════════════════════════════════════════════════
+      // ✦  PRAYER GRID — EMBEDDED TEXTS + SEASON AWARE
+      // ══════════════════════════════════════════════════
+
+      // ── Detect current Hebrew season ──────────────────
+      function getHebrewSeasonInfo() {
+        const now = new Date();
+        const heb = new Intl.DateTimeFormat('he-IL-u-ca-hebrew', { month: 'long', day: 'numeric' }).format(now);
+        const month = new Intl.DateTimeFormat('he-IL-u-ca-hebrew', { month: 'long' }).format(now);
+        const day   = parseInt(new Intl.DateTimeFormat('he-IL-u-ca-hebrew', { day: 'numeric' }).format(now));
+        const dow   = now.getDay(); // 0=Sun … 6=Sat
+
+        // Detect season flags
+        const isShabbat   = dow === 6;
+        const isRoshChodesh = heb.includes('א׳') || heb.includes('ב׳') || day === 1 || day === 30;
+        const isChanukah  = month.includes('כסלו') || month.includes('טבת');
+        const isPurim     = month.includes('אדר') && (day === 13 || day === 14 || day === 15);
+        const isPesach    = month.includes('ניסן') && day >= 15 && day <= 22;
+        const isShavuot   = month.includes('סיון') && (day === 6 || day === 7);
+        const isSukkot    = month.includes('תשרי') && day >= 15 && day <= 23;
+        const isYomKippur = month.includes('תשרי') && day === 10;
+        const isRoshHaShana = month.includes('תשרי') && (day === 1 || day === 2);
+        const isOmer     = month.includes('ניסן') && day >= 16 || month.includes('אייר') || (month.includes('סיון') && day < 6);
+        const isYamimNoraim = month.includes('תשרי') && day >= 1 && day <= 10;
+
+        return { isShabbat, isRoshChodesh, isChanukah, isPurim, isPesach, isShavuot, isSukkot, isYomKippur, isRoshHaShana, isOmer, isYamimNoraim, month, day, dow };
+      }
+
+      // ── Prayer texts database ─────────────────────────
+      const PRAYER_DB = {
+
+        'tefillat-haderech': {
+          title: 'תפילת הדרך',
+          nusach: {
+            all: `יְהִי רָצוֹן מִלְּפָנֶיךָ יְהֹוָה אֱלֹהֵינוּ וֵאלֹהֵי אֲבוֹתֵינוּ, שֶׁתּוֹלִיכֵנוּ לְשָׁלוֹם וְתַצְעִידֵנוּ לְשָׁלוֹם וְתַדְרִיכֵנוּ לְשָׁלוֹם, וְתִסְמְכֵנוּ לְשָׁלוֹם וְתַגִּיעֵנוּ לִמְחוֹז חֶפְצֵנוּ לְחַיִּים וּלְשִׂמְחָה וּלְשָׁלוֹם. וְתַצִּילֵנוּ מִכַּף כָּל אוֹיֵב וְאוֹרֵב וְלִסְטִים וְחַיּוֹת רָעוֹת בַּדֶּרֶךְ, וּמִכָּל מִינֵי פֻּרְעָנֻיּוֹת הַמִּתְרַגְּשׁוֹת לָבוֹא לָעוֹלָם. וְתִשְׁלַח בְּרָכָה בְּכָל מַעֲשֵׂה יָדֵינוּ, וְתִתְּנֵנוּ לְחֵן וּלְחֶסֶד וּלְרַחֲמִים בְּעֵינֶיךָ וּבְעֵינֵי כָל רוֹאֵינוּ. וְתִשְׁמַע קוֹל תַּחֲנוּנֵינוּ, כִּי אֵל שׁוֹמֵעַ תְּפִלָּה וְתַחֲנוּן אָתָּה.\n\nבָּרוּךְ אַתָּה יְהֹוָה, שׁוֹמֵעַ תְּפִלָּה.`
+          },
+          seasonal: () => ''
+        },
+
+        'shema': {
+          title: 'קריאת שמע',
+          nusach: {
+            all: `שְׁמַע יִשְׂרָאֵל יְהֹוָה אֱלֹהֵינוּ יְהֹוָה אֶחָד:\nבָּרוּךְ שֵׁם כְּבוֹד מַלְכוּתוֹ לְעוֹלָם וָעֶד:\n\nוְאָהַבְתָּ אֵת יְהֹוָה אֱלֹהֶיךָ בְּכָל לְבָבְךָ וּבְכָל נַפְשְׁךָ וּבְכָל מְאֹדֶךָ. וְהָיוּ הַדְּבָרִים הָאֵלֶּה אֲשֶׁר אָנֹכִי מְצַוְּךָ הַיּוֹם עַל לְבָבֶךָ. וְשִׁנַּנְתָּם לְבָנֶיךָ וְדִבַּרְתָּ בָּם בְּשִׁבְתְּךָ בְּבֵיתֶךָ וּבְלֶכְתְּךָ בַדֶּרֶךְ וּבְשָׁכְבְּךָ וּבְקוּמֶךָ. וּקְשַׁרְתָּם לְאוֹת עַל יָדֶךָ וְהָיוּ לְטֹטָפֹת בֵּין עֵינֶיךָ. וּכְתַבְתָּם עַל מְזוּזֹת בֵּיתֶךָ וּבִשְׁעָרֶיךָ:\n\nוְהָיָה אִם שָׁמֹעַ תִּשְׁמְעוּ אֶל מִצְוֹתַי אֲשֶׁר אָנֹכִי מְצַוֶּה אֶתְכֶם הַיּוֹם לְאַהֲבָה אֶת יְהֹוָה אֱלֹהֵיכֶם וּלְעָבְדוֹ בְּכָל לְבַבְכֶם וּבְכָל נַפְשְׁכֶם. וְנָתַתִּי מְטַר אַרְצְכֶם בְּעִתּוֹ יוֹרֶה וּמַלְקוֹשׁ וְאָסַפְתָּ דְגָנֶךָ וְתִירֹשְׁךָ וְיִצְהָרֶךָ. וְנָתַתִּי עֵשֶׂב בְּשָׂדְךָ לִבְהֶמְתֶּךָ וְאָכַלְתָּ וְשָׂבָעְתָּ. הִשָּׁמְרוּ לָכֶם פֶּן יִפְתֶּה לְבַבְכֶם וְסַרְתֶּם וַעֲבַדְתֶּם אֱלֹהִים אֲחֵרִים וְהִשְׁתַּחֲוִיתֶם לָהֶם. וְחָרָה אַף יְהֹוָה בָּכֶם וְעָצַר אֶת הַשָּׁמַיִם וְלֹא יִהְיֶה מָטָר וְהָאֲדָמָה לֹא תִתֵּן אֶת יְבוּלָהּ וַאֲבַדְתֶּם מְהֵרָה מֵעַל הָאָרֶץ הַטֹּבָה אֲשֶׁר יְהֹוָה נֹתֵן לָכֶם. וְשַׂמְתֶּם אֶת דְּבָרַי אֵלֶּה עַל לְבַבְכֶם וְעַל נַפְשְׁכֶם וּקְשַׁרְתֶּם אֹתָם לְאוֹת עַל יֶדְכֶם וְהָיוּ לְטוֹטָפֹת בֵּין עֵינֵיכֶם. וְלִמַּדְתֶּם אֹתָם אֶת בְּנֵיכֶם לְדַבֵּר בָּם בְּשִׁבְתְּךָ בְּבֵיתֶךָ וּבְלֶכְתְּךָ בַדֶּרֶךְ וּבְשָׁכְבְּךָ וּבְקוּמֶךָ. וּכְתַבְתָּם עַל מְזוּזוֹת בֵּיתֶךָ וּבִשְׁעָרֶיךָ. לְמַעַן יִרְבּוּ יְמֵיכֶם וִימֵי בְנֵיכֶם עַל הָאֲדָמָה אֲשֶׁר נִשְׁבַּע יְהֹוָה לַאֲבֹתֵיכֶם לָתֵת לָהֶם כִּימֵי הַשָּׁמַיִם עַל הָאָרֶץ:\n\nוַיֹּאמֶר יְהֹוָה אֶל מֹשֶׁה לֵּאמֹר: דַּבֵּר אֶל בְּנֵי יִשְׂרָאֵל וְאָמַרְתָּ אֲלֵהֶם וְעָשׂוּ לָהֶם צִיצִת עַל כַּנְפֵי בִגְדֵיהֶם לְדֹרֹתָם וְנָתְנוּ עַל צִיצִת הַכָּנָף פְּתִיל תְּכֵלֶת. וְהָיָה לָכֶם לְצִיצִת וּרְאִיתֶם אֹתוֹ וּזְכַרְתֶּם אֶת כָּל מִצְוֹת יְהֹוָה וַעֲשִׂיתֶם אֹתָם וְלֹא תָתוּרוּ אַחֲרֵי לְבַבְכֶם וְאַחֲרֵי עֵינֵיכֶם אֲשֶׁר אַתֶּם זֹנִים אַחֲרֵיהֶם. לְמַעַן תִּזְכְּרוּ וַעֲשִׂיתֶם אֶת כָּל מִצְוֹתָי וִהְיִיתֶם קְדֹשִׁים לֵאלֹהֵיכֶם. אֲנִי יְהֹוָה אֱלֹהֵיכֶם אֲשֶׁר הוֹצֵאתִי אֶתְכֶם מֵאֶרֶץ מִצְרַיִם לִהְיוֹת לָכֶם לֵאלֹהִים אֲנִי יְהֹוָה אֱלֹהֵיכֶם:`
+          },
+          seasonal: () => ''
+        },
+
+        'birchot-hashachar': {
+          title: 'ברכות השחר',
+          nusach: {
+            all: `מוֹדֶה אֲנִי לְפָנֶיךָ מֶלֶךְ חַי וְקַיָּם, שֶׁהֶחֱזַרְתָּ בִּי נִשְׁמָתִי בְּחֶמְלָה, רַבָּה אֱמוּנָתֶךָ.\n\nבָּרוּךְ אַתָּה יְהֹוָה אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, אֲשֶׁר נָתַן לַשֶּׂכְוִי בִינָה לְהַבְחִין בֵּין יוֹם וּבֵין לָיְלָה.\nבָּרוּךְ אַתָּה יְהֹוָה אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, שֶׁלֹּא עָשַׂנִי גוֹי.\nבָּרוּךְ אַתָּה יְהֹוָה אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, שֶׁלֹּא עָשַׂנִי עֶבֶד.\nבָּרוּךְ אַתָּה יְהֹוָה אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, שֶׁלֹּא עָשַׂנִי אִשָּׁה. [לאישה: שֶׁעָשַׂנִי כִּרְצוֹנוֹ]\nבָּרוּךְ אַתָּה יְהֹוָה אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, פּוֹקֵחַ עִוְרִים.\nבָּרוּךְ אַתָּה יְהֹוָה אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, מַלְבִּישׁ עֲרֻמִּים.\nבָּרוּךְ אַתָּה יְהֹוָה אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, מַתִּיר אֲסוּרִים.\nבָּרוּךְ אַתָּה יְהֹוָה אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, זוֹקֵף כְּפוּפִים.\nבָּרוּךְ אַתָּה יְהֹוָה אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, רוֹקַע הָאָרֶץ עַל הַמָּיִם.\nבָּרוּךְ אַתָּה יְהֹוָה אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, שֶׁעָשָׂה לִי כָּל צָרְכִּי.\nבָּרוּךְ אַתָּה יְהֹוָה אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, הַמֵּכִין מִצְעֲדֵי גָבֶר.\nבָּרוּךְ אַתָּה יְהֹוָה אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, אוֹזֵר יִשְׂרָאֵל בִּגְבוּרָה.\nבָּרוּךְ אַתָּה יְהֹוָה אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, עוֹטֵר יִשְׂרָאֵל בְּתִפְאָרָה.\nבָּרוּךְ אַתָּה יְהֹוָה אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, הַנּוֹתֵן לַיָּעֵף כֹּחַ.\nבָּרוּךְ אַתָּה יְהֹוָה אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, הַמַּעֲבִיר שֵׁנָה מֵעֵינָי וּתְנוּמָה מֵעַפְעַפָּי.\n\nיְהִי רָצוֹן מִלְּפָנֶיךָ יְהֹוָה אֱלֹהֵינוּ וֵאלֹהֵי אֲבוֹתֵינוּ, שֶׁתַּרְגִּילֵנוּ בְּתוֹרָתֶךָ וְדַבְּקֵנוּ בְּמִצְוֹתֶיךָ, וְאַל תְּבִיאֵנוּ לֹא לִידֵי חֵטְא וְלֹא לִידֵי עֲבֵרָה וְעָוֹן, וְלֹא לִידֵי נִסָּיוֹן וְלֹא לִידֵי בִזָּיוֹן. וְאַל יִשְׁלֹט בָּנוּ יֵצֶר הָרָע. וְהַרְחִיקֵנוּ מֵאָדָם רָע וּמֵחָבֵר רָע. וְדַבְּקֵנוּ בְּיֵצֶר הַטּוֹב וּבְמַעֲשִׂים טוֹבִים. וְכֹף אֶת יִצְרֵנוּ לְהִשְׁתַּעְבֶּד לָךְ. וּתְנֵנוּ הַיּוֹם וּבְכָל יוֹם לְחֵן וּלְחֶסֶד וּלְרַחֲמִים בְּעֵינֶיךָ וּבְעֵינֵי כָל רוֹאֵינוּ, וְתִגְמְלֵנוּ חֲסָדִים טוֹבִים. בָּרוּךְ אַתָּה יְהֹוָה, הַגּוֹמֵל חֲסָדִים טוֹבִים לְעַמּוֹ יִשְׂרָאֵל.`
+          },
+          seasonal: () => ''
+        },
+
+        'al-hamichya': {
+          title: 'ברכת מעין שלוש',
+          nusach: {
+            all: `עַל הַמִּחְיָה וְעַל הַכַּלְכָּלָה וְעַל תְּנוּבַת הַשָּׂדֶה, וְעַל אֶרֶץ חֶמְדָּה טוֹבָה וּרְחָבָה שֶׁרָצִיתָ וְהִנְחַלְתָּ לַאֲבוֹתֵינוּ לֶאֱכֹל מִפִּרְיָהּ וְלִשְׂבֹּעַ מִטּוּבָהּ. רַחֵם נָא יְהֹוָה אֱלֹהֵינוּ עַל יִשְׂרָאֵל עַמֶּךָ וְעַל יְרוּשָׁלַיִם עִירֶךָ וְעַל צִיּוֹן מִשְׁכַּן כְּבוֹדֶךָ וְעַל מִזְבַּחֲךָ וְעַל הֵיכָלֶךָ. וּבְנֵה יְרוּשָׁלַיִם עִיר הַקֹּדֶשׁ בִּמְהֵרָה בְיָמֵינוּ. וְהַעֲלֵנוּ לְתוֹכָהּ וְשַׂמְּחֵנוּ בְּבִנְיָנָהּ וְנֹאכַל מִפִּרְיָהּ וְנִשְׂבַּע מִטּוּבָהּ וּנְבָרֶכְךָ עָלֶיהָ בִּקְדֻשָּׁה וּבְטָהֳרָה.\n\n[בשבת] וּרְצֵה וְהַחֲלִיצֵנוּ בְּיוֹם הַשַּׁבָּת הַזֶּה.\n[בראש חודש] וְזָכְרֵנוּ לְטוֹבָה בְּיוֹם רֹאשׁ הַחֹדֶשׁ הַזֶּה.\n[ביום טוב] וְשַׂמְּחֵנוּ בְּיוֹם חַג... הַזֶּה.\n\nכִּי אַתָּה יְהֹוָה טוֹב וּמֵטִיב לַכֹּל וְנוֹדֶה לְּךָ עַל הָאָרֶץ וְעַל הַמִּחְיָה.\nבָּרוּךְ אַתָּה יְהֹוָה, עַל הָאָרֶץ וְעַל הַמִּחְיָה.`
+          },
+          seasonal: (s) => {
+            const parts = [];
+            if (s.isShabbat)   parts.push('📌 שבת: אומרים "וּרְצֵה וְהַחֲלִיצֵנוּ בְּיוֹם הַשַּׁבָּת הַזֶּה"');
+            if (s.isRoshChodesh) parts.push('📌 ראש חודש: אומרים "וְזָכְרֵנוּ לְטוֹבָה בְּיוֹם רֹאשׁ הַחֹדֶשׁ הַזֶּה"');
+            if (s.isChanukah)  parts.push('📌 חנוכה: לדעות רבות אין שינוי בברכת מעין שלוש');
+            return parts.join('\n');
+          }
+        },
+
+        'kiddush-levana': {
+          title: 'ברכת הלבנה / קידוש לבנה',
+          nusach: {
+            all: `בָּרוּךְ אַתָּה יְהֹוָה אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, אֲשֶׁר בְּמַאֲמָרוֹ בָּרָא שְׁחָקִים, וּבְרוּחַ פִּיו כָּל צְבָאָם. חֹק וּזְמַן נָתַן לָהֶם שֶׁלֹּא יְשַׁנּוּ אֶת תַּפְקִידָם. שָׂשִׂים וּשְׂמֵחִים לַעֲשׂוֹת רְצוֹן קוֹנָם, פּוֹעַל אֱמֶת שֶׁפְּעֻלָּתוֹ אֱמֶת. וְלַלְּבָנָה אָמַר שֶׁתִּתְחַדֵּשׁ עֲטֶרֶת תִּפְאֶרֶת לַעֲמוּסֵי בָטֶן שֶׁהֵם עֲתִידִים לְהִתְחַדֵּשׁ כְּמוֹתָהּ, וּלְפָאֵר לְיוֹצְרָם עַל שֵׁם כְּבוֹד מַלְכוּתוֹ.\n\nבָּרוּךְ אַתָּה יְהֹוָה, מְחַדֵּשׁ חֳדָשִׁים.\n\n[אומרים שלוש פעמים:] שָׁלוֹם עֲלֵיכֶם! (ג' פעמים)\n\nסִימָן טוֹב וּמַזָּל טוֹב יְהֵא לָנוּ וּלְכָל יִשְׂרָאֵל. (ג' פעמים)\n\n[עדות המזרח / ספרד — אחר הברכה:] תהלים קמח`
+          },
+          seasonal: () => ''
+        },
+
+        'birkat-hamazon': {
+          title: 'ברכת המזון',
+          nusach: {
+            mizrahi: `שִׁיר הַמַּעֲלוֹת, בְּשׁוּב יְהֹוָה אֶת שִׁיבַת צִיּוֹן הָיִינוּ כְּחֹלְמִים. אָז יִמָּלֵא שְׂחוֹק פִּינוּ וּלְשׁוֹנֵנוּ רִנָּה...\n\nרַבּוֹתַי נְבָרֵךְ!\n[עונים:] יְהִי שֵׁם יְהֹוָה מְבֹרָךְ מֵעַתָּה וְעַד עוֹלָם!\n[אומר:] יְהִי שֵׁם יְהֹוָה מְבֹרָךְ מֵעַתָּה וְעַד עוֹלָם. בִּרְשׁוּת מָרָנָן וְרַבָּנָן וְרַבּוֹתַי, נְבָרֵךְ (אֱלֹהֵינוּ) שֶׁאָכַלְנוּ מִשֶּׁלּוֹ.\n\n**בְּרָכָה רִאשׁוֹנָה — הַזָּן:**\nבָּרוּךְ אַתָּה יְהֹוָה אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, הַזָּן אֶת הָעוֹלָם כֻּלּוֹ בְּטוּבוֹ בְּחֵן בְּחֶסֶד וּבְרַחֲמִים. הוּא נוֹתֵן לֶחֶם לְכָל בָּשָׂר כִּי לְעוֹלָם חַסְדּוֹ. וּבְטוּבוֹ הַגָּדוֹל תָּמִיד לֹא חָסַר לָנוּ וְאַל יֶחְסַר לָנוּ מָזוֹן לְעוֹלָם וָעֶד. בַּעֲבוּר שְׁמוֹ הַגָּדוֹל כִּי הוּא זָן וּמְפַרְנֵס לַכֹּל וּמֵטִיב לַכֹּל וּמֵכִין מָזוֹן לְכָל בְּרִיּוֹתָיו אֲשֶׁר בָּרָא. בָּרוּךְ אַתָּה יְהֹוָה, הַזָּן אֶת הַכֹּל.\n\n**בְּרָכָה שְׁנִיָּה — הָאָרֶץ:**\nנוֹדֶה לְּךָ יְהֹוָה אֱלֹהֵינוּ עַל שֶׁהִנְחַלְתָּ לַאֲבוֹתֵינוּ אֶרֶץ חֶמְדָּה טוֹבָה וּרְחָבָה, וְעַל שֶׁהוֹצֵאתָנוּ יְהֹוָה אֱלֹהֵינוּ מֵאֶרֶץ מִצְרַיִם וּפְדִיתָנוּ מִבֵּית עֲבָדִים, וְעַל בְּרִיתְךָ שֶׁחָתַמְתָּ בִּבְשָׂרֵנוּ, וְעַל תּוֹרָתְךָ שֶׁלִּמַּדְתָּנוּ, וְעַל חֻקֶּיךָ שֶׁהוֹדַעְתָּנוּ, וְעַל חַיִּים חֵן וָחֶסֶד שֶׁחוֹנַנְתָּנוּ, וְעַל אֲכִילַת מָזוֹן שָׁאַתָּה זָן וּמְפַרְנֵס אוֹתָנוּ תָּמִיד בְּכָל יוֹם וּבְכָל עֵת וּבְכָל שָׁעָה.\n\nוְעַל הַכֹּל יְהֹוָה אֱלֹהֵינוּ אֲנַחְנוּ מוֹדִים לָךְ וּמְבָרְכִים אוֹתָךְ יִתְבָּרַךְ שִׁמְךָ בְּפִי כָּל חַי תָּמִיד לְעוֹלָם וָעֶד.\nבָּרוּךְ אַתָּה יְהֹוָה, עַל הָאָרֶץ וְעַל הַמָּזוֹן.\n\n**בְּרָכָה שְׁלִישִׁית — יְרוּשָׁלַיִם:**\nרַחֵם נָא יְהֹוָה אֱלֹהֵינוּ עַל יִשְׂרָאֵל עַמֶּךָ וְעַל יְרוּשָׁלַיִם עִירֶךָ וְעַל צִיּוֹן מִשְׁכַּן כְּבוֹדֶךָ וְעַל מַלְכוּת בֵּית דָּוִד מְשִׁיחֶךָ וְעַל הַבַּיִת הַגָּדוֹל וְהַקָּדוֹשׁ שֶׁנִּקְרָא שִׁמְךָ עָלָיו. אֱלֹהֵינוּ אָבִינוּ רְעֵנוּ זוּנֵנוּ פַּרְנְסֵנוּ וְכַלְכְּלֵנוּ וְהַרְוִיחֵנוּ וְהַרְוַח לָנוּ יְהֹוָה אֱלֹהֵינוּ מְהֵרָה מִכָּל צָרוֹתֵינוּ. וְנָא אַל תַּצְרִיכֵנוּ יְהֹוָה אֱלֹהֵינוּ לֹא לִידֵי מַתְּנַת בָּשָׂר וָדָם וְלֹא לִידֵי הַלְוָאָתָם כִּי אִם לְיָדְךָ הַמְּלֵאָה הַפְּתוּחָה הַקְּדוֹשָׁה וְהָרְחָבָה שֶׁלֹּא נֵבוֹשׁ וְלֹא נִכָּלֵם לְעוֹלָם וָעֶד.\n\n**בְּרָכָה רְבִיעִית — הַטּוֹב וְהַמֵּטִיב:**\nבָּרוּךְ אַתָּה יְהֹוָה אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, הָאֵל אָבִינוּ מַלְכֵּנוּ אַדִּירֵנוּ בּוֹרְאֵנוּ גֹּאֲלֵנוּ יוֹצְרֵנוּ קְדוֹשֵׁנוּ קְדוֹשׁ יַעֲקֹב הַטּוֹב וְהַמֵּטִיב לַכֹּל שֶׁבְּכָל יוֹם וָיוֹם הוּא הֵטִיב הוּא מֵטִיב הוּא יֵיטִיב לָנוּ. הוּא גְמָלָנוּ הוּא גוֹמְלֵנוּ הוּא יִגְמְלֵנוּ לָעַד לְחֵן וּלְחֶסֶד וּלְרַחֲמִים וְלִרְוַח הַצָּלָה וְהַצְלָחָה בְּרָכָה וִישׁוּעָה נֶחָמָה פַּרְנָסָה וְכַלְכָּלָה וְרַחֲמִים וְחַיִּים וְשָׁלוֹם וְכָל טוֹב, וּמִכָּל טוּב לְעוֹלָם אַל יְחַסְּרֵנוּ.`,
+            ashkenaz: `[נוסח אשכנז — ההבדל העיקרי: "בִּרְשׁוּת מוֹרַי וְרַבּוֹתַי" במקום "מָרָנָן וְרַבָּנָן"]\n\n[שאר הנוסח דומה לעיקר כנ"ל]`
+          },
+          seasonal: (s) => {
+            const parts = [];
+            if (s.isShabbat)     parts.push('📌 שבת: מוסיפים "רְצֵה וְהַחֲלִיצֵנוּ" בברכת ירושלים');
+            if (s.isRoshChodesh) parts.push('📌 ראש חודש: מוסיפים "יַעֲלֶה וְיָבֹא"');
+            if (s.isChanukah || s.isPurim) parts.push('📌 חנוכה/פורים: מוסיפים "עַל הַנִּסִּים"');
+            if (s.isPesach)      parts.push('📌 פסח: מוסיפים "יַעֲלֶה וְיָבֹא"');
+            if (s.isYamimNoraim) parts.push('📌 ימים נוראים: אפשר להוסיף "זָכְרֵנוּ לְחַיִּים"');
+            return parts.join('\n');
+          }
+        },
+
+        'tikkun-haklali': {
+          title: 'תיקון הכללי (י׳ מזמורים)',
+          nusach: {
+            all: `תיקון הכללי של רבינו נחמן מברסלב — עשרה מזמורי תהלים:\n\nטז • לב • מא • מב • נט • עז • צ • קה • קלז • קנ\n\n**תהלים טז**\nמִכְתָּם לְדָוִד שָׁמְרֵנִי אֵל כִּי חָסִיתִי בָּךְ: אָמַרְתְּ לַיהֹוָה אֲדֹנָי אָתָּה טוֹבָתִי בַּל עָלֶיךָ: לִקְדוֹשִׁים אֲשֶׁר בָּאָרֶץ הֵמָּה וְאַדִּירֵי כָּל חֶפְצִי בָם: יִרְבּוּ עַצְּבוֹתָם אַחֵר מָהָרוּ בַּל אַסִּיךְ נִסְכֵּיהֶם מִדָּם וּבַל אֶשָּׂא אֶת שְׁמוֹתָם עַל שְׂפָתָי: יְהֹוָה מְנָת חֶלְקִי וְכוֹסִי אַתָּה תּוֹמִיךְ גּוֹרָלִי: חֲבָלִים נָפְלוּ לִי בַּנְּעִמִים אַף נַחֲלָת שָׁפְרָה עָלָי: אֲבָרֵךְ אֶת יְהֹוָה אֲשֶׁר יְעָצָנִי אַף לֵילוֹת יִסְּרוּנִי כִלְיוֹתָי: שִׁוִּיתִי יְהֹוָה לְנֶגְדִּי תָמִיד כִּי מִימִינִי בַּל אֶמּוֹט: לָכֵן שָׂמַח לִבִּי וַיָּגֶל כְּבוֹדִי אַף בְּשָׂרִי יִשְׁכֹּן לָבֶטַח: כִּי לֹא תַעֲזֹב נַפְשִׁי לִשְׁאוֹל לֹא תִתֵּן חֲסִידְךָ לִרְאוֹת שָׁחַת: תּוֹדִיעֵנִי אֹרַח חַיִּים שֹׂבַע שְׂמָחוֹת אֶת פָּנֶיךָ נְעִמוֹת בִּימִינְךָ נֶצַח:\n\n**תהלים לב**\nלְדָוִד מַשְׂכִּיל אַשְׁרֵי נְשׂוּי פֶּשַׁע כְּסוּי חֲטָאָה: אַשְׁרֵי אָדָם לֹא יַחְשֹׁב יְהֹוָה לוֹ עָוֹן וְאֵין בְּרוּחוֹ רְמִיָּה: כִּי הֶחֱרַשְׁתִּי בָּלוּ עֲצָמָי בְּשַׁאֲגָתִי כָּל הַיּוֹם: כִּי יוֹמָם וָלַיְלָה תִּכְבַּד עָלַי יָדֶךָ נֶהְפַּךְ לְשַׁדִּי בְּחַרְבֹנֵי קָיִץ סֶלָה: חַטָּאתִי אוֹדִיעֲךָ וַעֲוֹנִי לֹא כִסִּיתִי אָמַרְתִּי אוֹדֶה עֲלֵי פְשָׁעַי לַיהֹוָה וְאַתָּה נָשָׂאתָ עֲוֹן חַטָּאתִי סֶלָה: עַל זֹאת יִתְפַּלֵּל כָּל חָסִיד אֵלֶיךָ לְעֵת מְצֹא רַק לְשֵׁטֶף מַיִם רַבִּים אֵלָיו לֹא יַגִּיעוּ: אַתָּה סֵתֶר לִי מִצַּר תִּצְּרֵנִי רָנֵּי פַלֵּט תְּסוֹבְבֵנִי סֶלָה: אַשְׂכִּילְךָ וְאוֹרְךָ בְּדֶרֶךְ זוּ תֵלֵךְ אִיעֲצָה עָלֶיךָ עֵינִי: אַל תִּהְיוּ כְּסוּס כְּפֶרֶד אֵין הָבִין בְּמֶתֶג וָרֶסֶן עֶדְיוֹ לִבְלוֹם בַּל קְרֹב אֵלֶיךָ: רַבִּים מַכְאוֹבִים לָרָשָׁע וְהַבּוֹטֵחַ בַּיהֹוָה חֶסֶד יְסוֹבְבֶנּוּ: שִׂמְחוּ בַיהֹוָה וְגִילוּ צַדִּיקִים וְהַרְנִינוּ כָּל יִשְׁרֵי לֵב:\n\n**תהלים מא**\nלַמְנַצֵּחַ מִזְמוֹר לְדָוִד: אַשְׁרֵי מַשְׂכִּיל אֶל דָּל בְּיוֹם רָעָה יְמַלְּטֵהוּ יְהֹוָה: יְהֹוָה יִשְׁמְרֵהוּ וִיחַיֵּהוּ וְאֻשַּׁר בָּאָרֶץ וְאַל תִּתְּנֵהוּ בְּנֶפֶשׁ אֹיְבָיו: יְהֹוָה יִסְעָדֶנּוּ עַל עֶרֶשׂ דְּוָי כָּל מִשְׁכָּבוֹ הָפַכְתָּ בְחָלְיוֹ: אֲנִי אָמַרְתִּי יְהֹוָה חָנֵּנִי רְפָאָה נַפְשִׁי כִּי חָטָאתִי לָךְ: אוֹיְבַי יֹאמְרוּ רַע לִי מָתַי יָמוּת וְאָבַד שְׁמוֹ: וְאִם בָּא לִרְאוֹת שָׁוְא יְדַבֵּר לִבּוֹ יִקְבָּץ אָוֶן לוֹ יֵצֵא לַחוּץ יְדַבֵּר: יַחַד עָלַי יִתְלַחֲשׁוּ כָּל שֹׂנְאַי עָלַי יַחְשְׁבוּ רָעָה לִי: דְּבַר בְּלִיַּעַל יָצוּק בּוֹ וַאֲשֶׁר שָׁכַב לֹא יוֹסִיף לָקוּם: גַּם אִישׁ שְׁלוֹמִי אֲשֶׁר בָּטַחְתִּי בוֹ אוֹכֵל לַחְמִי הִגְדִּיל עָלַי עָקֵב: וְאַתָּה יְהֹוָה חָנֵּנִי וַהֲקִימֵנִי וַאֲשַׁלְּמָה לָהֶם: בְּזֹאת יָדַעְתִּי כִּי חָפַצְתָּ בִּי כִּי לֹא יָרִיעַ אֹיְבִי עָלָי: וַאֲנִי בְּתֻמִּי תָּמַכְתָּ בִּי וַתַּצִּיבֵנִי לְפָנֶיךָ לְעוֹלָם: בָּרוּךְ יְהֹוָה אֱלֹהֵי יִשְׂרָאֵל מֵהָעוֹלָם וְעַד הָעוֹלָם אָמֵן וְאָמֵן:\n\n**תהלים מב**\nלַמְנַצֵּחַ מַשְׂכִּיל לִבְנֵי קֹרַח: כְּאַיָּל תַּעֲרֹג עַל אֲפִיקֵי מָיִם כֵּן נַפְשִׁי תַעֲרֹג אֵלֶיךָ אֱלֹהִים: צָמְאָה נַפְשִׁי לֵאלֹהִים לְאֵל חָי מָתַי אָבוֹא וְאֵרָאֶה פְּנֵי אֱלֹהִים: הָיְתָה לִּי דִמְעָתִי לֶחֶם יוֹמָם וָלָיְלָה בֶּאֱמֹר אֵלַי כָּל הַיּוֹם אַיֵּה אֱלֹהֶיךָ: אֵלֶּה אֶזְכְּרָה וְאֶשְׁפְּכָה עָלַי נַפְשִׁי כִּי אֶעֱבֹר בַּסָּךְ אֶדַּדֵּם עַד בֵּית אֱלֹהִים בְּקוֹל רִנָּה וְתוֹדָה הָמוֹן חוֹגֵג: מַה תִּשְׁתּוֹחֲחִי נַפְשִׁי וַתֶּהֱמִי עָלָי הוֹחִילִי לֵאלֹהִים כִּי עוֹד אוֹדֶנּוּ יְשׁוּעוֹת פָּנָיו:\n\n**תהלים נט** (ראשיתו)\nלַמְנַצֵּחַ אַל תַּשְׁחֵת לְדָוִד מִכְתָּם בִּשְׁלֹחַ שָׁאוּל וַיִּשְׁמְרוּ אֶת הַבַּיִת לַהֲמִיתוֹ: הַצִּילֵנִי מֵאֹיְבַי אֱלֹהָי מִמִּתְקוֹמְמַי תְּשַׂגְּבֵנִי: הַצִּילֵנִי מִפֹּעֲלֵי אָוֶן וּמֵאַנְשֵׁי דָמִים הוֹשִׁיעֵנִי: כִּי הִנֵּה אָרְבוּ לְנַפְשִׁי יָגוּרוּ עָלַי עַזִּים לֹא פִשְׁעִי וְלֹא חַטָּאתִי יְהֹוָה: בְּלִי עָוֹן יְרוּצוּן וְיִכּוֹנָנוּ עוּרָה לִקְרָאתִי וּרְאֵה: וְאַתָּה יְהֹוָה אֱלֹהִים צְבָאוֹת אֱלֹהֵי יִשְׂרָאֵל הָקִיצָה לִפְקֹד כָּל הַגּוֹיִם אַל תָּחֹן כָּל בֹּגְדֵי אָוֶן סֶלָה:\n\n**תהלים עז** (ראשיתו)\nלַמְנַצֵּחַ עַל יְדוּתוּן לְאָסָף מִזְמוֹר: קוֹלִי אֶל אֱלֹהִים וְאֶצְעָקָה קוֹלִי אֶל אֱלֹהִים וְהַאֲזִין אֵלָי: בְּיוֹם צָרָתִי אֲדֹנָי דָּרָשְׁתִּי יָדִי לַיְלָה נִגְּרָה וְלֹא תָפוּג מֵאֲנָה הִנָּחֵם נַפְשִׁי: אֶזְכְּרָה אֱלֹהִים וְאֶהֱמָיָה אָשִׂיחָה וְתִתְעַטֵּף רוּחִי סֶלָה: אָחַזְתָּ שְׁמֻרוֹת עֵינָי נִפְעַמְתִּי וְלֹא אֲדַבֵּר:\n\n**תהלים צ**\nתְּפִלָּה לְמֹשֶׁה אִישׁ הָאֱלֹהִים: אֲדֹנָי מָעוֹן אַתָּה הָיִיתָ לָּנוּ בְּדֹר וָדֹר: בְּטֶרֶם הָרִים יֻלָּדוּ וַתְּחוֹלֵל אֶרֶץ וְתֵבֵל וּמֵעוֹלָם עַד עוֹלָם אַתָּה אֵל: תָּשֵׁב אֱנוֹשׁ עַד דַּכָּא וַתֹּאמֶר שׁוּבוּ בְנֵי אָדָם: כִּי אֶלֶף שָׁנִים בְּעֵינֶיךָ כְּיוֹם אֶתְמוֹל כִּי יַעֲבֹר וְאַשְׁמוּרָה בַלָּיְלָה:\n\n**תהלים קה** (ראשיתו)\nהוֹדוּ לַיהֹוָה קִרְאוּ בִשְׁמוֹ הוֹדִיעוּ בָעַמִּים עֲלִילוֹתָיו: שִׁירוּ לוֹ זַמְּרוּ לוֹ שִׂיחוּ בְּכָל נִפְלְאוֹתָיו: הִתְהַלְלוּ בְּשֵׁם קָדְשׁוֹ יִשְׂמַח לֵב מְבַקְשֵׁי יְהֹוָה: דִּרְשׁוּ יְהֹוָה וְעֻזּוֹ בַּקְּשׁוּ פָנָיו תָּמִיד:\n\n**תהלים קלז**\nעַל נַהֲרוֹת בָּבֶל שָׁם יָשַׁבְנוּ גַּם בָּכִינוּ בְּזָכְרֵנוּ אֶת צִיּוֹן: עַל עֲרָבִים בְּתוֹכָהּ תָּלִינוּ כִּנֹּרוֹתֵינוּ: כִּי שָׁם שְׁאֵלוּנוּ שׁוֹבֵינוּ דִּבְרֵי שִׁיר וְתוֹלָלֵינוּ שִׂמְחָה שִׁירוּ לָנוּ מִשִּׁיר צִיּוֹן: אֵיךְ נָשִׁיר אֶת שִׁיר יְהֹוָה עַל אַדְמַת נֵכָר: אִם אֶשְׁכָּחֵךְ יְרוּשָׁלָיִם תִּשְׁכַּח יְמִינִי: תִּדְבַּק לְשׁוֹנִי לְחִכִּי אִם לֹא אֶזְכְּרֵכִי אִם לֹא אַעֲלֶה אֶת יְרוּשָׁלַיִם עַל רֹאשׁ שִׂמְחָתִי: זְכֹר יְהֹוָה לִבְנֵי אֱדוֹם אֵת יוֹם יְרוּשָׁלָיִם הָאֹמְרִים עָרוּ עָרוּ עַד הַיְסוֹד בָּהּ: בַּת בָּבֶל הַשְּׁדוּדָה אַשְׁרֵי שֶׁיְשַׁלֶּם לָךְ אֶת גְּמוּלֵךְ שֶׁגָּמַלְתְּ לָנוּ: אַשְׁרֵי שֶׁיֹּאחֵז וְנִפֵּץ אֶת עֹלָלַיִךְ אֶל הַסָּלַע:\n\n**תהלים קנ**\nהַלְלוּיָהּ הַלְלוּ אֵל בְּקָדְשׁוֹ הַלְלוּהוּ בִּרְקִיעַ עֻזּוֹ: הַלְלוּהוּ בִגְבוּרֹתָיו הַלְלוּהוּ כְּרֹב גֻּדְלוֹ: הַלְלוּהוּ בְּתֵקַע שׁוֹפָר הַלְלוּהוּ בְּנֵבֶל וְכִנּוֹר: הַלְלוּהוּ בְתֹף וּמָחוֹל הַלְלוּהוּ בְּמִנִּים וְעֻגָב: הַלְלוּהוּ בְצִלְצְלֵי שָׁמַע הַלְלוּהוּ בְּצִלְצְלֵי תְרוּעָה: כֹּל הַנְּשָׁמָה תְּהַלֵּל יָהּ הַלְלוּיָהּ:`
+          },
+          seasonal: () => ''
+        },
+
+        'shacharit': {
+          title: 'תפילת שחרית',
+          nusach: {
+            mizrahi: `**מודה אני**\nמוֹדֶה אֲנִי לְפָנֶיךָ מֶלֶךְ חַי וְקַיָּם, שֶׁהֶחֱזַרְתָּ בִּי נִשְׁמָתִי בְּחֶמְלָה, רַבָּה אֱמוּנָתֶךָ.\n\n**ברכות השחר** — [ראה פרק ברכות השחר]\n\n**פסוקי דזמרה**\nבָּרוּךְ שֶׁאָמַר וְהָיָה הָעוֹלָם... [עד] יִשְׁתַּבַּח שִׁמְךָ לָעַד מַלְכֵּנוּ...\n\n**קריאת שמע** — [ראה פרק שמע ישראל]\n\n**עמידה — שמונה עשרה**\n\nאֲדֹנָי שְׂפָתַי תִּפְתָּח וּפִי יַגִּיד תְּהִלָּתֶךָ:\n\nבָּרוּךְ אַתָּה יְהֹוָה אֱלֹהֵינוּ וֵאלֹהֵי אֲבוֹתֵינוּ, אֱלֹהֵי אַבְרָהָם אֱלֹהֵי יִצְחָק וֵאלֹהֵי יַעֲקֹב, הָאֵל הַגָּדוֹל הַגִּבּוֹר וְהַנּוֹרָא אֵל עֶלְיוֹן, גּוֹמֵל חֲסָדִים טוֹבִים וְקֹנֵה הַכֹּל וְזוֹכֵר חַסְדֵּי אָבוֹת וּמֵבִיא גוֹאֵל לִבְנֵי בְנֵיהֶם לְמַעַן שְׁמוֹ בְּאַהֲבָה:\nמֶלֶךְ עוֹזֵר וּמוֹשִׁיעַ וּמָגֵן. בָּרוּךְ אַתָּה יְהֹוָה, מָגֵן אַבְרָהָם.\n\nאַתָּה גִּבּוֹר לְעוֹלָם אֲדֹנָי, מְחַיֵּה מֵתִים אַתָּה, רַב לְהוֹשִׁיעַ.\n[קיץ:] מוֹרִיד הַטַּל\n[חורף:] מַשִּׁיב הָרוּחַ וּמוֹרִיד הַגֶּשֶׁם\nמְכַלְכֵּל חַיִּים בְּחֶסֶד, מְחַיֵּה מֵתִים בְּרַחֲמִים רַבִּים... בָּרוּךְ אַתָּה יְהֹוָה, מְחַיֵּה הַמֵּתִים.\n\n[המשך — קדושה, ברכות אמצעיות י"ג, ברכות אחרונות, עלינו]`,
+            ashkenaz: `[נוסח אשכנז — הבדלים עיקריים:\n• "אֲשֶׁר יָצַר" בנוסח שונה מעט\n• "לְעוֹלַם יְהֵא אָדָם" — נוסח שונה\n• "יִשְׁמַח מֹשֶׁה" בשבת — נוסח שונה\n\nהעמידה דומה לנוסח ספרד לרוב]`
+          },
+          seasonal: (s) => {
+            const parts = [];
+            if (s.isRoshChodesh) parts.push('📌 ראש חודש: מוסיפים "יַעֲלֶה וְיָבֹא" בעמידה ובברכת המזון; אומרים הלל (חצי הלל)');
+            if (s.isChanukah)    parts.push('📌 חנוכה: מוסיפים "עַל הַנִּסִּים" בעמידה; אומרים הלל שלם ח׳ ימים ראשונים');
+            if (s.isPurim)       parts.push('📌 פורים: מוסיפים "עַל הַנִּסִּים" בעמידה ובברכת המזון');
+            if (s.isPesach)      parts.push('📌 פסח: "יַעֲלֶה וְיָבֹא" בעמידה; הלל שלם ב׳ ראשונים, חצי הלל בשאר; מוסף');
+            if (s.isShavuot)     parts.push('📌 שבועות: הלל שלם; מוסף; אקדמות ואזהרות (לנוסחים מסוימים)');
+            if (s.isSukkot)      parts.push('📌 סוכות: הלל שלם; מוסף; ד׳ מינים');
+            if (s.isYamimNoraim) parts.push('📌 ימים נוראים: "זָכְרֵנוּ לְחַיִּים" ו"מִי כָמוֹךָ" בעמידה; "הָמֶלֶךְ הַקָּדוֹשׁ"');
+            if (s.isShabbat)     parts.push('📌 שבת: תפילת שחרית של שבת — ישתבח, נשמת, קדישים, קריאת התורה, מוסף שבת');
+            return parts.join('\n');
+          }
+        },
+
+        'mincha': {
+          title: 'תפילת מנחה',
+          nusach: {
+            mizrahi: `אַשְׁרֵי יוֹשְׁבֵי בֵיתֶךָ עוֹד יְהַלְלוּךָ סֶּלָה:\nאַשְׁרֵי הָעָם שֶׁכָּכָה לּוֹ אַשְׁרֵי הָעָם שֶׁיְּהֹוָה אֱלֹהָיו:\n\nתְּהִלָּה לְדָוִד אֲרוֹמִמְךָ אֱלוֹהַי הַמֶּלֶךְ...\n[מזמור קמה עד סופו]\n\n**חצי קדיש**\n\n**עמידה — שמונה עשרה** [כמו שחרית — ראה שם]\n\n[ביום חול שיש מנין: חזרת הש"צ, קדיש תתקבל]\n\n**עלינו לשבח**\nעָלֵינוּ לְשַׁבֵּחַ לַאֲדוֹן הַכֹּל, לָתֵת גְּדֻלָּה לְיוֹצֵר בְּרֵאשִׁית, שֶׁלֹּא עָשָׂנוּ כְּגוֹיֵי הָאֲרָצוֹת וְלֹא שָׂמָנוּ כְּמִשְׁפְּחוֹת הָאֲדָמָה. שֶׁלֹּא שָׂם חֶלְקֵנוּ כָּהֶם וְגֹרָלֵנוּ כְּכָל הֲמוֹנָם.\nוַאֲנַחְנוּ כֹּרְעִים וּמִשְׁתַּחֲוִים וּמוֹדִים לִפְנֵי מֶלֶךְ מַלְכֵי הַמְּלָכִים הַקָּדוֹשׁ בָּרוּךְ הוּא.\nשֶׁהוּא נוֹטֶה שָׁמַיִם וְיֹסֵד אָרֶץ, וּמוֹשַׁב יְקָרוֹ בַּשָּׁמַיִם מִמַּעַל, וּשְׁכִינַת עֻזּוֹ בְּגָבְהֵי מְרוֹמִים. הוּא אֱלֹהֵינוּ אֵין עוֹד. אֱמֶת מַלְכֵּנוּ אֶפֶס זוּלָתוֹ, כַּכָּתוּב בְּתוֹרָתוֹ: וְיָדַעְתָּ הַיּוֹם וַהֲשֵׁבֹתָ אֶל לְבָבֶךָ כִּי יְהֹוָה הוּא הָאֱלֹהִים בַּשָּׁמַיִם מִמַּעַל וְעַל הָאָרֶץ מִתָּחַת אֵין עוֹד:\n\nקַדִּישׁ יָתוֹם`,
+            ashkenaz: `[נוסח אשכנז — מנחה דומה לנוסח ספרד בעיקרה. הבדל: נוסח "עלינו" שונה מעט]`
+          },
+          seasonal: (s) => {
+            const parts = [];
+            if (s.isShabbat)     parts.push('📌 שבת: מנחת שבת — קריאת התורה (בגולה: מתחילים פרשת שבת הבאה); תפילת מנחה בנוסח שבת');
+            if (s.isRoshChodesh) parts.push('📌 ראש חודש: "יַעֲלֶה וְיָבֹא" בעמידה');
+            if (s.isChanukah)    parts.push('📌 חנוכה: "עַל הַנִּסִּים" בעמידה');
+            if (s.isPesach || s.isShavuot || s.isSukkot) parts.push('📌 יום טוב: "יַעֲלֶה וְיָבֹא" בעמידה; מוסף נאמר בשחרית בלבד');
+            return parts.join('\n');
+          }
+        },
+
+        'maariv': {
+          title: 'תפילת ערבית',
+          nusach: {
+            mizrahi: `**ברכו**\nבָּרְכוּ אֶת יְהֹוָה הַמְּבֹרָךְ!\n[עונים:] בָּרוּךְ יְהֹוָה הַמְּבֹרָךְ לְעוֹלָם וָעֶד!\n\n**ברכות קריאת שמע של ערבית**\nבָּרוּךְ אַתָּה יְהֹוָה אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, אֲשֶׁר בִּדְבָרוֹ מַעֲרִיב עֲרָבִים, בְּחָכְמָה פּוֹתֵחַ שְׁעָרִים... בָּרוּךְ אַתָּה יְהֹוָה, הַמַּעֲרִיב עֲרָבִים.\n\nאַהֲבַת עוֹלָם בֵּית יִשְׂרָאֵל עַמְּךָ אָהָבְתָּ... בָּרוּךְ אַתָּה יְהֹוָה, אוֹהֵב עַמּוֹ יִשְׂרָאֵל.\n\n**קריאת שמע** — [ראה פרק שמע ישראל]\n\nוֶאֱמֶת וֶאֱמוּנָה כָּל זֹאת... יְהֹוָה אֱלֹהֵיכֶם אֱמֶת.\n\nהַשְׁכִּיבֵנוּ יְהֹוָה אֱלֹהֵינוּ לְשָׁלוֹם... בָּרוּךְ אַתָּה יְהֹוָה, הַפּוֹרֵשׂ סֻכַּת שָׁלוֹם עָלֵינוּ...\n\n**עמידה — שמונה עשרה** [כמו שחרית]\n\n**קדיש תתקבל, עלינו, קדיש יתום**`,
+            ashkenaz: `[נוסח אשכנז — הבדל בנוסח "אהבת עולם"/"אהבה רבה"; שאר התפילה דומה]`
+          },
+          seasonal: (s) => {
+            const parts = [];
+            if (s.isShabbat)     parts.push('📌 מוצאי שבת: הבדלה — "הַמַּבְדִּיל בֵּין קֹדֶשׁ לְחֹל..."');
+            if (s.isRoshChodesh) parts.push('📌 ראש חודש: "יַעֲלֶה וְיָבֹא" בעמידה; "קִדּוּשׁ לְבָנָה" — ראו פרק ברכת לבנה');
+            if (s.isChanukah)    parts.push('📌 חנוכה: "עַל הַנִּסִּים" בעמידה; הדלקת נרות חנוכה אחר ערבית');
+            if (s.isPurim)       parts.push('📌 פורים: "עַל הַנִּסִּים" בעמידה; מגילת אסתר בלילה');
+            if (s.isYamimNoraim) parts.push('📌 ערב יום כיפור: "כָּל נִדְרֵי" לפני ערבית; "זָכְרֵנוּ לְחַיִּים" בעמידה');
+            return parts.join('\n');
+          }
+        },
+
+        'tehillim': {
+          title: 'תהילים',
+          nusach: {
+            all: `**תהלים א׳**\nאַשְׁרֵי הָאִישׁ אֲשֶׁר לֹא הָלַךְ בַּעֲצַת רְשָׁעִים וּבְדֶרֶךְ חַטָּאִים לֹא עָמָד וּבְמוֹשַׁב לֵצִים לֹא יָשָׁב:\nכִּי אִם בְּתוֹרַת יְהֹוָה חֶפְצוֹ וּבְתוֹרָתוֹ יֶהְגֶּה יוֹמָם וָלָיְלָה:\nוְהָיָה כְּעֵץ שָׁתוּל עַל פַּלְגֵי מָיִם אֲשֶׁר פִּרְיוֹ יִתֵּן בְּעִתּוֹ וְעָלֵהוּ לֹא יִבּוֹל וְכֹל אֲשֶׁר יַעֲשֶׂה יַצְלִיחַ:\nלֹא כֵן הָרְשָׁעִים כִּי אִם כַּמֹּץ אֲשֶׁר תִּדְּפֶנּוּ רוּחַ:\nעַל כֵּן לֹא יָקֻמוּ רְשָׁעִים בַּמִּשְׁפָּט וְחַטָּאִים בַּעֲדַת צַדִּיקִים:\nכִּי יוֹדֵעַ יְהֹוָה דֶּרֶךְ צַדִּיקִים וְדֶרֶךְ רְשָׁעִים תֹּאבֵד:\n\n**לחץ לפתיחת ספר תהילים המלא ב-Sefaria ←**\n[כפתור קישור מופיע למטה]`
+          },
+          seasonal: (s) => {
+            const parts = [];
+            if (s.isRoshChodesh) parts.push('📌 ראש חודש: נהוג לומר תהלים קד (או מנהגים שונים לפי קהילה)');
+            if (s.isShabbat)     parts.push('📌 שבת: ספר תהלים בין מנחה למעריב; "בֹּאוּ נְרַנְּנָה" (צ"ה) בקבלת שבת');
+            if (s.isYamimNoraim) parts.push('📌 ימים נוראים: תהלים כ"ז — "לְדָוִד יְהֹוָה אוֹרִי" מרה"ש עד שמחת תורה');
+            return parts.join('\n');
+          },
+          extraLink: 'https://www.sefaria.org/Psalms?lang=bi'
+        },
+
+        'tikkun-chatzot': {
+          title: 'תיקון חצות',
+          nusach: {
+            all: `**תיקון רחל** (אחר חצות הלילה, בימות החול בלבד)\n\nיֵשֵׁב בָּדָד וְיִדֹּם כִּי נָטַל עָלָיו:\n\nיְרוּשָׁלַיִם חָטְאָה חֵטְא עַל כֵּן לְנִידָה הָיָתָה כָּל מְכַבְּדֶיהָ הִזִּילוּהָ כִּי רָאוּ עֶרְוָתָהּ גַּם הִיא נֶאֱנָחָה וַתָּשָׁב אָחוֹר: (איכה א:ח)\n\n[תהלים עט, קב, קלז]\n\nעַל נַהֲרוֹת בָּבֶל שָׁם יָשַׁבְנוּ גַּם בָּכִינוּ בְּזָכְרֵנוּ אֶת צִיּוֹן:\nעַל עֲרָבִים בְּתוֹכָהּ תָּלִינוּ כִּנֹּרוֹתֵינוּ:\nכִּי שָׁם שְׁאֵלוּנוּ שׁוֹבֵינוּ דִּבְרֵי שִׁיר וְתוֹלָלֵינוּ שִׂמְחָה, שִׁירוּ לָנוּ מִשִּׁיר צִיּוֹן:\nאֵיךְ נָשִׁיר אֶת שִׁיר יְהֹוָה עַל אַדְמַת נֵכָר:\nאִם אֶשְׁכָּחֵךְ יְרוּשָׁלָיִם תִּשְׁכַּח יְמִינִי:\nתִּדְבַּק לְשׁוֹנִי לְחִכִּי אִם לֹא אֶזְכְּרֵכִי אִם לֹא אַעֲלֶה אֶת יְרוּשָׁלַיִם עַל רֹאשׁ שִׂמְחָתִי:\n(תהלים קלז, א–ו)\n\n**תיקון לאה** (לאחר תיקון רחל)\n[תהלים כ, כא, כד, סז, עב, צ, צא, קמ, קמא, קמב]`
+          },
+          seasonal: (s) => {
+            const parts = [];
+            if (s.isShabbat || s.isRoshHaShana || s.isYomKippur || s.isPesach || s.isShavuot || s.isSukkot)
+              parts.push('⚠️ תיקון חצות לא נאמר בשבת, ראש השנה, יום כיפור, ימים טובים, ימי חנוכה ופורים');
+            return parts.join('\n');
+          }
+        }
+
+      }; // end PRAYER_DB
+
+      // ── Build prayer modal HTML ───────────────────────
+      function openPrayer(key, heLabel, enLabel) {
+        const entry = PRAYER_DB[key];
+
+        // Fallback: open Sefaria if prayer not in local DB
+        if (!entry) {
+          const refs = {
+            'tehillim': 'https://www.sefaria.org/Psalms?lang=bi',
+            'birkat-hamazon': 'https://www.sefaria.org/Birkat_Hamazon?lang=bi',
+          };
+          const url = refs[key] || `https://www.sefaria.org/search?q=${encodeURIComponent(heLabel)}&lang=he`;
+          window.open(url, '_blank');
+          return;
+        }
+
+        const season = getHebrewSeasonInfo();
+        const seasonNote = entry.seasonal ? entry.seasonal(season) : '';
+
+        // Pick nusach-specific text
+        const nusachTexts = entry.nusach;
+        let text = nusachTexts[CURRENT_NUSACH] || nusachTexts.mizrahi || nusachTexts.all || '';
+
+        // Format text: bold headers, line breaks
+        const formatText = (t) => t
+          .replace(/\*\*([^*]+)\*\*/g, '<strong style="color:#93c5fd;display:block;margin:1rem 0 0.3rem;">$1</strong>')
+          .replace(/\n/g, '<br>');
+
+        const nusachNames = {
+          mizrahi: 'עדות המזרח', sfard: 'ספרד', ashkenaz: 'אשכנז',
+          temani_shami: 'תימן שאמי', temani_baladi: 'תימן בלאדי'
+        };
+
+        let existing = document.getElementById('prayer-modal');
+        if (existing) existing.remove();
+
+        const modal = document.createElement('div');
+        modal.id = 'prayer-modal';
+        modal.style.cssText = 'position:fixed;inset:0;z-index:200;background:rgba(2,6,23,0.92);backdrop-filter:blur(8px);display:flex;align-items:flex-start;justify-content:center;padding:1rem;overflow-y:auto;';
+        modal.innerHTML = `
+          <div style="background:linear-gradient(145deg,#1e293b,#0f172a);border:1px solid rgba(99,102,241,0.3);border-radius:2rem;padding:2rem;width:100%;max-width:600px;margin:auto;box-shadow:0 25px 60px rgba(0,0,0,0.6);text-align:right;direction:rtl;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
+              <h3 style="color:#f1f5f9;font-size:1.4rem;font-weight:900;margin:0;">${entry.title}</h3>
+              <button onclick="document.getElementById('prayer-modal').remove()" style="background:rgba(255,255,255,0.08);border:none;color:#94a3b8;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.2rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✕</button>
+            </div>
+            <div style="color:#64748b;font-size:0.75rem;margin-bottom:1.2rem;">נוסח: <strong style="color:#818cf8;">${nusachNames[CURRENT_NUSACH] || CURRENT_NUSACH}</strong> &nbsp;|&nbsp; ניתן לשנות בהגדרות</div>
+            ${seasonNote ? `<div style="background:rgba(234,179,8,0.12);border:1px solid rgba(234,179,8,0.3);border-radius:1rem;padding:0.85rem 1rem;margin-bottom:1rem;font-size:0.82rem;color:#fde047;line-height:1.7;">${seasonNote.replace(/\n/g,'<br>')}</div>` : ''}
+            <div style="background:rgba(255,255,255,0.04);border-radius:1rem;padding:1.25rem;font-size:1rem;line-height:2;color:#e2e8f0;font-family:'David Libre','Frank Ruhl Libre',serif;max-height:60vh;overflow-y:auto;">
+              ${formatText(text)}
+              ${entry.extraLink ? `<br><br><a href="${entry.extraLink}" target="_blank" style="color:#60a5fa;font-size:0.85rem;">📖 פתח טקסט מלא ב-Sefaria.org ←</a>` : ''}
+            </div>
+            <p style="color:#334155;font-size:0.68rem;margin-top:1rem;text-align:center;">המקור: נוסחי תפילה מסורתיים | ספריית ספריא.org (CC-BY-SA) | מחבר: הלוח היהודי</p>
+          </div>`;
+        modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+        document.body.appendChild(modal);
+      }
+
+      // ── Dedicated Tehillim Page ───────────────────────────────
+      function openTehillimPage() {
+        const DAY_NAMES = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+        const DAY_PSALMS = [
+          { day: 'ראשון',  range: [1,29],   chapters: Array.from({length:29},  (_,i)=>i+1)   },
+          { day: 'שני',    range: [30,50],  chapters: Array.from({length:21},  (_,i)=>i+30)  },
+          { day: 'שלישי',  range: [51,72],  chapters: Array.from({length:22},  (_,i)=>i+51)  },
+          { day: 'רביעי',  range: [73,89],  chapters: Array.from({length:17},  (_,i)=>i+73)  },
+          { day: 'חמישי',  range: [90,106], chapters: Array.from({length:17},  (_,i)=>i+90)  },
+          { day: 'שישי',   range: [107,119],chapters: Array.from({length:13},  (_,i)=>i+107) },
+          { day: 'שבת',    range: [120,150],chapters: Array.from({length:31},  (_,i)=>i+120) },
+        ];
+
+        // Today's day (0=Sun … 6=Sat)
+        const todayDow = new Date().getDay();
+        let activeDayIdx = todayDow; // 0=ראשון, 6=שבת
+
+        const colors = ['#6366f1','#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899'];
+
+        let existing = document.getElementById('tehillim-modal');
+        if (existing) existing.remove();
+
+        const modal = document.createElement('div');
+        modal.id = 'tehillim-modal';
+        modal.style.cssText = 'position:fixed;inset:0;z-index:200;background:rgba(2,6,23,0.95);backdrop-filter:blur(8px);display:flex;flex-direction:column;overflow:hidden;';
+
+        function buildPage(dayIdx) {
+          activeDayIdx = dayIdx;
+          const dayData = DAY_PSALMS[dayIdx];
+          const color   = colors[dayIdx];
+
+          const tabsHTML = DAY_PSALMS.map((d,i) => `
+            <button onclick="window._tehillimSwitchDay(${i})"
+              style="padding:0.35rem 0.7rem;border-radius:999px;font-size:0.75rem;font-weight:700;border:1px solid ${i===dayIdx ? color : 'rgba(255,255,255,0.12)'};
+                     background:${i===dayIdx ? color : 'transparent'};color:${i===dayIdx ? '#fff' : '#94a3b8'};cursor:pointer;white-space:nowrap;transition:all 0.15s;">
+              ${d.day}
+            </button>`).join('');
+
+          const chaptersHTML = dayData.chapters.map(n => `
+            <button onclick="window._tehillimOpenPsalm(${n})"
+              style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:0.75rem;
+                     padding:0.55rem;font-size:0.85rem;font-weight:700;color:#e2e8f0;cursor:pointer;
+                     transition:all 0.15s;text-align:center;"
+              onmouseover="this.style.background='${color}33';this.style.borderColor='${color}66';"
+              onmouseout="this.style.background='rgba(255,255,255,0.05)';this.style.borderColor='rgba(255,255,255,0.1)';">
+              ${n}
+            </button>`).join('');
+
+          modal.innerHTML = `
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;">
+              <div>
+                <h2 style="color:#f1f5f9;font-size:1.3rem;font-weight:900;margin:0;">ספר תהילים</h2>
+                <p style="color:${color};font-size:0.78rem;font-weight:700;margin:0.15rem 0 0;">יום ${dayData.day} — תהלים ${dayData.range[0]}–${dayData.range[1]}</p>
+              </div>
+              <button onclick="document.getElementById('tehillim-modal').remove()"
+                style="background:rgba(255,255,255,0.08);border:none;color:#94a3b8;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.1rem;flex-shrink:0;">✕</button>
+            </div>
+
+            <!-- Day tabs -->
+            <div style="display:flex;gap:0.4rem;padding:0.75rem 1.25rem;overflow-x:auto;flex-shrink:0;scrollbar-width:none;">
+              ${tabsHTML}
+            </div>
+
+            <!-- Psalm grid -->
+            <div style="padding:0 1.25rem;overflow-y:auto;flex:1;">
+              <p style="color:#64748b;font-size:0.72rem;margin:0 0 0.75rem;">לחץ על מספר פרק לקריאת הטקסט המלא</p>
+              <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(52px,1fr));gap:0.5rem;padding-bottom:1.5rem;">
+                ${chaptersHTML}
+              </div>
+            </div>
+
+            <!-- Psalm content pane (hidden initially) -->
+            <div id="psalm-content-pane" style="display:none;position:absolute;inset:0;background:rgba(2,6,23,0.98);z-index:10;flex-direction:column;overflow:hidden;">
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border-bottom:1px solid rgba(255,255,255,0.08);">
+                <button id="psalm-back-btn" onclick="document.getElementById('psalm-content-pane').style.display='none';"
+                  style="background:rgba(255,255,255,0.08);border:none;color:#94a3b8;padding:0.4rem 0.8rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;">
+                  ← חזרה
+                </button>
+                <h3 id="psalm-title" style="color:#f1f5f9;font-size:1rem;font-weight:900;margin:0;">תהלים א</h3>
+                <div style="width:60px;"></div>
+              </div>
+              <div id="psalm-text-area" style="padding:1.25rem;overflow-y:auto;flex:1;font-family:'David Libre','Frank Ruhl Libre',serif;font-size:1.05rem;line-height:2;color:#e2e8f0;text-align:right;direction:rtl;">
+                <div style="text-align:center;padding:2rem;">
+                  <div style="width:36px;height:36px;border:3px solid ${color};border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 1rem;"></div>
+                  <p style="color:#64748b;">טוען...</p>
+                </div>
+              </div>
+              <p style="color:#1e293b;font-size:0.65rem;text-align:center;padding:0.5rem;flex-shrink:0;">מקור: Sefaria.org (CC-BY-SA) | תנ"ך על-פי כתב יד אלפי"א</p>
+            </div>`;
+        }
+
+        window._tehillimSwitchDay = (idx) => buildPage(idx);
+
+        window._tehillimOpenPsalm = async (num) => {
+          const pane = document.getElementById('psalm-content-pane');
+          const title = document.getElementById('psalm-title');
+          const area  = document.getElementById('psalm-text-area');
+          const color = colors[activeDayIdx];
+
+          if (!pane || !title || !area) return;
+          pane.style.display = 'flex';
+          pane.style.flexDirection = 'column';
+          title.textContent = `תהלים פרק ${num}`;
+          area.innerHTML = `<div style="text-align:center;padding:2rem;"><div style="width:36px;height:36px;border:3px solid ${color};border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 1rem;"></div><p style="color:#64748b;">טוען פרק ${num}...</p></div>`;
+
+          try {
+            const url = `https://www.sefaria.org/api/texts/Psalms.${num}?lang=he&context=0`;
+            const res = await fetch(url);
+            if (!res.ok) throw new Error('fetch failed');
+            const data = await res.json();
+            const heTexts = data.he || [];
+            if (!heTexts.length) throw new Error('no text');
+
+            const verses = heTexts.map((v, i) => {
+              const clean = typeof v === 'string' ? v : (Array.isArray(v) ? v.join('') : String(v));
+              return `<span style="color:${color};font-size:0.75rem;font-weight:700;margin-left:0.3rem;">(${i+1})</span>${clean}`;
+            }).join(' &nbsp;');
+
+            area.innerHTML = `
+              <p style="color:#64748b;font-size:0.72rem;margin-bottom:1rem;">תהלים פרק ${num} | ${heTexts.length} פסוקים</p>
+              <div style="line-height:2.2;">${verses}</div>
+              <br>
+              <a href="https://www.sefaria.org/Psalms.${num}?lang=bi" target="_blank"
+                style="color:#60a5fa;font-size:0.8rem;display:block;text-align:center;margin-top:1rem;">
+                📖 פתח ב-Sefaria ←
+              </a>`;
+          } catch(err) {
+            area.innerHTML = `
+              <p style="color:#ef4444;text-align:center;margin-bottom:1rem;">לא ניתן לטעון את הטקסט כעת.</p>
+              <div style="text-align:center;">
+                <a href="https://www.sefaria.org/Psalms.${num}?lang=bi" target="_blank"
+                  style="background:${color};color:#fff;padding:0.6rem 1.5rem;border-radius:999px;text-decoration:none;font-weight:700;font-size:0.9rem;">
+                  📖 פתח פרק ${num} ב-Sefaria
+                </a>
+              </div>`;
+          }
+        };
+
+        buildPage(activeDayIdx);
+        modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+        document.body.appendChild(modal);
+      }
+
+      function toggleMorePrayers() {
+        const grid = document.getElementById('prayer-more-grid');
+        const chevron = document.getElementById('prayer-more-chevron');
+        const label = document.getElementById('prayer-more-label');
+        const isOpen = !grid.classList.contains('hidden');
+        grid.classList.toggle('hidden', isOpen);
+        chevron.style.transform = isOpen ? '' : 'rotate(180deg)';
+        label.textContent = isOpen ? 'עוד תפילות' : 'פחות';
+      }
+
+      // Store last zData globally for opinions popup
+      window._lastZData = null;
+
       function renderZmanimGrid(zData) {
+        window._lastZData = zData;
         const ft = (iso) =>
           iso
             ? new Date(iso).toLocaleTimeString(getCurrentLocale(), {
@@ -3387,48 +4134,259 @@
               })
             : "--:--";
 
-        const alot = ft(zData.times.alotHaShachar);
-        const netz = ft(zData.times.sunrise);
-        const shma = ft(
-          ZMANIM_METHOD === "MGA"
-            ? zData.times.sofZmanShmaMGA
-            : zData.times.sofZmanShma,
-        );
-        const tfilla = ft(
-          ZMANIM_METHOD === "MGA"
-            ? zData.times.sofZmanTfillaMGA
-            : zData.times.sofZmanTfilla,
-        );
-        const chatzot = ft(zData.times.chatzot);
-        const minchaGedola = ft(zData.times.minchaGedola);
-        const minchaKetana = ft(zData.times.minchaKetana);
-        const plag = ft(zData.times.plagHaMincha);
-        const shkia = ft(zData.times.sunset);
-        const tzeit = ft(zData.times.tzeit7083deg);
-
         // Save Tzeit for Omer Push Notifications
         if (zData.times.tzeit7083deg)
           window.TZEIT_TIME = new Date(zData.times.tzeit7083deg);
 
-        document.getElementById("zmanim-details").innerHTML = `
-              <div class="zman-card bg-gradient-to-br from-indigo-900/50 to-blue-900/30 border border-blue-400/15 rounded-2xl p-3 hover:border-blue-400/35 hover:from-indigo-900/70 transition-all cursor-default"><span class="text-blue-300/70 text-[11px] md:text-xs block mb-1.5 font-semibold">עלות השחר</span><span class="font-black text-base md:text-lg text-white tracking-tight" dir="ltr">${alot}</span></div>
-              <div class="zman-card bg-gradient-to-br from-indigo-900/50 to-blue-900/30 border border-blue-400/15 rounded-2xl p-3 hover:border-blue-400/35 hover:from-indigo-900/70 transition-all cursor-default"><span class="text-blue-300/70 text-[11px] md:text-xs block mb-1.5 font-semibold">הנץ החמה</span><span class="font-black text-base md:text-lg text-white tracking-tight" dir="ltr">${netz}</span></div>
-              <div class="zman-card bg-gradient-to-br from-indigo-900/50 to-blue-900/30 border border-blue-400/15 rounded-2xl p-3 hover:border-blue-400/35 hover:from-indigo-900/70 transition-all cursor-default"><span class="text-blue-300/70 text-[11px] md:text-xs block mb-1.5 font-semibold">סוף ק"ש</span><span class="font-black text-base md:text-lg text-white tracking-tight" dir="ltr">${shma}</span></div>
-              <div class="zman-card bg-gradient-to-br from-indigo-900/50 to-blue-900/30 border border-blue-400/15 rounded-2xl p-3 hover:border-blue-400/35 hover:from-indigo-900/70 transition-all cursor-default"><span class="text-blue-300/70 text-[11px] md:text-xs block mb-1.5 font-semibold">סוף תפילה</span><span class="font-black text-base md:text-lg text-white tracking-tight" dir="ltr">${tfilla}</span></div>
-              <div class="zman-card bg-gradient-to-br from-indigo-900/50 to-blue-900/30 border border-blue-400/15 rounded-2xl p-3 hover:border-blue-400/35 hover:from-indigo-900/70 transition-all cursor-default"><span class="text-blue-300/70 text-[11px] md:text-xs block mb-1.5 font-semibold">חצות</span><span class="font-black text-base md:text-lg text-white tracking-tight" dir="ltr">${chatzot}</span></div>
-              <div class="zman-card bg-gradient-to-br from-indigo-900/50 to-blue-900/30 border border-blue-400/15 rounded-2xl p-3 hover:border-blue-400/35 hover:from-indigo-900/70 transition-all cursor-default"><span class="text-blue-300/70 text-[11px] md:text-xs block mb-1.5 font-semibold">מנחה גדולה</span><span class="font-black text-base md:text-lg text-white tracking-tight" dir="ltr">${minchaGedola}</span></div>
-              <div class="zman-card bg-gradient-to-br from-indigo-900/50 to-blue-900/30 border border-blue-400/15 rounded-2xl p-3 hover:border-blue-400/35 hover:from-indigo-900/70 transition-all cursor-default"><span class="text-blue-300/70 text-[11px] md:text-xs block mb-1.5 font-semibold">מנחה קטנה</span><span class="font-black text-base md:text-lg text-white tracking-tight" dir="ltr">${minchaKetana}</span></div>
-              <div class="zman-card bg-gradient-to-br from-indigo-900/50 to-blue-900/30 border border-blue-400/15 rounded-2xl p-3 hover:border-blue-400/35 hover:from-indigo-900/70 transition-all cursor-default"><span class="text-blue-300/70 text-[11px] md:text-xs block mb-1.5 font-semibold">פלג המנחה</span><span class="font-black text-base md:text-lg text-white tracking-tight" dir="ltr">${plag}</span></div>
-              <div class="zman-card bg-gradient-to-br from-indigo-900/50 to-blue-900/30 border border-blue-400/15 rounded-2xl p-3 hover:border-blue-400/35 hover:from-indigo-900/70 transition-all cursor-default"><span class="text-blue-300/70 text-[11px] md:text-xs block mb-1.5 font-semibold">שקיעה</span><span class="font-black text-base md:text-lg text-white tracking-tight" dir="ltr">${shkia}</span></div>
-              <div class="zman-card bg-gradient-to-br from-indigo-900/50 to-blue-900/30 border border-blue-400/15 rounded-2xl p-3 hover:border-blue-400/35 hover:from-indigo-900/70 transition-all cursor-default"><span class="text-blue-300/70 text-[11px] md:text-xs block mb-1.5 font-semibold">צאת הכוכבים</span><span class="font-black text-base md:text-lg text-white tracking-tight" dir="ltr">${tzeit}</span></div>
-          `;
+        // ── Build zmanim array with all opinions ──────────────────
+        const now = new Date();
+
+        // ── Compute night-watch times ─────────────────────────────
+        const _sunMs  = zData.times.sunset      ? new Date(zData.times.sunset).getTime()      : null;
+        const _chnMs  = zData.times.chatzotNight? new Date(zData.times.chatzotNight).getTime(): null;
+        // Night = sunset → alot (tomorrow); midpoint = chatzotNight
+        // Full night ≈ 2*(chatzotNight − sunset)
+        // 1/3 of night = 2*(chn−sun)/3; 2/3 = 4*(chn−sun)/3
+        // אשמורת התיכונה starts at sunset + 2*(chn−sun)/3
+        // אשמורת הבוקר  starts at sunset + 4*(chn−sun)/3 = chn + (chn−sun)/3
+        const _ashTMs  = (_sunMs && _chnMs) ? Math.round(_sunMs + 2*(_chnMs-_sunMs)/3) : null;
+        const _ashBMs  = (_sunMs && _chnMs) ? Math.round(_chnMs + (_chnMs-_sunMs)/3)   : null;
+        const _ashTIso = _ashTMs ? new Date(_ashTMs).toISOString() : null;
+        const _ashBIso = _ashBMs ? new Date(_ashBMs).toISOString() : null;
+
+        // ── Bein HaShmashos: API or calculated (sunset + 13.5 min) ─
+        const _beinRaw = zData.times.beinHaShmashos || zData.times.beinHashmashos || null;
+        const _beinIso = _beinRaw || (_sunMs ? new Date(_sunMs + 13.5*60000).toISOString() : null);
+
+        const zmanimList = [
+          {
+            key: "alot",       label: "עלות השחר",
+            iso: zData.times.alotHaShachar,
+            opinions: [{ name: "מגן אברהם / גר\"א", val: ft(zData.times.alotHaShachar) }]
+          },
+          {
+            key: "talit",      label: "זמן טלית ותפילין",
+            iso: zData.times.misheyakir || zData.times.misheyakirMachmir,
+            opinions: [
+              { name: "משיכיר (50 דק׳ לפני הנץ)", val: ft(zData.times.misheyakir) },
+              { name: "משיכיר מחמיר (60 דק׳ לפני הנץ)", val: ft(zData.times.misheyakirMachmir) },
+            ]
+          },
+          {
+            key: "netz",       label: "הנץ החמה",
+            iso: zData.times.sunrise,
+            opinions: [{ name: "כל השיטות", val: ft(zData.times.sunrise) }]
+          },
+          {
+            key: "shma",       label: 'סוף ק"ש',
+            iso: ZMANIM_METHOD === "MGA" ? zData.times.sofZmanShmaMGA : zData.times.sofZmanShma,
+            opinions: [
+              { name: "מגן אברהם (עלות–צאת)", val: ft(zData.times.sofZmanShmaMGA) },
+              { name: "גר\"א / בעל התניא (הנץ–שקיעה)", val: ft(zData.times.sofZmanShma) },
+            ]
+          },
+          {
+            key: "tfilla",     label: "סוף זמן תפילה",
+            iso: ZMANIM_METHOD === "MGA" ? zData.times.sofZmanTfillaMGA : zData.times.sofZmanTfilla,
+            opinions: [
+              { name: "מגן אברהם", val: ft(zData.times.sofZmanTfillaMGA) },
+              { name: "גר\"א / בעל התניא", val: ft(zData.times.sofZmanTfilla) },
+            ]
+          },
+          {
+            key: "chatzot",    label: "חצות היום",
+            iso: zData.times.chatzot,
+            opinions: [
+              { name: "חצות היום (מחצית היום ההלכתי)", val: ft(zData.times.chatzot) },
+            ]
+          },
+          {
+            key: "mincha_g",   label: "מנחה גדולה",
+            iso: zData.times.minchaGedola,
+            opinions: [
+              { name: "מגן אברהם / גר\"א (חצי שעה אחר חצות)", val: ft(zData.times.minchaGedola) },
+              { name: "רפ\"ב (30 דק׳ שעות זמניות)", val: ft(zData.times.minchaGedola72Min) },
+            ]
+          },
+          {
+            key: "mincha_k",   label: "מנחה קטנה",
+            iso: zData.times.minchaKetana,
+            opinions: [{ name: "כל השיטות (9.5 שעות זמניות)", val: ft(zData.times.minchaKetana) }]
+          },
+          {
+            key: "plag",       label: "פלג המנחה",
+            iso: zData.times.plagHaMincha,
+            opinions: [
+              { name: "מגן אברהם", val: ft(zData.times.plagHaMincha) },
+              { name: "גר\"א / שו\"ע הרב", val: ft(zData.times.plagHaMinchaGRA) },
+            ]
+          },
+          {
+            key: "shkia",      label: "שקיעה",
+            iso: zData.times.sunset,
+            opinions: [{ name: "כל השיטות", val: ft(zData.times.sunset) }]
+          },
+          {
+            key: "bein_hashmashot", label: "בין השמשות",
+            iso: _beinIso,
+            opinions: [
+              { name: "שו\"ע (כ-13.5 דק׳ אחר שקיעה)", val: ft(_beinIso) },
+              { name: "הגדרה: ספק יום ספק לילה", val: "—" },
+            ]
+          },
+          {
+            key: "tzeit",      label: "צאת הכוכבים",
+            iso: zData.times.tzeit7083deg,
+            opinions: [
+              { name: "תצ\"ה — 7.083° (שלוש כוכבים בינוניים)", val: ft(zData.times.tzeit7083deg) },
+              { name: "בעל התניא — 50 דקות", val: ft(zData.times.tzeit50min) },
+              { name: "ג׳ כוכבים קטנים (13.5 דק׳ זמניות)", val: ft(zData.times.tzeit13Point5MinutesZmanis) },
+            ]
+          },
+          {
+            key: "ashmeret_tkona", label: "אשמורת התיכונה",
+            iso: _ashTIso,
+            opinions: [
+              { name: "תחילת משמרת שנייה של הלילה", val: ft(_ashTIso) },
+              { name: "שליש שני (= שני שלישים מהשקיעה)", val: ft(_ashTIso) },
+            ]
+          },
+          {
+            key: "ashmeret_boker", label: "אשמורת הבוקר",
+            iso: _ashBIso,
+            opinions: [
+              { name: "תחילת אשמורת הבוקר (לפני עלות השחר)", val: ft(_ashBIso) },
+              { name: "שני שלישים מהלילה (4/6 מהשקיעה)", val: ft(_ashBIso) },
+            ]
+          },
+        ];
+
+        // ── FIFO: next upcoming first, past times at end ──────────
+        zmanimList.forEach(z => {
+          z._ms = z.iso ? new Date(z.iso).getTime() : null;
+        });
+        const nowMs = now.getTime();
+        const future = zmanimList.filter(z => z._ms && z._ms >= nowMs).sort((a,b) => a._ms - b._ms);
+        const past   = zmanimList.filter(z => z._ms && z._ms <  nowMs).sort((a,b) => a._ms - b._ms);
+        const noTime = zmanimList.filter(z => !z._ms);
+        const sorted = [...future, ...past, ...noTime];
+
+        // ── Render ────────────────────────────────────────────────
+        const cardClass = "zman-card bg-gradient-to-br from-indigo-900/50 to-blue-900/30 border border-blue-400/15 rounded-2xl p-3 hover:border-blue-400/35 hover:from-indigo-900/70 transition-all cursor-pointer zman-clickable";
+        const isPast = (z) => z._ms && z._ms < nowMs;
+
+        document.getElementById("zmanim-details").innerHTML = sorted.map(z => `
+          <div class="${cardClass}${isPast(z) ? ' opacity-50' : ''}" data-zman-key="${z.key}" onclick="showZmanOpinions('${z.key}')">
+            <span class="text-blue-300/80 text-xs md:text-sm block mb-1.5 font-semibold">${z.label}</span>
+            <span class="font-black text-lg md:text-xl text-white tracking-tight" dir="ltr">${z._displayVal !== undefined ? z._displayVal : ft(z.iso)}</span>
+          </div>`).join('');
+
+        // Apply i18n labels
         const ui = getDynamicUiText();
-        document
-          .querySelectorAll("#zmanim-details > div > span:first-child")
-          .forEach((label, index) => {
-            if (ui.zmanimLabels[index])
-              label.textContent = ui.zmanimLabels[index];
-          });
+        const labels = ui.zmanimLabels || [];
+        // Keep labels synced if i18n has overrides (legacy support)
+        const rendered = document.querySelectorAll("#zmanim-details > div");
+        rendered.forEach((card, i) => {
+          const key = card.dataset.zmanKey;
+          const zItem = zmanimList.find(z => z.key === key);
+          // i18n override by position only if label matches
+          const firstSpan = card.querySelector("span");
+          if (labels[i] && firstSpan) firstSpan.textContent = labels[i];
+        });
+      }
+
+      // ── Zman Opinions Popup ───────────────────────────────────
+      function showZmanOpinions(key) {
+        const zData = window._lastZData;
+        if (!zData) return;
+
+        const ft = (iso) => iso
+          ? new Date(iso).toLocaleTimeString(getCurrentLocale(), { hour: "2-digit", minute: "2-digit" })
+          : "—";
+
+        // Re-compute night-watch ISO for opinions popup (mirrors renderZmanimGrid logic)
+        const _opSunMs = zData.times.sunset       ? new Date(zData.times.sunset).getTime()       : null;
+        const _opChnMs = zData.times.chatzotNight ? new Date(zData.times.chatzotNight).getTime() : null;
+        const _opAshTMs = (_opSunMs && _opChnMs) ? Math.round(_opSunMs + 2*(_opChnMs-_opSunMs)/3) : null;
+        const _opAshBMs = (_opSunMs && _opChnMs) ? Math.round(_opChnMs + (_opChnMs-_opSunMs)/3)   : null;
+        const _opBeinRaw = zData.times.beinHaShmashos || zData.times.beinHashmashos || null;
+        const _opBeinIso = _opBeinRaw || (_opSunMs ? new Date(_opSunMs + 13.5*60000).toISOString() : null);
+
+        const opinionsMap = {
+          alot:     { label: "עלות השחר",        rows: [{ name: "מגן אברהם / גר\"א", val: ft(zData.times.alotHaShachar) }] },
+          talit:    { label: "זמן טלית ותפילין",  rows: [
+                       { name: "משיכיר (50 דק׳ לפני הנץ)", val: ft(zData.times.misheyakir) },
+                       { name: "משיכיר מחמיר (60 דק׳ לפני הנץ)", val: ft(zData.times.misheyakirMachmir) },
+                     ]},
+          netz:     { label: "הנץ החמה",          rows: [{ name: "כל השיטות", val: ft(zData.times.sunrise) }] },
+          shma:     { label: 'סוף זמן קריאת שמע', rows: [
+                       { name: "מגן אברהם (עלות–צאת)",        val: ft(zData.times.sofZmanShmaMGA) },
+                       { name: "גר\"א / בעל התניא (הנץ–שקיעה)", val: ft(zData.times.sofZmanShma) },
+                     ]},
+          tfilla:   { label: "סוף זמן תפילה",    rows: [
+                       { name: "מגן אברהם",           val: ft(zData.times.sofZmanTfillaMGA) },
+                       { name: "גר\"א / בעל התניא",   val: ft(zData.times.sofZmanTfilla) },
+                     ]},
+          chatzot:  { label: "חצות היום",         rows: [
+                       { name: "חצות היום (מחצית היום ההלכתי)", val: ft(zData.times.chatzot) },
+                       { name: "חצות הלילה (לעיון)", val: ft(zData.times.chatzotNight) },
+                     ]},
+          mincha_g: { label: "מנחה גדולה",       rows: [
+                       { name: "מגן אברהם / גר\"א (חצי שעה אחר חצות)", val: ft(zData.times.minchaGedola) },
+                       { name: "רפ\"ב (30 דק׳ שעות זמניות)", val: ft(zData.times.minchaGedola72Min) },
+                     ]},
+          mincha_k: { label: "מנחה קטנה",        rows: [{ name: "כל השיטות (9.5 שעות זמניות)", val: ft(zData.times.minchaKetana) }] },
+          plag:     { label: "פלג המנחה",         rows: [
+                       { name: "מגן אברהם (שעות זמניות)", val: ft(zData.times.plagHaMincha) },
+                       { name: "גר\"א / שו\"ע הרב",           val: ft(zData.times.plagHaMinchaGRA) },
+                     ]},
+          shkia:    { label: "שקיעה",              rows: [{ name: "כל השיטות", val: ft(zData.times.sunset) }] },
+          bein_hashmashot: { label: "בין השמשות", rows: [
+                       { name: "שו\"ע (כ-13.5 דק׳ אחר שקיעה)", val: ft(_opBeinIso) },
+                       { name: "הגדרה: ספק יום ספק לילה (ר׳ יוסף קארו)", val: "—" },
+                     ]},
+          tzeit:    { label: "צאת הכוכבים",        rows: [
+                       { name: "תצ\"ה — 7.083° (שלושה כוכבים בינוניים)", val: ft(zData.times.tzeit7083deg) },
+                       { name: "בעל התניא — 50 דקות אחר שקיעה",          val: ft(zData.times.tzeit50min) },
+                       { name: "שלושה כוכבים קטנים — 13.5 דק׳ זמניות",  val: ft(zData.times.tzeit13Point5MinutesZmanis) },
+                     ]},
+          ashmeret_tkona: { label: "אשמורת התיכונה", rows: [
+                       { name: "תחילת משמרת שנייה של הלילה", val: ft(_opAshTMs ? new Date(_opAshTMs).toISOString() : null) },
+                       { name: "חישוב: 2/3 מהשקיעה עד עלות השחר", val: ft(_opAshTMs ? new Date(_opAshTMs).toISOString() : null) },
+                     ]},
+          ashmeret_boker: { label: "אשמורת הבוקר", rows: [
+                       { name: "תחילת אשמורת הבוקר (לפני עלות)", val: ft(_opAshBMs ? new Date(_opAshBMs).toISOString() : null) },
+                       { name: "חישוב: 4/3 מהשקיעה (= חצות + 1/3 לילה)", val: ft(_opAshBMs ? new Date(_opAshBMs).toISOString() : null) },
+                     ]},
+        };
+
+        const entry = opinionsMap[key];
+        if (!entry) return;
+
+        // Build and show modal
+        let existing = document.getElementById('zman-opinions-modal');
+        if (existing) existing.remove();
+
+        const modal = document.createElement('div');
+        modal.id = 'zman-opinions-modal';
+        modal.style.cssText = 'position:fixed;inset:0;z-index:200;background:rgba(15,23,42,0.85);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:1rem;';
+        modal.innerHTML = `
+          <div style="background:linear-gradient(145deg,#1e293b,#0f172a);border:1px solid rgba(99,102,241,0.3);border-radius:2rem;padding:2rem;width:100%;max-width:360px;box-shadow:0 25px 60px rgba(0,0,0,0.5);text-align:right;direction:rtl;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+              <h3 style="color:#e2e8f0;font-size:1.25rem;font-weight:900;margin:0;">${entry.label}</h3>
+              <button onclick="document.getElementById('zman-opinions-modal').remove()" style="background:rgba(255,255,255,0.08);border:none;color:#94a3b8;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center;">✕</button>
+            </div>
+            <p style="color:#64748b;font-size:0.75rem;margin-bottom:1rem;">כל הדעות וחישובי השיטות</p>
+            <div style="display:flex;flex-direction:column;gap:0.75rem;">
+              ${entry.rows.map(r => `
+                <div style="display:flex;justify-content:space-between;align-items:center;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.2);border-radius:1rem;padding:0.75rem 1rem;">
+                  <span style="color:#93c5fd;font-size:0.8rem;font-weight:600;">${r.name}</span>
+                  <span style="color:#f8fafc;font-size:1.1rem;font-weight:900;direction:ltr;">${r.val}</span>
+                </div>`).join('')}
+            </div>
+          </div>`;
+        modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+        document.body.appendChild(modal);
       }
 
       async function fetchFastTimes(name, dateStr, elementId) {
@@ -3638,8 +4596,35 @@
       async function saveSettings() {
         ZMANIM_METHOD = document.getElementById("settings-method").value;
         localStorage.setItem("moadim_method", ZMANIM_METHOD);
+
+        // Save nusach
+        const nusachEl = document.getElementById("settings-nusach");
+        if (nusachEl) {
+          CURRENT_NUSACH = nusachEl.value;
+          localStorage.setItem("moadim_nusach", CURRENT_NUSACH);
+        }
+
+        // Save font size
+        const fsEl = document.getElementById("settings-font-size");
+        if (fsEl) {
+          applyFontSize(parseInt(fsEl.value));
+          localStorage.setItem("moadim_fontsize", fsEl.value);
+        }
+
         fetchLiveCalendarData();
         toggleSettings();
+      }
+
+      // ── Font size ─────────────────────────────────────────────
+      function applyFontSize(level) {
+        document.documentElement.classList.remove('fs-1', 'fs-2');
+        if (level === 1) document.documentElement.classList.add('fs-1');
+        if (level === 2) document.documentElement.classList.add('fs-2');
+      }
+      function previewFontSize(val) {
+        applyFontSize(parseInt(val));
+        const lbl = document.getElementById('font-size-label');
+        if (lbl) lbl.textContent = FS_LABELS[parseInt(val)] || 'רגיל';
       }
 
       function getBearing(lat1, lon1, lat2, lon2) {
@@ -3763,16 +4748,27 @@
         };
         setCompassStatus("מאתר כיוון התפילה...");
         const handler = (e) => {
-          let alpha = e.webkitCompassHeading || Math.abs(e.alpha - 360);
-          if (alpha) {
+          let alpha = e.webkitCompassHeading != null
+            ? e.webkitCompassHeading
+            : (e.absolute && e.alpha != null ? (360 - e.alpha) % 360 : null);
+          if (alpha == null) alpha = Math.abs((e.alpha || 0) - 360);
+          if (alpha != null) {
             const lat1 = GPS_COORDS ? GPS_COORDS.lat : 32.084;
             const lon1 = GPS_COORDS ? GPS_COORDS.lon : 34.8878;
             const target = getCompassTarget(lat1, lon1);
             const bearing = getBearing(lat1, lon1, target.lat, target.lon);
             const rotation = bearing - alpha;
 
+            // Rotate compass rose (N/E/S/W labels) with device heading
             document.getElementById("compass-ring").style.transform =
               `rotate(${-alpha}deg)`;
+            // Counter-rotate each label to keep text upright
+            const counterRot = `rotate(${alpha}deg)`;
+            document.getElementById("compass-dir-n").style.transform = `translateX(-50%) ${counterRot}`;
+            document.getElementById("compass-dir-s").style.transform = `translateX(-50%) ${counterRot}`;
+            document.getElementById("compass-dir-e").style.transform = `translateY(-50%) ${counterRot}`;
+            document.getElementById("compass-dir-w").style.transform = `translateY(-50%) ${counterRot}`;
+            // Prayer direction arrow
             document.getElementById("compass-arrow").style.transform =
               `rotate(${rotation}deg)`;
 
@@ -4485,6 +5481,1205 @@
       // ═══════════════════════════════════════════════════════
       // ✦  PATCH: hook into existing functions
       // ═══════════════════════════════════════════════════════
+
+      const ZMANIM_FALLBACK_ORDER = [
+        "alot",
+        "talit",
+        "netz",
+        "shma",
+        "tfilla",
+        "chatzot",
+        "mincha_g",
+        "mincha_k",
+        "plag",
+        "shkia",
+        "bein_hashmashot",
+        "tzeit",
+        "ashmeret_tichona",
+        "ashmeret_haboker",
+      ];
+
+      function formatZmanTime(iso) {
+        return iso
+          ? new Date(iso).toLocaleTimeString(getCurrentLocale(), {
+              hour: "2-digit",
+              minute: "2-digit",
+            })
+          : "--:--";
+      }
+
+      function toIso(ms) {
+        return Number.isFinite(ms) ? new Date(ms).toISOString() : null;
+      }
+
+      function getZmanimMethodKey() {
+        return String(ZMANIM_METHOD || "MGA").toUpperCase() === "GRA" ? "GRA" : "MGA";
+      }
+
+      function getZmanimBundle(zData) {
+        return {
+          prev: zData?._prevDay || null,
+          today: zData || null,
+          next: zData?._nextDay || null,
+          nowMs: Date.now(),
+        };
+      }
+
+      function pushCandidate(target, iso, extra = {}) {
+        if (!iso) return;
+        const ms = new Date(iso).getTime();
+        if (!Number.isFinite(ms)) return;
+        target.push({ iso, ms, ...extra });
+      }
+
+      function getFieldCandidates(bundle, field, order = ["prev", "today", "next"]) {
+        const out = [];
+        order.forEach((bucket) => {
+          const data = bundle[bucket];
+          pushCandidate(out, data?.times?.[field] || null, {
+            field,
+            bucket,
+            dayOffset: bucket === "prev" ? -1 : bucket === "next" ? 1 : 0,
+          });
+        });
+        return out;
+      }
+
+      function getNightSegments(bundle) {
+        return [
+          {
+            key: "prevNight",
+            bucket: "prev",
+            dayOffset: 0,
+            sunsetIso: bundle.prev?.times?.sunset || null,
+            alotIso: bundle.today?.times?.alotHaShachar || null,
+            chatzotIso: bundle.prev?.times?.chatzotNight || null,
+            beinIso: bundle.prev?.times?.beinHaShmashos || bundle.prev?.times?.beinHashmashos || null,
+          },
+          {
+            key: "todayNight",
+            bucket: "today",
+            dayOffset: 1,
+            sunsetIso: bundle.today?.times?.sunset || null,
+            alotIso: bundle.next?.times?.alotHaShachar || null,
+            chatzotIso: bundle.today?.times?.chatzotNight || null,
+            beinIso: bundle.today?.times?.beinHaShmashos || bundle.today?.times?.beinHashmashos || null,
+          },
+        ];
+      }
+
+      function buildNightDerivedCandidates(bundle, type) {
+        const out = [];
+        getNightSegments(bundle).forEach((segment) => {
+          const sunsetMs = segment.sunsetIso ? new Date(segment.sunsetIso).getTime() : null;
+          const alotMs = segment.alotIso ? new Date(segment.alotIso).getTime() : null;
+          const chatzotMs = segment.chatzotIso ? new Date(segment.chatzotIso).getTime() : null;
+          if (!sunsetMs || !(alotMs || chatzotMs)) return;
+
+          let iso = null;
+          if (type === "chatzot") {
+            iso = segment.chatzotIso || toIso(sunsetMs + ((alotMs - sunsetMs) / 2));
+          } else if (type === "ashmeret") {
+            const endMs = alotMs || (chatzotMs ? sunsetMs + ((chatzotMs - sunsetMs) * 2) : null);
+            if (endMs) iso = toIso(sunsetMs + ((endMs - sunsetMs) / 3));
+          } else if (type === "bein") {
+            iso = segment.beinIso || toIso(sunsetMs + (13.5 * 60 * 1000));
+          }
+
+          pushCandidate(out, iso, {
+            bucket: segment.bucket,
+            dayOffset: segment.dayOffset,
+            segment: segment.key,
+            type,
+          });
+        });
+        return out;
+      }
+
+      function selectRelevantCandidate(candidates, nowMs) {
+        if (!candidates.length) return null;
+        const future = candidates.filter((candidate) => candidate.ms >= nowMs).sort((a, b) => a.ms - b.ms);
+        if (future.length) return future[0];
+        return candidates.slice().sort((a, b) => b.ms - a.ms)[0];
+      }
+
+      function enrichOpinion(base, bundle, nowMs) {
+        const candidate = selectRelevantCandidate(base.candidates || [], nowMs);
+        return {
+          ...base,
+          iso: candidate?.iso || null,
+          ms: candidate?.ms || null,
+          bucket: candidate?.bucket || null,
+          dayOffset: candidate?.dayOffset || 0,
+          segment: candidate?.segment || null,
+        };
+      }
+
+      function getPrimaryOpinion(itemKey, opinions, methodKey, nowMs) {
+        const valid = opinions.filter((opinion) => opinion.iso);
+        if (!valid.length) return null;
+        if (itemKey === "shma" || itemKey === "tfilla" || itemKey === "plag") {
+          return valid.find((opinion) => opinion.method === methodKey) || valid[0];
+        }
+        if (itemKey === "chatzot") {
+          return valid.filter((opinion) => opinion.ms >= nowMs).sort((a, b) => a.ms - b.ms)[0] || valid.sort((a, b) => b.ms - a.ms)[0];
+        }
+        return valid[0];
+      }
+
+      function buildOccurrenceHint(opinion) {
+        if (!opinion?.iso) return "לא זמין כעת";
+        if (opinion.dayOffset > 0) return `${opinion.shortLabel} · מחר`;
+        if (opinion.bucket === "prev" || opinion.segment === "prevNight") return `${opinion.shortLabel} · כבר עבר`;
+        return opinion.shortLabel;
+      }
+
+      function buildZmanDefinitionList(bundle) {
+        const methodKey = getZmanimMethodKey();
+        const nowMs = bundle.nowMs;
+        return [
+          {
+            key: "alot",
+            label: "עלות השחר",
+            opinions: [
+              enrichOpinion({ id: "alotHaShachar", label: "עלות השחר", shortLabel: "עלות השחר", method: "ALL", candidates: getFieldCandidates(bundle, "alotHaShachar", ["today", "next"]) }, bundle, nowMs),
+            ],
+          },
+          {
+            key: "talit",
+            label: "זמן טלית ותפילין",
+            opinions: [
+              enrichOpinion({ id: "misheyakir", label: "משיכיר", shortLabel: "משיכיר", method: "ALL", candidates: getFieldCandidates(bundle, "misheyakir", ["today", "next"]) }, bundle, nowMs),
+              enrichOpinion({ id: "misheyakirMachmir", label: "משיכיר מחמיר", shortLabel: "משיכיר מחמיר", method: "ALL", candidates: getFieldCandidates(bundle, "misheyakirMachmir", ["today", "next"]) }, bundle, nowMs),
+            ],
+          },
+          {
+            key: "netz",
+            label: "הנץ החמה",
+            opinions: [
+              enrichOpinion({ id: "sunrise", label: "הנץ החמה", shortLabel: "הנץ", method: "ALL", candidates: getFieldCandidates(bundle, "sunrise", ["today", "next"]) }, bundle, nowMs),
+            ],
+          },
+          {
+            key: "shma",
+            label: "סוף ק\"ש",
+            opinions: [
+              enrichOpinion({ id: "sofZmanShmaMGA", label: "מגן אברהם", shortLabel: "מגן אברהם", method: "MGA", candidates: getFieldCandidates(bundle, "sofZmanShmaMGA", ["today", "next"]) }, bundle, nowMs),
+              enrichOpinion({ id: "sofZmanShma", label: "הגר\"א", shortLabel: "הגר\"א", method: "GRA", candidates: getFieldCandidates(bundle, "sofZmanShma", ["today", "next"]) }, bundle, nowMs),
+            ],
+          },
+          {
+            key: "tfilla",
+            label: "סוף תפילה",
+            opinions: [
+              enrichOpinion({ id: "sofZmanTfillaMGA", label: "מגן אברהם", shortLabel: "מגן אברהם", method: "MGA", candidates: getFieldCandidates(bundle, "sofZmanTfillaMGA", ["today", "next"]) }, bundle, nowMs),
+              enrichOpinion({ id: "sofZmanTfilla", label: "הגר\"א", shortLabel: "הגר\"א", method: "GRA", candidates: getFieldCandidates(bundle, "sofZmanTfilla", ["today", "next"]) }, bundle, nowMs),
+            ],
+          },
+          {
+            key: "chatzot",
+            label: "חצות יום / לילה",
+            opinions: [
+              enrichOpinion({ id: "chatzotDay", label: "חצות יום", shortLabel: "חצות יום", method: "ALL", candidates: getFieldCandidates(bundle, "chatzot", ["today", "next"]) }, bundle, nowMs),
+              enrichOpinion({ id: "chatzotNight", label: "חצות לילה", shortLabel: "חצות לילה", method: "ALL", candidates: buildNightDerivedCandidates(bundle, "chatzot") }, bundle, nowMs),
+            ],
+          },
+          {
+            key: "mincha_g",
+            label: "מנחה גדולה",
+            opinions: [
+              enrichOpinion({ id: "minchaGedola", label: "מנחה גדולה", shortLabel: "מנחה גדולה", method: "ALL", candidates: getFieldCandidates(bundle, "minchaGedola", ["today", "next"]) }, bundle, nowMs),
+              enrichOpinion({ id: "minchaGedola72Min", label: "72 דקות", shortLabel: "72 דקות", method: "ALL", candidates: getFieldCandidates(bundle, "minchaGedola72Min", ["today", "next"]) }, bundle, nowMs),
+            ],
+          },
+          {
+            key: "mincha_k",
+            label: "מנחה קטנה",
+            opinions: [
+              enrichOpinion({ id: "minchaKetana", label: "מנחה קטנה", shortLabel: "מנחה קטנה", method: "ALL", candidates: getFieldCandidates(bundle, "minchaKetana", ["today", "next"]) }, bundle, nowMs),
+            ],
+          },
+          {
+            key: "plag",
+            label: "פלג המנחה",
+            opinions: [
+              enrichOpinion({ id: "plagHaMincha", label: "מגן אברהם", shortLabel: "מגן אברהם", method: "MGA", candidates: getFieldCandidates(bundle, "plagHaMincha", ["today", "next"]) }, bundle, nowMs),
+              enrichOpinion({ id: "plagHaMinchaGRA", label: "הגר\"א", shortLabel: "הגר\"א", method: "GRA", candidates: getFieldCandidates(bundle, "plagHaMinchaGRA", ["today", "next"]) }, bundle, nowMs),
+            ],
+          },
+          {
+            key: "shkia",
+            label: "שקיעה",
+            opinions: [
+              enrichOpinion({ id: "sunset", label: "שקיעה", shortLabel: "שקיעה", method: "ALL", candidates: getFieldCandidates(bundle, "sunset") }, bundle, nowMs),
+            ],
+          },
+          {
+            key: "bein_hashmashot",
+            label: "בין השמשות",
+            opinions: [
+              enrichOpinion({ id: "beinHashmashot", label: "בין השמשות", shortLabel: "בין השמשות", method: "ALL", candidates: buildNightDerivedCandidates(bundle, "bein") }, bundle, nowMs),
+            ],
+          },
+          {
+            key: "tzeit",
+            label: "צאת הכוכבים",
+            opinions: [
+              enrichOpinion({ id: "tzeit7083deg", label: "7.083°", shortLabel: "7.083°", method: methodKey, candidates: getFieldCandidates(bundle, "tzeit7083deg") }, bundle, nowMs),
+              enrichOpinion({ id: "tzeit50min", label: "50 דקות", shortLabel: "50 דקות", method: "ALL", candidates: getFieldCandidates(bundle, "tzeit50min") }, bundle, nowMs),
+              enrichOpinion({ id: "tzeit13Point5MinutesZmanis", label: "13.5 דקות זמניות", shortLabel: "13.5 דקות", method: "ALL", candidates: getFieldCandidates(bundle, "tzeit13Point5MinutesZmanis") }, bundle, nowMs),
+            ],
+          },
+          {
+            key: "ashmeret_tichona",
+            label: "אשמורת התיכונה",
+            opinions: [
+              enrichOpinion({ id: "ashmeretMiddle", label: "אשמורת התיכונה", shortLabel: "אשמורת תיכונה", method: "ALL", candidates: buildNightDerivedCandidates(bundle, "ashmeret") }, bundle, nowMs),
+            ],
+          },
+          {
+            key: "ashmeret_haboker",
+            label: "אשמורת הבוקר",
+            opinions: [
+              enrichOpinion({
+                id: "ashmeretMorning",
+                label: "אשמורת הבוקר",
+                shortLabel: "אשמורת הבוקר",
+                method: "ALL",
+                candidates: getNightSegments(bundle).flatMap((segment) => {
+                  const sunsetMs = segment.sunsetIso ? new Date(segment.sunsetIso).getTime() : null;
+                  const alotMs = segment.alotIso ? new Date(segment.alotIso).getTime() : null;
+                  const chatzotMs = segment.chatzotIso ? new Date(segment.chatzotIso).getTime() : null;
+                  if (!sunsetMs || !(alotMs || chatzotMs)) return [];
+                  const endMs = alotMs || (chatzotMs ? sunsetMs + ((chatzotMs - sunsetMs) * 2) : null);
+                  if (!endMs) return [];
+                  return [{
+                    iso: toIso(sunsetMs + (((endMs - sunsetMs) * 2) / 3)),
+                    ms: sunsetMs + (((endMs - sunsetMs) * 2) / 3),
+                    bucket: segment.bucket,
+                    dayOffset: segment.dayOffset,
+                    segment: segment.key,
+                  }];
+                }),
+              }, bundle, nowMs),
+            ],
+          },
+        ].map((definition, index) => {
+          const primary = getPrimaryOpinion(definition.key, definition.opinions, methodKey, nowMs);
+          return {
+            ...definition,
+            orderIndex: ZMANIM_FALLBACK_ORDER.indexOf(definition.key) >= 0 ? ZMANIM_FALLBACK_ORDER.indexOf(definition.key) : index,
+            primary,
+            sortMs: primary?.ms || null,
+            displayValue: primary?.iso ? formatZmanTime(primary.iso) : "--:--",
+            meta: buildOccurrenceHint(primary),
+          };
+        });
+      }
+
+      function orderZmanimByCurrentRelevance(items) {
+        const nowMs = Date.now();
+        return items.slice().sort((left, right) => {
+          const leftFuture = Number.isFinite(left.sortMs) && left.sortMs >= nowMs;
+          const rightFuture = Number.isFinite(right.sortMs) && right.sortMs >= nowMs;
+          if (leftFuture && rightFuture) return left.sortMs - right.sortMs;
+          if (leftFuture) return -1;
+          if (rightFuture) return 1;
+          return left.orderIndex - right.orderIndex;
+        });
+      }
+
+      function normalizeZmanim(zData) {
+        const bundle = getZmanimBundle(zData);
+        const items = buildZmanDefinitionList(bundle);
+        return {
+          bundle,
+          items,
+          orderedItems: orderZmanimByCurrentRelevance(items),
+          byKey: Object.fromEntries(items.map((item) => [item.key, item])),
+        };
+      }
+
+      function buildZmanimOpinionsPayload(key) {
+        const normalized = window._lastNormalizedZmanim;
+        const item = normalized?.byKey?.[key];
+        if (!item) return null;
+        const rows = item.opinions
+          .filter((opinion) => opinion.iso)
+          .map((opinion) => ({
+            label: opinion.label,
+            value: formatZmanTime(opinion.iso),
+            isSelected: opinion.method === getZmanimMethodKey() || (item.primary && opinion.id === item.primary.id),
+          }));
+        return {
+          label: item.label,
+          rows: rows.length ? rows : [{ label: "אין זמן זמין כרגע", value: "--:--", isSelected: false }],
+        };
+      }
+
+      renderZmanimGrid = function(zData) {
+        window._lastZData = zData;
+        const normalized = normalizeZmanim(zData);
+        window._lastNormalizedZmanim = normalized;
+
+        const activeTzeit = normalized.byKey?.tzeit?.primary?.iso || zData?.times?.tzeit7083deg;
+        if (activeTzeit) window.TZEIT_TIME = new Date(activeTzeit);
+
+        const cardClass = "zman-card bg-gradient-to-br from-indigo-900/50 to-blue-900/30 border border-blue-400/15 rounded-2xl p-3 hover:border-blue-400/35 hover:from-indigo-900/70 transition-all cursor-pointer zman-clickable";
+        document.getElementById("zmanim-details").innerHTML = normalized.orderedItems
+          .map((item) => `
+            <div class="${cardClass}" data-zman-key="${item.key}" onclick="showZmanOpinions('${item.key}')">
+              <span class="text-blue-300/80 text-xs md:text-sm block mb-1.5 font-semibold">${item.label}</span>
+              <span class="font-black text-lg md:text-xl text-white tracking-tight" dir="ltr">${item.displayValue}</span>
+              <span class="zman-meta">${item.meta}</span>
+            </div>
+          `)
+          .join("");
+      };
+
+      showZmanOpinions = function(key) {
+        const payload = buildZmanimOpinionsPayload(key);
+        if (!payload) return;
+
+        let existing = document.getElementById("zman-opinions-modal");
+        if (existing) existing.remove();
+
+        const modal = document.createElement("div");
+        modal.id = "zman-opinions-modal";
+        modal.style.cssText = "position:fixed;inset:0;z-index:200;background:rgba(15,23,42,0.85);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:1rem;";
+        modal.innerHTML = `
+          <div style="background:linear-gradient(145deg,#1e293b,#0f172a);border:1px solid rgba(99,102,241,0.3);border-radius:2rem;padding:2rem;width:100%;max-width:380px;box-shadow:0 25px 60px rgba(0,0,0,0.5);text-align:right;direction:rtl;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+              <h3 style="color:#e2e8f0;font-size:1.25rem;font-weight:900;margin:0;">${payload.label}</h3>
+              <button onclick="document.getElementById('zman-opinions-modal').remove()" style="background:rgba(255,255,255,0.08);border:none;color:#94a3b8;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center;">✕</button>
+            </div>
+            <p style="color:#64748b;font-size:0.75rem;margin-bottom:1rem;">כל השיטות הזמינות לזמן זה. השיטה הפעילה מסומנת.</p>
+            <div style="display:flex;flex-direction:column;gap:0.75rem;">
+              ${payload.rows.map((row) => `
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:0.8rem;background:${row.isSelected ? "rgba(59,130,246,0.18)" : "rgba(99,102,241,0.12)"};border:1px solid ${row.isSelected ? "rgba(96,165,250,0.42)" : "rgba(99,102,241,0.2)"};border-radius:1rem;padding:0.85rem 1rem;">
+                  <span style="color:${row.isSelected ? "#dbeafe" : "#93c5fd"};font-size:0.83rem;font-weight:700;">${row.label}${row.isSelected ? " · נבחר" : ""}</span>
+                  <span style="color:#f8fafc;font-size:1.05rem;font-weight:900;direction:ltr;">${row.value}</span>
+                </div>
+              `).join("")}
+            </div>
+          </div>`;
+        modal.addEventListener("click", (event) => {
+          if (event.target === modal) modal.remove();
+        });
+        document.body.appendChild(modal);
+      };
+
+      const PRAYER_HTML_CACHE = new Map();
+      const NUSACH_LABELS = {
+        mizrahi: "עדות המזרח",
+        sfard: "ספרד",
+        ashkenaz: "אשכנז",
+        temani_shami: "תימן שאמי",
+        temani_baladi: "תימן בלדי",
+      };
+
+      const PRAYER_QUERY_DEFS = {
+        shacharit: { weekday: "שחרית לחול", shabbat: "שחרית לשבת" },
+        mincha: { weekday: "מנחה לחול", shabbat: "מנחה לשבת" },
+        maariv: { weekday: "ערבית לחול", shabbat: "ערבית לשבת" },
+        "birchot-hashachar": { weekday: "ברכות השחר" },
+        shema: { weekday: "קריאת שמע" },
+        "birkat-hamazon": { weekday: "ברכת המזון" },
+        "al-hamichya": { weekday: "ברכת מעין שלוש" },
+        "kiddush-levana": { weekday: "ברכת הלבנה" },
+        "tikkun-chatzot": { weekday: "תיקון חצות" },
+      };
+
+      const SEFARIA_PRAYER_REFS = {
+        shacharit: {
+          mizrahi: { weekday: ["Siddur_Edot_HaMizrach,_Weekday_Shacharit"] },
+          sfard: { weekday: ["Siddur_Sefard,_Weekday_Shacharit"] },
+          ashkenaz: { weekday: ["Siddur_Ashkenaz,_Weekday,_Shacharit"] },
+        },
+        mincha: {
+          mizrahi: { weekday: ["Siddur_Edot_HaMizrach,_Weekday_Mincha"] },
+          sfard: { weekday: ["Siddur_Sefard,_Weekday_Mincha"] },
+          ashkenaz: { weekday: ["Siddur_Ashkenaz,_Weekday,_Mincha"] },
+        },
+        maariv: {
+          mizrahi: { weekday: ["Siddur_Edot_HaMizrach,_Weekday_Arvit", "Siddur_Edot_HaMizrach,_Weekday_Maariv"] },
+          sfard: { weekday: ["Siddur_Sefard,_Weekday_Maariv"] },
+          ashkenaz: { weekday: ["Siddur_Ashkenaz,_Weekday,_Maariv"] },
+        },
+        "birchot-hashachar": {
+          mizrahi: { weekday: ["Siddur_Edot_HaMizrach,_Birchot_HaShachar"] },
+          sfard: { weekday: ["Siddur_Sefard,_Birchot_HaShachar"] },
+          ashkenaz: { weekday: ["Siddur_Ashkenaz,_Birkhot_HaShachar"] },
+        },
+        shema: {
+          mizrahi: { weekday: ["Siddur_Edot_HaMizrach,_Kriat_Shema_Sheal_HaMitah", "The_Shema"] },
+          sfard: { weekday: ["Siddur_Sefard,_Kriat_Shema", "The_Shema"] },
+          ashkenaz: { weekday: ["Siddur_Ashkenaz,_The_Shema", "The_Shema"] },
+        },
+        "birkat-hamazon": {
+          mizrahi: { weekday: ["Siddur_Edot_HaMizrach,_Post_Meal_Blessing"] },
+          sfard: { weekday: ["Siddur_Sefard,_Birchat_HaMazon,_Birchat_HaMazon"] },
+          ashkenaz: { weekday: ["Siddur_Ashkenaz,_Berachot,_Birkat_HaMazon"] },
+        },
+        "al-hamichya": {
+          mizrahi: { weekday: ["Al_HaMichya"] },
+          sfard: { weekday: ["Al_HaMichya"] },
+          ashkenaz: { weekday: ["Al_HaMichya"] },
+        },
+        "kiddush-levana": {
+          mizrahi: { weekday: ["Siddur_Edot_HaMizrach,_Blessing_of_the_Moon"] },
+          sfard: { weekday: ["Siddur_Edot_HaMizrach,_Blessing_of_the_Moon"] },
+          ashkenaz: { weekday: ["Siddur_Edot_HaMizrach,_Blessing_of_the_Moon"] },
+        },
+        "tikkun-chatzot": {
+          mizrahi: { weekday: ["Siddur_Edot_HaMizrach,_The_Midnight_Rite,_Tikkun_Rachel", "Siddur_Edot_HaMizrach,_The_Midnight_Rite,_Tikkun_Leah"] },
+          sfard: { weekday: ["Siddur_Edot_HaMizrach,_The_Midnight_Rite,_Tikkun_Rachel", "Siddur_Edot_HaMizrach,_The_Midnight_Rite,_Tikkun_Leah"] },
+          ashkenaz: { weekday: ["Siddur_Edot_HaMizrach,_The_Midnight_Rite,_Tikkun_Rachel", "Siddur_Edot_HaMizrach,_The_Midnight_Rite,_Tikkun_Leah"] },
+        },
+      };
+
+      const PRAYER_SOURCE_PRIORITY = {
+        shacharit: "full-sefaria-compose",
+        maariv: "full-sefaria-compose",
+        mincha: "full-sefaria-compose",
+        "birchot-hashachar": "full-sefaria-compose",
+        shema: "local-first",
+        "al-hamichya": "composite-local",
+        "kiddush-levana": "full-sefaria-compose",
+        "tikkun-chatzot": "full-sefaria-compose",
+        "birkat-hamazon": "full-sefaria-compose",
+      };
+
+      const FULL_PRAYER_SECTION_REFS = {
+        shacharit: {
+          mizrahi: [
+            "Siddur_Edot_HaMizrach,_Preparatory_Prayers,_Modeh_Ani",
+            "Siddur_Edot_HaMizrach,_Preparatory_Prayers,_Morning_Blessings",
+            "Siddur_Edot_HaMizrach,_Preparatory_Prayers,_Torah_Blessings",
+            "Siddur_Edot_HaMizrach,_Weekday_Shacharit,_Morning_Prayer",
+            "Siddur_Edot_HaMizrach,_Weekday_Shacharit,_Pesukei_D'Zimra",
+            "Siddur_Edot_HaMizrach,_Weekday_Shacharit,_The_Shema",
+            "Siddur_Edot_HaMizrach,_Weekday_Shacharit,_Amida",
+            "Siddur_Edot_HaMizrach,_Weekday_Shacharit,_Alenu",
+          ],
+          sfard: [
+            "Siddur_Sefard,_Upon_Arising,_Modeh_Ani",
+            "Siddur_Sefard,_Weekday_Shacharit,_Morning_Blessings",
+            "Siddur_Sefard,_Weekday_Shacharit,_Blessings_on_Torah",
+            "Siddur_Sefard,_Weekday_Shacharit,_Morning_Prayer",
+            "Siddur_Sefard,_Weekday_Shacharit,_Korbanot",
+            "Siddur_Sefard,_Weekday_Shacharit,_Hodu",
+            "Siddur_Sefard,_Weekday_Shacharit,_Yishtabach",
+            "Siddur_Sefard,_Weekday_Shacharit,_The_Shema",
+            "Siddur_Sefard,_Weekday_Shacharit,_Amidah",
+            "Siddur_Sefard,_Weekday_Shacharit,_Tachanun",
+            "Siddur_Sefard,_Weekday_Shacharit,_Ashrei",
+            "Siddur_Sefard,_Weekday_Shacharit,_Song_of_the_Day",
+            "Siddur_Sefard,_Weekday_Shacharit,_Kaveh",
+            "Siddur_Sefard,_Weekday_Shacharit,_Aleinu",
+          ],
+          ashkenaz: [
+            "Siddur_Ashkenaz,_Weekday,_Shacharit,_Preparatory_Prayers,_Modeh_Ani",
+            "Siddur_Ashkenaz,_Weekday,_Shacharit,_Preparatory_Prayers,_Netilat_Yadayim",
+            "Siddur_Ashkenaz,_Weekday,_Shacharit,_Preparatory_Prayers,_Asher_Yatzar",
+            "Siddur_Ashkenaz,_Weekday,_Shacharit,_Preparatory_Prayers,_Elokai_Neshama",
+            "Siddur_Ashkenaz,_Weekday,_Shacharit,_Preparatory_Prayers,_Torah_Blessings",
+            "Siddur_Ashkenaz,_Weekday,_Shacharit,_Preparatory_Prayers,_Morning_Blessings",
+            "Siddur_Ashkenaz,_Weekday,_Shacharit,_Pesukei_Dezimra,_Barukh_She'amar",
+            "Siddur_Ashkenaz,_Weekday,_Shacharit,_Pesukei_Dezimra,_Hodu",
+            "Siddur_Ashkenaz,_Weekday,_Shacharit,_Pesukei_Dezimra,_Ashrei",
+            "Siddur_Ashkenaz,_Weekday,_Shacharit,_Pesukei_Dezimra,_Az_Yashir",
+            "Siddur_Ashkenaz,_Weekday,_Shacharit,_Pesukei_Dezimra,_Yishtabach",
+            "Siddur_Ashkenaz,_Weekday,_Shacharit,_Blessings_of_the_Shema,_First_Blessing_before_Shema",
+            "Siddur_Ashkenaz,_Weekday,_Shacharit,_Blessings_of_the_Shema,_Second_Blessing_before_Shema",
+            "Siddur_Ashkenaz,_Weekday,_Shacharit,_Blessings_of_the_Shema,_Shema",
+            "Siddur_Ashkenaz,_Weekday,_Shacharit,_Blessings_of_the_Shema,_Blessing_after_Shema",
+            "Siddur_Ashkenaz,_Weekday,_Shacharit,_Amidah,_Patriarchs",
+            "Siddur_Ashkenaz,_Weekday,_Shacharit,_Amidah,_Divine_Might",
+            "Siddur_Ashkenaz,_Weekday,_Shacharit,_Amidah,_Holiness_of_God",
+            "Siddur_Ashkenaz,_Weekday,_Shacharit,_Amidah,_Keduasha",
+            "Siddur_Ashkenaz,_Weekday,_Shacharit,_Amidah,_Knowledge",
+            "Siddur_Ashkenaz,_Weekday,_Shacharit,_Amidah,_Repentance",
+            "Siddur_Ashkenaz,_Weekday,_Shacharit,_Amidah,_Forgiveness",
+            "Siddur_Ashkenaz,_Weekday,_Shacharit,_Amidah,_Redemption",
+            "Siddur_Ashkenaz,_Weekday,_Shacharit,_Amidah,_Healing",
+            "Siddur_Ashkenaz,_Weekday,_Shacharit,_Amidah,_Prosperity",
+            "Siddur_Ashkenaz,_Weekday,_Shacharit,_Amidah,_Gathering_the_Exiles",
+            "Siddur_Ashkenaz,_Weekday,_Shacharit,_Amidah,_Justice",
+            "Siddur_Ashkenaz,_Weekday,_Shacharit,_Amidah,_Against_Enemies",
+            "Siddur_Ashkenaz,_Weekday,_Shacharit,_Amidah,_The_Righteous",
+            "Siddur_Ashkenaz,_Weekday,_Shacharit,_Amidah,_Rebuilding_Jerusalem",
+            "Siddur_Ashkenaz,_Weekday,_Shacharit,_Amidah,_Kingdom_of_David",
+            "Siddur_Ashkenaz,_Weekday,_Shacharit,_Amidah,_Response_to_Prayer",
+            "Siddur_Ashkenaz,_Weekday,_Shacharit,_Amidah,_Temple_Service",
+            "Siddur_Ashkenaz,_Weekday,_Shacharit,_Amidah,_Thanksgiving",
+            "Siddur_Ashkenaz,_Weekday,_Shacharit,_Amidah,_Birkat_Kohanim",
+            "Siddur_Ashkenaz,_Weekday,_Shacharit,_Amidah,_Peace",
+            "Siddur_Ashkenaz,_Weekday,_Shacharit,_Amidah,_Concluding_Passage",
+            "Siddur_Ashkenaz,_Weekday,_Shacharit,_Concluding_Prayers,_Ashrei",
+            "Siddur_Ashkenaz,_Weekday,_Shacharit,_Concluding_Prayers,_Uva_Letzion",
+            "Siddur_Ashkenaz,_Weekday,_Shacharit,_Concluding_Prayers,_Kaddish_Shalem",
+            "Siddur_Ashkenaz,_Weekday,_Shacharit,_Concluding_Prayers,_Song_of_the_Day",
+            "Siddur_Ashkenaz,_Weekday,_Shacharit,_Concluding_Prayers,_Alenu",
+          ],
+        },
+        maariv: {
+          mizrahi: [
+            "Siddur_Edot_HaMizrach,_Weekday_Arvit,_Barchu",
+            "Siddur_Edot_HaMizrach,_Weekday_Arvit,_The_Shema",
+            "Siddur_Edot_HaMizrach,_Weekday_Arvit,_Amidah",
+            "Siddur_Edot_HaMizrach,_Weekday_Arvit,_Alenu",
+          ],
+          sfard: [
+            "Siddur_Sefard,_Weekday_Maariv,_The_Shema",
+            "Siddur_Sefard,_Weekday_Maariv,_Amidah",
+            "Siddur_Sefard,_Weekday_Shacharit,_Aleinu",
+          ],
+          ashkenaz: [
+            "Siddur_Ashkenaz,_Weekday,_Maariv,_Barchu",
+            "Siddur_Ashkenaz,_Weekday,_Maariv,_Blessings_of_the_Shema,_First_Blessing_before_Shema",
+            "Siddur_Ashkenaz,_Weekday,_Maariv,_Blessings_of_the_Shema,_Second_Blessing_before_Shema",
+            "Siddur_Ashkenaz,_Weekday,_Maariv,_Blessings_of_the_Shema,_Shema",
+            "Siddur_Ashkenaz,_Weekday,_Maariv,_Blessings_of_the_Shema,_First_Blessing_after_Shema",
+            "Siddur_Ashkenaz,_Weekday,_Maariv,_Blessings_of_the_Shema,_Second_Blessing_after_Shema",
+            "Siddur_Ashkenaz,_Weekday,_Maariv,_Amidah,_Patriarchs",
+            "Siddur_Ashkenaz,_Weekday,_Maariv,_Amidah,_Divine_Might",
+            "Siddur_Ashkenaz,_Weekday,_Maariv,_Amidah,_Holiness_of_God",
+            "Siddur_Ashkenaz,_Weekday,_Maariv,_Amidah,_Knowledge",
+            "Siddur_Ashkenaz,_Weekday,_Maariv,_Amidah,_Repentance",
+            "Siddur_Ashkenaz,_Weekday,_Maariv,_Amidah,_Forgiveness",
+            "Siddur_Ashkenaz,_Weekday,_Maariv,_Amidah,_Redemption",
+            "Siddur_Ashkenaz,_Weekday,_Maariv,_Amidah,_Healing",
+            "Siddur_Ashkenaz,_Weekday,_Maariv,_Amidah,_Prosperity",
+            "Siddur_Ashkenaz,_Weekday,_Maariv,_Amidah,_Gathering_the_Exiles",
+            "Siddur_Ashkenaz,_Weekday,_Maariv,_Amidah,_Justice",
+            "Siddur_Ashkenaz,_Weekday,_Maariv,_Amidah,_Against_Enemies",
+            "Siddur_Ashkenaz,_Weekday,_Maariv,_Amidah,_The_Righteous",
+            "Siddur_Ashkenaz,_Weekday,_Maariv,_Amidah,_Rebuilding_Jerusalem",
+            "Siddur_Ashkenaz,_Weekday,_Maariv,_Amidah,_Kingdom_of_David",
+            "Siddur_Ashkenaz,_Weekday,_Maariv,_Amidah,_Response_to_Prayer",
+            "Siddur_Ashkenaz,_Weekday,_Maariv,_Amidah,_Temple_Service",
+            "Siddur_Ashkenaz,_Weekday,_Maariv,_Amidah,_Thanksgiving",
+            "Siddur_Ashkenaz,_Weekday,_Maariv,_Amidah,_Peace",
+            "Siddur_Ashkenaz,_Weekday,_Maariv,_Amidah,_Concluding_Passage",
+            "Siddur_Ashkenaz,_Weekday,_Maariv,_Kaddish_Shalem",
+            "Siddur_Ashkenaz,_Weekday,_Maariv,_Alenu",
+          ],
+        },
+        mincha: {
+          mizrahi: [
+            "Siddur_Edot_HaMizrach,_Weekday_Mincha,_Offerings",
+            "Siddur_Edot_HaMizrach,_Weekday_Mincha,_Amida",
+            "Siddur_Edot_HaMizrach,_Weekday_Mincha,_Vidui",
+            "Siddur_Edot_HaMizrach,_Weekday_Mincha,_Alenu",
+          ],
+          sfard: [
+            "Siddur_Sefard,_Weekday_Mincha,_Korbanot",
+            "Siddur_Sefard,_Weekday_Mincha,_Amidah",
+            "Siddur_Sefard,_Weekday_Mincha,_Tachanun",
+            "Siddur_Sefard,_Weekday_Mincha,_Avinu_Malkeinu",
+          ],
+          ashkenaz: [
+            "Siddur_Ashkenaz,_Weekday,_Minchah,_Ashrei",
+            "Siddur_Ashkenaz,_Weekday,_Minchah,_Amida,_Patriarchs",
+            "Siddur_Ashkenaz,_Weekday,_Minchah,_Amida,_Divine_Might",
+            "Siddur_Ashkenaz,_Weekday,_Minchah,_Amida,_Holiness_of_God",
+            "Siddur_Ashkenaz,_Weekday,_Minchah,_Amida,_Keduasha",
+            "Siddur_Ashkenaz,_Weekday,_Minchah,_Amida,_Knowledge",
+            "Siddur_Ashkenaz,_Weekday,_Minchah,_Amida,_Repentance",
+            "Siddur_Ashkenaz,_Weekday,_Minchah,_Amida,_Forgiveness",
+            "Siddur_Ashkenaz,_Weekday,_Minchah,_Amida,_Redemption",
+            "Siddur_Ashkenaz,_Weekday,_Minchah,_Amida,_Healing",
+            "Siddur_Ashkenaz,_Weekday,_Minchah,_Amida,_Prosperity",
+            "Siddur_Ashkenaz,_Weekday,_Minchah,_Amida,_Gathering_the_Exiles",
+            "Siddur_Ashkenaz,_Weekday,_Minchah,_Amida,_Justice",
+            "Siddur_Ashkenaz,_Weekday,_Minchah,_Amida,_Against_Enemies",
+            "Siddur_Ashkenaz,_Weekday,_Minchah,_Amida,_The_Righteous",
+            "Siddur_Ashkenaz,_Weekday,_Minchah,_Amida,_Rebuilding_Jerusalem",
+            "Siddur_Ashkenaz,_Weekday,_Minchah,_Amida,_Kingdom_of_David",
+            "Siddur_Ashkenaz,_Weekday,_Minchah,_Amida,_Response_to_Prayer",
+            "Siddur_Ashkenaz,_Weekday,_Minchah,_Amida,_Temple_Service",
+            "Siddur_Ashkenaz,_Weekday,_Minchah,_Amida,_Thanksgiving",
+            "Siddur_Ashkenaz,_Weekday,_Minchah,_Amida,_Birkat_Kohanim",
+            "Siddur_Ashkenaz,_Weekday,_Minchah,_Amida,_Peace",
+            "Siddur_Ashkenaz,_Weekday,_Minchah,_Amida,_Concluding_Passage",
+            "Siddur_Ashkenaz,_Weekday,_Minchah,_Post_Amidah,_Avinu_Malkenu",
+            "Siddur_Ashkenaz,_Weekday,_Minchah,_Post_Amidah,_Tachanun,_Nefilat_Appayim",
+            "Siddur_Ashkenaz,_Weekday,_Minchah,_Post_Amidah,_Tachanun,_Shomer_Yisrael",
+            "Siddur_Ashkenaz,_Weekday,_Minchah,_Post_Amidah,_Kaddish_Shalem",
+            "Siddur_Ashkenaz,_Weekday,_Minchah,_Concluding_Prayers,_Alenu",
+            "Siddur_Ashkenaz,_Weekday,_Minchah,_Concluding_Prayers,_Mourner's_Kaddish",
+          ],
+        },
+        "birchot-hashachar": {
+          mizrahi: [
+            "Siddur_Edot_HaMizrach,_Preparatory_Prayers,_Modeh_Ani",
+            "Siddur_Edot_HaMizrach,_Preparatory_Prayers,_Morning_Blessings",
+            "Siddur_Edot_HaMizrach,_Preparatory_Prayers,_Torah_Blessings",
+          ],
+          sfard: [
+            "Siddur_Sefard,_Upon_Arising,_Modeh_Ani",
+            "Siddur_Sefard,_Weekday_Shacharit,_Morning_Blessings",
+            "Siddur_Sefard,_Weekday_Shacharit,_Blessings_on_Torah",
+          ],
+          ashkenaz: [
+            "Siddur_Ashkenaz,_Weekday,_Shacharit,_Preparatory_Prayers,_Modeh_Ani",
+            "Siddur_Ashkenaz,_Weekday,_Shacharit,_Preparatory_Prayers,_Netilat_Yadayim",
+            "Siddur_Ashkenaz,_Weekday,_Shacharit,_Preparatory_Prayers,_Asher_Yatzar",
+            "Siddur_Ashkenaz,_Weekday,_Shacharit,_Preparatory_Prayers,_Elokai_Neshama",
+            "Siddur_Ashkenaz,_Weekday,_Shacharit,_Preparatory_Prayers,_Morning_Blessings",
+            "Siddur_Ashkenaz,_Weekday,_Shacharit,_Preparatory_Prayers,_Torah_Blessings",
+            "Siddur_Ashkenaz,_Weekday,_Shacharit,_Preparatory_Prayers,_Torah_Study",
+          ],
+        },
+        "kiddush-levana": {
+          mizrahi: [
+            "Siddur_Edot_HaMizrach,_Blessing_of_the_Moon",
+          ],
+        },
+        "tikkun-chatzot": {
+          mizrahi: [
+            "Siddur_Edot_HaMizrach,_The_Midnight_Rite,_LeShem_Yichud",
+            "Siddur_Edot_HaMizrach,_The_Midnight_Rite,_Tikkun_Rachel",
+            "Siddur_Edot_HaMizrach,_The_Midnight_Rite,_Tikkun_Leah",
+          ],
+        },
+        "birkat-hamazon": {
+          mizrahi: [
+            "Siddur_Edot_HaMizrach,_Post_Meal_Blessing",
+          ],
+          sfard: [
+            "Siddur_Sefard,_Birchat_HaMazon,_Birchat_HaMazon",
+          ],
+          ashkenaz: [
+            "Siddur_Ashkenaz,_Berachot,_Birkat_HaMazon",
+          ],
+        },
+      };
+
+      function resolveSelectedNusach() {
+        return {
+          key: CURRENT_NUSACH in NUSACH_LABELS ? CURRENT_NUSACH : "mizrahi",
+          label: NUSACH_LABELS[CURRENT_NUSACH] || NUSACH_LABELS.mizrahi,
+        };
+      }
+
+      function resolveSeasonalPrayerContext() {
+        const cached = window._livePrayerContextData?.dateData || {};
+        const displayDate = window._livePrayerContextData?.displayDate || new Date();
+        const liveNow = new Date();
+        const liveSunset = window._lastZData?.times?.sunset ? new Date(window._lastZData.times.sunset) : null;
+        const events = cached.events || [];
+        const joined = [cached.hebrew || "", ...events].join(" | ");
+        const includesAny = (patterns) => patterns.some((pattern) => joined.includes(pattern));
+        return {
+          displayDate,
+          events,
+          isShabbat: displayDate.getDay() === 6 || includesAny(["Shabbat", "שבת"]) || (liveNow.getDay() === 5 && liveSunset && liveNow >= liveSunset),
+          isRoshChodesh: includesAny(["Rosh Chodesh", "ראש חודש"]),
+          isChanukah: includesAny(["Chanukah", "Hanukkah", "חנוכה"]),
+          isPurim: includesAny(["Purim", "פורים"]),
+          isPesach: includesAny(["Pesach", "Passover", "פסח"]),
+          isShavuot: includesAny(["Shavuot", "שבועות"]),
+          isSukkot: includesAny(["Sukkot", "סוכות", "Shemini Atzeret", "שמיני עצרת", "Simchat Torah", "שמחת תורה"]),
+          isYomKippur: includesAny(["Yom Kippur", "יום כיפור"]),
+          isRoshHaShana: includesAny(["Rosh Hashana", "ראש השנה"]),
+          isYamimNoraim: includesAny(["Rosh Hashana", "ראש השנה", "Yom Kippur", "יום כיפור"]),
+        };
+      }
+
+      function buildPrayerQueries(key, context, nusachLabel) {
+        const def = PRAYER_QUERY_DEFS[key];
+        if (!def) return [];
+        const variant = context.isShabbat && def.shabbat ? def.shabbat : def.weekday;
+        return [
+          `${variant} ${nusachLabel}`,
+          `${nusachLabel} ${variant}`,
+          `סידור ${nusachLabel} ${variant}`,
+        ];
+      }
+
+      async function fetchSefariaTextRef(ref) {
+        const url = `https://www.sefaria.org/api/texts/${encodeURIComponent(ref)}?lang=he&context=0&commentary=0`;
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error(`Sefaria ${response.status} for ${ref}`);
+        }
+        const data = await response.json();
+        const flatten = (value) => {
+          if (Array.isArray(value)) return value.flatMap(flatten);
+          if (typeof value === "string") return [value];
+          return [];
+        };
+        const segments = flatten(data?.he || []);
+        if (!segments.length) {
+          throw new Error(`No Sefaria text for ${ref}`);
+        }
+        return {
+          html: `<div class="prayer-richtext">${segments.map((segment) => `<p>${segment}</p>`).join("")}</div>`,
+          sourceLabel: "Sefaria",
+          sourceUrl: `https://www.sefaria.org/${encodeURIComponent(ref).replace(/%2C/g, ",")}?lang=he`,
+        };
+      }
+
+      function cleanWikisourceHtml(rawHtml) {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(rawHtml, "text/html");
+        doc.querySelectorAll("script,style,table,.mw-editsection,.navbox,.toc,.metadata,.noprint,sup.reference,span.mw-editsection,div.sistersitebox").forEach((node) => node.remove());
+        doc.querySelectorAll("a").forEach((anchor) => {
+          const span = doc.createElement("span");
+          span.innerHTML = anchor.innerHTML;
+          anchor.replaceWith(span);
+        });
+        const body = doc.body;
+        return `<div class="prayer-richtext">${body.innerHTML}</div>`;
+      }
+
+      async function fetchWikisourcePrayer(query) {
+        const searchUrl = `https://he.wikisource.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*`;
+        const searchData = await fetch(searchUrl).then((response) => response.json());
+        const title = searchData?.query?.search?.[0]?.title;
+        if (!title) throw new Error(`No Wikisource result for ${query}`);
+        const parseUrl = `https://he.wikisource.org/w/api.php?action=parse&page=${encodeURIComponent(title)}&prop=text&formatversion=2&format=json&origin=*`;
+        const parseData = await fetch(parseUrl).then((response) => response.json());
+        const html = parseData?.parse?.text;
+        if (!html) throw new Error(`No Wikisource HTML for ${title}`);
+        return {
+          html: cleanWikisourceHtml(html),
+          sourceLabel: "ויקיטקסט",
+          sourceUrl: `https://he.wikisource.org/wiki/${encodeURIComponent(title).replace(/%2F/g, "/")}`,
+        };
+      }
+
+      function resolveSeasonalPrayerAdditions(key, context) {
+        const blocks = [];
+        const tefillahLike = ["shacharit", "mincha", "maariv"].includes(key);
+        if (tefillahLike && context.isRoshChodesh) {
+          blocks.push(`<div class="seasonal-block"><strong>ראש חודש:</strong><div>מוסיפים בתפילת העמידה ובברכת המזון את "יעלה ויבוא", ובשחרית אומרים הלל.</div></div>`);
+        }
+        if (tefillahLike && (context.isChanukah || context.isPurim)) {
+          blocks.push(`<div class="seasonal-block"><strong>${context.isChanukah ? "חנוכה" : "פורים"}:</strong><div>מוסיפים "על הנסים" בהודאה. בחנוכה אומרים הלל שלם, ובפורים קוראים את המגילה במקומה.</div></div>`);
+        }
+        if (tefillahLike && (context.isPesach || context.isShavuot || context.isSukkot)) {
+          blocks.push(`<div class="seasonal-block"><strong>יום טוב:</strong><div>זהו יום טוב. משתמשים בנוסח יום טוב המתאים ליום ומוסיפים "יעלה ויבוא" וכן הלל/מוסף לפי המועד.</div></div>`);
+        }
+        if (tefillahLike && context.isYamimNoraim) {
+          blocks.push(`<div class="seasonal-block"><strong>ימים נוראים:</strong><div>מוסיפים בעמידה "זכרנו לחיים", "מי כמוך", "וכתוב לחיים" ו"בספר חיים" לפי מנהג הנוסח.</div></div>`);
+        }
+        if (key === "birkat-hamazon" && context.isShabbat) {
+          blocks.push(`<div class="seasonal-block"><strong>שבת:</strong><div>מוסיפים בברכת המזון "רצה והחליצנו".</div></div>`);
+        }
+        if (key === "birkat-hamazon" && context.isRoshChodesh) {
+          blocks.push(`<div class="seasonal-block"><strong>ראש חודש:</strong><div>מוסיפים בברכת המזון "יעלה ויבוא".</div></div>`);
+        }
+        if (key === "al-hamichya" && context.isShabbat) {
+          blocks.push(`<div class="seasonal-block"><strong>שבת:</strong><div>בברכת מעין שלוש מוסיפים "ורצה והחליצנו ביום השבת הזה".</div></div>`);
+        }
+        if (key === "kiddush-levana") {
+          blocks.push(`<div class="seasonal-block"><strong>ברכת הלבנה:</strong><div>מברכים כשהלבנה נראית ובמנהג רוב הקהילות לא בשבת ויום טוב. יש להעדיף אמירה מתוך שמחה ובלבוש מכובד.</div></div>`);
+        }
+        if (key === "tikkun-chatzot" && (context.isShabbat || context.isRoshHaShana || context.isYomKippur || context.isPesach || context.isShavuot || context.isSukkot)) {
+          blocks.push(`<div class="seasonal-block"><strong>היום:</strong><div>ברוב הקהילות אין אומרים תיקון חצות בשבת, ימים טובים וימים שאין אומרים בהם תחנון מסוג זה.</div></div>`);
+        }
+        return blocks.join("");
+      }
+
+      function buildPrayerDbPayload(key, fallbackEntry) {
+        if (!fallbackEntry) return null;
+        const raw = fallbackEntry.nusach?.[CURRENT_NUSACH] || fallbackEntry.nusach?.mizrahi || fallbackEntry.nusach?.all || "";
+        if (!raw || !raw.trim()) return null;
+        const html = raw
+          .split(/\n{2,}/)
+          .map((chunk) => chunk.trim())
+          .filter(Boolean)
+          .map((chunk) => `<p>${chunk.replace(/\n/g, "<br>")}</p>`)
+          .join("");
+        return {
+          html: `<div class="prayer-richtext">${html}</div>`,
+          sourceLabel: "מאגר פנימי",
+          sourceUrl: fallbackEntry.extraLink || "",
+        };
+      }
+
+      function buildAlHamichyaPayload() {
+        const sections = [
+          {
+            title: "על המחיה",
+            text: `בָּרוּךְ אַתָּה יְיָ אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, עַל הַמִּחְיָה וְעַל הַכַּלְכָּלָה וְעַל תְּנוּבַת הַשָּׂדֶה וְעַל אֶרֶץ חֶמְדָּה טוֹבָה וּרְחָבָה שֶׁרָצִיתָ וְהִנְחַלְתָּ לַאֲבוֹתֵינוּ לֶאֱכוֹל מִפִּרְיָהּ וְלִשְׂבּוֹעַ מִטּוּבָהּ. רַחֵם נָא יְיָ אֱלֹהֵינוּ עַל יִשְׂרָאֵל עַמֶּךָ וְעַל יְרוּשָׁלַיִם עִירֶךָ וְעַל צִיּוֹן מִשְׁכַּן כְּבוֹדֶךָ וְעַל מִזְבַּחֶךָ וְעַל הֵיכָלֶךָ. וּבְנֵה יְרוּשָׁלַיִם עִיר הַקֹּדֶשׁ בִּמְהֵרָה בְיָמֵינוּ, וְהַעֲלֵנוּ לְתוֹכָהּ וְשַׂמְּחֵנוּ בְּבִנְיָנָהּ, וְנֹאכַל מִפִּרְיָהּ וְנִשְׂבַּע מִטּוּבָהּ וּנְבָרֶכְךָ עָלֶיהָ בִּקְדֻשָּׁה וּבְטָהֳרָה. כִּי אַתָּה יְיָ טוֹב וּמֵטִיב לַכֹּל, וְנוֹדֶה לְךָ עַל הָאָרֶץ וְעַל הַמִּחְיָה. בָּרוּךְ אַתָּה יְיָ עַל הָאָרֶץ וְעַל הַמִּחְיָה.`
+          },
+          {
+            title: "על הגפן",
+            text: `בָּרוּךְ אַתָּה יְיָ אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, עַל הַגֶּפֶן וְעַל פְּרִי הַגֶּפֶן וְעַל תְּנוּבַת הַשָּׂדֶה וְעַל אֶרֶץ חֶמְדָּה טוֹבָה וּרְחָבָה שֶׁרָצִיתָ וְהִנְחַלְתָּ לַאֲבוֹתֵינוּ לֶאֱכוֹל מִפִּרְיָהּ וְלִשְׂבּוֹעַ מִטּוּבָהּ. רַחֵם נָא יְיָ אֱלֹהֵינוּ עַל יִשְׂרָאֵל עַמֶּךָ וְעַל יְרוּשָׁלַיִם עִירֶךָ וְעַל צִיּוֹן מִשְׁכַּן כְּבוֹדֶךָ וְעַל מִזְבַּחֶךָ וְעַל הֵיכָלֶךָ. וּבְנֵה יְרוּשָׁלַיִם עִיר הַקֹּדֶשׁ בִּמְהֵרָה בְיָמֵינוּ, וְהַעֲלֵנוּ לְתוֹכָהּ וְשַׂמְּחֵנוּ בְּבִנְיָנָהּ, וְנֹאכַל מִפִּרְיָהּ וְנִשְׂבַּע מִטּוּבָהּ וּנְבָרֶכְךָ עָלֶיהָ בִּקְדֻשָּׁה וּבְטָהֳרָה. כִּי אַתָּה יְיָ טוֹב וּמֵטִיב לַכֹּל, וְנוֹדֶה לְךָ עַל הָאָרֶץ וְעַל פְּרִי הַגֶּפֶן. בָּרוּךְ אַתָּה יְיָ עַל הָאָרֶץ וְעַל פְּרִי הַגֶּפֶן.`
+          },
+          {
+            title: "על הפירות",
+            text: `בָּרוּךְ אַתָּה יְיָ אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, עַל הָעֵץ וְעַל פְּרִי הָעֵץ וְעַל תְּנוּבַת הַשָּׂדֶה וְעַל אֶרֶץ חֶמְדָּה טוֹבָה וּרְחָבָה שֶׁרָצִיתָ וְהִנְחַלְתָּ לַאֲבוֹתֵינוּ לֶאֱכוֹל מִפִּרְיָהּ וְלִשְׂבּוֹעַ מִטּוּבָהּ. רַחֵם נָא יְיָ אֱלֹהֵינוּ עַל יִשְׂרָאֵל עַמֶּךָ וְעַל יְרוּשָׁלַיִם עִירֶךָ וְעַל צִיּוֹן מִשְׁכַּן כְּבוֹדֶךָ וְעַל מִזְבַּחֶךָ וְעַל הֵיכָלֶךָ. וּבְנֵה יְרוּשָׁלַיִם עִיר הַקֹּדֶשׁ בִּמְהֵרָה בְיָמֵינוּ, וְהַעֲלֵנוּ לְתוֹכָהּ וְשַׂמְּחֵנוּ בְּבִנְיָנָהּ, וְנֹאכַל מִפִּרְיָהּ וְנִשְׂבַּע מִטּוּבָהּ וּנְבָרֶכְךָ עָלֶיהָ בִּקְדֻשָּׁה וּבְטָהֳרָה. כִּי אַתָּה יְיָ טוֹב וּמֵטִיב לַכֹּל, וְנוֹדֶה לְךָ עַל הָאָרֶץ וְעַל הַפֵּרוֹת. בָּרוּךְ אַתָּה יְיָ עַל הָאָרֶץ וְעַל הַפֵּרוֹת.`
+          },
+        ];
+
+        return {
+          html: `<div class="prayer-richtext">${sections.map((section) => `
+            <section style="margin-bottom:1.25rem;padding:0.9rem 1rem;border:1px solid rgba(96,165,250,0.18);border-radius:1rem;background:rgba(15,23,42,0.22);">
+              <h3 style="margin-top:0;">${section.title}</h3>
+              <p>${section.text}</p>
+            </section>
+          `).join("")}</div>`,
+          sourceLabel: "מאגר פנימי מורחב",
+          sourceUrl: "",
+        };
+      }
+
+      function stripPrayerHtml(html) {
+        const probe = document.createElement("div");
+        probe.innerHTML = html || "";
+        return (probe.textContent || probe.innerText || "").replace(/[\u0591-\u05C7]/g, "").replace(/\s+/g, " ").trim();
+      }
+
+      const PRAYER_INVALID_PATTERNS = {
+        shacharit: [
+          "דף זה מציג סידור כללי",
+          "וחלקי בינתיים",
+          "ראה גם",
+          "נוסח המזרח באתר",
+          "ראה פרק",
+          "כמו שחרית",
+          "המשך",
+        ],
+        maariv: [
+          "דף זה מציג סידור כללי",
+          "וחלקי בינתיים",
+          "ראה גם",
+          "נוסח המזרח באתר",
+          "ראה פרק",
+          "ראה פרק שמע ישראל",
+          "כמו שחרית",
+          "עמידה כמו שחרית",
+        ],
+        mincha: [
+          "דף זה מציג סידור כללי",
+          "וחלקי בינתיים",
+          "ראה גם",
+          "נוסח המזרח באתר",
+        ],
+      };
+
+      const PRAYER_REQUIRED_MARKERS = {
+        shacharit: [
+          "מודה אני",
+          "ברוך שאמר",
+          "שמע ישראל",
+          "אדני שפתי תפתח",
+          "אשרי",
+          "עלינו לשבח",
+        ],
+        maariv: [
+          "מעריב ערבים",
+          "שמע ישראל",
+          "תשמעו אלמצותי",
+          "ויאמר",
+          "השכיבנו",
+          "אתה חונן",
+          "אדני שפתי תפתח",
+          "עלינו לשבח",
+        ],
+        mincha: [
+          "אדני שפתי תפתח",
+          "עלינו לשבח",
+        ],
+        "birchot-hashachar": [
+          "מודה אני",
+        ],
+        "kiddush-levana": [
+          "ברכת הלבנה",
+        ],
+        "tikkun-chatzot": [
+          "תיקון רחל",
+        ],
+        "birkat-hamazon": [
+          "ברוך אתה",
+          "הזן את הכל",
+        ],
+      };
+
+      function prayerHasRequiredFlow(key, html) {
+        const text = stripPrayerHtml(html);
+        if (!text) return false;
+        const invalidPatterns = PRAYER_INVALID_PATTERNS[key] || [];
+        if (invalidPatterns.some((pattern) => text.includes(pattern))) return false;
+        const requiredMarkers = PRAYER_REQUIRED_MARKERS[key] || [];
+        return requiredMarkers.every((marker) => text.includes(marker));
+      }
+
+      async function fetchComposedSefariaPrayer(key, nusachKey) {
+        const refs = FULL_PRAYER_SECTION_REFS[key]?.[nusachKey] || FULL_PRAYER_SECTION_REFS[key]?.mizrahi || [];
+        if (!refs.length) throw new Error(`No composed refs for ${key}`);
+
+        const sections = [];
+        const failedRefs = [];
+        for (const ref of refs) {
+          try {
+            const payload = await fetchSefariaTextRef(ref);
+            if (payload?.html) sections.push(payload);
+          } catch (error) {
+            failedRefs.push({ ref, message: error?.message || String(error) });
+            console.warn(`[prayer] composed ref failed for ${key}: ${ref}`, error);
+          }
+        }
+        if (!sections.length) throw new Error(`No composed Sefaria sections for ${key}`);
+        if (failedRefs.length) {
+          console.warn(`[prayer] partial compose for ${key}`, failedRefs);
+        }
+
+        const combinedHtml = `<div class="prayer-richtext">${sections.map((section) => {
+          const inner = section.html.replace(/^<div class="prayer-richtext">/, "").replace(/<\/div>$/, "");
+          return inner;
+        }).join("")}</div>`;
+
+        if (!prayerHasRequiredFlow(key, combinedHtml)) {
+          throw new Error(`Composed prayer still incomplete for ${key}`);
+        }
+
+        return {
+          html: combinedHtml,
+          sourceLabel: "Sefaria",
+          sourceUrl: `https://www.sefaria.org/${encodeURIComponent(refs[0]).replace(/%2C/g, ",")}?lang=he`,
+        };
+      }
+
+      async function getFullPrayerContent(key) {
+        const nusach = resolveSelectedNusach();
+        const context = resolveSeasonalPrayerContext();
+        const cacheKey = JSON.stringify({ key, nusach: nusach.key, shabbat: context.isShabbat, flags: context.events });
+        if (PRAYER_HTML_CACHE.has(cacheKey)) return PRAYER_HTML_CACHE.get(cacheKey);
+
+        const fallbackEntry = PRAYER_DB[key];
+        const sourcePriority = PRAYER_SOURCE_PRIORITY[key] || "wikisource-first";
+        const attempts = [];
+        if (key === "al-hamichya") {
+          attempts.push(() => buildAlHamichyaPayload());
+        }
+        if (sourcePriority === "full-sefaria-compose") {
+          attempts.push(() => fetchComposedSefariaPrayer(key, nusach.key));
+        }
+        if (sourcePriority === "local-first") {
+          attempts.push(() => buildPrayerDbPayload(key, fallbackEntry));
+        }
+
+        const refs = SEFARIA_PRAYER_REFS[key]?.[nusach.key]?.weekday || SEFARIA_PRAYER_REFS[key]?.mizrahi?.weekday || [];
+        const pushSefariaRefs = () => {
+          refs.forEach((ref) => {
+            attempts.push(() => fetchSefariaTextRef(ref));
+          });
+        };
+        const pushWikisourceQueries = () => {
+          buildPrayerQueries(key, context, nusach.label).forEach((query) => {
+            attempts.push(() => fetchWikisourcePrayer(query));
+          });
+        };
+
+        if (sourcePriority === "full-sefaria-compose") {
+          pushSefariaRefs();
+          pushWikisourceQueries();
+        } else if (sourcePriority === "sefaria-first") {
+          pushSefariaRefs();
+          pushWikisourceQueries();
+        } else if (sourcePriority !== "local-first" && key !== "al-hamichya") {
+          pushWikisourceQueries();
+          pushSefariaRefs();
+        } else {
+          pushWikisourceQueries();
+          pushSefariaRefs();
+        }
+
+        if (sourcePriority !== "local-first" && key !== "al-hamichya") {
+          attempts.push(() => buildPrayerDbPayload(key, fallbackEntry));
+        }
+        let result = null;
+        for (const attempt of attempts) {
+          try {
+            result = await attempt();
+            if (result?.html) {
+              if ((key === "shacharit" || key === "maariv") && !prayerHasRequiredFlow(key, result.html)) {
+                continue;
+              }
+              break;
+            }
+          } catch (error) {}
+        }
+
+        if (!result && sourcePriority === "local-first") {
+          result = buildPrayerDbPayload(key, fallbackEntry);
+        }
+
+        if (!result) {
+          throw new Error(`Prayer source unavailable for ${key}`);
+        }
+
+        const payload = {
+          ...result,
+          nusachLabel: nusach.label,
+          seasonalHtml: resolveSeasonalPrayerAdditions(key, context),
+        };
+        PRAYER_HTML_CACHE.set(cacheKey, payload);
+        return payload;
+      }
+
+      function renderPrayerModalShell(title) {
+        let existing = document.getElementById("prayer-modal");
+        if (existing) existing.remove();
+        const modal = document.createElement("div");
+        modal.id = "prayer-modal";
+        modal.style.cssText = "position:fixed;inset:0;z-index:200;background:rgba(2,6,23,0.92);backdrop-filter:blur(8px);display:flex;align-items:flex-start;justify-content:center;padding:1rem;overflow-y:auto;";
+        modal.innerHTML = `
+          <div style="background:linear-gradient(145deg,#1e293b,#0f172a);border:1px solid rgba(99,102,241,0.3);border-radius:2rem;padding:1.5rem;width:100%;max-width:760px;max-height:min(88vh,980px);margin:auto;box-shadow:0 25px 60px rgba(0,0,0,0.6);text-align:right;direction:rtl;display:flex;flex-direction:column;overflow:hidden;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
+              <h3 style="color:#f1f5f9;font-size:1.4rem;font-weight:900;margin:0;">${title}</h3>
+              <button onclick="document.getElementById('prayer-modal').remove()" style="background:rgba(255,255,255,0.08);border:none;color:#94a3b8;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.2rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✕</button>
+            </div>
+            <div id="prayer-modal-meta" class="prayer-source-credit" style="margin-bottom:1rem;">טוען נוסח מלא…</div>
+            <div id="prayer-modal-body" style="background:rgba(255,255,255,0.05);border-radius:1rem;padding:1rem;min-height:240px;flex:1;overflow:hidden;display:flex;flex-direction:column;">
+              <div style="text-align:center;padding:2rem;color:#cbd5e1;">טוען טקסט מלא ממקור זמין…</div>
+            </div>
+          </div>`;
+        modal.addEventListener("click", (event) => {
+          if (event.target === modal) modal.remove();
+        });
+        document.body.appendChild(modal);
+        return modal;
+      }
+
+      openPrayer = async function(key, heLabel, enLabel) {
+        const entry = PRAYER_DB[key] || { title: heLabel || enLabel || key };
+        renderPrayerModalShell(entry.title || heLabel || enLabel || key);
+        try {
+          const content = await getFullPrayerContent(key);
+          const meta = document.getElementById("prayer-modal-meta");
+          const body = document.getElementById("prayer-modal-body");
+          if (meta) {
+            meta.className = "prayer-source-credit";
+            meta.innerHTML = `נוסח: <strong style="color:#c7d2fe;">${content.nusachLabel}</strong> · מקור: <strong style="color:#c7d2fe;">${content.sourceLabel}</strong>${content.sourceUrl ? ` · <a href="${content.sourceUrl}" target="_blank" style="color:#93c5fd;">פתיחת המקור</a>` : ""}`;
+          }
+          if (body) {
+            body.innerHTML = `
+              <div style="display:flex;flex-direction:column;min-height:0;max-height:100%;height:100%;">
+                <div style="flex:1;min-height:0;overflow-y:auto;padding-inline-end:0.35rem;padding-bottom:0.35rem;color:#e2e8f0;">
+                  ${content.seasonalHtml}
+                  ${content.html}
+                </div>
+                <div class="prayer-source-credit" style="border-top:1px solid rgba(148,163,184,0.16);margin-top:0.85rem;padding-top:0.75rem;">
+                  מקור התוכן: <strong>${content.sourceLabel}</strong>${content.sourceUrl ? ` · <a href="${content.sourceUrl}" target="_blank" style="color:#93c5fd;">קישור למקור</a>` : ""}
+                </div>
+              </div>`;
+          }
+        } catch (error) {
+          const body = document.getElementById("prayer-modal-body");
+          const meta = document.getElementById("prayer-modal-meta");
+          if (meta) {
+            meta.className = "prayer-source-credit";
+            meta.textContent = "לא הצלחתי לטעון נוסח מלא כעת.";
+          }
+          if (body) {
+            body.innerHTML = `<div class="prayer-richtext"><p>אירעה שגיאה בטעינת התפילה. אפשר לנסות שוב בעוד רגע.</p></div>`;
+          }
+        }
+      };
+
+      function toHebrewPsalmNumber(num) {
+        const numerals = [
+          [400, "ת"], [300, "ש"], [200, "ר"], [100, "ק"],
+          [90, "צ"], [80, "פ"], [70, "ע"], [60, "ס"], [50, "נ"],
+          [40, "מ"], [30, "ל"], [20, "כ"], [10, "י"], [9, "ט"], [8, "ח"],
+          [7, "ז"], [6, "ו"], [5, "ה"], [4, "ד"], [3, "ג"], [2, "ב"], [1, "א"],
+        ];
+        let n = num;
+        let out = "";
+        numerals.forEach(([value, letter]) => {
+          while (n >= value) {
+            out += letter;
+            n -= value;
+          }
+        });
+        return out || String(num);
+      }
+
+      openTehillimPage = function() {
+        const dayPlans = [
+          { day: "ראשון", chapters: Array.from({ length: 29 }, (_, index) => index + 1) },
+          { day: "שני", chapters: Array.from({ length: 21 }, (_, index) => index + 30) },
+          { day: "שלישי", chapters: Array.from({ length: 22 }, (_, index) => index + 51) },
+          { day: "רביעי", chapters: Array.from({ length: 17 }, (_, index) => index + 73) },
+          { day: "חמישי", chapters: Array.from({ length: 17 }, (_, index) => index + 90) },
+          { day: "שישי", chapters: Array.from({ length: 13 }, (_, index) => index + 107) },
+          { day: "שבת", chapters: Array.from({ length: 31 }, (_, index) => index + 120) },
+        ];
+        const todayIndex = new Date().getDay();
+        let activeIndex = todayIndex;
+        let existing = document.getElementById("tehillim-modal");
+        if (existing) existing.remove();
+
+        const modal = document.createElement("div");
+        modal.id = "tehillim-modal";
+        modal.style.cssText = "position:fixed;inset:0;z-index:200;background:rgba(2,6,23,0.95);backdrop-filter:blur(8px);display:flex;flex-direction:column;overflow:hidden;";
+
+        const renderDay = (index) => {
+          activeIndex = index;
+          const plan = dayPlans[index];
+          const rangeLabel = `${toHebrewPsalmNumber(plan.chapters[0])}-${toHebrewPsalmNumber(plan.chapters[plan.chapters.length - 1])}`;
+          modal.innerHTML = `
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;">
+              <div>
+                <h2 style="color:#f1f5f9;font-size:1.3rem;font-weight:900;margin:0;">ספר תהילים</h2>
+                <p style="color:#93c5fd;font-size:0.82rem;font-weight:700;margin:0.15rem 0 0;">יום ${plan.day} · פרקים ${rangeLabel}</p>
+              </div>
+              <button onclick="document.getElementById('tehillim-modal').remove()" style="background:rgba(255,255,255,0.08);border:none;color:#94a3b8;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.1rem;">✕</button>
+            </div>
+            <div style="display:flex;gap:0.4rem;padding:0.75rem 1.25rem;overflow-x:auto;flex-shrink:0;">
+              ${dayPlans.map((item, itemIndex) => {
+                const itemRange = `${toHebrewPsalmNumber(item.chapters[0])}-${toHebrewPsalmNumber(item.chapters[item.chapters.length - 1])}`;
+                return `<button onclick="window._tehillimSwitchDay(${itemIndex})" style="padding:0.38rem 0.72rem;border-radius:999px;font-size:0.75rem;font-weight:700;border:1px solid ${itemIndex === index ? "#60a5fa" : "rgba(255,255,255,0.12)"};background:${itemIndex === index ? "rgba(59,130,246,0.25)" : "transparent"};color:${itemIndex === index ? "#fff" : "#94a3b8"};cursor:pointer;white-space:nowrap;">${item.day} · ${itemRange}</button>`;
+              }).join("")}
+            </div>
+            <div style="padding:0 1.25rem 1.25rem;overflow-y:auto;flex:1;">
+              <div style="color:#94a3b8;font-size:0.74rem;margin:0 0 0.75rem;">מקור התהילים: <strong style="color:#cbd5e1;">Sefaria.org</strong></div>
+              <p style="color:#64748b;font-size:0.76rem;margin:0 0 0.9rem;">לחיצה על פרק תפתח את הטקסט המלא של אותו פרק.</p>
+              <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:0.55rem;">
+                ${plan.chapters.map((chapter) => `<button onclick="window._tehillimOpenPsalm(${chapter})" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:0.9rem;padding:0.7rem 0.6rem;font-size:0.82rem;font-weight:800;color:#e2e8f0;cursor:pointer;">פרק ${toHebrewPsalmNumber(chapter)}</button>`).join("")}
+              </div>
+            </div>
+            <div id="psalm-content-pane" style="display:none;position:absolute;inset:0;background:rgba(2,6,23,0.98);z-index:10;flex-direction:column;overflow:hidden;">
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border-bottom:1px solid rgba(255,255,255,0.08);">
+                <button onclick="document.getElementById('psalm-content-pane').style.display='none'" style="background:rgba(255,255,255,0.08);border:none;color:#94a3b8;padding:0.4rem 0.8rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;">חזרה</button>
+                <h3 id="psalm-title" style="color:#f1f5f9;font-size:1rem;font-weight:900;margin:0;">תהילים</h3>
+                <div style="width:60px;"></div>
+              </div>
+              <div id="psalm-text-area" style="padding:1.25rem;overflow-y:auto;flex:1;font-family:'David Libre','Frank Ruhl Libre',serif;font-size:1.05rem;line-height:2;color:#e2e8f0;text-align:right;direction:rtl;"></div>
+              <div style="border-top:1px solid rgba(148,163,184,0.14);padding:0.7rem 1.25rem;color:#94a3b8;font-size:0.74rem;line-height:1.6;flex-shrink:0;">מקור הטקסט: <strong style="color:#cbd5e1;">Sefaria.org</strong> · ספר תהילים</div>
+            </div>
+          `;
+        };
+
+        window._tehillimSwitchDay = (index) => renderDay(index);
+        window._tehillimOpenPsalm = async (chapter) => {
+          const pane = document.getElementById("psalm-content-pane");
+          const title = document.getElementById("psalm-title");
+          const area = document.getElementById("psalm-text-area");
+          if (!pane || !title || !area) return;
+          pane.style.display = "flex";
+          title.textContent = `תהילים פרק ${toHebrewPsalmNumber(chapter)}`;
+          area.innerHTML = `<p>טוען את פרק ${toHebrewPsalmNumber(chapter)}…</p>`;
+          try {
+            const response = await fetch(`https://www.sefaria.org/api/texts/Psalms.${chapter}?lang=he&context=0`);
+            const data = await response.json();
+            const verses = (data.he || []).map((verse, index) => `<p><strong>(${index + 1})</strong> ${verse}</p>`).join("");
+            area.innerHTML = verses || `<p>לא נמצא טקסט לפרק זה.</p>`;
+          } catch (error) {
+            area.innerHTML = `<p>לא הצלחתי לטעון את הפרק כרגע.</p>`;
+          }
+        };
+
+        renderDay(activeIndex);
+        document.body.appendChild(modal);
+      };
 
       // Patch render() to trigger animations after render
       const _origRender = render;

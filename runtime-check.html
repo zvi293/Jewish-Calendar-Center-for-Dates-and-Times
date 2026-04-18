@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <title>Prayer Runtime Check</title>
+</head>
+<body>
+  <pre id="output">loading...</pre>
+  <iframe id="app" src="/index.html" style="width:0;height:0;border:0;"></iframe>
+  <script>
+    const output = document.getElementById("output");
+    const frame = document.getElementById("app");
+
+    async function waitFor(test, timeout = 30000) {
+      const start = Date.now();
+      while (Date.now() - start < timeout) {
+        const value = test();
+        if (value) return value;
+        await new Promise((resolve) => setTimeout(resolve, 200));
+      }
+      throw new Error("timeout");
+    }
+
+    async function runPrayerCheck(key, label) {
+      const win = frame.contentWindow;
+      const doc = frame.contentDocument;
+      const fetchLog = [];
+      const originalFetch = win.fetch.bind(win);
+      win.fetch = async (...args) => {
+        const response = await originalFetch(...args);
+        fetchLog.push({
+          url: String(args[0]),
+          status: response.status,
+          ok: response.ok
+        });
+        return response;
+      };
+
+      await win.openPrayer(key, label, label);
+      await waitFor(() => doc.getElementById("prayer-modal-body"));
+      const body = doc.getElementById("prayer-modal-body");
+      const text = (body.innerText || body.textContent || "").replace(/\s+/g, " ").trim();
+      const sefariaFailures = fetchLog.filter((entry) => entry.url.includes("sefaria.org") && entry.status >= 400);
+      const genericMarkers = [
+        "דף זה מציג סידור כללי",
+        "וחלקי בינתיים",
+        "ראה גם",
+        "ראה פרק",
+        "כמו שחרית"
+      ].filter((marker) => text.includes(marker));
+
+      const result = {
+        key,
+        hasModal: !!body,
+        textLength: text.length,
+        startsWith: text.slice(0, 120),
+        endsWith: text.slice(-120),
+        sefariaFailures,
+        genericMarkers
+      };
+
+      doc.getElementById("prayer-modal")?.remove();
+      win.fetch = originalFetch;
+      return result;
+    }
+
+    frame.addEventListener("load", async () => {
+      try {
+        await waitFor(() => frame.contentWindow && typeof frame.contentWindow.openPrayer === "function");
+        const shacharit = await runPrayerCheck("shacharit", "תפילת שחרית");
+        const maariv = await runPrayerCheck("maariv", "תפילת ערבית");
+        output.textContent = JSON.stringify({ shacharit, maariv }, null, 2);
+      } catch (error) {
+        output.textContent = JSON.stringify({ error: String(error && error.message || error) }, null, 2);
+      }
+    });
+  </script>
+</body>
+</html>

@@ -234,11 +234,18 @@
     <link rel="dns-prefetch" href="https://www.sefaria.org">
 
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/kosher-zmanim@0.9.0/dist/kosher-zmanim.min.js"></script>
+    <script>
+      // Fallback CDN if unpkg fails
+      if (!window.KosherZmanim) {
+        document.write('<scr'+'ipt src="https://cdn.jsdelivr.net/npm/kosher-zmanim@0.9.0/dist/kosher-zmanim.min.js"><\/scr'+'ipt>');
+      }
+    </script>
     <script>
       tailwind.config = { darkMode: "class", theme: { extend: {} } };
     </script>
     <link
-      href="https://fonts.googleapis.com/css2?family=Assistant:wght@200;400;600;700;800&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Assistant:wght@200;400;600;700;800&family=Frank+Ruhl+Libre:wght@400;700&display=swap"
       rel="stylesheet"
     />
     <style>
@@ -247,6 +254,14 @@
         transition:
           background-color 0.5s ease,
           color 0.5s ease;
+      }
+      .holy-text-style {
+        font-family: 'Frank Ruhl Libre', serif;
+        font-size: 25px;
+        font-weight: 700;
+        line-height: 1.7;
+        text-align: justify;
+        color: #000000;
       }
 
       /* ── Stars Canvas ── */
@@ -495,7 +510,12 @@
       .cal-grid {
         display: grid;
         grid-template-columns: repeat(7, 1fr);
-        gap: 6px;
+        gap: 3px;
+        width: 100%;
+        min-width: 0;
+      }
+      @media (max-width: 640px) {
+        .cal-grid { gap: 2px; }
       }
       .cal-header {
         text-align: center;
@@ -766,13 +786,13 @@
       .prayer-richtext h2,
       .prayer-richtext h3,
       .prayer-richtext h4 {
-        color: #c7d2fe;
+        color: #000000;
         font-weight: 900;
         margin: 1rem 0 0.45rem;
       }
       .prayer-richtext p,
       .prayer-richtext li {
-        color: #e2e8f0;
+        color: #000000;
         line-height: 2.02;
         overflow-wrap: anywhere;
       }
@@ -782,18 +802,18 @@
         padding-inline-start: 1.4rem;
       }
       .prayer-richtext a {
-        color: #93c5fd;
+        color: #1d4ed8;
         text-decoration: underline;
       }
       .prayer-richtext .seasonal-block {
-        background: rgba(59, 130, 246, 0.12);
-        border: 1px solid rgba(96, 165, 250, 0.24);
+        background: rgba(59, 130, 246, 0.06);
+        border: 1px solid rgba(59, 130, 246, 0.15);
         border-radius: 1rem;
         padding: 0.9rem 1rem;
         margin-bottom: 0.9rem;
       }
       .prayer-richtext .seasonal-block strong {
-        color: #bfdbfe;
+        color: #1e40af;
       }
       .prayer-source-credit {
         color: #94a3b8;
@@ -812,6 +832,23 @@
         }
         .dashboard-shabbat-value {
           font-size: 0.9rem;
+        }
+      }
+
+      /* ── Mobile: shnayim-mikra & daf-yomi same size ── */
+      @media (max-width: 767px) {
+        #halacha-banner .flex-row {
+          flex-direction: column;
+          align-items: stretch;
+          gap: 0.5rem;
+        }
+        #shnayim-mikra-link,
+        #daf-yomi-link {
+          width: 100%;
+          box-sizing: border-box;
+        }
+        #shnayim-mikra-link .shnayim-parsha-suffix {
+          display: none;
         }
       }
 
@@ -1092,12 +1129,10 @@
           <span style="background: linear-gradient(135deg,#93c5fd,#60a5fa,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;" data-i18n-key="app_title_2">היהודי</span>
         </h1>
 
-        <!-- Shabbat countdown removed per user request -->
-
         <button
           id="btn-open-calendar"
           onclick="openCalendar()"
-          class="hidden mx-auto -mt-4 mb-8 bg-white/10 hover:bg-white/20 border border-white/30 text-white px-8 py-3 rounded-2xl font-bold transition-all items-center justify-center gap-2 backdrop-blur-md opacity-0"
+          class="hidden mx-auto -mt-4 mb-4 bg-white/10 hover:bg-white/20 border border-white/30 text-white px-8 py-3 rounded-2xl font-bold transition-all items-center justify-center gap-2 backdrop-blur-md opacity-0"
           aria-haspopup="dialog"
         >
           <svg
@@ -1116,6 +1151,19 @@
           <span data-i18n-key="cal_btn">פתח לוח שנה חודשי</span>
         </button>
 
+        <!-- ══════ ספירה לאחור לכניסת שבת / חג ══════ -->
+        <div
+          id="shabbat-countdown-wrap"
+          class="hidden mx-auto mb-6 flex items-center justify-center"
+          aria-label="ספירה לאחור לכניסת שבת"
+        >
+          <div id="shabbat-countdown-bar" class="flex items-center justify-center gap-3">
+            <span class="text-blue-200/80 text-sm font-bold" id="countdown-label">🕯️ עוד</span>
+            <span id="countdown-display" class="countdown-digit">--:--:--</span>
+            <span class="text-blue-200/80 text-sm font-bold" id="countdown-event-type">כניסת שבת</span>
+          </div>
+        </div>
+
         <!-- ══════ גריד תפילות ══════ -->
         <div id="prayer-grid-wrap" class="hidden mx-auto w-full max-w-4xl mb-6 px-2 opacity-0 transition-opacity duration-500">
           <!-- שורה ראשית — תמיד מוצגת -->
@@ -1127,13 +1175,13 @@
               <span class="prayer-icon">🍞</span><span class="prayer-label">ברכת המזון</span>
             </button>
             <button onclick="openPrayer('tikkun-haklali','תיקון הכללי','Tikkun HaKlali')" class="prayer-btn">
-              <span class="prayer-icon">📿</span><span class="prayer-label">תיקון הכללי</span>
+              <span class="prayer-icon">🔥</span><span class="prayer-label">תיקון הכללי</span>
             </button>
           </div>
           <!-- כפתור עוד -->
           <div class="flex justify-center mb-2">
             <button id="prayer-more-btn" onclick="toggleMorePrayers()" class="flex items-center gap-1.5 text-blue-200/70 hover:text-blue-100 text-xs font-bold px-4 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all">
-              <span id="prayer-more-label">עוד תפילות</span>
+              <span id="prayer-more-label">תפילות נוספות</span>
               <svg id="prayer-more-chevron" class="w-3 h-3 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
             </button>
           </div>
@@ -1226,7 +1274,7 @@
               <p class="text-blue-200/60 text-[13px] font-bold tracking-wider mb-0.5">יציאת שבת</p>
               <p id="shabbat-exit" class="text-white text-xl md:text-2xl font-black leading-tight mb-2" dir="ltr">--:--</p>
             </div>
-            <div class="flex items-center gap-1.5 text-blue-200/90 text-[10px] md:text-[12px] font-bold">
+            <div class="flex items-center gap-1.5 text-blue-200/90 text-[13px] md:text-[15px] font-bold">
               <span id="stat-parasha">פרשת...</span>
               <svg class="w-3 h-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
@@ -1276,14 +1324,24 @@
           class="hidden mt-4 glass-card rounded-[2rem] p-5 flex-col items-center text-sm text-blue-100 gap-4 opacity-0 transition-opacity duration-500 w-full max-w-4xl mx-auto"
           aria-label="זמני הלכה"
         >
-          <button
-            id="daf-yomi-link"
-            onclick="event.preventDefault()"
-            class="flex items-center justify-center gap-2 font-bold text-white bg-blue-600/40 hover:bg-blue-600/60 transition-colors px-6 py-2 rounded-xl border border-blue-400/30 w-auto group shadow-md"
-          >
-            <span>📖 הדף היומי:</span>
-            <span id="daf-yomi-text">מחשב...</span>
-          </button>
+          <div class="flex flex-row items-center justify-center gap-3 flex-wrap">
+            <button
+              id="shnayim-mikra-link"
+              onclick="event.preventDefault()"
+              class="flex items-center justify-center gap-2 font-bold text-white bg-blue-600/40 hover:bg-blue-600/60 transition-colors px-6 py-2 rounded-xl border border-blue-400/30 w-auto group shadow-md"
+            >
+              <span>📜 שנים מקרא ואחד תרגום</span>
+              <span id="shnayim-mikra-text" class="shnayim-parsha-suffix">מחשב...</span>
+            </button>
+            <button
+              id="daf-yomi-link"
+              onclick="event.preventDefault()"
+              class="flex items-center justify-center gap-2 font-bold text-white bg-blue-600/40 hover:bg-blue-600/60 transition-colors px-6 py-2 rounded-xl border border-blue-400/30 w-auto group shadow-md"
+            >
+              <span>📖 הדף היומי:</span>
+              <span id="daf-yomi-text">מחשב...</span>
+            </button>
+          </div>
 
           <div class="w-full border-t border-blue-400/20 pt-4">
             <h2
@@ -1291,6 +1349,7 @@
               data-i18n-key="zmanim"
             >
               זמני היום
+              <span id="zmanim-source-badge" class="text-xs font-normal opacity-50 mr-1" style="font-size:0.6rem;vertical-align:super;"></span>
             </h2>
             <!-- Day Progress Bar -->
             <div id="zmanim-day-bar" class="mb-3 mx-2" title="מיקום נוכחי ביום">
@@ -1700,19 +1759,18 @@
 
     <div
       id="sefaria-modal"
-      class="fixed inset-0 z-[120] bg-slate-900/90 backdrop-blur-md hidden flex items-center justify-center p-4 opacity-0 transition-opacity duration-300"
+      class="fixed inset-0 z-[120] hidden flex flex-col opacity-0 transition-opacity duration-300"
+      style="background:#faf9f6;"
       role="dialog"
       aria-modal="true"
     >
-      <div
-        class="bg-white dark:bg-slate-800 w-full max-w-2xl h-[85vh] overflow-hidden rounded-[2rem] shadow-[0_0_50px_rgba(0,0,0,0.5)] flex flex-col relative"
-      >
         <div
-          class="p-6 pb-4 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900"
+          class="p-4 md:p-6 pb-3 md:pb-4 border-b flex justify-between items-center flex-shrink-0"
+          style="border-color:rgba(0,0,0,0.08);background:#faf9f6;"
         >
           <button
             onclick="closeSefariaModal()"
-            class="text-slate-400 hover:text-slate-600 dark:hover:text-white bg-white dark:bg-slate-800 shadow-sm p-2.5 rounded-full transition-colors"
+            class="text-slate-500 hover:text-slate-700 bg-black/5 hover:bg-black/10 p-2.5 rounded-full transition-colors"
             aria-label="סגור"
           >
             <svg
@@ -1731,17 +1789,18 @@
           </button>
           <h2
             id="sefaria-modal-title"
-            class="text-xl md:text-2xl font-black text-slate-800 dark:text-white text-right"
+            class="text-xl md:text-2xl font-black text-slate-800 text-right"
           >
             קריאה
           </h2>
         </div>
         <div
           id="sefaria-modal-content"
-          class="p-6 md:p-8 overflow-y-auto flex-1 text-right text-lg leading-loose text-slate-700 dark:text-slate-300 font-serif scrollbar-hide"
+          class="p-5 md:p-8 overflow-y-auto flex-1 text-right leading-loose scrollbar-hide holy-text-style"
         ></div>
         <div
-          class="p-4 bg-slate-50 dark:bg-slate-900/80 border-t border-slate-100 dark:border-slate-700"
+          class="p-3 md:p-4 border-t flex-shrink-0"
+          style="border-color:rgba(0,0,0,0.08);background:#faf9f6;"
         >
           <a
             id="sefaria-credit-link"
@@ -1766,7 +1825,6 @@
             הטקסט באדיבות Sefaria.org (ברישיון פתוח)
           </a>
         </div>
-      </div>
     </div>
 
     <div
@@ -1965,6 +2023,26 @@
             </select>
           </div>
 
+          <!-- בחירת נוסח -->
+          <div>
+            <label
+              for="settings-nusach"
+              class="block text-sm font-bold text-slate-500 dark:text-slate-400 mb-2"
+              >בחירת נוסח</label
+            >
+            <select
+              id="settings-nusach"
+              class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
+              aria-label="בחר נוסח"
+            >
+              <option value="mizrahi">עדות המזרח ⭐</option>
+              <option value="sfard">ספרד</option>
+              <option value="ashkenaz">אשכנז</option>
+              <option value="temani_shami">תימן שאמי</option>
+              <option value="temani_baladi">תימן בלאדי</option>
+            </select>
+          </div>
+
           <div>
             <label
               class="block text-sm font-bold text-slate-500 dark:text-slate-400 mb-2"
@@ -1987,26 +2065,6 @@
                 >HE</span
               >
             </button>
-          </div>
-
-          <!-- בחירת נוסח -->
-          <div>
-            <label
-              for="settings-nusach"
-              class="block text-sm font-bold text-slate-500 dark:text-slate-400 mb-2"
-              >בחירת נוסח</label
-            >
-            <select
-              id="settings-nusach"
-              class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
-              aria-label="בחר נוסח"
-            >
-              <option value="mizrahi">עדות המזרח ⭐</option>
-              <option value="sfard">ספרד</option>
-              <option value="ashkenaz">אשכנז</option>
-              <option value="temani_shami">תימן שאמי</option>
-              <option value="temani_baladi">תימן בלאדי</option>
-            </select>
           </div>
 
           <!-- גודל כיתוב -->
@@ -2158,7 +2216,7 @@
       aria-labelledby="cal-month-title"
     >
       <div
-        class="bg-slate-50 dark:bg-slate-900 w-full max-w-4xl rounded-[2rem] shadow-2xl overflow-hidden transform scale-95 transition-transform duration-300 flex flex-col max-h-[95vh]"
+        class="bg-slate-50 dark:bg-slate-900 w-full max-w-4xl rounded-[1.5rem] md:rounded-[2rem] shadow-2xl overflow-hidden transform scale-95 transition-transform duration-300 flex flex-col max-h-[95vh]"
       >
         <div
           class="bg-slate-900 text-white p-5 flex justify-between items-center shadow-md"
@@ -3288,10 +3346,244 @@
         }
       }
 
+      /* ── שניים מקרא ואחד תרגום – modal with Torah + Onkelos ── */
+      async function openShnayimMikraModal(hebTitle, enRef) {
+        if (!enRef) return;
+        const parshaName = enRef.replace(/^Parashat\s+/, "").replace(/ /g, "_");
+
+        const m = document.getElementById("sefaria-modal");
+        document.getElementById("sefaria-modal-title").textContent =
+          CURRENT_LANG === "he" ? `שניים מקרא ואחד תרגום – ${hebTitle}` : `Shnayim Mikra – ${enRef}`;
+        document.getElementById("sefaria-modal-content").innerHTML =
+          '<div class="animate-pulse text-center mt-10">טוען מקרא ותרגום אונקלוס...</div>';
+        document.getElementById("sefaria-credit-link").href =
+          `https://www.sefaria.org.il/Parashat_${parshaName}?lang=he`;
+        document.getElementById("sefaria-credit-link").textContent =
+          CURRENT_LANG === "he" ? "צפה בספריא" : "View on Sefaria";
+
+        m.classList.remove("hidden");
+        setTimeout(() => m.classList.remove("opacity-0"), 10);
+
+        try {
+          // Step 1: Fetch the Torah parsha text
+          const torahData = await fetchHebcalWithCache(
+            `https://www.sefaria.org/api/texts/Parashat_${parshaName}?context=0`
+          );
+          if (!torahData || !torahData.ref) throw new Error("No parsha data");
+
+          // Step 2: Extract book name from ref (e.g. "Leviticus 16:1-18:30" → "Leviticus")
+          const bookName = torahData.ref.split(" ")[0];
+
+          // Step 3: Fetch Onkelos for the same parsha
+          const onkelosRef = `Onkelos_${bookName},_${parshaName}`;
+          const onkelosData = await fetchHebcalWithCache(
+            `https://www.sefaria.org/api/texts/${onkelosRef}?context=0`
+          );
+
+          // Step 4: Build interleaved display
+          // Flatten Torah verses (may be nested arrays for multi-chapter parshas)
+          const flattenVerses = (arr) => {
+            if (!arr) return [];
+            const result = [];
+            const flatten = (a) => {
+              if (Array.isArray(a)) { a.forEach(v => flatten(v)); }
+              else { result.push(a); }
+            };
+            flatten(arr);
+            return result;
+          };
+
+          const torahVerses = flattenVerses(torahData.he);
+          const onkelosVerses = flattenVerses(onkelosData?.he);
+
+          let textHtml = "";
+          if (torahVerses.length > 0) {
+            textHtml += `<div style="margin-bottom:1.5rem;padding:0.75rem;border-radius:0.5rem;background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.15);">
+              <p style="text-align:center;font-size:0.85rem;color:#1d4ed8;margin:0;">
+                📖 כל פסוק מוצג פעמיים (מקרא) ואחריו תרגום אונקלוס
+              </p>
+            </div>`;
+
+            for (let i = 0; i < torahVerses.length; i++) {
+              const verseNum = i + 1;
+              const torahText = torahVerses[i] || "";
+              const onkelosText = onkelosVerses[i] || "";
+
+              textHtml += `<div class="shmikra-verse" style="margin-bottom:1.2rem;padding:0.8rem;border-radius:0.5rem;border:1px solid rgba(0,0,0,0.06);background:rgba(0,0,0,0.02);">`;
+              textHtml += `<div style="font-size:0.7rem;color:#2563eb;margin-bottom:0.3rem;font-weight:bold;">פסוק ${verseNum}</div>`;
+              // Torah text (twice - shnayim mikra)
+              textHtml += `<p style="line-height:1.9;margin:0 0 0.4rem 0;color:#1a1a1a;font-size:1.05rem;">${torahText}</p>`;
+              // Targum Onkelos
+              if (onkelosText) {
+                textHtml += `<p style="line-height:1.9;margin:0;color:#92400e;font-size:0.95rem;padding-right:0.5rem;border-right:3px solid rgba(146,64,14,0.3);">
+                  <span style="font-size:0.7rem;color:#b45309;font-weight:bold;">תרגום אונקלוס: </span>${onkelosText}
+                </p>`;
+              }
+              textHtml += `</div>`;
+            }
+          } else {
+            textHtml = "<p class='text-center text-rose-500 font-bold mt-10'>לא נמצא טקסט עבור פרשה זו.</p>";
+          }
+          document.getElementById("sefaria-modal-content").innerHTML = textHtml;
+        } catch (e) {
+          console.error("Shnayim Mikra error:", e);
+          document.getElementById("sefaria-modal-content").innerHTML =
+            "<p class='text-center text-rose-500 font-bold mt-10'>שגיאה בטעינת המקרא והתרגום. אנא בדוק חיבור לאינטרנט.</p>";
+        }
+      }
+
       function closeSefariaModal() {
         const m = document.getElementById("sefaria-modal");
+        if (!m) return;
         m.classList.add("opacity-0");
         setTimeout(() => m.classList.add("hidden"), 300);
+      }
+
+      /* ── KosherZmanim helper ─────────────────────────────────── */
+      function getLocationCoords() {
+        // Try GPS first
+        if (GEO_LOCATION === "GPS" && GPS_COORDS) {
+          return { lat: GPS_COORDS.lat, lon: GPS_COORDS.lon, tzid: "Asia/Jerusalem", elevation: GPS_COORDS.elevation || 0 };
+        }
+        // Try cached city coords
+        const cached = window._cityCoords || (localStorage.getItem("moadim_city_coords") ? JSON.parse(localStorage.getItem("moadim_city_coords")) : null);
+        if (cached) {
+          window._cityCoords = cached;
+          return cached;
+        }
+        // Default: Petach Tikva (geonameid 293918) — elevation 54m per KosherJava reference
+        return { lat: 32.08707, lon: 34.88747, tzid: "Asia/Jerusalem", elevation: 54 };
+      }
+
+      function computeKosherZmanim(dateObj) {
+        const coords = getLocationCoords();
+        const KZ = window.KosherZmanim;
+        if (!KZ) { console.warn("KosherZmanim library not loaded"); return null; }
+
+        try {
+          // Use ComplexZmanimCalendar for all opinion variants
+          const geoLoc = new KZ.GeoLocation(
+            "UserLocation",
+            coords.lat,
+            coords.lon,
+            coords.elevation || 0,
+            coords.tzid || "Asia/Jerusalem"
+          );
+          const cal = new KZ.ComplexZmanimCalendar(geoLoc);
+
+          // setDate accepts native Date, ISO string, Luxon DateTime, or timestamp
+          const dateStr = `${dateObj.getFullYear()}-${String(dateObj.getMonth()+1).padStart(2,"0")}-${String(dateObj.getDate()).padStart(2,"0")}`;
+          cal.setDate(dateStr);
+
+          const toIso = (d) => {
+            if (!d) return null;
+            try {
+              if (d instanceof Date) return d.toISOString();
+              if (typeof d.toJSDate === "function") return d.toJSDate().toISOString();
+              if (typeof d.toDate === "function") return d.toDate().toISOString();
+              const s = String(d);
+              const p = new Date(s);
+              return isNaN(p) ? null : p.toISOString();
+            } catch(e) { return null; }
+          };
+
+          // Build times object matching HebCal field names
+          const times = {};
+          try { times.alotHaShachar = toIso(cal.getAlos72()); } catch(e) {}
+          try { times.misheyakir = toIso(cal.getMisheyakir11Point5Degrees()); } catch(e) {}
+          try { times.misheyakirMachmir = toIso(cal.getMisheyakir11Degrees()); } catch(e) {}
+          try { times.misheyakir10_2 = toIso(cal.getMisheyakir10Point2Degrees()); } catch(e) {}
+          // Use elevation-adjusted sunrise if elevation > 0
+          try {
+            if (coords.elevation > 0 && typeof cal.getSunriseOffsetByDegrees === 'function') {
+              // getElevationAdjustedSunrise is available in newer versions
+              const seaLevelSunrise = cal.getSeaLevelSunrise ? toIso(cal.getSeaLevelSunrise()) : null;
+              times.sunrise = toIso(cal.getSunrise());
+              times.seaLevelSunrise = seaLevelSunrise;
+            } else {
+              times.sunrise = toIso(cal.getSunrise());
+            }
+          } catch(e) { try { times.sunrise = toIso(cal.getSunrise()); } catch(e2) {} }
+          try { times.sofZmanShmaMGA = toIso(cal.getSofZmanShmaMGA()); } catch(e) {}
+          try { times.sofZmanShma = toIso(cal.getSofZmanShmaGRA()); } catch(e) {}
+          try { times.sofZmanTfillaMGA = toIso(cal.getSofZmanTfilaMGA()); } catch(e) {}
+          try { times.sofZmanTfilla = toIso(cal.getSofZmanTfilaGRA()); } catch(e) {}
+          try { times.chatzot = toIso(cal.getChatzos()); } catch(e) {}
+          try { times.minchaGedola = toIso(cal.getMinchaGedola()); } catch(e) {}
+          try { times.minchaGedola72Min = toIso(cal.getMinchaGedola72Minutes()); } catch(e) {}
+          try { times.minchaKetana = toIso(cal.getMinchaKetana()); } catch(e) {}
+          try { times.plagHaMincha = toIso(cal.getPlagHamincha()); } catch(e) {}
+          try {
+            times.plagHaMinchaGRA = toIso(cal.getPlagHaminchaBaalHatanya()) || times.plagHaMincha;
+          } catch(e) { times.plagHaMinchaGRA = times.plagHaMincha; }
+          try { times.sunset = toIso(cal.getSunset()); } catch(e) {}
+          try { times.seaLevelSunset = toIso(cal.getSeaLevelSunset()); } catch(e) { times.seaLevelSunset = times.sunset; }
+          try { times.tzeit7083deg = toIso(cal.getTzaisGeonim7Point083Degrees()); } catch(e) {}
+          try { if (!times.tzeit7083deg) times.tzeit7083deg = toIso(cal.getTzais72()); } catch(e) {}
+          try { times.tzeit50min = toIso(cal.getTzais50()); } catch(e) {}
+          // tzeit 13.5 zmanit minutes: sunset + 13.5/60 of a shaah zmanit
+          try {
+            if (times.sunrise && times.sunset) {
+              const srMs = new Date(times.sunrise).getTime();
+              const ssMs = new Date(times.sunset).getTime();
+              const shaahZmanit = (ssMs - srMs) / 12;
+              times.tzeit13Point5MinutesZmanis = new Date(ssMs + (13.5 / 60) * shaahZmanit).toISOString();
+            }
+          } catch(e) {}
+          try { times.chatzotNight = toIso(cal.getSolarMidnight()); } catch(e) {}
+          // Bein HaShmashos: RT 2 stars (matches KosherJava app)
+          try { times.beinHaShmashos = toIso(cal.getBainHashmashosRT2Stars()); } catch(e) {
+            try { times.beinHaShmashos = toIso(cal.getBainHashmashosRT13Point24Degrees()); } catch(e2) {}
+          }
+          // Tzeit at 8.5° = Lailah (night per KosherJava app)
+          try { times.tzeit8_5deg = toIso(cal.getTzaisGeonim8Point5Degrees()); } catch(e) {
+            try { times.tzeit8_5deg = toIso(cal.getSunsetOffsetByDegrees(98.5)); } catch(e2) {}
+          }
+
+          // Candle lighting: per KosherJava, uses SEA-LEVEL sunset (not elevation-adjusted)
+          // Offset: 40 min Jerusalem, 20 min Israel, 18 min abroad
+          const isJerusalem = typeof isInJerusalem === "function" && isInJerusalem(coords.lat, coords.lon);
+          const isIsrael = coords.lat >= 29.4 && coords.lat <= 33.5 && coords.lon >= 34.2 && coords.lon <= 35.9;
+          const candleOffset = isJerusalem ? 40 : (isIsrael ? 20 : 18);
+          const candleSunset = times.seaLevelSunset || times.sunset;
+          if (candleSunset) {
+            const sunsetMs = new Date(candleSunset).getTime();
+            times.candleLighting = new Date(sunsetMs - candleOffset * 60000).toISOString();
+          }
+
+          return { times };
+        } catch(e) {
+          console.warn("computeKosherZmanim error:", e);
+          return null;
+        }
+      }
+
+      /* Resolve coordinates from GeoNameId if not yet cached */
+      async function ensureCityCoords() {
+        if (GEO_LOCATION === "GPS" && GPS_COORDS) return;
+        if (window._cityCoords) return;
+        const cached = localStorage.getItem("moadim_city_coords");
+        if (cached) { window._cityCoords = JSON.parse(cached); return; }
+
+        // Fetch from HebCal to get coordinates for the geonameid
+        try {
+          const now = new Date();
+          const todayIso = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`;
+          const res = await fetch(`https://www.hebcal.com/zmanim?cfg=json&geonameid=${GEO_LOCATION}&date=${todayIso}`);
+          const data = await res.json();
+          if (data.location) {
+            const cityCoords = {
+              lat: data.location.latitude,
+              lon: data.location.longitude,
+              tzid: data.location.timezone || "Asia/Jerusalem",
+              elevation: data.location.elevation || 0
+            };
+            localStorage.setItem("moadim_city_coords", JSON.stringify(cityCoords));
+            window._cityCoords = cityCoords;
+          }
+        } catch(e) {
+          console.warn("Could not resolve city coords:", e);
+        }
       }
 
       async function fetchLiveCalendarData() {
@@ -3312,18 +3604,38 @@
           const prevIso = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, "0")}-${String(prevDate.getDate()).padStart(2, "0")}`;
           const nextIso = `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, "0")}-${String(nextDate.getDate()).padStart(2, "0")}`;
 
-          // Fetch zmanim bundle with caching
-          const [zData, prevZData, nextZData] = await Promise.all([
-            fetchHebcalWithCache(
-              `https://www.hebcal.com/zmanim?cfg=json&${getGeoParams()}&date=${todayLocalIso}`,
-            ),
-            fetchHebcalWithCache(
-              `https://www.hebcal.com/zmanim?cfg=json&${getGeoParams()}&date=${prevIso}`,
-            ),
-            fetchHebcalWithCache(
-              `https://www.hebcal.com/zmanim?cfg=json&${getGeoParams()}&date=${nextIso}`,
-            ),
-          ]);
+          // Compute zmanim locally via KosherZmanim (primary source)
+          await ensureCityCoords();
+          let zData, prevZData, nextZData;
+          let zmanimSource = "hebcal";
+          const kzToday = computeKosherZmanim(todayDateUI);
+          const kzPrev  = computeKosherZmanim(prevDate);
+          const kzNext  = computeKosherZmanim(nextDate);
+
+          if (kzToday && kzToday.times && kzToday.times.sunrise) {
+            zData = kzToday;
+            prevZData = kzPrev || { times: {} };
+            nextZData = kzNext || { times: {} };
+            zmanimSource = "kosher-zmanim";
+            /* KosherZmanim computed successfully — silent in production */
+          } else {
+            // Fallback to HebCal API only if kosher-zmanim library failed to load
+            console.warn("⚠ KosherZmanim library not available, falling back to HebCal API. KZ loaded:", !!window.KosherZmanim);
+            [zData, prevZData, nextZData] = await Promise.all([
+              fetchHebcalWithCache(
+                `https://www.hebcal.com/zmanim?cfg=json&${getGeoParams()}&date=${todayLocalIso}`,
+              ),
+              fetchHebcalWithCache(
+                `https://www.hebcal.com/zmanim?cfg=json&${getGeoParams()}&date=${prevIso}`,
+              ),
+              fetchHebcalWithCache(
+                `https://www.hebcal.com/zmanim?cfg=json&${getGeoParams()}&date=${nextIso}`,
+              ),
+            ]);
+          }
+          window._zmanimSource = zmanimSource;
+          const srcBadge = document.getElementById("zmanim-source-badge");
+          if (srcBadge) srcBadge.textContent = zmanimSource === "kosher-zmanim" ? "KosherJava" : "HebCal";
           zData._prevDay = prevZData;
           zData._nextDay = nextZData;
           zData._dateIso = todayLocalIso;
@@ -3458,8 +3770,45 @@
               if (i.category === "havdalah") h = formatTimeStr(i.date);
             });
           }
+
+          // Override candle lighting & havdalah with KosherZmanim if available
+          try {
+            const today = new Date(todayDateUI);
+            const dow = today.getDay(); // 0=Sun
+            // Find this week's Friday (for candle lighting)
+            const friday = new Date(today);
+            friday.setDate(today.getDate() + ((5 - dow + 7) % 7));
+            const kzFriday = computeKosherZmanim(friday);
+            if (kzFriday && kzFriday.times && kzFriday.times.candleLighting) {
+              c = formatTimeStr(kzFriday.times.candleLighting);
+              window.SHABBAT_CANDLES_TIME = new Date(kzFriday.times.candleLighting);
+            }
+            // Havdalah: Saturday tzeit
+            const saturday = new Date(friday);
+            saturday.setDate(friday.getDate() + 1);
+            const kzSat = computeKosherZmanim(saturday);
+            if (kzSat && kzSat.times && kzSat.times.tzeit7083deg) {
+              h = formatTimeStr(kzSat.times.tzeit7083deg);
+            }
+          } catch(e) { console.warn("KZ Shabbat times:", e); }
           document.getElementById("stat-parasha").textContent = p;
           window._openShabbatParasha = () => openSefariaModal(p, eTitle);
+
+          /* ── שניים מקרא ואחד תרגום ── */
+          const smEl = document.getElementById("shnayim-mikra-text");
+          const smBtn = document.getElementById("shnayim-mikra-link");
+          if (smEl && eTitle) {
+            const smDisplay = CURRENT_LANG === "he" ? p : eTitle;
+            smEl.textContent = smDisplay;
+            if (smBtn) {
+              smBtn.onclick = (e) => {
+                e.preventDefault();
+                openShnayimMikraModal(smDisplay, eTitle);
+              };
+            }
+          } else if (smEl) {
+            smEl.textContent = p;
+          }
           const shabbatWrap = document.getElementById("stat-shabbat-times");
           if (shabbatWrap) {
             shabbatWrap.innerHTML = `
@@ -3951,18 +4300,18 @@
         modal.id = 'prayer-modal';
         modal.style.cssText = 'position:fixed;inset:0;z-index:200;background:rgba(2,6,23,0.92);backdrop-filter:blur(8px);display:flex;align-items:flex-start;justify-content:center;padding:1rem;overflow-y:auto;';
         modal.innerHTML = `
-          <div style="background:linear-gradient(145deg,#1e293b,#0f172a);border:1px solid rgba(99,102,241,0.3);border-radius:2rem;padding:2rem;width:100%;max-width:600px;margin:auto;box-shadow:0 25px 60px rgba(0,0,0,0.6);text-align:right;direction:rtl;">
+          <div class="modal-inner" style="background:linear-gradient(145deg,#1e293b,#0f172a);border:1px solid rgba(99,102,241,0.3);border-radius:2rem;padding:2rem;width:100%;max-width:600px;margin:auto;box-shadow:0 25px 60px rgba(0,0,0,0.6);text-align:right;direction:rtl;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
-              <h3 style="color:#f1f5f9;font-size:1.4rem;font-weight:900;margin:0;">${entry.title}</h3>
-              <button onclick="document.getElementById('prayer-modal').remove()" style="background:rgba(255,255,255,0.08);border:none;color:#94a3b8;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.2rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✕</button>
+              <h3 class="modal-title" style="color:#f1f5f9;font-size:1.4rem;font-weight:900;margin:0;">${entry.title}</h3>
+              <button class="modal-close" onclick="document.getElementById('prayer-modal').remove()" style="background:rgba(255,255,255,0.08);border:none;color:#94a3b8;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.2rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✕</button>
             </div>
-            <div style="color:#64748b;font-size:0.75rem;margin-bottom:1.2rem;">נוסח: <strong style="color:#818cf8;">${nusachNames[CURRENT_NUSACH] || CURRENT_NUSACH}</strong> &nbsp;|&nbsp; ניתן לשנות בהגדרות</div>
-            ${seasonNote ? `<div style="background:rgba(234,179,8,0.12);border:1px solid rgba(234,179,8,0.3);border-radius:1rem;padding:0.85rem 1rem;margin-bottom:1rem;font-size:0.82rem;color:#fde047;line-height:1.7;">${seasonNote.replace(/\n/g,'<br>')}</div>` : ''}
-            <div style="background:rgba(255,255,255,0.04);border-radius:1rem;padding:1.25rem;font-size:1rem;line-height:2;color:#e2e8f0;font-family:'David Libre','Frank Ruhl Libre',serif;max-height:60vh;overflow-y:auto;">
+            <div class="modal-nusach" style="color:#64748b;font-size:0.75rem;margin-bottom:1.2rem;">נוסח: <strong style="color:#818cf8;">${nusachNames[CURRENT_NUSACH] || CURRENT_NUSACH}</strong> &nbsp;|&nbsp; ניתן לשנות בהגדרות</div>
+            ${seasonNote ? `<div class="modal-season" style="background:rgba(234,179,8,0.12);border:1px solid rgba(234,179,8,0.3);border-radius:1rem;padding:0.85rem 1rem;margin-bottom:1rem;font-size:0.82rem;color:#fde047;line-height:1.7;">${seasonNote.replace(/\n/g,'<br>')}</div>` : ''}
+            <div class="modal-body" style="background:rgba(255,255,255,0.04);border-radius:1rem;padding:1.25rem;font-size:1rem;line-height:2;color:#e2e8f0;font-family:'David Libre','Frank Ruhl Libre',serif;max-height:60vh;overflow-y:auto;">
               ${formatText(text)}
               ${entry.extraLink ? `<br><br><a href="${entry.extraLink}" target="_blank" style="color:#60a5fa;font-size:0.85rem;">📖 פתח טקסט מלא ב-Sefaria.org ←</a>` : ''}
             </div>
-            <p style="color:#334155;font-size:0.68rem;margin-top:1rem;text-align:center;">המקור: נוסחי תפילה מסורתיים | ספריית ספריא.org (CC-BY-SA) | מחבר: הלוח היהודי</p>
+            <p class="modal-credit" style="color:#334155;font-size:0.68rem;margin-top:1rem;text-align:center;">המקור: נוסחי תפילה מסורתיים | ספריית ספריא.org (CC-BY-SA) | מחבר: הלוח היהודי</p>
           </div>`;
         modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
         document.body.appendChild(modal);
@@ -4118,7 +4467,7 @@
         const isOpen = !grid.classList.contains('hidden');
         grid.classList.toggle('hidden', isOpen);
         chevron.style.transform = isOpen ? '' : 'rotate(180deg)';
-        label.textContent = isOpen ? 'עוד תפילות' : 'פחות';
+        label.textContent = isOpen ? 'תפילות נוספות' : 'פחות';
       }
 
       // Store last zData globally for opinions popup
@@ -4168,14 +4517,18 @@
             key: "talit",      label: "זמן טלית ותפילין",
             iso: zData.times.misheyakir || zData.times.misheyakirMachmir,
             opinions: [
-              { name: "משיכיר (50 דק׳ לפני הנץ)", val: ft(zData.times.misheyakir) },
-              { name: "משיכיר מחמיר (60 דק׳ לפני הנץ)", val: ft(zData.times.misheyakirMachmir) },
+              { name: "משיכיר (11.5° מתחת לאופק)", val: ft(zData.times.misheyakir) },
+              { name: "משיכיר 11° מתחת לאופק", val: ft(zData.times.misheyakirMachmir) },
+              ...(zData.times.misheyakir10_2 ? [{ name: "משיכיר 10.2° מתחת לאופק", val: ft(zData.times.misheyakir10_2) }] : []),
             ]
           },
           {
             key: "netz",       label: "הנץ החמה",
             iso: zData.times.sunrise,
-            opinions: [{ name: "כל השיטות", val: ft(zData.times.sunrise) }]
+            opinions: [
+              { name: "מותאם לגובה", val: ft(zData.times.sunrise) },
+              ...(zData.times.seaLevelSunrise ? [{ name: "גובה פני הים", val: ft(zData.times.seaLevelSunrise) }] : []),
+            ]
           },
           {
             key: "shma",       label: 'סוף ק"ש',
@@ -4224,14 +4577,14 @@
           {
             key: "shkia",      label: "שקיעה",
             iso: zData.times.sunset,
-            opinions: [{ name: "כל השיטות", val: ft(zData.times.sunset) }]
+            opinions: [{ name: "מותאם לגובה", val: ft(zData.times.sunset) }]
           },
           {
             key: "bein_hashmashot", label: "בין השמשות",
-            iso: _beinIso,
+            iso: zData.times.beinHaShmashos || _beinIso,
             opinions: [
+              { name: "רבנו תם — 2 כוכבים", val: ft(zData.times.beinHaShmashos) },
               { name: "שו\"ע (כ-13.5 דק׳ אחר שקיעה)", val: ft(_beinIso) },
-              { name: "הגדרה: ספק יום ספק לילה", val: "—" },
             ]
           },
           {
@@ -4239,6 +4592,7 @@
             iso: zData.times.tzeit7083deg,
             opinions: [
               { name: "תצ\"ה — 7.083° (שלוש כוכבים בינוניים)", val: ft(zData.times.tzeit7083deg) },
+              { name: "לילה — 8.5° מתחת לאופק", val: ft(zData.times.tzeit8_5deg) },
               { name: "בעל התניא — 50 דקות", val: ft(zData.times.tzeit50min) },
               { name: "ג׳ כוכבים קטנים (13.5 דק׳ זמניות)", val: ft(zData.times.tzeit13Point5MinutesZmanis) },
             ]
@@ -4400,25 +4754,34 @@
           let startStr = "",
             endStr = "";
 
+          await ensureCityCoords();
+
           if (isMajorFast) {
             let prevDay = new Date(dateStr);
             prevDay.setDate(prevDay.getDate() - 1);
-            let prevIso = prevDay.toISOString().split("T")[0];
-            let [resPrev, resCurr] = await Promise.all([
-              fetchHebcalWithCache(
-                `https://www.hebcal.com/zmanim?cfg=json&${getGeoParams()}&date=${prevIso}`,
-              ),
-              fetchHebcalWithCache(
-                `https://www.hebcal.com/zmanim?cfg=json&${getGeoParams()}&date=${dateStr}`,
-              ),
-            ]);
+            const kzPrev = computeKosherZmanim(prevDay);
+            const kzCurr = computeKosherZmanim(new Date(dateStr));
+            let resPrev, resCurr;
+            if (kzPrev && kzPrev.times && kzPrev.times.sunset && kzCurr && kzCurr.times) {
+              resPrev = kzPrev; resCurr = kzCurr;
+            } else {
+              let prevIso = prevDay.toISOString().split("T")[0];
+              [resPrev, resCurr] = await Promise.all([
+                fetchHebcalWithCache(`https://www.hebcal.com/zmanim?cfg=json&${getGeoParams()}&date=${prevIso}`),
+                fetchHebcalWithCache(`https://www.hebcal.com/zmanim?cfg=json&${getGeoParams()}&date=${dateStr}`),
+              ]);
+            }
             startStr = formatLocalizedTime(resPrev.times.sunset);
             window.FAST_END_TIME = new Date(resCurr.times.tzeit7083deg);
             endStr = formatLocalizedTime(window.FAST_END_TIME);
           } else {
-            let res = await fetchHebcalWithCache(
-              `https://www.hebcal.com/zmanim?cfg=json&${getGeoParams()}&date=${dateStr}`,
-            );
+            const kzRes = computeKosherZmanim(new Date(dateStr));
+            let res;
+            if (kzRes && kzRes.times && kzRes.times.alotHaShachar) {
+              res = kzRes;
+            } else {
+              res = await fetchHebcalWithCache(`https://www.hebcal.com/zmanim?cfg=json&${getGeoParams()}&date=${dateStr}`);
+            }
             startStr = formatLocalizedTime(res.times.alotHaShachar);
             window.FAST_END_TIME = new Date(res.times.tzeit7083deg);
             endStr = formatLocalizedTime(window.FAST_END_TIME);
@@ -4443,15 +4806,19 @@
           const ui = getDynamicUiText();
           let prevDay = new Date(dateStr);
           prevDay.setDate(prevDay.getDate() - 1);
-          let prevIso = prevDay.toISOString().split("T")[0];
-          let [resPrev, resCurr] = await Promise.all([
-            fetchHebcalWithCache(
-              `https://www.hebcal.com/zmanim?cfg=json&${getGeoParams()}&date=${prevIso}`,
-            ),
-            fetchHebcalWithCache(
-              `https://www.hebcal.com/zmanim?cfg=json&${getGeoParams()}&date=${dateStr}`,
-            ),
-          ]);
+          await ensureCityCoords();
+          const kzPrev = computeKosherZmanim(prevDay);
+          const kzCurr = computeKosherZmanim(new Date(dateStr));
+          let resPrev, resCurr;
+          if (kzPrev && kzPrev.times && kzPrev.times.sunset && kzCurr && kzCurr.times) {
+            resPrev = kzPrev; resCurr = kzCurr;
+          } else {
+            let prevIso = prevDay.toISOString().split("T")[0];
+            [resPrev, resCurr] = await Promise.all([
+              fetchHebcalWithCache(`https://www.hebcal.com/zmanim?cfg=json&${getGeoParams()}&date=${prevIso}`),
+              fetchHebcalWithCache(`https://www.hebcal.com/zmanim?cfg=json&${getGeoParams()}&date=${dateStr}`),
+            ]);
+          }
           let startStr = formatLocalizedTime(resPrev.times.sunset);
           let endStr = formatLocalizedTime(resCurr.times.tzeit7083deg);
 
@@ -4495,6 +4862,12 @@
                 GEO_LOCATION = item.id;
                 localStorage.setItem("moadim_city", GEO_LOCATION);
                 localStorage.setItem("moadim_city_name", item.value);
+                // Store coordinates for kosher-zmanim
+                if (item.latitude !== undefined && item.longitude !== undefined) {
+                  const cityCoords = { lat: item.latitude, lon: item.longitude, tzid: item.timezone || "Asia/Jerusalem", elevation: item.elevation || 0 };
+                  localStorage.setItem("moadim_city_coords", JSON.stringify(cityCoords));
+                  window._cityCoords = cityCoords;
+                }
                 document.getElementById("current-city-name").textContent =
                   item.value;
                 ul.classList.add("hidden");
@@ -4994,7 +5367,13 @@
       }
       document
         .getElementById("mainSearch")
-        .addEventListener("input", (e) => render("all", e.target.value));
+        .addEventListener("input", (e) => {
+          render("all", e.target.value);
+          if (e.target.value.trim().length > 0) {
+            const grid = document.getElementById("resultsGrid");
+            if (grid) grid.scrollIntoView({ behavior: "smooth", block: "start" });
+          }
+        });
 
       function openCalendar() {
         if (navigator.vibrate) navigator.vibrate(20);
@@ -5050,7 +5429,7 @@
           grid = document.getElementById("cal-days-grid");
         grid.innerHTML = "";
         for (let i = 0; i < new Date(y, m, 1).getDay(); i++)
-          grid.innerHTML += `<div class="bg-slate-100/50 dark:bg-slate-800/50 rounded-xl border border-transparent" aria-hidden="true"></div>`;
+          grid.innerHTML += `<div class="h-16 sm:h-20 md:h-28 bg-slate-100/50 dark:bg-slate-800/50 rounded-lg md:rounded-xl border border-transparent" aria-hidden="true"></div>`;
 
         for (let i = 1; i <= lastDay.getDate(); i++) {
           const cDate = new Date(y, m, i),
@@ -5084,12 +5463,12 @@
           });
 
           grid.innerHTML += `
-                    <div class="h-20 md:h-28 p-1.5 md:p-2.5 bg-white dark:bg-slate-800 rounded-xl border ${isToday ? "border-blue-500 ring-2 ring-blue-500/20 shadow-md" : "border-slate-200 dark:border-slate-700"} flex flex-col transition-all" role="gridcell">
-                        <div class="flex justify-between items-start mb-1 px-1">
-                            <span class="text-xs md:text-sm font-bold text-blue-800 dark:text-blue-400" aria-label="תאריך עברי ${hebDayStr}">${hebDayStr}</span>
-                            <span class="text-sm md:text-base font-black ${isToday ? "text-blue-600 dark:text-blue-400" : "text-slate-700 dark:text-slate-300"}" aria-label="תאריך לועזי ${i}">${i}</span>
+                    <div class="h-16 sm:h-20 md:h-28 p-1 sm:p-1.5 md:p-2.5 bg-white dark:bg-slate-800 rounded-lg md:rounded-xl border ${isToday ? "border-blue-500 ring-2 ring-blue-500/20 shadow-md" : "border-slate-200 dark:border-slate-700"} flex flex-col transition-all overflow-hidden" role="gridcell">
+                        <div class="flex justify-between items-start mb-0.5 sm:mb-1 px-0.5 sm:px-1">
+                            <span class="text-[10px] sm:text-xs md:text-sm font-bold text-blue-800 dark:text-blue-400" aria-label="תאריך עברי ${hebDayStr}">${hebDayStr}</span>
+                            <span class="text-xs sm:text-sm md:text-base font-black ${isToday ? "text-blue-600 dark:text-blue-400" : "text-slate-700 dark:text-slate-300"}" aria-label="תאריך לועזי ${i}">${i}</span>
                         </div>
-                        <div class="flex-1 overflow-y-auto flex flex-col gap-1 scrollbar-hide px-0.5 pb-1">${evHtml}</div>
+                        <div class="flex-1 overflow-y-auto flex flex-col gap-0.5 sm:gap-1 scrollbar-hide px-0.5 pb-0.5">${evHtml}</div>
                     </div>`;
         }
       }
@@ -5414,15 +5793,36 @@
       // ═══════════════════════════════════════════════════════
       let countdownInterval;
       function startShabbatCountdown() {
-        if (!window.SHABBAT_CANDLES_TIME) return;
         const wrap = document.getElementById('shabbat-countdown-wrap');
         const display = document.getElementById('countdown-display');
+        const eventLabel = document.getElementById('countdown-event-type');
         if (!wrap || !display) return;
 
+        // Determine which candle-lighting to count down to
+        const now = new Date();
+        const isFriday = now.getDay() === 5;
+        const hasHolidayCandles = !!window.HOLIDAY_CANDLES_TIME && window.HOLIDAY_CANDLES_TIME > now;
+        const hasShabbatCandles = !!window.SHABBAT_CANDLES_TIME && window.SHABBAT_CANDLES_TIME > now;
+
+        let target = null;
+        let label = '';
+
+        if (isFriday && hasShabbatCandles) {
+          target = window.SHABBAT_CANDLES_TIME;
+          label = 'כניסת שבת';
+        } else if (hasHolidayCandles) {
+          target = window.HOLIDAY_CANDLES_TIME;
+          label = 'כניסת החג';
+        } else if (isFriday && hasShabbatCandles) {
+          target = window.SHABBAT_CANDLES_TIME;
+          label = 'כניסת שבת';
+        }
+
+        if (!target) { wrap.classList.add('hidden'); return; }
+        if (eventLabel) eventLabel.textContent = label;
+
         function tick() {
-          const now = new Date();
-          const target = window.SHABBAT_CANDLES_TIME;
-          const diff = target - now;
+          const diff = target - new Date();
           if (diff <= 0) {
             clearInterval(countdownInterval);
             wrap.classList.add('hidden');
@@ -6524,58 +6924,87 @@
         return payload;
       }
 
-      function renderPrayerModalShell(title) {
+      function renderPrayerModalShell(title, isPopup) {
         let existing = document.getElementById("prayer-modal");
         if (existing) existing.remove();
         const modal = document.createElement("div");
         modal.id = "prayer-modal";
-        modal.style.cssText = "position:fixed;inset:0;z-index:200;background:rgba(2,6,23,0.92);backdrop-filter:blur(8px);display:flex;align-items:flex-start;justify-content:center;padding:1rem;overflow-y:auto;";
-        modal.innerHTML = `
-          <div style="background:linear-gradient(145deg,#1e293b,#0f172a);border:1px solid rgba(99,102,241,0.3);border-radius:2rem;padding:1.5rem;width:100%;max-width:760px;max-height:min(88vh,980px);margin:auto;box-shadow:0 25px 60px rgba(0,0,0,0.6);text-align:right;direction:rtl;display:flex;flex-direction:column;overflow:hidden;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
-              <h3 style="color:#f1f5f9;font-size:1.4rem;font-weight:900;margin:0;">${title}</h3>
-              <button onclick="document.getElementById('prayer-modal').remove()" style="background:rgba(255,255,255,0.08);border:none;color:#94a3b8;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.2rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✕</button>
+        if (isPopup) {
+          modal.style.cssText = "position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);display:flex;align-items:flex-start;justify-content:center;padding:1rem;overflow-y:auto;";
+          modal.innerHTML = `
+            <div class="modal-inner" style="background:#faf9f6;border:1px solid rgba(0,0,0,0.1);border-radius:2rem;padding:1.5rem;width:100%;max-width:760px;max-height:min(88vh,980px);margin:auto;box-shadow:0 25px 60px rgba(0,0,0,0.2);text-align:right;direction:rtl;display:flex;flex-direction:column;overflow:hidden;">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
+                <h3 class="modal-title" style="color:#000000;font-size:1.4rem;font-weight:900;margin:0;">${title}</h3>
+                <button class="modal-close" onclick="document.getElementById('prayer-modal').remove()" style="background:rgba(0,0,0,0.06);border:none;color:#64748b;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.2rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✕</button>
+              </div>
+              <div id="prayer-modal-meta" style="color:#64748b;font-size:0.75rem;margin-bottom:1rem;">טוען נוסח מלא…</div>
+              <div id="prayer-modal-body" style="background:rgba(0,0,0,0.02);border-radius:1rem;padding:1rem;min-height:240px;flex:1;overflow:hidden;display:flex;flex-direction:column;">
+                <div style="text-align:center;padding:2rem;color:#94a3b8;">טוען טקסט מלא ממקור זמין…</div>
+              </div>
+            </div>`;
+          modal.addEventListener("click", (event) => {
+            if (event.target === modal) modal.remove();
+          });
+        } else {
+          modal.style.cssText = "position:fixed;inset:0;z-index:200;display:flex;flex-direction:column;overflow:hidden;background:#faf9f6;";
+          modal.innerHTML = `
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem 0.75rem;border-bottom:1px solid rgba(0,0,0,0.08);flex-shrink:0;background:#faf9f6;">
+              <div>
+                <h2 style="color:#1a1a1a;font-size:1.3rem;font-weight:900;margin:0;">${title}</h2>
+                <div id="prayer-modal-meta" style="color:#64748b;font-size:0.75rem;margin-top:0.15rem;">טוען נוסח מלא…</div>
+              </div>
+              <button onclick="document.getElementById('prayer-modal').remove()" style="background:rgba(0,0,0,0.06);border:none;color:#64748b;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.1rem;flex-shrink:0;">✕</button>
             </div>
-            <div id="prayer-modal-meta" class="prayer-source-credit" style="margin-bottom:1rem;">טוען נוסח מלא…</div>
-            <div id="prayer-modal-body" style="background:rgba(255,255,255,0.05);border-radius:1rem;padding:1rem;min-height:240px;flex:1;overflow:hidden;display:flex;flex-direction:column;">
-              <div style="text-align:center;padding:2rem;color:#cbd5e1;">טוען טקסט מלא ממקור זמין…</div>
-            </div>
-          </div>`;
-        modal.addEventListener("click", (event) => {
-          if (event.target === modal) modal.remove();
-        });
+            <div id="prayer-modal-body" style="flex:1;overflow-y:auto;padding:1.25rem;background:#faf9f6;text-align:right;direction:rtl;">
+              <div style="text-align:center;padding:2rem;color:#94a3b8;">טוען טקסט מלא ממקור זמין…</div>
+            </div>`;
+        }
         document.body.appendChild(modal);
         return modal;
       }
 
       openPrayer = async function(key, heLabel, enLabel) {
         const entry = PRAYER_DB[key] || { title: heLabel || enLabel || key };
-        renderPrayerModalShell(entry.title || heLabel || enLabel || key);
+        const isPopup = (key === 'tefillat-haderech' || key === 'al-hamichya');
+        renderPrayerModalShell(entry.title || heLabel || enLabel || key, isPopup);
         try {
           const content = await getFullPrayerContent(key);
           const meta = document.getElementById("prayer-modal-meta");
           const body = document.getElementById("prayer-modal-body");
           if (meta) {
-            meta.className = "prayer-source-credit";
-            meta.innerHTML = `נוסח: <strong style="color:#c7d2fe;">${content.nusachLabel}</strong> · מקור: <strong style="color:#c7d2fe;">${content.sourceLabel}</strong>${content.sourceUrl ? ` · <a href="${content.sourceUrl}" target="_blank" style="color:#93c5fd;">פתיחת המקור</a>` : ""}`;
+            if (isPopup) {
+              meta.innerHTML = `נוסח: <strong>${content.nusachLabel}</strong> · מקור: <strong>${content.sourceLabel}</strong>${content.sourceUrl ? ` · <a href="${content.sourceUrl}" target="_blank" style="color:#1d4ed8;">פתיחת המקור</a>` : ""}`;
+            } else {
+              meta.innerHTML = `נוסח: <strong>${content.nusachLabel}</strong> · מקור: <strong>${content.sourceLabel}</strong>${content.sourceUrl ? ` · <a href="${content.sourceUrl}" target="_blank" style="color:#3b82f6;">פתיחת המקור</a>` : ""}`;
+            }
           }
           if (body) {
-            body.innerHTML = `
-              <div style="display:flex;flex-direction:column;min-height:0;max-height:100%;height:100%;">
-                <div style="flex:1;min-height:0;overflow-y:auto;padding-inline-end:0.35rem;padding-bottom:0.35rem;color:#e2e8f0;">
-                  ${content.seasonalHtml}
+            if (isPopup) {
+              body.innerHTML = `
+                <div style="display:flex;flex-direction:column;min-height:0;max-height:100%;height:100%;">
+                  <div class="holy-text-style" style="flex:1;min-height:0;overflow-y:auto;padding-inline-end:0.35rem;padding-bottom:0.35rem;direction:rtl;text-align:right;">
+                    ${content.seasonalHtml}
+                    ${content.html}
+                  </div>
+                  <div style="border-top:1px solid rgba(0,0,0,0.08);margin-top:0.85rem;padding-top:0.75rem;color:#94a3b8;font-size:0.72rem;text-align:center;">
+                    מקור התוכן: <strong>${content.sourceLabel}</strong>${content.sourceUrl ? ` · <a href="${content.sourceUrl}" target="_blank" style="color:#1d4ed8;">קישור למקור</a>` : ""}
+                  </div>
+                </div>`;
+            } else {
+              body.innerHTML = `
+                <div class="holy-text-style" style="direction:rtl;text-align:right;">
+                  ${content.seasonalHtml ? '<div style="background:rgba(234,179,8,0.08);border:1px solid rgba(234,179,8,0.2);border-radius:0.75rem;padding:0.85rem 1rem;margin-bottom:1.25rem;font-size:0.85rem;color:#92400e;line-height:1.7;">' + content.seasonalHtml + '</div>' : ''}
                   ${content.html}
                 </div>
-                <div class="prayer-source-credit" style="border-top:1px solid rgba(148,163,184,0.16);margin-top:0.85rem;padding-top:0.75rem;">
-                  מקור התוכן: <strong>${content.sourceLabel}</strong>${content.sourceUrl ? ` · <a href="${content.sourceUrl}" target="_blank" style="color:#93c5fd;">קישור למקור</a>` : ""}
-                </div>
-              </div>`;
+                <div style="border-top:1px solid rgba(0,0,0,0.08);margin-top:1.5rem;padding-top:0.75rem;color:#94a3b8;font-size:0.72rem;text-align:center;">
+                  מקור התוכן: <strong>${content.sourceLabel}</strong>${content.sourceUrl ? ` · <a href="${content.sourceUrl}" target="_blank" style="color:#3b82f6;">קישור למקור</a>` : ""}
+                </div>`;
+            }
           }
         } catch (error) {
           const body = document.getElementById("prayer-modal-body");
           const meta = document.getElementById("prayer-modal-meta");
           if (meta) {
-            meta.className = "prayer-source-credit";
             meta.textContent = "לא הצלחתי לטעון נוסח מלא כעת.";
           }
           if (body) {
@@ -6619,62 +7048,121 @@
 
         const modal = document.createElement("div");
         modal.id = "tehillim-modal";
-        modal.style.cssText = "position:fixed;inset:0;z-index:200;background:rgba(2,6,23,0.95);backdrop-filter:blur(8px);display:flex;flex-direction:column;overflow:hidden;";
+        modal.style.cssText = "position:fixed;inset:0;z-index:200;background:#faf9f6;display:flex;flex-direction:column;overflow:hidden;";
 
         const renderDay = (index) => {
           activeIndex = index;
           const plan = dayPlans[index];
           const rangeLabel = `${toHebrewPsalmNumber(plan.chapters[0])}-${toHebrewPsalmNumber(plan.chapters[plan.chapters.length - 1])}`;
           modal.innerHTML = `
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem 0.75rem;border-bottom:1px solid rgba(0,0,0,0.08);flex-shrink:0;background:#faf9f6;">
               <div>
-                <h2 style="color:#f1f5f9;font-size:1.3rem;font-weight:900;margin:0;">ספר תהילים</h2>
-                <p style="color:#93c5fd;font-size:0.82rem;font-weight:700;margin:0.15rem 0 0;">יום ${plan.day} · פרקים ${rangeLabel}</p>
+                <h2 style="color:#000000;font-size:1.3rem;font-weight:900;margin:0;">ספר תהילים</h2>
+                <p style="color:#1d4ed8;font-size:0.82rem;font-weight:700;margin:0.15rem 0 0;">יום ${plan.day} · פרקים ${rangeLabel}</p>
               </div>
-              <button onclick="document.getElementById('tehillim-modal').remove()" style="background:rgba(255,255,255,0.08);border:none;color:#94a3b8;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.1rem;">✕</button>
+              <button onclick="document.getElementById('tehillim-modal').remove()" style="background:rgba(0,0,0,0.06);border:none;color:#64748b;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.1rem;">✕</button>
             </div>
-            <div style="display:flex;gap:0.4rem;padding:0.75rem 1.25rem;overflow-x:auto;flex-shrink:0;">
+            <div style="display:flex;gap:0.4rem;padding:0.75rem 1.25rem;overflow-x:auto;flex-shrink:0;background:#faf9f6;">
               ${dayPlans.map((item, itemIndex) => {
                 const itemRange = `${toHebrewPsalmNumber(item.chapters[0])}-${toHebrewPsalmNumber(item.chapters[item.chapters.length - 1])}`;
-                return `<button onclick="window._tehillimSwitchDay(${itemIndex})" style="padding:0.38rem 0.72rem;border-radius:999px;font-size:0.75rem;font-weight:700;border:1px solid ${itemIndex === index ? "#60a5fa" : "rgba(255,255,255,0.12)"};background:${itemIndex === index ? "rgba(59,130,246,0.25)" : "transparent"};color:${itemIndex === index ? "#fff" : "#94a3b8"};cursor:pointer;white-space:nowrap;">${item.day} · ${itemRange}</button>`;
+                return `<button onclick="window._tehillimSwitchDay(${itemIndex})" style="padding:0.38rem 0.72rem;border-radius:999px;font-size:0.75rem;font-weight:700;border:1px solid ${itemIndex === index ? "#2563eb" : "rgba(0,0,0,0.12)"};background:${itemIndex === index ? "#2563eb" : "transparent"};color:${itemIndex === index ? "#fff" : "#64748b"};cursor:pointer;white-space:nowrap;">${item.day} · ${itemRange}</button>`;
               }).join("")}
             </div>
-            <div style="padding:0 1.25rem 1.25rem;overflow-y:auto;flex:1;">
-              <div style="color:#94a3b8;font-size:0.74rem;margin:0 0 0.75rem;">מקור התהילים: <strong style="color:#cbd5e1;">Sefaria.org</strong></div>
+            <div style="padding:0 1.25rem 1.25rem;overflow-y:auto;flex:1;background:#faf9f6;">
+              <div style="color:#94a3b8;font-size:0.74rem;margin:0 0 0.75rem;">מקור התהילים: <strong style="color:#1e40af;">Sefaria.org</strong></div>
               <p style="color:#64748b;font-size:0.76rem;margin:0 0 0.9rem;">לחיצה על פרק תפתח את הטקסט המלא של אותו פרק.</p>
               <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:0.55rem;">
-                ${plan.chapters.map((chapter) => `<button onclick="window._tehillimOpenPsalm(${chapter})" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:0.9rem;padding:0.7rem 0.6rem;font-size:0.82rem;font-weight:800;color:#e2e8f0;cursor:pointer;">פרק ${toHebrewPsalmNumber(chapter)}</button>`).join("")}
+                ${plan.chapters.map((chapter) => `<button onclick="window._tehillimOpenPsalm(${chapter})" style="background:rgba(0,0,0,0.03);border:1px solid rgba(0,0,0,0.1);border-radius:0.9rem;padding:0.7rem 0.6rem;font-size:0.82rem;font-weight:800;color:#000000;cursor:pointer;">פרק ${toHebrewPsalmNumber(chapter)}</button>`).join("")}
               </div>
             </div>
-            <div id="psalm-content-pane" style="display:none;position:absolute;inset:0;background:rgba(2,6,23,0.98);z-index:10;flex-direction:column;overflow:hidden;">
-              <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border-bottom:1px solid rgba(255,255,255,0.08);">
-                <button onclick="document.getElementById('psalm-content-pane').style.display='none'" style="background:rgba(255,255,255,0.08);border:none;color:#94a3b8;padding:0.4rem 0.8rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;">חזרה</button>
-                <h3 id="psalm-title" style="color:#f1f5f9;font-size:1rem;font-weight:900;margin:0;">תהילים</h3>
+            <div id="psalm-content-pane" style="display:none;position:absolute;inset:0;background:#faf9f6;z-index:10;flex-direction:column;overflow:hidden;">
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border-bottom:1px solid rgba(0,0,0,0.08);background:#faf9f6;">
+                <button onclick="document.getElementById('psalm-content-pane').style.display='none'" style="background:rgba(0,0,0,0.06);border:none;color:#64748b;padding:0.4rem 0.8rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;">חזרה</button>
+                <h3 id="psalm-title" style="color:#000000;font-size:1rem;font-weight:900;margin:0;">תהילים</h3>
                 <div style="width:60px;"></div>
               </div>
-              <div id="psalm-text-area" style="padding:1.25rem;overflow-y:auto;flex:1;font-family:'David Libre','Frank Ruhl Libre',serif;font-size:1.05rem;line-height:2;color:#e2e8f0;text-align:right;direction:rtl;"></div>
-              <div style="border-top:1px solid rgba(148,163,184,0.14);padding:0.7rem 1.25rem;color:#94a3b8;font-size:0.74rem;line-height:1.6;flex-shrink:0;">מקור הטקסט: <strong style="color:#cbd5e1;">Sefaria.org</strong> · ספר תהילים</div>
+              <div id="psalm-text-area" class="holy-text-style" style="padding:1.25rem;overflow-y:auto;flex:1;text-align:right;direction:rtl;"></div>
+              <div style="border-top:1px solid rgba(0,0,0,0.08);padding:0.7rem 1.25rem;color:#94a3b8;font-size:0.74rem;line-height:1.6;flex-shrink:0;background:#faf9f6;">מקור הטקסט: <strong style="color:#1e40af;">Sefaria.org</strong> · ספר תהילים</div>
             </div>
           `;
         };
 
         window._tehillimSwitchDay = (index) => renderDay(index);
+        window._tehillimLoadedChapters = new Set();
+        window._tehillimCurrentChapter = 1;
+
+        async function loadPsalmChapter(chapter, area, prepend) {
+          if (chapter < 1 || chapter > 150 || window._tehillimLoadedChapters.has(chapter)) return;
+          window._tehillimLoadedChapters.add(chapter);
+          const chapterDiv = document.createElement("div");
+          chapterDiv.id = `psalm-chapter-${chapter}`;
+          chapterDiv.style.cssText = "margin-bottom:2rem;padding-bottom:1.5rem;border-bottom:1px solid rgba(0,0,0,0.08);";
+          chapterDiv.innerHTML = `<h4 style="color:#1e40af;font-size:1.1rem;font-weight:900;margin-bottom:0.75rem;text-align:center;">תהילים פרק ${toHebrewPsalmNumber(chapter)}</h4><p style="color:#94a3b8;text-align:center;">טוען...</p>`;
+          if (prepend && area.firstChild) {
+            area.insertBefore(chapterDiv, area.firstChild);
+          } else {
+            area.appendChild(chapterDiv);
+          }
+          try {
+            const response = await fetch(`https://www.sefaria.org/api/texts/Psalms.${chapter}?lang=he&context=0`);
+            const data = await response.json();
+            const verses = (data.he || []).map((verse, index) => `<p style="margin:0.3rem 0;color:#000000;"><strong style="color:#1d4ed8;font-size:0.75rem;">(${index + 1})</strong> ${verse}</p>`).join("");
+            chapterDiv.innerHTML = `<h4 style="color:#1e40af;font-size:1.1rem;font-weight:900;margin-bottom:0.75rem;text-align:center;">תהילים פרק ${toHebrewPsalmNumber(chapter)}</h4>${verses || '<p>לא נמצא טקסט.</p>'}`;
+          } catch (error) {
+            chapterDiv.innerHTML = `<h4 style="color:#1e40af;font-size:1.1rem;font-weight:900;margin-bottom:0.75rem;text-align:center;">תהילים פרק ${toHebrewPsalmNumber(chapter)}</h4><p style="color:#ef4444;">לא הצלחתי לטעון פרק זה.</p>`;
+          }
+        }
+
         window._tehillimOpenPsalm = async (chapter) => {
           const pane = document.getElementById("psalm-content-pane");
           const title = document.getElementById("psalm-title");
           const area = document.getElementById("psalm-text-area");
           if (!pane || !title || !area) return;
           pane.style.display = "flex";
+          window._tehillimLoadedChapters = new Set();
+          window._tehillimCurrentChapter = chapter;
           title.textContent = `תהילים פרק ${toHebrewPsalmNumber(chapter)}`;
-          area.innerHTML = `<p>טוען את פרק ${toHebrewPsalmNumber(chapter)}…</p>`;
-          try {
-            const response = await fetch(`https://www.sefaria.org/api/texts/Psalms.${chapter}?lang=he&context=0`);
-            const data = await response.json();
-            const verses = (data.he || []).map((verse, index) => `<p><strong>(${index + 1})</strong> ${verse}</p>`).join("");
-            area.innerHTML = verses || `<p>לא נמצא טקסט לפרק זה.</p>`;
-          } catch (error) {
-            area.innerHTML = `<p>לא הצלחתי לטעון את הפרק כרגע.</p>`;
-          }
+          area.innerHTML = "";
+          area.style.cssText = "padding:1.25rem;overflow-y:auto;flex:1;font-family:'Frank Ruhl Libre','David Libre',serif;font-size:25px;font-weight:700;line-height:1.7;color:#000000;text-align:right;direction:rtl;";
+          // Load current chapter and neighbors
+          if (chapter > 1) await loadPsalmChapter(chapter - 1, area, false);
+          await loadPsalmChapter(chapter, area, false);
+          if (chapter < 150) await loadPsalmChapter(chapter + 1, area, false);
+          // Scroll to current chapter
+          const currentEl = document.getElementById(`psalm-chapter-${chapter}`);
+          if (currentEl) currentEl.scrollIntoView({ block: "start" });
+          // Infinite scroll: load more chapters on scroll
+          area.onscroll = async function() {
+            const scrollTop = area.scrollTop;
+            const scrollHeight = area.scrollHeight;
+            const clientHeight = area.clientHeight;
+            // Near bottom: load next chapter
+            if (scrollHeight - scrollTop - clientHeight < 200) {
+              const maxLoaded = Math.max(...window._tehillimLoadedChapters);
+              if (maxLoaded < 150) await loadPsalmChapter(maxLoaded + 1, area, false);
+            }
+            // Near top: load previous chapter
+            if (scrollTop < 200) {
+              const minLoaded = Math.min(...window._tehillimLoadedChapters);
+              if (minLoaded > 1) {
+                const prevScrollHeight = area.scrollHeight;
+                await loadPsalmChapter(minLoaded - 1, area, true);
+                // Maintain scroll position after prepending
+                area.scrollTop += (area.scrollHeight - prevScrollHeight);
+              }
+            }
+            // Update title based on visible chapter
+            const chapters = area.querySelectorAll("[id^='psalm-chapter-']");
+            for (const ch of chapters) {
+              const rect = ch.getBoundingClientRect();
+              const areaRect = area.getBoundingClientRect();
+              if (rect.top >= areaRect.top - 50 && rect.top < areaRect.top + 150) {
+                const num = parseInt(ch.id.replace("psalm-chapter-", ""));
+                if (num && title) title.textContent = `תהילים פרק ${toHebrewPsalmNumber(num)}`;
+                break;
+              }
+            }
+          };
         };
 
         renderDay(activeIndex);
@@ -6720,7 +7208,11 @@
 
       // Kick off card observer on initial load via idle callback for better perf
       window.addEventListener('load', () => {
-        (window.requestIdleCallback || setTimeout)(() => setupCardObserver(), 800);
+        if (window.requestIdleCallback) {
+          window.requestIdleCallback(() => setupCardObserver(), { timeout: 800 });
+        } else {
+          setTimeout(() => setupCardObserver(), 800);
+        }
       }, { once: true });
 
       // ═══════════════════════════════════════════════════════

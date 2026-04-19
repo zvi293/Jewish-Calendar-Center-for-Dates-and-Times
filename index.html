@@ -840,6 +840,26 @@
         background: linear-gradient(90deg, transparent, rgba(59,130,246,0.3), transparent);
         margin-top: 0.6rem;
       }
+      /* Supplement/addition styling for prayer texts */
+      .prayer-supplement {
+        color: #1e40af;
+        font-size: 0.82em;
+        line-height: 1.65;
+        background: rgba(59,130,246,0.04);
+        border: 1px solid rgba(59,130,246,0.14);
+        border-right: 3px solid rgba(37,99,235,0.35);
+        border-radius: 0.6rem;
+        padding: 0.55rem 0.75rem;
+        margin: 0.6rem 0;
+      }
+      .prayer-supplement p,
+      .prayer-supplement li {
+        color: #1e40af !important;
+        line-height: 1.65 !important;
+      }
+      .prayer-supplement strong {
+        color: #1e3a8a;
+      }
       .prayer-richtext .seasonal-block strong {
         color: #1d4ed8;
         font-size: 0.9em;
@@ -2374,7 +2394,7 @@
         </div>
         <div class="p-3 md:p-6 overflow-y-auto flex-1">
           <div class="cal-grid mb-2" role="row">
-            <div class="cal-header text-rose-500" role="columnheader">א'</div>
+            <div class="cal-header dark:text-slate-400" role="columnheader">א'</div>
             <div class="cal-header dark:text-slate-400" role="columnheader">
               ב'
             </div>
@@ -2387,10 +2407,10 @@
             <div class="cal-header dark:text-slate-400" role="columnheader">
               ה'
             </div>
-            <div class="cal-header dark:text-slate-400" role="columnheader">
+            <div class="cal-header text-amber-600 dark:text-amber-400" role="columnheader">
               ו'
             </div>
-            <div class="cal-header text-blue-500" role="columnheader">ש'</div>
+            <div class="cal-header text-blue-600 dark:text-blue-400 font-bold" role="columnheader">ש'</div>
           </div>
           <div id="cal-days-grid" class="cal-grid" role="grid"></div>
         </div>
@@ -3456,6 +3476,9 @@
       // --- Sefaria Modal Logic ---
       async function openSefariaModal(hebTitle, enRef) {
         if (!enRef) return;
+        // Remove shmikra toggles if present (from previous Shnayim Mikra use)
+        const existingToggles = document.getElementById("shmikra-toggles");
+        if (existingToggles) existingToggles.remove();
         const ui = getDynamicUiText();
         let cleanRef = enRef.replace("Parashat ", "").replace(/ /g, "_");
         if (/\d/.test(cleanRef)) cleanRef = cleanRef.replace("_", "."); // For Daf Yomi
@@ -3476,6 +3499,9 @@
         setTimeout(() => m.classList.remove("opacity-0"), 10);
         lockBodyScroll();
         pushModalState('sefaria-modal');
+        // Sync font size
+        applyPrayerFontSize('#sefaria-modal-content');
+        document.querySelectorAll('#sefaria-font-bar .font-size-label').forEach(el => { el.textContent = _prayerFontSize + '%'; });
 
         try {
           const data = await fetchHebcalWithCache(
@@ -3528,19 +3554,40 @@
           const rashiData = await fetchHebcalWithCache(
             `https://www.sefaria.org/api/texts/Rashi_on_Parashat_${parshaName}?context=0`
           );
-          const flattenVerses = (arr) => {
-            if (!arr) return [];
-            const result = [];
-            const flatten = (a) => { if (Array.isArray(a)) { a.forEach(v => flatten(v)); } else { result.push(a); } };
-            flatten(arr);
-            return result;
-          };
-          // Rashi is nested: per verse -> multiple comments. Keep as arrays of arrays
           if (rashiData && rashiData.he) {
-            _shmikraData.rashiVerses = rashiData.he.map(v => {
-              if (Array.isArray(v)) return v.flat ? v.flat(Infinity).filter(x => typeof x === 'string') : v;
-              return typeof v === 'string' ? [v] : [];
-            });
+            // Rashi data can be nested: [chapter][verse][comment] or [verse][comment]
+            // We need to flatten to match the flat Torah verse array
+            const rashiPerVerse = [];
+            const processLevel = (arr) => {
+              if (!Array.isArray(arr)) return;
+              // Check if this is a leaf level (array of strings = comments for one verse)
+              if (arr.length > 0 && typeof arr[0] === 'string') {
+                rashiPerVerse.push(arr);
+                return;
+              }
+              // Check if this is verse level (array of arrays of strings)
+              if (arr.length > 0 && Array.isArray(arr[0])) {
+                // Could be [verse][comment] or [chapter][verse][comment]
+                const firstInner = arr[0];
+                if (firstInner.length > 0 && typeof firstInner[0] === 'string') {
+                  // This is [verse][comments] level
+                  arr.forEach(verse => {
+                    if (Array.isArray(verse)) {
+                      rashiPerVerse.push(verse.flat(Infinity).filter(x => typeof x === 'string'));
+                    } else if (typeof verse === 'string') {
+                      rashiPerVerse.push([verse]);
+                    } else {
+                      rashiPerVerse.push([]);
+                    }
+                  });
+                } else {
+                  // Deeper nesting - recurse into each chapter
+                  arr.forEach(chapter => processLevel(chapter));
+                }
+              }
+            };
+            processLevel(rashiData.he);
+            _shmikraData.rashiVerses = rashiPerVerse;
           }
           renderShmikraContent();
         } catch (e) {
@@ -3556,17 +3603,26 @@
         const { torahVerses, onkelosVerses, rashiVerses } = _shmikraData;
 
         let textHtml = "";
-        // Toggle bar
-        textHtml += `<div style="margin-bottom:1rem;padding:0.65rem 0.8rem;border-radius:0.75rem;background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.15);display:flex;flex-wrap:wrap;gap:0.75rem;align-items:center;justify-content:center;">
-          <label style="display:flex;align-items:center;gap:0.4rem;cursor:pointer;font-size:0.82rem;font-weight:700;color:#1e40af;user-select:none;">
-            <input type="checkbox" onchange="toggleShmikraDouble()" ${showDouble ? "checked" : ""} style="width:1.1rem;height:1.1rem;accent-color:#2563eb;cursor:pointer;">
-            הצג כל פסוק פעמיים
+        // Toggle bar moved to bottom (inside sefaria-font-bar area)
+        const toggleBarHtml = `<div id="shmikra-toggles" style="display:flex;flex-wrap:wrap;gap:0.75rem;align-items:center;justify-content:center;">
+          <label style="display:flex;align-items:center;gap:0.4rem;cursor:pointer;font-size:0.78rem;font-weight:700;color:#1e40af;user-select:none;">
+            <input type="checkbox" onchange="toggleShmikraDouble()" ${showDouble ? "checked" : ""} style="width:1rem;height:1rem;accent-color:#2563eb;cursor:pointer;">
+            פסוק פעמיים
           </label>
-          <label style="display:flex;align-items:center;gap:0.4rem;cursor:pointer;font-size:0.82rem;font-weight:700;color:#7c3aed;user-select:none;">
-            <input type="checkbox" onchange="toggleShmikraRashi()" ${showRashi ? "checked" : ""} style="width:1.1rem;height:1.1rem;accent-color:#7c3aed;cursor:pointer;">
-            הצג פירוש רש״י
+          <label style="display:flex;align-items:center;gap:0.4rem;cursor:pointer;font-size:0.78rem;font-weight:700;color:#7c3aed;user-select:none;">
+            <input type="checkbox" onchange="toggleShmikraRashi()" ${showRashi ? "checked" : ""} style="width:1rem;height:1rem;accent-color:#7c3aed;cursor:pointer;">
+            פירוש רש״י
           </label>
         </div>`;
+        // Inject toggle bar above font bar
+        const fontBar = document.getElementById("sefaria-font-bar");
+        if (fontBar) {
+          let existingToggles = document.getElementById("shmikra-toggles");
+          if (existingToggles) existingToggles.remove();
+          fontBar.insertAdjacentHTML('afterbegin', toggleBarHtml);
+          fontBar.style.flexWrap = 'wrap';
+          fontBar.style.gap = '0.5rem 1.5rem';
+        }
 
         if (torahVerses.length > 0) {
           for (let i = 0; i < torahVerses.length; i++) {
@@ -3626,6 +3682,9 @@
         setTimeout(() => m.classList.remove("opacity-0"), 10);
         lockBodyScroll();
         pushModalState('sefaria-modal');
+        // Sync font size
+        applyPrayerFontSize('#sefaria-modal-content');
+        document.querySelectorAll('#sefaria-font-bar .font-size-label').forEach(el => { el.textContent = _prayerFontSize + '%'; });
 
         try {
           const torahData = await fetchHebcalWithCache(
@@ -6001,7 +6060,7 @@
           // Show note indicator if there's a saved note for this day
           const dayNote = getDayNotes(dStr);
           if (dayNote) {
-            evHtml += `<div class="bg-yellow-400 text-yellow-900 text-[9px] md:text-xs px-1.5 py-0.5 rounded-md truncate shadow-sm w-full font-bold tracking-wide" title="${dayNote.substring(0, 80)}">📝 הערה</div>`;
+            evHtml += `<div class="bg-yellow-400 text-yellow-900 text-[9px] md:text-xs px-1.5 py-0.5 rounded-md truncate shadow-sm w-full font-bold tracking-wide" title="${dayNote.substring(0, 80)}">📝 ${dayNote.substring(0, 30)}${dayNote.length > 30 ? '…' : ''}</div>`;
           }
           const ariaLabel = `${formatLocalizedDate(cDate, { day: "2-digit", month: "long", year: "numeric" })}${hebrewDate ? ` | ${hebrewDate}` : ""}`;
 
@@ -7253,8 +7312,10 @@
                 .map((chapter, index) => `${index > 0 ? '<hr class="prayer-divider">' : ""}<p>${chapter.trim().replace(/\n/g, "<br>")}</p>`)
                 .join("")
             : "";
+          const introHtml = intro ? `<div class="prayer-supplement">${renderParagraphBlocks(intro)}</div>` : '';
+          const closingHtml = closing ? `<div class="prayer-supplement">${renderParagraphBlocks(closing)}</div>` : '';
           return {
-            html: `<div class="prayer-richtext">${renderParagraphBlocks(intro)}${chaptersHtml}${renderParagraphBlocks(closing)}</div>`,
+            html: `<div class="prayer-richtext">${introHtml}${chaptersHtml}${closingHtml}</div>`,
             sourceLabel: "מאגר פנימי",
             sourceUrl: fallbackEntry.extraLink || "",
           };
@@ -7417,6 +7478,51 @@
         };
       }
 
+      /**
+       * Post-process prayer HTML to wrap supplement/addition text in .prayer-supplement
+       * Supplements include: instructions in [...], zimun, section headers/directions,
+       * "leshem yichud", introductions, and seasonal insertion notes.
+       */
+      function markPrayerSupplements(html, key) {
+        if (!html) return html;
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = html;
+        // Process paragraphs
+        const paragraphs = wrapper.querySelectorAll('p');
+        paragraphs.forEach(p => {
+          const text = p.textContent.trim();
+          // Already wrapped in supplement
+          if (p.closest('.prayer-supplement') || p.closest('.seasonal-block')) return;
+          const isSupplement =
+            // Bracket instructions [בשבת], [עונים], [נוסח אשכנז...], etc.
+            /^\[/.test(text) ||
+            // Zimun call-and-response markers
+            /^רבותי נברך|^\[עונים|^\[אומר|^בירשות|^ברשות|^יהי שם/.test(text) ||
+            // Leshem Yichud / preparation text
+            /^לשם י[יי]חוד|^הנני מוכן|^לפני אמירת|^לאחר אמירת|^תפילה קצרה לאמרה/.test(text) ||
+            // "Shir Hamaalot" before birkat hamazon is a preamble
+            (key === 'birkat-hamazon' && /^שִׁיר הַמַּעֲלוֹת|^שיר המעלות/.test(text)) ||
+            // Zimun section in birkat hamazon
+            (key === 'birkat-hamazon' && /^רַבּוֹתַי נְבָרֵךְ/.test(text)) ||
+            // Direction lines like "אומרים שלוש פעמים"
+            /^אומרים|^ג['׳] פעמים|^סימן טוב/.test(text) ||
+            // Section heading markers that are bold descriptions, not prayer
+            /^📌/.test(text) ||
+            // Bold section titles like **ברכה ראשונה**
+            (p.querySelector('strong') && !p.querySelector('strong').nextSibling && /^ברכה\s|^חצי קדיש|^עמידה|^קדיש|^פסוקי דזמרה|^קריאת שמע|^ברכו|^ברכות קריאת/.test(text)) ||
+            // Explanatory notes
+            /^נוסח אשכנז|^ההבדל|^שאר הנוסח|^המשך —|^\[המשך/.test(text) ||
+            // Instructions with colons that describe what to say
+            /^(בשבת|בראש חודש|ביום טוב|בחנוכה|בפורים|קיץ|חורף):/.test(text) ||
+            // "Lechu neranena" and "lecho" style introductions in tikkun chatzot
+            /^לכו נרננה/.test(text);
+          if (isSupplement) {
+            p.classList.add('prayer-supplement');
+          }
+        });
+        return wrapper.innerHTML;
+      }
+
       async function getFullPrayerContent(key) {
         const nusach = resolveSelectedNusach();
         const context = resolveSeasonalPrayerContext();
@@ -7488,6 +7594,7 @@
 
         const payload = {
           ...result,
+          html: markPrayerSupplements(result.html, key),
           nusachLabel: nusach.label,
           seasonalHtml: resolveSeasonalPrayerAdditions(key, context),
         };
@@ -7589,7 +7696,47 @@
         return modal;
       }
 
+      // --- First-time Nusach Selection ---
+      const NUSACH_CHOSEN_KEY = 'moadim_nusach_chosen';
+      function showNusachSelectionPopup(callback) {
+        let existing = document.getElementById("nusach-selection-modal");
+        if (existing) existing.remove();
+        const overlay = document.createElement("div");
+        overlay.id = "nusach-selection-modal";
+        overlay.style.cssText = "position:fixed;inset:0;z-index:250;background:rgba(0,0,0,0.55);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:1rem;";
+        const nusachOptions = Object.entries(NUSACH_LABELS).map(([k, v]) =>
+          `<button onclick="window._selectNusachAndContinue('${k}')" style="width:100%;padding:0.85rem 1rem;border-radius:0.9rem;border:2px solid ${k === CURRENT_NUSACH ? '#2563eb' : 'rgba(0,0,0,0.1)'};background:${k === CURRENT_NUSACH ? 'rgba(37,99,235,0.08)' : 'rgba(0,0,0,0.02)'};color:#1a1a1a;font-size:1.05rem;font-weight:800;cursor:pointer;transition:all 0.15s;">${v}</button>`
+        ).join("");
+        overlay.innerHTML = `
+          <div style="background:#faf9f6;border-radius:1.5rem;padding:1.8rem 1.5rem;width:100%;max-width:380px;box-shadow:0 25px 60px rgba(0,0,0,0.25);text-align:center;direction:rtl;">
+            <div style="font-size:2rem;margin-bottom:0.5rem;">🕎</div>
+            <h3 style="color:#1a1a1a;font-size:1.25rem;font-weight:900;margin:0 0 0.4rem;">בחירת נוסח תפילה</h3>
+            <p style="color:#64748b;font-size:0.85rem;margin:0 0 1.2rem;line-height:1.5;">בחר את הנוסח שלך. ניתן לשנות בכל עת בהגדרות.</p>
+            <div style="display:flex;flex-direction:column;gap:0.5rem;">${nusachOptions}</div>
+          </div>`;
+        window._selectNusachAndContinue = (nusach) => {
+          CURRENT_NUSACH = nusach;
+          localStorage.setItem("moadim_nusach", nusach);
+          localStorage.setItem(NUSACH_CHOSEN_KEY, "true");
+          // Update settings dropdown if visible
+          const nusachEl = document.getElementById("nusach-select");
+          if (nusachEl) nusachEl.value = nusach;
+          overlay.remove();
+          if (callback) callback();
+        };
+        document.body.appendChild(overlay);
+      }
+
+      function ensureNusachChosen(callback) {
+        if (localStorage.getItem(NUSACH_CHOSEN_KEY)) {
+          callback();
+        } else {
+          showNusachSelectionPopup(callback);
+        }
+      }
+
       openPrayer = async function(key, heLabel, enLabel) {
+        const doOpen = async () => {
         const entry = PRAYER_DB[key] || { title: heLabel || enLabel || key };
         const isPopup = false;
         renderPrayerModalShell(entry.title || heLabel || enLabel || key, isPopup);
@@ -7639,6 +7786,8 @@
             body.innerHTML = `<div class="prayer-richtext"><p>אירעה שגיאה בטעינת התפילה. אפשר לנסות שוב בעוד רגע.</p></div>`;
           }
         }
+        };
+        ensureNusachChosen(doOpen);
       };
 
       function toHebrewPsalmNumber(num) {
@@ -7710,6 +7859,11 @@
                 <div style="width:60px;"></div>
               </div>
               <div id="psalm-text-area" class="holy-text-style" style="padding:1.25rem;overflow-y:auto;flex:1;text-align:right;direction:rtl;"></div>
+              <div id="tehillim-font-bar" class="flex items-center justify-center gap-3 py-2 px-4 flex-shrink-0" style="background:rgba(250,249,246,0.95);border-top:1px solid rgba(0,0,0,0.08);">
+                <button onclick="changePrayerFontSize(-10, '#psalm-text-area')" style="width:34px;height:34px;border-radius:50%;border:1px solid rgba(0,0,0,0.15);background:rgba(0,0,0,0.04);color:#334155;font-size:1.1rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;" aria-label="הקטן כתב">−</button>
+                <span class="font-size-label" style="font-size:0.78rem;font-weight:700;color:#64748b;min-width:3rem;text-align:center;">${_prayerFontSize}%</span>
+                <button onclick="changePrayerFontSize(10, '#psalm-text-area')" style="width:34px;height:34px;border-radius:50%;border:1px solid rgba(0,0,0,0.15);background:rgba(0,0,0,0.04);color:#334155;font-size:1.1rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;" aria-label="הגדל כתב">+</button>
+              </div>
               <div style="border-top:1px solid rgba(0,0,0,0.08);padding:0.7rem 1.25rem;color:#94a3b8;font-size:0.74rem;line-height:1.6;flex-shrink:0;background:#faf9f6;">מקור הטקסט: <strong style="color:#1e40af;">Sefaria.org</strong> · ספר תהילים</div>
             </div>
           `;
@@ -7752,6 +7906,7 @@
           title.textContent = `תהילים פרק ${toHebrewPsalmNumber(chapter)}`;
           area.innerHTML = "";
           area.style.cssText = "padding:1.25rem;overflow-y:auto;flex:1;font-family:'Frank Ruhl Libre','David Libre',serif;font-size:25px;font-weight:700;line-height:1.7;color:#000000;text-align:right;direction:rtl;";
+          applyPrayerFontSize('#psalm-text-area');
           // Load current chapter and neighbors
           if (chapter > 1) await loadPsalmChapter(chapter - 1, area, false);
           await loadPsalmChapter(chapter, area, false);

@@ -264,6 +264,16 @@
         color: #000000;
       }
 
+      /* Mobile-optimized prayer modal: use full width */
+      .prayer-modal-body-mobile {
+        padding: 0.5rem 0.4rem !important;
+      }
+      @media (min-width: 640px) {
+        .prayer-modal-body-mobile {
+          padding: 1.25rem !important;
+        }
+      }
+
       /* ── Stars Canvas ── */
       #stars-canvas {
         position: absolute;
@@ -807,18 +817,50 @@
       }
       .prayer-richtext .seasonal-block {
         background: rgba(59, 130, 246, 0.06);
-        border: 1px solid rgba(59, 130, 246, 0.15);
-        border-radius: 1rem;
-        padding: 0.9rem 1rem;
-        margin-bottom: 0.9rem;
+        border: 1px solid rgba(59, 130, 246, 0.18);
+        border-radius: 0.85rem;
+        padding: 0.7rem 0.85rem;
+        margin-bottom: 0.75rem;
+        font-size: 0.82em;
+        color: #1e40af;
+        line-height: 1.65;
+        position: relative;
+      }
+      .prayer-richtext .seasonal-block::before {
+        content: "";
+        display: block;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(59,130,246,0.3), transparent);
+        margin-bottom: 0.6rem;
+      }
+      .prayer-richtext .seasonal-block::after {
+        content: "";
+        display: block;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(59,130,246,0.3), transparent);
+        margin-top: 0.6rem;
       }
       .prayer-richtext .seasonal-block strong {
-        color: #1e40af;
+        color: #1d4ed8;
+        font-size: 0.9em;
+      }
+      .prayer-richtext .seasonal-block div {
+        color: #2563eb;
       }
       .prayer-richtext .prayer-divider {
         border: 0;
         border-top: 1px solid rgba(148, 163, 184, 0.35);
         margin: 1.35rem 0;
+      }
+      /* Inline prayer additions/supplements styling */
+      .prayer-richtext .prayer-addition,
+      .prayer-richtext [data-addition] {
+        color: #1d4ed8;
+        font-size: 0.88em;
+        border-right: 3px solid rgba(59,130,246,0.3);
+        padding-right: 0.6rem;
+        margin: 0.5rem 0;
+        display: block;
       }
       .prayer-source-credit {
         color: #94a3b8;
@@ -1820,8 +1862,13 @@
         </div>
         <div
           id="sefaria-modal-content"
-          class="p-5 md:p-8 overflow-y-auto flex-1 text-right leading-loose scrollbar-hide holy-text-style"
+          class="p-2 sm:p-5 md:p-8 overflow-y-auto flex-1 text-right leading-loose scrollbar-hide holy-text-style"
         ></div>
+        <div id="sefaria-font-bar" class="flex items-center justify-center gap-3 py-2 px-4 flex-shrink-0" style="background:rgba(250,249,246,0.95);border-top:1px solid rgba(0,0,0,0.08);">
+          <button onclick="changePrayerFontSize(-10, '#sefaria-modal-content')" style="width:34px;height:34px;border-radius:50%;border:1px solid rgba(0,0,0,0.15);background:rgba(0,0,0,0.04);color:#334155;font-size:1.1rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;" aria-label="הקטן כתב">−</button>
+          <span class="font-size-label" style="font-size:0.78rem;font-weight:700;color:#64748b;min-width:3rem;text-align:center;">100%</span>
+          <button onclick="changePrayerFontSize(10, '#sefaria-modal-content')" style="width:34px;height:34px;border-radius:50%;border:1px solid rgba(0,0,0,0.15);background:rgba(0,0,0,0.04);color:#334155;font-size:1.1rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;" aria-label="הגדל כתב">+</button>
+        </div>
         <div
           class="p-3 md:p-4 border-t flex-shrink-0"
           style="border-color:rgba(0,0,0,0.08);background:#faf9f6;"
@@ -2930,6 +2977,7 @@
       // --- Navbar Scroll Logic ---
       window.addEventListener("scroll", () => {
         const navButtons = document.querySelectorAll(".nav-action-btn");
+        const isBlueTheme = document.documentElement.classList.contains("theme-blue");
         if (window.scrollY > 50) {
           navButtons.forEach((btn) => {
             btn.classList.remove(
@@ -2938,16 +2986,28 @@
               "border-white/20",
               "hover:bg-white/20",
             );
-            btn.classList.add(
-              "bg-white/90",
-              "text-slate-800",
-              "border-slate-200",
-              "hover:bg-slate-100",
-              "dark:bg-slate-800",
-              "dark:text-white",
-              "dark:border-slate-700",
-              "dark:hover:bg-slate-700",
-            );
+            if (isBlueTheme) {
+              // Blue theme scrolled: dark blue buttons visible on light content
+              btn.classList.remove("bg-white/90", "text-slate-800", "border-slate-200", "hover:bg-slate-100");
+              btn.classList.add(
+                "bg-blue-700/90",
+                "text-white",
+                "border-blue-600",
+                "hover:bg-blue-800",
+              );
+            } else {
+              btn.classList.remove("bg-blue-700/90", "border-blue-600", "hover:bg-blue-800");
+              btn.classList.add(
+                "bg-white/90",
+                "text-slate-800",
+                "border-slate-200",
+                "hover:bg-slate-100",
+                "dark:bg-slate-800",
+                "dark:text-white",
+                "dark:border-slate-700",
+                "dark:hover:bg-slate-700",
+              );
+            }
           });
         } else {
           navButtons.forEach((btn) => {
@@ -2966,8 +3026,80 @@
               "dark:text-white",
               "dark:border-slate-700",
               "dark:hover:bg-slate-700",
+              "bg-blue-700/90",
+              "border-blue-600",
+              "hover:bg-blue-800",
             );
           });
+        }
+      });
+
+      // --- Modal Scroll Lock & History Management ---
+      let _modalScrollLockCount = 0;
+      function lockBodyScroll() {
+        _modalScrollLockCount++;
+        if (_modalScrollLockCount === 1) {
+          document.body.style.overflow = 'hidden';
+          document.body.style.touchAction = 'none';
+          document.body.style.position = 'fixed';
+          document.body.style.width = '100%';
+          document.body.style.top = `-${window.scrollY}px`;
+          document.body.dataset.scrollY = window.scrollY;
+        }
+      }
+      function unlockBodyScroll() {
+        _modalScrollLockCount = Math.max(0, _modalScrollLockCount - 1);
+        if (_modalScrollLockCount === 0) {
+          const scrollY = parseInt(document.body.dataset.scrollY || '0', 10);
+          document.body.style.overflow = '';
+          document.body.style.touchAction = '';
+          document.body.style.position = '';
+          document.body.style.width = '';
+          document.body.style.top = '';
+          window.scrollTo(0, scrollY);
+        }
+      }
+      // History-based back button: push state when modal opens, pop to close
+      let _activeModals = [];
+      function pushModalState(modalId) {
+        _activeModals.push(modalId);
+        history.pushState({ modal: modalId }, '');
+      }
+      function removeModalById(modalId) {
+        const el = document.getElementById(modalId);
+        if (el) {
+          if (el.classList.contains('hidden')) return;
+          if (el.remove) el.remove();
+          else el.classList.add('hidden');
+        }
+        unlockBodyScroll();
+      }
+      window.addEventListener('popstate', function(e) {
+        if (_activeModals.length > 0) {
+          const modalId = _activeModals.pop();
+          // Close the specific modal
+          if (modalId === 'prayer-modal' || modalId === 'tehillim-modal' || modalId === 'calendar-day-modal' || modalId === 'zman-opinions-modal') {
+            const el = document.getElementById(modalId);
+            if (el) el.remove();
+            unlockBodyScroll();
+          } else if (modalId === 'sefaria-modal') {
+            closeSefariaModal();
+            unlockBodyScroll();
+          } else if (modalId === 'calendar-modal') {
+            closeCalendar();
+            unlockBodyScroll();
+          } else if (modalId === 'settings-modal') {
+            toggleSettings();
+          } else if (modalId === 'compass-modal') {
+            closeCompass();
+            unlockBodyScroll();
+          } else if (modalId === 'omer-modal') {
+            const el = document.getElementById(modalId);
+            if (el) { el.classList.add('opacity-0'); setTimeout(() => el.classList.add('hidden'), 300); }
+            unlockBodyScroll();
+          } else {
+            removeModalById(modalId);
+          }
         }
       });
 
@@ -3342,6 +3474,8 @@
 
         m.classList.remove("hidden");
         setTimeout(() => m.classList.remove("opacity-0"), 10);
+        lockBodyScroll();
+        pushModalState('sefaria-modal');
 
         try {
           const data = await fetchHebcalWithCache(
@@ -3366,6 +3500,114 @@
       }
 
       /* ── שניים מקרא ואחד תרגום – modal with Torah + Onkelos ── */
+      // Shnayim Mikra state
+      let _shmikraData = { torahVerses: [], onkelosVerses: [], rashiVerses: [], parshaName: "" };
+      const SHMIKRA_DOUBLE_KEY = "moadim_shmikra_double";
+      const SHMIKRA_RASHI_KEY = "moadim_shmikra_rashi";
+
+      function getShmikraDouble() { return localStorage.getItem(SHMIKRA_DOUBLE_KEY) !== "false"; } // default ON
+      function getShmikraRashi() { return localStorage.getItem(SHMIKRA_RASHI_KEY) === "true"; } // default OFF
+
+      function toggleShmikraDouble() {
+        const newVal = !getShmikraDouble();
+        localStorage.setItem(SHMIKRA_DOUBLE_KEY, newVal ? "true" : "false");
+        renderShmikraContent();
+      }
+      function toggleShmikraRashi() {
+        const newVal = !getShmikraRashi();
+        localStorage.setItem(SHMIKRA_RASHI_KEY, newVal ? "true" : "false");
+        renderShmikraContent();
+        // Fetch Rashi if toggled on and not yet loaded
+        if (newVal && _shmikraData.rashiVerses.length === 0 && _shmikraData.parshaName) {
+          fetchRashiForShmikra(_shmikraData.parshaName);
+        }
+      }
+
+      async function fetchRashiForShmikra(parshaName) {
+        try {
+          const rashiData = await fetchHebcalWithCache(
+            `https://www.sefaria.org/api/texts/Rashi_on_Parashat_${parshaName}?context=0`
+          );
+          const flattenVerses = (arr) => {
+            if (!arr) return [];
+            const result = [];
+            const flatten = (a) => { if (Array.isArray(a)) { a.forEach(v => flatten(v)); } else { result.push(a); } };
+            flatten(arr);
+            return result;
+          };
+          // Rashi is nested: per verse -> multiple comments. Keep as arrays of arrays
+          if (rashiData && rashiData.he) {
+            _shmikraData.rashiVerses = rashiData.he.map(v => {
+              if (Array.isArray(v)) return v.flat ? v.flat(Infinity).filter(x => typeof x === 'string') : v;
+              return typeof v === 'string' ? [v] : [];
+            });
+          }
+          renderShmikraContent();
+        } catch (e) {
+          console.warn("Rashi fetch error:", e);
+        }
+      }
+
+      function renderShmikraContent() {
+        const el = document.getElementById("sefaria-modal-content");
+        if (!el) return;
+        const showDouble = getShmikraDouble();
+        const showRashi = getShmikraRashi();
+        const { torahVerses, onkelosVerses, rashiVerses } = _shmikraData;
+
+        let textHtml = "";
+        // Toggle bar
+        textHtml += `<div style="margin-bottom:1rem;padding:0.65rem 0.8rem;border-radius:0.75rem;background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.15);display:flex;flex-wrap:wrap;gap:0.75rem;align-items:center;justify-content:center;">
+          <label style="display:flex;align-items:center;gap:0.4rem;cursor:pointer;font-size:0.82rem;font-weight:700;color:#1e40af;user-select:none;">
+            <input type="checkbox" onchange="toggleShmikraDouble()" ${showDouble ? "checked" : ""} style="width:1.1rem;height:1.1rem;accent-color:#2563eb;cursor:pointer;">
+            הצג כל פסוק פעמיים
+          </label>
+          <label style="display:flex;align-items:center;gap:0.4rem;cursor:pointer;font-size:0.82rem;font-weight:700;color:#7c3aed;user-select:none;">
+            <input type="checkbox" onchange="toggleShmikraRashi()" ${showRashi ? "checked" : ""} style="width:1.1rem;height:1.1rem;accent-color:#7c3aed;cursor:pointer;">
+            הצג פירוש רש״י
+          </label>
+        </div>`;
+
+        if (torahVerses.length > 0) {
+          for (let i = 0; i < torahVerses.length; i++) {
+            const verseNum = i + 1;
+            const torahText = torahVerses[i] || "";
+            const onkelosText = onkelosVerses[i] || "";
+
+            textHtml += `<div class="shmikra-verse" style="margin-bottom:1.2rem;padding:0.8rem;border-radius:0.5rem;border:1px solid rgba(0,0,0,0.06);background:rgba(0,0,0,0.02);">`;
+            textHtml += `<div style="font-size:0.7rem;color:#2563eb;margin-bottom:0.3rem;font-weight:bold;">פסוק ${verseNum}</div>`;
+            // Torah text - first reading
+            textHtml += `<p style="line-height:1.9;margin:0 0 0.4rem 0;color:#1a1a1a;font-size:1.2rem;">${torahText}</p>`;
+            // Torah text - second reading (shnayim mikra)
+            if (showDouble) {
+              textHtml += `<p style="line-height:1.9;margin:0 0 0.4rem 0;color:#374151;font-size:1.2rem;opacity:0.75;">${torahText}</p>`;
+            }
+            // Targum Onkelos
+            if (onkelosText) {
+              textHtml += `<p style="line-height:1.9;margin:0;color:#92400e;font-size:1.1rem;padding-right:0.5rem;border-right:3px solid rgba(146,64,14,0.3);">
+                <span style="font-size:0.7rem;color:#b45309;font-weight:bold;">תרגום אונקלוס: </span>${onkelosText}
+              </p>`;
+            }
+            // Rashi commentary
+            if (showRashi && rashiVerses && rashiVerses[i] && rashiVerses[i].length > 0) {
+              const rashiComments = rashiVerses[i];
+              textHtml += `<div style="margin-top:0.5rem;padding:0.6rem 0.7rem;border-radius:0.5rem;background:rgba(124,58,237,0.05);border:1px solid rgba(124,58,237,0.12);">
+                <div style="font-size:0.65rem;color:#7c3aed;font-weight:bold;margin-bottom:0.3rem;">רש״י:</div>
+                ${rashiComments.map(c => `<p style="line-height:1.8;margin:0 0 0.3rem 0;color:#4c1d95;font-size:0.95rem;">${c}</p>`).join("")}
+              </div>`;
+            } else if (showRashi && rashiVerses.length === 0) {
+              if (i === 0) {
+                textHtml += `<div style="margin-top:0.4rem;font-size:0.75rem;color:#7c3aed;font-style:italic;">טוען פירוש רש״י...</div>`;
+              }
+            }
+            textHtml += `</div>`;
+          }
+        } else {
+          textHtml += "<p class='text-center text-rose-500 font-bold mt-10'>לא נמצא טקסט עבור פרשה זו.</p>";
+        }
+        el.innerHTML = textHtml;
+      }
+
       async function openShnayimMikraModal(hebTitle, enRef) {
         if (!enRef) return;
         const parshaName = enRef.replace(/^Parashat\s+/, "").replace(/ /g, "_");
@@ -3382,68 +3624,42 @@
 
         m.classList.remove("hidden");
         setTimeout(() => m.classList.remove("opacity-0"), 10);
+        lockBodyScroll();
+        pushModalState('sefaria-modal');
 
         try {
-          // Step 1: Fetch the Torah parsha text
           const torahData = await fetchHebcalWithCache(
             `https://www.sefaria.org/api/texts/Parashat_${parshaName}?context=0`
           );
           if (!torahData || !torahData.ref) throw new Error("No parsha data");
 
-          // Step 2: Extract book name from ref (e.g. "Leviticus 16:1-18:30" → "Leviticus")
           const bookName = torahData.ref.split(" ")[0];
-
-          // Step 3: Fetch Onkelos for the same parsha
           const onkelosRef = `Onkelos_${bookName},_${parshaName}`;
           const onkelosData = await fetchHebcalWithCache(
             `https://www.sefaria.org/api/texts/${onkelosRef}?context=0`
           );
 
-          // Step 4: Build interleaved display
-          // Flatten Torah verses (may be nested arrays for multi-chapter parshas)
           const flattenVerses = (arr) => {
             if (!arr) return [];
             const result = [];
-            const flatten = (a) => {
-              if (Array.isArray(a)) { a.forEach(v => flatten(v)); }
-              else { result.push(a); }
-            };
+            const flatten = (a) => { if (Array.isArray(a)) { a.forEach(v => flatten(v)); } else { result.push(a); } };
             flatten(arr);
             return result;
           };
 
-          const torahVerses = flattenVerses(torahData.he);
-          const onkelosVerses = flattenVerses(onkelosData?.he);
+          _shmikraData = {
+            torahVerses: flattenVerses(torahData.he),
+            onkelosVerses: flattenVerses(onkelosData?.he),
+            rashiVerses: [],
+            parshaName: parshaName
+          };
 
-          let textHtml = "";
-          if (torahVerses.length > 0) {
-            textHtml += `<div style="margin-bottom:1.5rem;padding:0.75rem;border-radius:0.5rem;background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.15);">
-              <p style="text-align:center;font-size:0.85rem;color:#1d4ed8;margin:0;">
-                📖 כל פסוק מוצג פעמיים (מקרא) ואחריו תרגום אונקלוס
-              </p>
-            </div>`;
+          renderShmikraContent();
 
-            for (let i = 0; i < torahVerses.length; i++) {
-              const verseNum = i + 1;
-              const torahText = torahVerses[i] || "";
-              const onkelosText = onkelosVerses[i] || "";
-
-              textHtml += `<div class="shmikra-verse" style="margin-bottom:1.2rem;padding:0.8rem;border-radius:0.5rem;border:1px solid rgba(0,0,0,0.06);background:rgba(0,0,0,0.02);">`;
-              textHtml += `<div style="font-size:0.7rem;color:#2563eb;margin-bottom:0.3rem;font-weight:bold;">פסוק ${verseNum}</div>`;
-              // Torah text (twice - shnayim mikra)
-              textHtml += `<p style="line-height:1.9;margin:0 0 0.4rem 0;color:#1a1a1a;font-size:1.05rem;">${torahText}</p>`;
-              // Targum Onkelos
-              if (onkelosText) {
-                textHtml += `<p style="line-height:1.9;margin:0;color:#92400e;font-size:0.95rem;padding-right:0.5rem;border-right:3px solid rgba(146,64,14,0.3);">
-                  <span style="font-size:0.7rem;color:#b45309;font-weight:bold;">תרגום אונקלוס: </span>${onkelosText}
-                </p>`;
-              }
-              textHtml += `</div>`;
-            }
-          } else {
-            textHtml = "<p class='text-center text-rose-500 font-bold mt-10'>לא נמצא טקסט עבור פרשה זו.</p>";
+          // If Rashi is enabled, fetch it
+          if (getShmikraRashi()) {
+            fetchRashiForShmikra(parshaName);
           }
-          document.getElementById("sefaria-modal-content").innerHTML = textHtml;
         } catch (e) {
           console.error("Shnayim Mikra error:", e);
           document.getElementById("sefaria-modal-content").innerHTML =
@@ -3456,6 +3672,11 @@
         if (!m) return;
         m.classList.add("opacity-0");
         setTimeout(() => m.classList.add("hidden"), 300);
+        unlockBodyScroll();
+        if (_activeModals[_activeModals.length - 1] === 'sefaria-modal') {
+          _activeModals.pop();
+          history.back();
+        }
       }
 
       /* ── KosherZmanim helper ─────────────────────────────────── */
@@ -3845,10 +4066,10 @@
           const cy = dateForHebcal.getFullYear();
           const [y1, y2] = await Promise.all([
             fetchHebcalWithCache(
-              `https://www.hebcal.com/hebcal?v=1&cfg=json&year=${cy}&i=on&maj=on&min=on&nx=on&mf=on&ss=on&mod=on`,
+              `https://www.hebcal.com/hebcal?v=1&cfg=json&year=${cy}&i=on&maj=on&min=on&nx=on&mf=on&ss=on&mod=on&s=on`,
             ),
             fetchHebcalWithCache(
-              `https://www.hebcal.com/hebcal?v=1&cfg=json&year=${cy + 1}&i=on&maj=on&min=on&nx=on&mf=on&ss=on&mod=on`,
+              `https://www.hebcal.com/hebcal?v=1&cfg=json&year=${cy + 1}&i=on&maj=on&min=on&nx=on&mf=on&ss=on&mod=on&s=on`,
             ),
           ]);
 
@@ -4014,6 +4235,9 @@
               } else {
                 icon = "📅";
               }
+            } else if (ev.category === "parashat") {
+              type = "parashat";
+              icon = "📖";
             } else return;
 
             const evName = CURRENT_LANG === "he" ? ev.hebrew : ev.title;
@@ -4373,7 +4597,7 @@
           <div class="modal-inner" style="background:linear-gradient(145deg,#1e293b,#0f172a);border:1px solid rgba(99,102,241,0.3);border-radius:2rem;padding:2rem;width:100%;max-width:600px;margin:auto;box-shadow:0 25px 60px rgba(0,0,0,0.6);text-align:right;direction:rtl;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
               <h3 class="modal-title" style="color:#f1f5f9;font-size:1.4rem;font-weight:900;margin:0;">${entry.title}</h3>
-              <button class="modal-close" onclick="document.getElementById('prayer-modal').remove()" style="background:rgba(255,255,255,0.08);border:none;color:#94a3b8;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.2rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✕</button>
+              <button class="modal-close" onclick="closePrayerModal()" style="background:rgba(255,255,255,0.08);border:none;color:#94a3b8;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.2rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✕</button>
             </div>
             <div class="modal-nusach" style="color:#64748b;font-size:0.75rem;margin-bottom:1.2rem;">נוסח: <strong style="color:#818cf8;">${nusachNames[CURRENT_NUSACH] || CURRENT_NUSACH}</strong> &nbsp;|&nbsp; ניתן לשנות בהגדרות</div>
             ${seasonNote ? `<div class="modal-season" style="background:rgba(234,179,8,0.12);border:1px solid rgba(234,179,8,0.3);border-radius:1rem;padding:0.85rem 1rem;margin-bottom:1rem;font-size:0.82rem;color:#fde047;line-height:1.7;">${seasonNote.replace(/\n/g,'<br>')}</div>` : ''}
@@ -4441,7 +4665,7 @@
                 <h2 style="color:#f1f5f9;font-size:1.3rem;font-weight:900;margin:0;">ספר תהילים</h2>
                 <p style="color:${color};font-size:0.78rem;font-weight:700;margin:0.15rem 0 0;">יום ${dayData.day} — תהלים ${dayData.range[0]}–${dayData.range[1]}</p>
               </div>
-              <button onclick="document.getElementById('tehillim-modal').remove()"
+              <button onclick="closeTehillimModal()"
                 style="background:rgba(255,255,255,0.08);border:none;color:#94a3b8;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.1rem;flex-shrink:0;">✕</button>
             </div>
 
@@ -4526,8 +4750,10 @@
         };
 
         buildPage(activeDayIdx);
-        modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+        modal.addEventListener('click', (e) => { if (e.target === modal) closeTehillimModal(); });
         document.body.appendChild(modal);
+        lockBodyScroll();
+        pushModalState('tehillim-modal');
       }
 
       function toggleMorePrayers() {
@@ -5410,7 +5636,14 @@
 
       function closeCalendarDay() {
         const modal = document.getElementById("calendar-day-modal");
-        if (modal) modal.remove();
+        if (modal) {
+          modal.remove();
+          unlockBodyScroll();
+          if (_activeModals[_activeModals.length - 1] === 'calendar-day-modal') {
+            _activeModals.pop();
+            history.back();
+          }
+        }
       }
 
       function saveCalendarDayNotes(dateStr) {
@@ -5420,6 +5653,8 @@
         if (typeof showToast === "function") {
           showToast("ההערה נשמרה", "success", 2200);
         }
+        // Refresh calendar grid to show/hide note indicator
+        if (typeof buildMonthCalendar === "function") buildMonthCalendar();
       }
 
       function syncSingleDayToCalendar(dateStr) {
@@ -5467,8 +5702,44 @@
           month: "long",
           year: "numeric",
         });
-        const eventsHtml = dayEvents.length
-          ? `<ul style="display:flex;flex-direction:column;gap:0.6rem;margin:0;padding:0;list-style:none;">${dayEvents.map((eventItem) => `<li style="padding:0.8rem 0.9rem;border:1px solid rgba(59,130,246,0.14);border-radius:0.9rem;background:rgba(255,255,255,0.78);"><strong style="display:block;color:#0f172a;">${eventItem.name}</strong><span style="display:block;color:#475569;font-size:0.86rem;margin-top:0.25rem;">${eventItem.titleStr || eventItem.heb || ""}</span></li>`).join("")}</ul>`
+
+        // Build Shabbat times section for Friday/Shabbat
+        let shabbatHtml = "";
+        const dow = dateObj.getDay();
+        if (dow === 5 || dow === 6) {
+          try {
+            const friday = new Date(dateObj);
+            if (dow === 6) friday.setDate(friday.getDate() - 1);
+            const saturday = new Date(friday);
+            saturday.setDate(friday.getDate() + 1);
+            const kzFriday = computeKosherZmanim(friday);
+            const kzSaturday = computeKosherZmanim(saturday);
+            const fmtTime = (iso) => {
+              if (!iso) return "--:--";
+              const d = new Date(iso);
+              return isNaN(d) ? "--:--" : d.toLocaleTimeString(getCurrentLocale(), { hour: "2-digit", minute: "2-digit" });
+            };
+            const candleTime = kzFriday && kzFriday.times && kzFriday.times.candleLighting ? fmtTime(kzFriday.times.candleLighting) : null;
+            const havdalahTime = kzSaturday && kzSaturday.times && kzSaturday.times.tzeit7083deg ? fmtTime(kzSaturday.times.tzeit7083deg) : null;
+            // Find parsha for this Shabbat
+            const satStr = saturday.toISOString().split("T")[0];
+            const parshaEvent = ALL_EVENTS.find((e) => e.type === "parashat" && e.date === satStr);
+            if (candleTime || havdalahTime || parshaEvent) {
+              shabbatHtml = `<div style="margin-bottom:1rem;padding:0.85rem 1rem;border-radius:1rem;background:linear-gradient(135deg,#eff6ff,#faf5ff);border:1px solid rgba(99,102,241,0.18);">
+                <h4 style="margin:0 0 0.55rem;font-size:0.95rem;font-weight:800;color:#312e81;">🕯️ זמני שבת</h4>
+                ${parshaEvent ? `<div style="font-size:0.9rem;font-weight:700;color:#4338ca;margin-bottom:0.5rem;">📖 פרשת ${parshaEvent.name.replace("Parashat ", "").replace("פרשת ", "")}</div>` : ""}
+                <div style="display:flex;gap:1.5rem;flex-wrap:wrap;">
+                  ${candleTime ? `<div style="font-size:0.88rem;color:#334155;"><span style="font-weight:700;">הדלקת נרות:</span> <span style="font-weight:800;color:#2563eb;" dir="ltr">${candleTime}</span></div>` : ""}
+                  ${havdalahTime ? `<div style="font-size:0.88rem;color:#334155;"><span style="font-weight:700;">הבדלה:</span> <span style="font-weight:800;color:#7c3aed;" dir="ltr">${havdalahTime}</span></div>` : ""}
+                </div>
+              </div>`;
+            }
+          } catch (e) { console.warn("Shabbat times error:", e); }
+        }
+
+        const nonParshaEvents = dayEvents.filter((e) => e.type !== "parashat");
+        const eventsHtml = nonParshaEvents.length
+          ? `<ul style="display:flex;flex-direction:column;gap:0.6rem;margin:0;padding:0;list-style:none;">${nonParshaEvents.map((eventItem) => `<li style="padding:0.8rem 0.9rem;border:1px solid rgba(59,130,246,0.14);border-radius:0.9rem;background:rgba(255,255,255,0.78);"><strong style="display:block;color:#0f172a;">${eventItem.name}</strong><span style="display:block;color:#475569;font-size:0.86rem;margin-top:0.25rem;">${eventItem.titleStr || eventItem.heb || ""}</span></li>`).join("")}</ul>`
           : `<p style="margin:0;color:#64748b;">אין אירועים מובנים ביום זה.</p>`;
 
         const modal = document.createElement("div");
@@ -5484,6 +5755,7 @@
               </div>
               <button type="button" onclick="closeCalendarDay()" style="width:2.35rem;height:2.35rem;border:none;border-radius:999px;background:rgba(15,23,42,0.06);color:#475569;font-size:1.1rem;cursor:pointer;">✕</button>
             </div>
+            ${shabbatHtml}
             <div style="margin-bottom:1rem;">
               <h4 style="margin:0 0 0.55rem;font-size:0.95rem;font-weight:800;color:#0f172a;">אירועי היום</h4>
               ${eventsHtml}
@@ -5499,6 +5771,8 @@
           if (event.target === modal) closeCalendarDay();
         });
         document.body.appendChild(modal);
+        lockBodyScroll();
+        pushModalState('calendar-day-modal');
         const textarea = document.getElementById("calendar-day-notes");
         if (textarea) textarea.focus();
       }
@@ -5509,6 +5783,7 @@
         c.innerHTML = "";
         const filtered = ALL_EVENTS.filter(
           (e) =>
+            e.type !== "parashat" &&
             (filter === "all" || e.type === filter) &&
             (e.name.includes(search) ||
               (e.titleStr && e.titleStr.includes(search))),
@@ -5632,6 +5907,8 @@
           m.classList.remove("opacity-0");
           m.querySelector("div").classList.remove("scale-95");
         }, 10);
+        lockBodyScroll();
+        pushModalState('calendar-modal');
       }
       function closeCalendar() {
         closeCalendarDay();
@@ -5641,6 +5918,11 @@
         setTimeout(() => {
           m.classList.add("hidden");
         }, 300);
+        unlockBodyScroll();
+        if (_activeModals[_activeModals.length - 1] === 'calendar-modal') {
+          _activeModals.pop();
+          history.back();
+        }
       }
 
       function changeMonth(offset) {
@@ -5699,7 +5981,13 @@
 
           const evs = ALL_EVENTS.filter((e) => e.date === dStr);
           let evHtml = "";
+          // Show parsha on Shabbat cells
+          const parshaEv = evs.find((e) => e.type === "parashat");
+          if (parshaEv) {
+            evHtml += `<div class="bg-amber-600 text-white text-[9px] md:text-xs px-1.5 py-0.5 rounded-md truncate shadow-sm w-full font-bold tracking-wide" title="${parshaEv.name}">📖 ${parshaEv.name.replace("Parashat ", "")}</div>`;
+          }
           evs.forEach((e) => {
+            if (e.type === "parashat") return; // already shown above
             const c =
               {
                 major: "bg-blue-500",
@@ -5710,6 +5998,11 @@
               }[e.type] || "bg-slate-500";
             evHtml += `<div class="${c} text-white text-[9px] md:text-xs px-1.5 py-0.5 rounded-md truncate shadow-sm w-full font-medium tracking-wide" title="${e.name}">${e.name.replace("קידוש לבנה - ", "")}</div>`;
           });
+          // Show note indicator if there's a saved note for this day
+          const dayNote = getDayNotes(dStr);
+          if (dayNote) {
+            evHtml += `<div class="bg-yellow-400 text-yellow-900 text-[9px] md:text-xs px-1.5 py-0.5 rounded-md truncate shadow-sm w-full font-bold tracking-wide" title="${dayNote.substring(0, 80)}">📝 הערה</div>`;
+          }
           const ariaLabel = `${formatLocalizedDate(cDate, { day: "2-digit", month: "long", year: "numeric" })}${hebrewDate ? ` | ${hebrewDate}` : ""}`;
 
           grid.innerHTML += `
@@ -6997,7 +7290,7 @@
 
         return {
           html: `<div class="prayer-richtext">${sections.map((section) => `
-            <section style="margin-bottom:1.25rem;padding:0.9rem 1rem;border:1px solid rgba(96,165,250,0.18);border-radius:1rem;background:rgba(15,23,42,0.22);">
+            <section style="margin-bottom:1.25rem;padding:0.9rem 1rem;border:1px solid rgba(96,165,250,0.18);border-radius:1rem;background:rgba(255,255,255,0.6);">
               <h3 style="margin-top:0;">${section.title}</h3>
               <p>${section.text}</p>
             </section>
@@ -7202,6 +7495,56 @@
         return payload;
       }
 
+      // --- Font Size Controls for Prayers/Modals ---
+      const FONT_SIZE_KEY = 'moadim_prayer_font_size';
+      let _prayerFontSize = parseInt(localStorage.getItem(FONT_SIZE_KEY) || '100', 10);
+
+      function createFontSizeBar(targetSelector) {
+        const bar = document.createElement('div');
+        bar.className = 'font-size-bar';
+        bar.style.cssText = 'position:sticky;bottom:0;left:0;right:0;display:flex;align-items:center;justify-content:center;gap:0.75rem;padding:0.6rem 1rem;background:rgba(250,249,246,0.95);backdrop-filter:blur(8px);border-top:1px solid rgba(0,0,0,0.08);z-index:10;flex-shrink:0;';
+        bar.innerHTML = `
+          <button onclick="changePrayerFontSize(-10, '${targetSelector}')" style="width:36px;height:36px;border-radius:50%;border:1px solid rgba(0,0,0,0.15);background:rgba(0,0,0,0.04);color:#334155;font-size:1.2rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;" aria-label="הקטן כתב">−</button>
+          <span class="font-size-label" style="font-size:0.78rem;font-weight:700;color:#64748b;min-width:3rem;text-align:center;">${_prayerFontSize}%</span>
+          <button onclick="changePrayerFontSize(10, '${targetSelector}')" style="width:36px;height:36px;border-radius:50%;border:1px solid rgba(0,0,0,0.15);background:rgba(0,0,0,0.04);color:#334155;font-size:1.2rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;" aria-label="הגדל כתב">+</button>
+        `;
+        return bar;
+      }
+
+      function changePrayerFontSize(delta, targetSelector) {
+        _prayerFontSize = Math.max(70, Math.min(180, _prayerFontSize + delta));
+        localStorage.setItem(FONT_SIZE_KEY, _prayerFontSize);
+        applyPrayerFontSize(targetSelector);
+        // Update label
+        document.querySelectorAll('.font-size-label').forEach(el => { el.textContent = _prayerFontSize + '%'; });
+      }
+
+      function applyPrayerFontSize(targetSelector) {
+        const targets = document.querySelectorAll(targetSelector);
+        targets.forEach(el => {
+          el.style.fontSize = (_prayerFontSize / 100) + 'em';
+        });
+      }
+
+      function closePrayerModal() {
+        const el = document.getElementById('prayer-modal');
+        if (el) el.remove();
+        unlockBodyScroll();
+        if (_activeModals[_activeModals.length - 1] === 'prayer-modal') {
+          _activeModals.pop();
+          history.back();
+        }
+      }
+      function closeTehillimModal() {
+        const el = document.getElementById('tehillim-modal');
+        if (el) el.remove();
+        unlockBodyScroll();
+        if (_activeModals[_activeModals.length - 1] === 'tehillim-modal') {
+          _activeModals.pop();
+          history.back();
+        }
+      }
+
       function renderPrayerModalShell(title, isPopup) {
         let existing = document.getElementById("prayer-modal");
         if (existing) existing.remove();
@@ -7213,15 +7556,15 @@
             <div class="modal-inner" style="background:#faf9f6;border:1px solid rgba(0,0,0,0.1);border-radius:2rem;padding:1.5rem;width:100%;max-width:760px;max-height:min(88vh,980px);margin:auto;box-shadow:0 25px 60px rgba(0,0,0,0.2);text-align:right;direction:rtl;display:flex;flex-direction:column;overflow:hidden;">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
                 <h3 class="modal-title" style="color:#000000;font-size:1.4rem;font-weight:900;margin:0;">${title}</h3>
-                <button class="modal-close" onclick="document.getElementById('prayer-modal').remove()" style="background:rgba(0,0,0,0.06);border:none;color:#64748b;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.2rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✕</button>
+                <button class="modal-close" onclick="closePrayerModal()" style="background:rgba(0,0,0,0.06);border:none;color:#64748b;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.2rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✕</button>
               </div>
               <div id="prayer-modal-meta" style="color:#64748b;font-size:0.75rem;margin-bottom:1rem;">טוען נוסח מלא…</div>
-              <div id="prayer-modal-body" style="background:rgba(0,0,0,0.02);border-radius:1rem;padding:1rem;min-height:240px;flex:1;overflow:hidden;display:flex;flex-direction:column;">
+              <div id="prayer-modal-body" class="prayer-modal-body-mobile" style="background:rgba(0,0,0,0.02);border-radius:1rem;min-height:240px;flex:1;overflow:hidden;display:flex;flex-direction:column;">
                 <div style="text-align:center;padding:2rem;color:#94a3b8;">טוען טקסט מלא ממקור זמין…</div>
               </div>
             </div>`;
           modal.addEventListener("click", (event) => {
-            if (event.target === modal) modal.remove();
+            if (event.target === modal) closePrayerModal();
           });
         } else {
           modal.style.cssText = "position:fixed;inset:0;z-index:200;display:flex;flex-direction:column;overflow:hidden;background:#faf9f6;";
@@ -7231,20 +7574,27 @@
                 <h2 style="color:#1a1a1a;font-size:1.3rem;font-weight:900;margin:0;">${title}</h2>
                 <div id="prayer-modal-meta" style="color:#64748b;font-size:0.75rem;margin-top:0.15rem;">טוען נוסח מלא…</div>
               </div>
-              <button onclick="document.getElementById('prayer-modal').remove()" style="background:rgba(0,0,0,0.06);border:none;color:#64748b;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.1rem;flex-shrink:0;">✕</button>
+              <button onclick="closePrayerModal()" style="background:rgba(0,0,0,0.06);border:none;color:#64748b;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.1rem;flex-shrink:0;">✕</button>
             </div>
-            <div id="prayer-modal-body" style="flex:1;overflow-y:auto;padding:1.25rem;background:#faf9f6;text-align:right;direction:rtl;">
+            <div id="prayer-modal-body" class="prayer-modal-body-mobile" style="flex:1;overflow-y:auto;background:#faf9f6;text-align:right;direction:rtl;">
               <div style="text-align:center;padding:2rem;color:#94a3b8;">טוען טקסט מלא ממקור זמין…</div>
             </div>`;
         }
         document.body.appendChild(modal);
+        // Add font size bar to full-screen modals
+        if (!isPopup) {
+          modal.appendChild(createFontSizeBar('.holy-text-style'));
+          applyPrayerFontSize('.holy-text-style');
+        }
         return modal;
       }
 
       openPrayer = async function(key, heLabel, enLabel) {
         const entry = PRAYER_DB[key] || { title: heLabel || enLabel || key };
-        const isPopup = (key === 'tefillat-haderech' || key === 'al-hamichya');
+        const isPopup = false;
         renderPrayerModalShell(entry.title || heLabel || enLabel || key, isPopup);
+        lockBodyScroll();
+        pushModalState('prayer-modal');
         try {
           const content = await getFullPrayerContent(key);
           const meta = document.getElementById("prayer-modal-meta");
@@ -7271,7 +7621,7 @@
             } else {
               body.innerHTML = `
                 <div class="holy-text-style" style="direction:rtl;text-align:right;">
-                  ${content.seasonalHtml ? '<div style="background:rgba(234,179,8,0.08);border:1px solid rgba(234,179,8,0.2);border-radius:0.75rem;padding:0.85rem 1rem;margin-bottom:1.25rem;font-size:0.85rem;color:#92400e;line-height:1.7;">' + content.seasonalHtml + '</div>' : ''}
+                  ${content.seasonalHtml ? '<div style="background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.18);border-radius:0.75rem;padding:0.7rem 0.85rem;margin-bottom:1.25rem;font-size:0.82em;color:#1e40af;line-height:1.65;border-right:3px solid rgba(37,99,235,0.4);">' + content.seasonalHtml + '</div>' : ''}
                   ${content.html}
                 </div>
                 <div style="border-top:1px solid rgba(0,0,0,0.08);margin-top:1.5rem;padding-top:0.75rem;color:#94a3b8;font-size:0.72rem;text-align:center;">
@@ -7338,7 +7688,7 @@
                 <h2 style="color:#000000;font-size:1.3rem;font-weight:900;margin:0;">ספר תהילים</h2>
                 <p style="color:#1d4ed8;font-size:0.82rem;font-weight:700;margin:0.15rem 0 0;">יום ${plan.day} · פרקים ${rangeLabel}</p>
               </div>
-              <button onclick="document.getElementById('tehillim-modal').remove()" style="background:rgba(0,0,0,0.06);border:none;color:#64748b;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.1rem;">✕</button>
+              <button onclick="closeTehillimModal()" style="background:rgba(0,0,0,0.06);border:none;color:#64748b;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.1rem;">✕</button>
             </div>
             <div style="display:flex;gap:0.4rem;padding:0.75rem 1.25rem;overflow-x:auto;flex-shrink:0;background:#faf9f6;">
               ${dayPlans.map((item, itemIndex) => {
@@ -7445,6 +7795,8 @@
 
         renderDay(activeIndex);
         document.body.appendChild(modal);
+        lockBodyScroll();
+        pushModalState('tehillim-modal');
       };
 
       // Patch render() to trigger animations after render

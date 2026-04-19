@@ -138,35 +138,109 @@
       <div
         class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-2xl rounded-[2rem] p-6 md:p-10 space-y-6"
       >
+        <!-- פיתוח האתר -->
         <section class="rounded-3xl bg-slate-50 dark:bg-slate-900/60 p-6">
           <h2 class="text-2xl font-black text-slate-900 dark:text-white">
             פיתוח האתר
           </h2>
           <p class="mt-3 leading-8 text-slate-700 dark:text-slate-300">
-            האתר, מבנה הממשק, התאמות התצוגה, סידור ה־RTL, חוויית המשתמש,
+            האתר, מבנה הממשק, התאמות התצוגה, סידור ה-RTL, חוויית המשתמש,
             החיבורים הטכניים והטמעת הפונקציונליות פותחו עבור פרויקט
-            <strong>"הלוח היהודי"</strong>. הקוד, השילוב בין הרכיבים וההתאמות
-            הייעודיות בוצעו כחלק מהקמת האתר והפעלתו.
+            <strong>"הלוח היהודי"</strong> על ידי <strong>NZ-web</strong>. הקוד,
+            השילוב בין הרכיבים וההתאמות הייעודיות בוצעו כחלק מהקמת האתר והפעלתו.
+            כל הזכויות בעיצוב, במבנה ובקוד המקורי של האתר שמורות ל-NZ-web.
           </p>
         </section>
 
+        <!-- מקורות נתונים -->
         <section class="rounded-3xl bg-slate-50 dark:bg-slate-900/60 p-6">
           <h2 class="text-2xl font-black text-slate-900 dark:text-white">
             מקורות נתונים
           </h2>
-          <p class="mt-3 leading-8 text-slate-700 dark:text-slate-300">
-            האתר עשוי להציג מידע הקשור ללוח השנה העברי, תאריכים, מועדים, זמנים,
-            שבתות, אירועים ונתונים דומים באמצעות מקורות מידע חיצוניים ושירותי צד
-            שלישי. ככל שהאתר מסתמך על שירותים כאלה, הזכויות במידע, בשירות,
-            בממשקי ה־API ובתשתיות המקור שייכות לבעליהם, והשימוש בהם כפוף לתנאי
-            השימוש של אותם גורמים.
-          </p>
-          <p class="mt-3 leading-8 text-slate-700 dark:text-slate-300">
-            על בסיס קוד האתר, ייתכן שנעשה שימוש בשירותים כגון
-            <strong>Hebcal</strong> או במקורות דומים לצורך הצגת נתונים ועדכונים.
-          </p>
+
+          <div class="mt-4 space-y-4">
+            <div
+              class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5"
+            >
+              <h3 class="text-lg font-bold text-slate-900 dark:text-white">
+                Hebcal
+              </h3>
+              <p class="mt-2 leading-7 text-slate-700 dark:text-slate-300">
+                האתר מסתמך על שירות
+                <a
+                  href="https://www.hebcal.com/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="text-blue-600 dark:text-blue-400 hover:underline"
+                  >Hebcal</a
+                >
+                לצורך קבלת נתוני לוח שנה עברי, המרת תאריכים (לועזי-עברי), מועדי
+                חגים ושבתות, זמני הדלקת נרות, פרשת השבוע, דף יומי ונתונים נוספים
+                הקשורים ללוח העברי. הנתונים מתקבלים באמצעות ממשקי ה-API של
+                Hebcal. כל הזכויות בשירות, בנתונים ובממשקי ה-API שייכות ל-Hebcal
+                ולבעליו. השימוש כפוף לתנאי השימוש של Hebcal.
+              </p>
+            </div>
+
+            <div
+              class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5"
+            >
+              <h3 class="text-lg font-bold text-slate-900 dark:text-white">
+                KosherZmanim (KosherJava)
+              </h3>
+              <p class="mt-2 leading-7 text-slate-700 dark:text-slate-300">
+                האתר משתמש בספריית
+                <a
+                  href="https://github.com/BehindTheMath/KosherZmanim"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="text-blue-600 dark:text-blue-400 hover:underline"
+                  >KosherZmanim</a
+                >
+                (גרסת JavaScript של KosherJava) לחישוב זמנים הלכתיים מדויקים
+                (זריחה, שקיעה, זמני תפילה, צאת הכוכבים ועוד) על בסיס מיקום
+                גיאוגרפי. הספרייה מבוססת על הפרויקט
+                <a
+                  href="https://kosherjava.com/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="text-blue-600 dark:text-blue-400 hover:underline"
+                  >KosherJava</a
+                >
+                מאת Eliyahu Hershfeld. הספרייה נטענת באמצעות
+                <a
+                  href="https://www.jsdelivr.com/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="text-blue-600 dark:text-blue-400 hover:underline"
+                  >jsDelivr CDN</a
+                >. כל הזכויות בספרייה שייכות ליוצריה בהתאם לרישיון הקוד הפתוח
+                שלה (LGPL 2.1).
+              </p>
+            </div>
+
+            <div
+              class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5"
+            >
+              <h3 class="text-lg font-bold text-slate-900 dark:text-white">
+                GeoNames
+              </h3>
+              <p class="mt-2 leading-7 text-slate-700 dark:text-slate-300">
+                מזהי הערים (geonameid) המשמשים לבחירת מיקום וחישוב זמנים מבוססים
+                על מאגר הנתונים של
+                <a
+                  href="https://www.geonames.org/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="text-blue-600 dark:text-blue-400 hover:underline"
+                  >GeoNames</a
+                >. כל הזכויות במאגר שייכות ל-GeoNames ולבעליו.
+              </p>
+            </div>
+          </div>
         </section>
 
+        <!-- עיצוב ונכסים גרפיים -->
         <section class="rounded-3xl bg-slate-50 dark:bg-slate-900/60 p-6">
           <h2 class="text-2xl font-black text-slate-900 dark:text-white">
             עיצוב, אייקונים ונכסים גרפיים
@@ -180,37 +254,147 @@
           </p>
         </section>
 
+        <!-- תמונת שיתוף -->
         <section class="rounded-3xl bg-slate-50 dark:bg-slate-900/60 p-6">
           <h2 class="text-2xl font-black text-slate-900 dark:text-white">
             תמונת שיתוף ומיתוג
           </h2>
           <p class="mt-3 leading-8 text-slate-700 dark:text-slate-300">
-            תמונת השיתוף, האייקונים וקובצי הייצוג של האתר משמשים להצגת
-            <strong>"הלוח היהודי"</strong> בדפדפנים, ברשתות חברתיות, במסכי
-            שיתוף, בקיצורי דרך ובממשקי התקנה. ככל שמשולבים בהם רכיבים שמקורם
-            בשירותים, פונטים, כלים או תשתיות צד שלישי, הזכויות באותם רכיבים
-            נשמרות לבעליהן ובהתאם לתנאים החלים עליהם.
+            תמונת השיתוף (Open Graph), האייקונים וקובצי הייצוג של האתר משמשים
+            להצגת <strong>"הלוח היהודי"</strong> בדפדפנים, ברשתות חברתיות, במסכי
+            שיתוף, בקיצורי דרך ובממשקי התקנה (PWA). ככל שמשולבים בהם רכיבים
+            שמקורם בשירותים, פונטים, כלים או תשתיות צד שלישי, הזכויות באותם
+            רכיבים נשמרות לבעליהן ובהתאם לתנאים החלים עליהם.
           </p>
         </section>
 
+        <!-- טכנולוגיות -->
         <section class="rounded-3xl bg-slate-50 dark:bg-slate-900/60 p-6">
           <h2 class="text-2xl font-black text-slate-900 dark:text-white">
             טכנולוגיות ושירותים
           </h2>
           <p class="mt-3 leading-8 text-slate-700 dark:text-slate-300">
-            האתר עושה שימוש בטכנולוגיות Web ובשירותים מקובלים לצורך תצוגה,
-            עיצוב, טעינה, התקנה, נגישות, ביצועים והצגת מידע. בין היתר, ייתכן
-            שנעשה שימוש ב־<strong>Tailwind CSS</strong>,
-            <strong>Google Fonts</strong>, יכולות דפדפן מובנות כגון
-            <strong>Service Worker</strong>, <strong>Geolocation</strong> ו־
-            <strong>Intl</strong>, וכן בשירותי צד שלישי נוספים לפי צורכי האתר.
+            האתר עושה שימוש בטכנולוגיות Web ובשירותים מקובלים. להלן פירוט
+            הטכנולוגיות העיקריות:
           </p>
+
+          <div class="mt-4 space-y-4">
+            <div
+              class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5"
+            >
+              <h3 class="text-lg font-bold text-slate-900 dark:text-white">
+                Tailwind CSS
+              </h3>
+              <p class="mt-2 leading-7 text-slate-700 dark:text-slate-300">
+                מסגרת עיצוב (CSS framework) המשמשת לעיצוב הממשק והתאמתו לגדלי
+                מסך שונים. נטענת באמצעות CDN. פותחה על ידי
+                <a
+                  href="https://tailwindcss.com/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="text-blue-600 dark:text-blue-400 hover:underline"
+                  >Tailwind Labs</a
+                >
+                תחת רישיון MIT.
+              </p>
+            </div>
+
+            <div
+              class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5"
+            >
+              <h3 class="text-lg font-bold text-slate-900 dark:text-white">
+                Google Fonts
+              </h3>
+              <p class="mt-2 leading-7 text-slate-700 dark:text-slate-300">
+                האתר משתמש בגופנים
+                <strong>Assistant</strong> ו-<strong>Frank Ruhl Libre</strong>
+                מהשירות
+                <a
+                  href="https://fonts.google.com/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="text-blue-600 dark:text-blue-400 hover:underline"
+                  >Google Fonts</a
+                >. גופן Assistant פותח על ידי Ben Nathan ומורשה תחת רישיון SIL
+                Open Font License 1.1. גופן Frank Ruhl Libre פותח על ידי Yanek
+                Iontef ומורשה תחת אותו רישיון.
+              </p>
+            </div>
+
+            <div
+              class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5"
+            >
+              <h3 class="text-lg font-bold text-slate-900 dark:text-white">
+                Service Worker (PWA)
+              </h3>
+              <p class="mt-2 leading-7 text-slate-700 dark:text-slate-300">
+                האתר משתמש בטכנולוגיית Service Worker לתמיכה בהתקנה כאפליקציית
+                PWA (Progressive Web App), שמירת נכסים במטמון ואפשרות שימוש לא
+                מקוון. זוהי יכולת מובנית של הדפדפן ואינה דורשת ספרייה חיצונית.
+              </p>
+            </div>
+
+            <div
+              class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5"
+            >
+              <h3 class="text-lg font-bold text-slate-900 dark:text-white">
+                Geolocation API
+              </h3>
+              <p class="mt-2 leading-7 text-slate-700 dark:text-slate-300">
+                ממשק דפדפן מובנה המאפשר קבלת מיקום גיאוגרפי (בכפוף לאישור
+                המשתמש) לצורך חישוב זמנים מדויקים עבור מיקום המשתמש.
+              </p>
+            </div>
+
+            <div
+              class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5"
+            >
+              <h3 class="text-lg font-bold text-slate-900 dark:text-white">
+                Intl API
+              </h3>
+              <p class="mt-2 leading-7 text-slate-700 dark:text-slate-300">
+                ממשק דפדפן מובנה לפורמוט תאריכים, מספרים וטקסט בהתאם לאזור
+                ולשפה, המשמש להצגת תאריכים בפורמטים מותאמים לעברית ולשפות
+                נוספות.
+              </p>
+            </div>
+
+            <div
+              class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5"
+            >
+              <h3 class="text-lg font-bold text-slate-900 dark:text-white">
+                Netlify
+              </h3>
+              <p class="mt-2 leading-7 text-slate-700 dark:text-slate-300">
+                האתר מתארח על פלטפורמת
+                <a
+                  href="https://www.netlify.com/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="text-blue-600 dark:text-blue-400 hover:underline"
+                  >Netlify</a
+                >, המספקת אירוח, CDN, HTTPS ותשתית פריסה. כל הזכויות בשירות
+                שייכות ל-Netlify, Inc.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <!-- פורמט ICS -->
+        <section class="rounded-3xl bg-slate-50 dark:bg-slate-900/60 p-6">
+          <h2 class="text-2xl font-black text-slate-900 dark:text-white">
+            ייצוא ליומן (ICS)
+          </h2>
           <p class="mt-3 leading-8 text-slate-700 dark:text-slate-300">
-            כל ספרייה, מסגרת עבודה, שירות, API, סימן מסחר, לוגו, שם מסחרי או
-            רכיב קנייני של צד שלישי שייכים לבעליהם בלבד.
+            האתר מאפשר ייצוא אירועים בפורמט ICS (iCalendar) התואם ליומנים
+            דיגיטליים כגון Google Calendar, Apple Calendar ו-Outlook. פורמט ICS
+            הוא תקן פתוח (RFC 5545) ואינו שייך לגוף מסחרי כלשהו. שמות המוצרים
+            Google Calendar, Apple Calendar ו-Microsoft Outlook הם סימנים
+            מסחריים של Google LLC, Apple Inc. ו-Microsoft Corporation בהתאמה.
           </p>
         </section>
 
+        <!-- הבהרה כללית -->
         <section class="rounded-3xl bg-slate-50 dark:bg-slate-900/60 p-6">
           <h2 class="text-2xl font-black text-slate-900 dark:text-white">
             הבהרה כללית
@@ -218,12 +402,24 @@
           <p class="mt-3 leading-8 text-slate-700 dark:text-slate-300">
             עמוד זה נועד לספק שקיפות כללית לגבי מקורות, רכיבים ושימושים באתר,
             ואינו מהווה ייעוץ משפטי. מטרת העמוד היא להבהיר בצורה מסודרת אילו
-            חלקים באתר פותחו עבור הפרויקט, ואילו רכיבים, שירותים או מקורות
-            עשויים להיות שייכים לצדדים שלישיים.
+            חלקים באתר פותחו עבור הפרויקט על ידי NZ-web, ואילו רכיבים, שירותים
+            או מקורות עשויים להיות שייכים לצדדים שלישיים.
+          </p>
+          <p class="mt-3 leading-8 text-slate-700 dark:text-slate-300">
+            כל ספרייה, מסגרת עבודה, שירות, API, סימן מסחר, לוגו, שם מסחרי או
+            רכיב קנייני של צד שלישי שייכים לבעליהם בלבד. השימוש בשמות מסחריים
+            באתר נעשה לצורכי זיהוי בלבד ואינו מעיד על חסות או שיוך.
           </p>
           <p class="mt-3 leading-8 text-slate-700 dark:text-slate-300">
             ככל שנדרש עדכון, תיקון, הבהרה נוספת או הוספת ייחוס מתאים, ניתן לפנות
-            לבעל האתר לצורך בדיקה ועדכון בהתאם.
+            לבעל האתר בכתובת
+            <a
+              href="mailto:nzweb295@gmail.com
+"
+              class="text-blue-600 dark:text-blue-400 hover:underline"
+              >nzweb295@gmail.com
+            </a>
+            לצורך בדיקה ועדכון בהתאם.
           </p>
         </section>
       </div>

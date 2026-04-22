@@ -642,89 +642,23 @@
         direction: ltr;
       }
 
-      /* ── Blue (Sea) Theme – Modal Overrides ── */
-      .theme-blue #sefaria-modal,
-      .theme-blue #omer-modal,
-      .theme-blue #compass-modal,
-      .theme-blue #settings-modal,
-      .theme-blue #calendar-modal {
-        background: rgba(7, 89, 133, 0.88);
+      /* ── Blue (Sea) Theme – Search Bar Fix ── */
+      .theme-blue nav[aria-label="סינון וחיפוש"] {
+        background: #ffffff !important;
+        border-color: #e2e8f0 !important;
       }
-      .theme-blue #sefaria-modal > div,
-      .theme-blue #omer-modal > div,
-      .theme-blue #compass-modal > div,
-      .theme-blue #settings-modal > div,
-      .theme-blue #calendar-modal > div {
-        background: linear-gradient(135deg, #0c4a6e 0%, #0e7490 100%);
-        box-shadow: 0 0 60px rgba(14, 116, 144, 0.45);
-        color: #e0f2fe;
-      }
-      .theme-blue #sefaria-modal .bg-slate-50,
-      .theme-blue #sefaria-modal [class*="dark:bg-slate-900"] {
-        background: rgba(8, 47, 73, 0.7) !important;
-      }
-      .theme-blue #sefaria-modal .border-slate-100,
-      .theme-blue #omer-modal .border-slate-100 {
-        border-color: rgba(56, 189, 248, 0.2) !important;
-      }
-      .theme-blue #sefaria-modal-title,
-      .theme-blue #omer-modal h2,
-      .theme-blue #omer-modal h3 {
-        color: #e0f2fe !important;
-      }
-      .theme-blue #sefaria-modal-content {
-        color: #bae6fd !important;
-      }
-      .theme-blue #sefaria-modal-content p {
-        color: #bae6fd;
-      }
-      .theme-blue #omer-modal p,
-      .theme-blue #omer-modal span {
-        color: #bae6fd;
-      }
-      .theme-blue #sefaria-modal button,
-      .theme-blue #omer-modal button,
-      .theme-blue #compass-modal button,
-      .theme-blue #settings-modal button,
-      .theme-blue #calendar-modal button {
-        background: rgba(14, 116, 144, 0.5) !important;
-        color: #e0f2fe !important;
-      }
-      .theme-blue #sefaria-modal button:hover,
-      .theme-blue #omer-modal button:hover,
-      .theme-blue #compass-modal button:hover {
-        color: #fff !important;
-      }
-      .theme-blue #sefaria-modal a,
-      .theme-blue #omer-modal a {
-        color: #38bdf8 !important;
-      }
-      .theme-blue #sefaria-modal a:hover,
-      .theme-blue #omer-modal a:hover {
-        color: #7dd3fc !important;
-      }
-      .theme-blue .bg-white.dark\:bg-slate-800 {
-        background: linear-gradient(135deg, #0c4a6e 0%, #0e7490 100%);
-      }
-      .theme-blue .text-slate-800.dark\:text-white {
-        color: #e0f2fe;
-      }
-      .theme-blue .text-slate-700.dark\:text-slate-300 {
-        color: #bae6fd;
-      }
-      .theme-blue .bg-slate-100.dark\:bg-slate-700 {
-        background: rgba(14, 116, 144, 0.5);
-      }
-      .theme-blue .text-slate-400.dark\:hover\:text-white:hover {
-        color: #fff;
-      }
-
-      /* ── Search Bar Enhancement ── */
-      #mainSearch {
+      .theme-blue #mainSearch {
+        background: #f1f5f9;
+        color: #1e293b;
+        border-color: #cbd5e1;
         transition: all 0.3s ease;
       }
-      #mainSearch:focus {
-        box-shadow: 0 0 0 3px rgba(59,130,246,0.15), 0 4px 20px rgba(59,130,246,0.08);
+      .theme-blue #mainSearch::placeholder {
+        color: #94a3b8;
+      }
+      .theme-blue #mainSearch:focus {
+        border-color: #38bdf8;
+        box-shadow: 0 0 0 3px rgba(56,189,248,0.25), 0 4px 15px rgba(56,189,248,0.1);
       }
 
       /* ── Zmanim Card Hover ── */
@@ -1803,8 +1737,8 @@
             <p
               class="text-slate-600 dark:text-slate-300 text-xs md:text-sm leading-relaxed mb-4"
             >
-              הָרַחֲמָן הוּא יַחֲזִיר לָנוּ עֲבוֹדַת בֵּית הַמִּקְדָּשׁ
-              לִמְקוֹמָהּ, בִּמְהֵרָה בְיָמֵינוּ אָמֵן סֶלָה.
+              הָרַחֲמָן הוּא יַחֲזִיר עֲבוֹדַת בֵּית הַמִּקְדָּשׁ
+              לִמְקוֹמָהּ, בִּמְהֵרָה בְיָמֵינוּ אָמֵן .
             </p>
             <p
               class="text-slate-600 dark:text-slate-300 text-xs md:text-sm leading-relaxed mb-4"
@@ -3519,6 +3453,7 @@
               "<p class='text-center text-rose-500 font-bold mt-10'>לא נמצא טקסט עבור מועד זה במאגר הפתוח.</p>";
           }
           document.getElementById("sefaria-modal-content").innerHTML = textHtml;
+          applyPrayerFontSize('#sefaria-modal-content');
         } catch (e) {
           document.getElementById("sefaria-modal-content").innerHTML =
             "<p class='text-center text-rose-500 font-bold mt-10'>שגיאה בטעינת הטקסט. אנא בדוק חיבור לאינטרנט.</p>";
@@ -3527,7 +3462,7 @@
 
       /* ── שניים מקרא ואחד תרגום – modal with Torah + Onkelos ── */
       // Shnayim Mikra state
-      let _shmikraData = { torahVerses: [], onkelosVerses: [], rashiVerses: [], parshaName: "" };
+      let _shmikraData = { torahVerses: [], onkelosVerses: [], rashiVerses: [], parshaName: "", torahRef: "" };
       const SHMIKRA_DOUBLE_KEY = "moadim_shmikra_double";
       const SHMIKRA_RASHI_KEY = "moadim_shmikra_rashi";
 
@@ -3551,42 +3486,102 @@
 
       async function fetchRashiForShmikra(parshaName) {
         try {
-          const rashiData = await fetchHebcalWithCache(
-            `https://www.sefaria.org/api/texts/Rashi_on_Parashat_${parshaName}?context=0`
-          );
+          // Use the stored Torah ref to construct proper Rashi URL
+          const torahRef = _shmikraData.torahRef;
+          let rashiData = null;
+
+          if (torahRef) {
+            // Try using the Torah reference directly: "Rashi on Genesis 1:1-6:8"
+            const rashiRef = `Rashi on ${torahRef}`.replace(/ /g, '_');
+            rashiData = await fetchHebcalWithCache(
+              `https://www.sefaria.org/api/texts/${encodeURIComponent(rashiRef.replace(/_/g, ' '))}?context=0`
+            );
+          }
+
+          // Fallback: try parsha name format
+          if (!rashiData || !rashiData.he) {
+            rashiData = await fetchHebcalWithCache(
+              `https://www.sefaria.org/api/texts/Rashi_on_Parashat_${parshaName}?context=0`
+            );
+          }
+
           if (rashiData && rashiData.he) {
-            // Rashi data can be nested: [chapter][verse][comment] or [verse][comment]
-            // We need to flatten to match the flat Torah verse array
+            // Rashi data structure: deeply nested arrays
+            // [chapter][verse][comment] where comments are strings or arrays of strings
+            // We need to flatten to one entry per Torah verse
             const rashiPerVerse = [];
-            const processLevel = (arr) => {
-              if (!Array.isArray(arr)) return;
-              // Check if this is a leaf level (array of strings = comments for one verse)
-              if (arr.length > 0 && typeof arr[0] === 'string') {
-                rashiPerVerse.push(arr);
-                return;
+
+            const processItem = (item) => {
+              if (typeof item === 'string') {
+                return [item];
               }
-              // Check if this is verse level (array of arrays of strings)
-              if (arr.length > 0 && Array.isArray(arr[0])) {
-                // Could be [verse][comment] or [chapter][verse][comment]
-                const firstInner = arr[0];
-                if (firstInner.length > 0 && typeof firstInner[0] === 'string') {
-                  // This is [verse][comments] level
-                  arr.forEach(verse => {
-                    if (Array.isArray(verse)) {
-                      rashiPerVerse.push(verse.flat(Infinity).filter(x => typeof x === 'string'));
-                    } else if (typeof verse === 'string') {
-                      rashiPerVerse.push([verse]);
-                    } else {
-                      rashiPerVerse.push([]);
-                    }
-                  });
-                } else {
-                  // Deeper nesting - recurse into each chapter
-                  arr.forEach(chapter => processLevel(chapter));
+              if (Array.isArray(item)) {
+                // Check if all elements are strings = this is one verse's comments
+                if (item.length > 0 && item.every(x => typeof x === 'string')) {
+                  return item;
                 }
+                // Check if this is an array of arrays (verse level or chapter level)
+                if (item.length > 0 && Array.isArray(item[0])) {
+                  // Check depth: is item[0][0] a string? Then item = [verse_comments, verse_comments, ...]
+                  if (item[0].length > 0 && typeof item[0][0] === 'string') {
+                    // Each sub-array is one verse's comments
+                    item.forEach(verseComments => {
+                      if (Array.isArray(verseComments)) {
+                        rashiPerVerse.push(verseComments.flat(Infinity).filter(x => typeof x === 'string'));
+                      } else if (typeof verseComments === 'string') {
+                        rashiPerVerse.push([verseComments]);
+                      } else {
+                        rashiPerVerse.push([]);
+                      }
+                    });
+                    return null; // already pushed
+                  }
+                  // Deeper nesting - recurse into each chapter
+                  item.forEach(chapter => processItem(chapter));
+                  return null;
+                }
+                // Mixed array - flatten strings
+                const strings = item.flat(Infinity).filter(x => typeof x === 'string');
+                if (strings.length > 0) return strings;
+                return [];
               }
+              return [];
             };
-            processLevel(rashiData.he);
+
+            const heData = rashiData.he;
+            if (Array.isArray(heData)) {
+              // Check if top level is chapters (array of arrays of arrays)
+              if (heData.length > 0 && Array.isArray(heData[0]) && heData[0].length > 0 && Array.isArray(heData[0][0])) {
+                // Structure: [chapter][verse][comments]
+                heData.forEach(chapter => {
+                  if (Array.isArray(chapter)) {
+                    chapter.forEach(verse => {
+                      if (Array.isArray(verse)) {
+                        rashiPerVerse.push(verse.flat(Infinity).filter(x => typeof x === 'string'));
+                      } else if (typeof verse === 'string') {
+                        rashiPerVerse.push([verse]);
+                      } else {
+                        rashiPerVerse.push([]);
+                      }
+                    });
+                  }
+                });
+              } else if (heData.length > 0 && Array.isArray(heData[0])) {
+                // Structure: [verse][comments]
+                heData.forEach(verse => {
+                  if (Array.isArray(verse)) {
+                    rashiPerVerse.push(verse.flat(Infinity).filter(x => typeof x === 'string'));
+                  } else if (typeof verse === 'string') {
+                    rashiPerVerse.push([verse]);
+                  } else {
+                    rashiPerVerse.push([]);
+                  }
+                });
+              } else {
+                // Flat array of strings
+                rashiPerVerse.push(heData.filter(x => typeof x === 'string'));
+              }
+            }
             _shmikraData.rashiVerses = rashiPerVerse;
           }
           renderShmikraContent();
@@ -3604,13 +3599,13 @@
 
         let textHtml = "";
         // Toggle bar moved to bottom (inside sefaria-font-bar area)
-        const toggleBarHtml = `<div id="shmikra-toggles" style="display:flex;flex-wrap:wrap;gap:0.75rem;align-items:center;justify-content:center;">
-          <label style="display:flex;align-items:center;gap:0.4rem;cursor:pointer;font-size:0.78rem;font-weight:700;color:#1e40af;user-select:none;">
-            <input type="checkbox" onchange="toggleShmikraDouble()" ${showDouble ? "checked" : ""} style="width:1rem;height:1rem;accent-color:#2563eb;cursor:pointer;">
+        const toggleBarHtml = `<div id="shmikra-toggles" style="display:flex;flex-wrap:nowrap;gap:0.5rem;align-items:center;">
+          <label style="display:flex;align-items:center;gap:0.25rem;cursor:pointer;font-size:0.7rem;font-weight:700;color:#1e40af;user-select:none;white-space:nowrap;">
+            <input type="checkbox" onchange="toggleShmikraDouble()" ${showDouble ? "checked" : ""} style="width:0.9rem;height:0.9rem;accent-color:#2563eb;cursor:pointer;">
             פסוק פעמיים
           </label>
-          <label style="display:flex;align-items:center;gap:0.4rem;cursor:pointer;font-size:0.78rem;font-weight:700;color:#7c3aed;user-select:none;">
-            <input type="checkbox" onchange="toggleShmikraRashi()" ${showRashi ? "checked" : ""} style="width:1rem;height:1rem;accent-color:#7c3aed;cursor:pointer;">
+          <label style="display:flex;align-items:center;gap:0.25rem;cursor:pointer;font-size:0.7rem;font-weight:700;color:#7c3aed;user-select:none;white-space:nowrap;">
+            <input type="checkbox" onchange="toggleShmikraRashi()" ${showRashi ? "checked" : ""} style="width:0.9rem;height:0.9rem;accent-color:#7c3aed;cursor:pointer;">
             פירוש רש״י
           </label>
         </div>`;
@@ -3620,8 +3615,10 @@
           let existingToggles = document.getElementById("shmikra-toggles");
           if (existingToggles) existingToggles.remove();
           fontBar.insertAdjacentHTML('afterbegin', toggleBarHtml);
-          fontBar.style.flexWrap = 'wrap';
-          fontBar.style.gap = '0.5rem 1.5rem';
+          fontBar.style.flexWrap = 'nowrap';
+          fontBar.style.gap = '0.5rem';
+          fontBar.style.justifyContent = 'center';
+          fontBar.style.alignItems = 'center';
         }
 
         if (torahVerses.length > 0) {
@@ -3630,26 +3627,26 @@
             const torahText = torahVerses[i] || "";
             const onkelosText = onkelosVerses[i] || "";
 
-            textHtml += `<div class="shmikra-verse" style="margin-bottom:1.2rem;padding:0.8rem;border-radius:0.5rem;border:1px solid rgba(0,0,0,0.06);background:rgba(0,0,0,0.02);">`;
-            textHtml += `<div style="font-size:0.7rem;color:#2563eb;margin-bottom:0.3rem;font-weight:bold;">פסוק ${verseNum}</div>`;
+            textHtml += `<div class="shmikra-verse" style="margin-bottom:1.2em;padding:0.8em;border-radius:0.5em;border:1px solid rgba(0,0,0,0.06);background:rgba(0,0,0,0.02);">`;
+            textHtml += `<div style="font-size:0.7em;color:#2563eb;margin-bottom:0.3em;font-weight:bold;">פסוק ${verseNum}</div>`;
             // Torah text - first reading
-            textHtml += `<p style="line-height:1.9;margin:0 0 0.4rem 0;color:#1a1a1a;font-size:1.2rem;">${torahText}</p>`;
+            textHtml += `<p style="line-height:1.9;margin:0 0 0.4em 0;color:#1a1a1a;font-size:1.2em;">${torahText}</p>`;
             // Torah text - second reading (shnayim mikra)
             if (showDouble) {
-              textHtml += `<p style="line-height:1.9;margin:0 0 0.4rem 0;color:#374151;font-size:1.2rem;opacity:0.75;">${torahText}</p>`;
+              textHtml += `<p style="line-height:1.9;margin:0 0 0.4em 0;color:#374151;font-size:1.2em;opacity:0.75;">${torahText}</p>`;
             }
             // Targum Onkelos
             if (onkelosText) {
-              textHtml += `<p style="line-height:1.9;margin:0;color:#92400e;font-size:1.1rem;padding-right:0.5rem;border-right:3px solid rgba(146,64,14,0.3);">
-                <span style="font-size:0.7rem;color:#b45309;font-weight:bold;">תרגום אונקלוס: </span>${onkelosText}
+              textHtml += `<p style="line-height:1.9;margin:0;color:#92400e;font-size:1.1em;padding-right:0.5em;border-right:3px solid rgba(146,64,14,0.3);">
+                <span style="font-size:0.7em;color:#b45309;font-weight:bold;">תרגום אונקלוס: </span>${onkelosText}
               </p>`;
             }
             // Rashi commentary
             if (showRashi && rashiVerses && rashiVerses[i] && rashiVerses[i].length > 0) {
               const rashiComments = rashiVerses[i];
-              textHtml += `<div style="margin-top:0.5rem;padding:0.6rem 0.7rem;border-radius:0.5rem;background:rgba(124,58,237,0.05);border:1px solid rgba(124,58,237,0.12);">
-                <div style="font-size:0.65rem;color:#7c3aed;font-weight:bold;margin-bottom:0.3rem;">רש״י:</div>
-                ${rashiComments.map(c => `<p style="line-height:1.8;margin:0 0 0.3rem 0;color:#4c1d95;font-size:0.95rem;">${c}</p>`).join("")}
+              textHtml += `<div style="margin-top:0.5em;padding:0.6em 0.7em;border-radius:0.5em;background:rgba(124,58,237,0.05);border:1px solid rgba(124,58,237,0.12);">
+                <div style="font-size:0.65em;color:#7c3aed;font-weight:bold;margin-bottom:0.3em;">רש״י:</div>
+                ${rashiComments.map(c => `<p style="line-height:1.8;margin:0 0 0.3em 0;color:#4c1d95;font-size:0.95em;">${c}</p>`).join("")}
               </div>`;
             } else if (showRashi && rashiVerses.length === 0) {
               if (i === 0) {
@@ -3662,6 +3659,8 @@
           textHtml += "<p class='text-center text-rose-500 font-bold mt-10'>לא נמצא טקסט עבור פרשה זו.</p>";
         }
         el.innerHTML = textHtml;
+        // Re-apply font size after content render
+        applyPrayerFontSize('#sefaria-modal-content');
       }
 
       async function openShnayimMikraModal(hebTitle, enRef) {
@@ -3710,7 +3709,8 @@
             torahVerses: flattenVerses(torahData.he),
             onkelosVerses: flattenVerses(onkelosData?.he),
             rashiVerses: [],
-            parshaName: parshaName
+            parshaName: parshaName,
+            torahRef: torahData.ref || ""
           };
 
           renderShmikraContent();
@@ -4412,7 +4412,8 @@
         'tefillat-haderech': {
           title: 'תפילת הדרך',
           nusach: {
-            all: `יְהִי רָצוֹן מִלְּפָנֶיךָ יְהֹוָה אֱלֹהֵינוּ וֵאלֹהֵי אֲבוֹתֵינוּ, שֶׁתּוֹלִיכֵנוּ לְשָׁלוֹם וְתַצְעִידֵנוּ לְשָׁלוֹם וְתַדְרִיכֵנוּ לְשָׁלוֹם, וְתִסְמְכֵנוּ לְשָׁלוֹם וְתַגִּיעֵנוּ לִמְחוֹז חֶפְצֵנוּ לְחַיִּים וּלְשִׂמְחָה וּלְשָׁלוֹם. וְתַצִּילֵנוּ מִכַּף כָּל אוֹיֵב וְאוֹרֵב וְלִסְטִים וְחַיּוֹת רָעוֹת בַּדֶּרֶךְ, וּמִכָּל מִינֵי פֻּרְעָנֻיּוֹת הַמִּתְרַגְּשׁוֹת לָבוֹא לָעוֹלָם. וְתִשְׁלַח בְּרָכָה בְּכָל מַעֲשֵׂה יָדֵינוּ, וְתִתְּנֵנוּ לְחֵן וּלְחֶסֶד וּלְרַחֲמִים בְּעֵינֶיךָ וּבְעֵינֵי כָל רוֹאֵינוּ. וְתִשְׁמַע קוֹל תַּחֲנוּנֵינוּ, כִּי אֵל שׁוֹמֵעַ תְּפִלָּה וְתַחֲנוּן אָתָּה.\n\nבָּרוּךְ אַתָּה יְהֹוָה, שׁוֹמֵעַ תְּפִלָּה.`
+            mizrahi: `יְהִי רָצוֹן מִלְּפָנֶיךָ יְהֹוָה אֱלֹהֵינוּ וֵאלֹהֵי אֲבוֹתֵינוּ, שֶׁתּוֹלִיכֵנוּ לְשָׁלוֹם, וְתַצְעִידֵנוּ לְשָׁלוֹם, וְתַדְרִיכֵנוּ לְשָׁלוֹם, וְתַגִּיעֵנוּ לִמְחוֹז חֶפְצֵנוּ לְשָׁלוֹם: (אִם חוֹזֵר בּוֹ בַּיּוֹם מוֹסִיף: וְתַחֲזִירֵנוּ לְשָׁלוֹם), וְתַצִּילֵנוּ מִכַּף כָּל-אוֹיֵב וְאוֹרֵב בַּדֶּרֶךְ, וְתִשְׁלַח בְּרָכָה בְּמַעֲשֵׂי יָדֵינוּ, וְתִתְּנֵנוּ לְחֵן וּלְחֶסֶד וּלְרַחֲמִים בְּעֵינֶיךָ וּבְעֵינֵי כָל-רוֹאֵינוּ, וְתִשְׁמַע קוֹל תַּחֲנוּנֵינוּ. כִּי אֵל שׁוֹמֵעַ תְּפִלָּה וְתַחֲנוּן אָתָּה. בָּרוּךְ אַתָּה יְהֹוָה שׁוֹמֵעַ תְּפִלָּה:\n\nוַיַּעֲקֹב הָלַךְ לְדַרְכּוֹ, וַיִּפְגְּעוּ בוֹ מַלְאֲכֵי אֱלֹהִים: וַיֹּאמֶר יַעֲקֹב כַּאֲשֶׁר רָאָם, מַחֲנֵה אֱלֹהִים זֶה, וַיִּקְרָא שֵׁם הַמָּקוֹם הַהוּא מַחֲנָיִם:\n\n(ג' פעמים) וַיִּסָּעוּ, וַיְהִי חִתַּת אֱלֹהִים עַל הֶעָרִים אֲשֶׁר סְבִיבוֹתֵיהֶם, וְלֹא רָדְפוּ אַחֲרֵי בְּנֵי יַעֲקֹב:\n\nלִישׁוּעָתְךָ קִוִּיתִי יְהֹוָה (ג' פעמים)\n\nיְבָרֶכְךָ יְהֹוָה וְיִשְׁמְרֶךָ: | יָאֵר יְהֹוָה פָּנָיו אֵלֶיךָ וִיחֻנֶּךָּ: | יִשָּׂא יְהֹוָה פָּנָיו אֵלֶיךָ, וְיָשֵׂם לְךָ שָׁלוֹם: (ג' פעמים)`,
+            ashkenaz: `יְהִי רָצוֹן מִלְּפָנֶיךָ יְהֹוָה אֱלֹהֵינוּ וֵאלֹהֵי אֲבוֹתֵינוּ, שֶׁתּוֹלִיכֵנוּ לְשָׁלוֹם וְתַצְעִידֵנוּ לְשָׁלוֹם וְתַדְרִיכֵנוּ לְשָׁלוֹם, וְתִסְמְכֵנוּ לְשָׁלוֹם וְתַגִּיעֵנוּ לִמְחוֹז חֶפְצֵנוּ לְחַיִּים וּלְשִׂמְחָה וּלְשָׁלוֹם. וְתַצִּילֵנוּ מִכַּף כָּל אוֹיֵב וְאוֹרֵב וְלִסְטִים וְחַיּוֹת רָעוֹת בַּדֶּרֶךְ, וּמִכָּל מִינֵי פֻּרְעָנֻיּוֹת הַמִּתְרַגְּשׁוֹת לָבוֹא לָעוֹלָם. וְתִשְׁלַח בְּרָכָה בְּכָל מַעֲשֵׂה יָדֵינוּ, וְתִתְּנֵנוּ לְחֵן וּלְחֶסֶד וּלְרַחֲמִים בְּעֵינֶיךָ וּבְעֵינֵי כָל רוֹאֵינוּ. וְתִשְׁמַע קוֹל תַּחֲנוּנֵינוּ, כִּי אֵל שׁוֹמֵעַ תְּפִלָּה וְתַחֲנוּן אָתָּה.\n\nבָּרוּךְ אַתָּה יְהֹוָה, שׁוֹמֵעַ תְּפִלָּה.`
           },
           seasonal: () => ''
         },
@@ -4420,7 +4421,7 @@
         'shema': {
           title: 'קריאת שמע',
           nusach: {
-            all: `שְׁמַע יִשְׂרָאֵל יְהֹוָה אֱלֹהֵינוּ יְהֹוָה אֶחָד:\nבָּרוּךְ שֵׁם כְּבוֹד מַלְכוּתוֹ לְעוֹלָם וָעֶד:\n\nוְאָהַבְתָּ אֵת יְהֹוָה אֱלֹהֶיךָ בְּכָל לְבָבְךָ וּבְכָל נַפְשְׁךָ וּבְכָל מְאֹדֶךָ. וְהָיוּ הַדְּבָרִים הָאֵלֶּה אֲשֶׁר אָנֹכִי מְצַוְּךָ הַיּוֹם עַל לְבָבֶךָ. וְשִׁנַּנְתָּם לְבָנֶיךָ וְדִבַּרְתָּ בָּם בְּשִׁבְתְּךָ בְּבֵיתֶךָ וּבְלֶכְתְּךָ בַדֶּרֶךְ וּבְשָׁכְבְּךָ וּבְקוּמֶךָ. וּקְשַׁרְתָּם לְאוֹת עַל יָדֶךָ וְהָיוּ לְטֹטָפֹת בֵּין עֵינֶיךָ. וּכְתַבְתָּם עַל מְזוּזֹת בֵּיתֶךָ וּבִשְׁעָרֶיךָ:\n\nוְהָיָה אִם שָׁמֹעַ תִּשְׁמְעוּ אֶל מִצְוֹתַי אֲשֶׁר אָנֹכִי מְצַוֶּה אֶתְכֶם הַיּוֹם לְאַהֲבָה אֶת יְהֹוָה אֱלֹהֵיכֶם וּלְעָבְדוֹ בְּכָל לְבַבְכֶם וּבְכָל נַפְשְׁכֶם. וְנָתַתִּי מְטַר אַרְצְכֶם בְּעִתּוֹ יוֹרֶה וּמַלְקוֹשׁ וְאָסַפְתָּ דְגָנֶךָ וְתִירֹשְׁךָ וְיִצְהָרֶךָ. וְנָתַתִּי עֵשֶׂב בְּשָׂדְךָ לִבְהֶמְתֶּךָ וְאָכַלְתָּ וְשָׂבָעְתָּ. הִשָּׁמְרוּ לָכֶם פֶּן יִפְתֶּה לְבַבְכֶם וְסַרְתֶּם וַעֲבַדְתֶּם אֱלֹהִים אֲחֵרִים וְהִשְׁתַּחֲוִיתֶם לָהֶם. וְחָרָה אַף יְהֹוָה בָּכֶם וְעָצַר אֶת הַשָּׁמַיִם וְלֹא יִהְיֶה מָטָר וְהָאֲדָמָה לֹא תִתֵּן אֶת יְבוּלָהּ וַאֲבַדְתֶּם מְהֵרָה מֵעַל הָאָרֶץ הַטֹּבָה אֲשֶׁר יְהֹוָה נֹתֵן לָכֶם. וְשַׂמְתֶּם אֶת דְּבָרַי אֵלֶּה עַל לְבַבְכֶם וְעַל נַפְשְׁכֶם וּקְשַׁרְתֶּם אֹתָם לְאוֹת עַל יֶדְכֶם וְהָיוּ לְטוֹטָפֹת בֵּין עֵינֵיכֶם. וְלִמַּדְתֶּם אֹתָם אֶת בְּנֵיכֶם לְדַבֵּר בָּם בְּשִׁבְתְּךָ בְּבֵיתֶךָ וּבְלֶכְתְּךָ בַדֶּרֶךְ וּבְשָׁכְבְּךָ וּבְקוּמֶךָ. וּכְתַבְתָּם עַל מְזוּזוֹת בֵּיתֶךָ וּבִשְׁעָרֶיךָ. לְמַעַן יִרְבּוּ יְמֵיכֶם וִימֵי בְנֵיכֶם עַל הָאֲדָמָה אֲשֶׁר נִשְׁבַּע יְהֹוָה לַאֲבֹתֵיכֶם לָתֵת לָהֶם כִּימֵי הַשָּׁמַיִם עַל הָאָרֶץ:\n\nוַיֹּאמֶר יְהֹוָה אֶל מֹשֶׁה לֵּאמֹר: דַּבֵּר אֶל בְּנֵי יִשְׂרָאֵל וְאָמַרְתָּ אֲלֵהֶם וְעָשׂוּ לָהֶם צִיצִת עַל כַּנְפֵי בִגְדֵיהֶם לְדֹרֹתָם וְנָתְנוּ עַל צִיצִת הַכָּנָף פְּתִיל תְּכֵלֶת. וְהָיָה לָכֶם לְצִיצִת וּרְאִיתֶם אֹתוֹ וּזְכַרְתֶּם אֶת כָּל מִצְוֹת יְהֹוָה וַעֲשִׂיתֶם אֹתָם וְלֹא תָתוּרוּ אַחֲרֵי לְבַבְכֶם וְאַחֲרֵי עֵינֵיכֶם אֲשֶׁר אַתֶּם זֹנִים אַחֲרֵיהֶם. לְמַעַן תִּזְכְּרוּ וַעֲשִׂיתֶם אֶת כָּל מִצְוֹתָי וִהְיִיתֶם קְדֹשִׁים לֵאלֹהֵיכֶם. אֲנִי יְהֹוָה אֱלֹהֵיכֶם אֲשֶׁר הוֹצֵאתִי אֶתְכֶם מֵאֶרֶץ מִצְרַיִם לִהְיוֹת לָכֶם לֵאלֹהִים אֲנִי יְהֹוָה אֱלֹהֵיכֶם:`
+            all: `שְׁמַע יִשְׂרָאֵל יְהֹוָה אֱלֹהֵינוּ יְהֹוָה אֶחָד:\nבָּרוּךְ שֵׁם כְּבוֹד מַלְכוּתוֹ לְעוֹלָם וָעֶד:\n\nוְאָהַבְתָּ אֵת יְהֹוָה אֱלֹהֶיךָ בְּכָל לְבָבְךָ וּבְכָל נַפְשְׁךָ וּבְכָל מְאֹדֶךָ. וְהָיוּ הַדְּבָרִים הָאֵלֶּה אֲשֶׁר אָנֹכִי מְצַוְּךָ הַיּוֹם עַל לְבָבֶךָ. וְשִׁנַּנְתָּם לְבָנֶיךָ וְדִבַּרְתָּ בָּם בְּשִׁבְתְּךָ בְּבֵיתֶךָ וּבְלֶכְתְּךָ בַדֶּרֶךְ וּבְשָׁכְבְּךָ וּבְקוּמֶךָ. וּקְשַׁרְתָּם לְאוֹת עַל יָדֶךָ וְהָיוּ לְטֹטָפֹת בֵּין עֵינֶיךָ. וּכְתַבְתָּם עַל מְזוּזֹת בֵּיתֶךָ וּבִשְׁעָרֶיךָ:\n\nוְהָיָה אִם שָׁמֹעַ תִּשְׁמְעוּ אֶל מִצְוֹתַי אֲשֶׁר אָנֹכִי מְצַוֶּה אֶתְכֶם הַיּוֹם לְאַהֲבָה אֶת יְהֹוָה אֱלֹהֵיכֶם וּלְעָבְדוֹ בְּכָל לְבַבְכֶם וּבְכָל נַפְשְׁכֶם. וְנָתַתִּי מְטַר אַרְצְכֶם בְּעִתּוֹ יוֹרֶה וּמַלְקוֹשׁ וְאָסַפְתָּ דְגָנֶךָ וְתִירֹשְׁךָ וְיִצְהָרֶךָ. וְנָתַתִּי עֵשֶׂב בְּשָׂדְךָ לִבְהֶמְתֶּךָ וְאָכַלְתָּ וְשָׂבָעְתָּ. הִשָּׁמְרוּ לָכֶם פֶּן יִפְתֶּה לְבַבְכֶם וְסַרְתֶּם וַעֲבַדְתֶּם אֱלֹהִים אֲחֵרִים וְהִשְׁתַּחֲוִיתֶם לָהֶם. וְחָרָה אַף יְהֹוָה בָּכֶם וְעָצַר אֶת הַשָּׁמַיִם וְלֹא יִהְיֶה מָטָר וְהָאֲדָמָה לֹא תִתֵּן אֶת יְבוּלָהּ וַאֲבַדְתֶּם מְהֵרָה מֵעַל הָאָרֶץ הַטֹּבָה אֲשֶׁר יְהֹוָה נֹתֵן לָכֶם. וְשַׂמְתֶּם אֶת דְּבָרַי אֵלֶּה עַל לְבַבְכֶם וְעַל נַפְשְׁכֶם וּקְשַׁרְתֶּם אֹתָם לְאוֹת עַל יֶדְכֶם וְהָיוּ לְטוֹטָפֹת בֵּין עֵינֵיכֶם. וְלִמַּדְתֶּם אֹתָם אֶת בְּנֵיכֶם לְדַבֵּר בָּם בְּשִׁבְתְּךָ בְּבֵיתֶךָ וּבְלֶכְתְּךָ בַדֶּרֶךְ וּבְשָׁכְבְּךָ וּבְקוּמֶךָ. וּכְתַבְתָּם עַל מְזוּזוֹת בֵּיתֶךָ וּבִשְׁעָרֶיךָ. לְמַעַן יִרְבּוּ יְמֵיכֶם וִימֵי בְנֵיכֶם עַל הָאֲדָמָה אֲשֶׁר נִשְׁבַּע יְהֹוָה לַאֲבֹתֵיכֶם לָתֵת לָהֶם כִּימֵי הַשָּׁמַיִם עַל הָאָרֶץ:\n\nוַיֹּאמֶר יְהֹוָה אֶל מֹשֶׁה לֵּאמֹר: דַּבֵּר אֶל בְּנֵי יִשְׂרָאֵל וְאָמַרְתָּ אֲלֵהֶם וְעָשׂוּ לָהֶם צִיצִת עַל כַּנְפֵי בִגְדֵיהֶם לְדֹרֹתָם וְנָתְנוּ עַל צִיצִת הַכָּנָף פְּתִיל תְּכֵלֶת. וְהָיָה לָכֶם לְצִיצִת וּרְאִיתֶם אֹתוֹ וּזְכַרְתֶּם אֶת כָּל מִצְוֹת יְהֹוָה וַעֲשִׂיתֶם אֹתָם וְלֹא תָתוּרוּ אַחֲרֵי לְבַבְכֶם וְאַחֲרֵי עֵינֵיכֶם אֲשֶׁר אַתֶּם זֹנִים אַחֲרֵיהֶם. לְמַעַן תִּזְכְּרוּ וַעֲשִׂיתֶם אֶת כָּל מִצְוֹתָי וִהְיִיתֶם קְדֹשִׁים לֵאלֹהֵיכֶם. אֲנִי יְהֹוָה אֱלֹהֵיכֶם אֲשֶׁר הוֹצֵאתִי אֶתְכֶם מֵאֶרֶץ מִצְרַיִם לִהְיוֹת לָכֶם לֵאלֹהִים אֲנִי יְהֹוָה אֱלֹהֵיכֶם:\n\nיְהוָה אֱלֹהֵיכֶם אֱמֶת.`
           },
           seasonal: () => ''
         },
@@ -5781,7 +5782,7 @@
             const candleTime = kzFriday && kzFriday.times && kzFriday.times.candleLighting ? fmtTime(kzFriday.times.candleLighting) : null;
             const havdalahTime = kzSaturday && kzSaturday.times && kzSaturday.times.tzeit7083deg ? fmtTime(kzSaturday.times.tzeit7083deg) : null;
             // Find parsha for this Shabbat
-            const satStr = saturday.toISOString().split("T")[0];
+            const satStr = `${saturday.getFullYear()}-${String(saturday.getMonth() + 1).padStart(2, '0')}-${String(saturday.getDate()).padStart(2, '0')}`;
             const parshaEvent = ALL_EVENTS.find((e) => e.type === "parashat" && e.date === satStr);
             if (candleTime || havdalahTime || parshaEvent) {
               shabbatHtml = `<div style="margin-bottom:1rem;padding:0.85rem 1rem;border-radius:1rem;background:linear-gradient(135deg,#eff6ff,#faf5ff);border:1px solid rgba(99,102,241,0.18);">
@@ -6022,7 +6023,7 @@
 
         for (let i = 1; i <= lastDay.getDate(); i++) {
           const cDate = new Date(y, m, i),
-            dStr = cDate.toISOString().split("T")[0],
+            dStr = `${y}-${String(m + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`,
             hebrewDate = getHebrewDateString(cDate),
             isToday =
               i === TODAY.getDate() &&
@@ -6213,7 +6214,7 @@
 
           const prefs = JSON.parse(localStorage.getItem("moadim_notif_prefs") || "{}");
           const now = new Date();
-          const todayStr = now.toISOString().split("T")[0];
+          const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
           const h = now.getHours(), m = now.getMinutes();
 
           // Helper: fire only once per calendar-day per event ID

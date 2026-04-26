@@ -998,6 +998,8 @@
         const cachedEvents = localStorage.getItem("moadim_cached_events");
         if (cachedEvents) {
           ALL_EVENTS = JSON.parse(cachedEvents);
+          const cachedFull = localStorage.getItem("moadim_cached_events_full");
+          window.ALL_EVENTS_FULL = cachedFull ? JSON.parse(cachedFull) : ALL_EVENTS;
           showDashboard();
           render();
         }
@@ -1784,7 +1786,10 @@
           }
 
           const cy = dateForHebcal.getFullYear();
-          const [y1, y2] = await Promise.all([
+          const [y0, y1, y2] = await Promise.all([
+            fetchHebcalWithCache(
+              `https://www.hebcal.com/hebcal?v=1&cfg=json&year=${cy - 1}&i=on&maj=on&min=on&nx=on&mf=on&ss=on&mod=on&s=on`,
+            ),
             fetchHebcalWithCache(
               `https://www.hebcal.com/hebcal?v=1&cfg=json&year=${cy}&i=on&maj=on&min=on&nx=on&mf=on&ss=on&mod=on&s=on`,
             ),
@@ -1795,12 +1800,12 @@
 
           let newEvents = [];
           const rcCounts = {};
-          [...y1.items, ...y2.items].forEach((ev) => {
+          [...(y0.items||[]), ...y1.items, ...y2.items].forEach((ev) => {
             if (ev.category === "roshchodesh")
               rcCounts[ev.hebrew] = (rcCounts[ev.hebrew] || 0) + 1;
           });
 
-          [...y1.items, ...y2.items].forEach((ev) => {
+          [...(y0.items||[]), ...y1.items, ...y2.items].forEach((ev) => {
             const eventDate = new Date(ev.date);
             eventDate.setHours(0, 0, 0, 0);
             if (eventDate < dateForHebcal && ev.category !== "roshchodesh")
@@ -1988,9 +1993,14 @@
               return new Date(compareDate).setHours(0, 0, 0, 0) >= dateForHebcal.getTime();
             })
             .sort((a, b) => new Date(a.date) - new Date(b.date));
+          window.ALL_EVENTS_FULL = [...newEvents].sort((a, b) => new Date(a.date) - new Date(b.date));
           localStorage.setItem(
             "moadim_cached_events",
             JSON.stringify(ALL_EVENTS),
+          );
+          localStorage.setItem(
+            "moadim_cached_events_full",
+            JSON.stringify(window.ALL_EVENTS_FULL),
           );
 
           showDashboard();
@@ -3694,6 +3704,74 @@
         buildMonthCalendar();
       }
 
+      function openMonthYearPicker() {
+        const existing = document.getElementById("cal-month-year-picker");
+        if (existing) { existing.remove(); return; }
+
+        const todayY = new Date().getFullYear();
+        const selY = CALENDAR_DISPLAY_DATE.getFullYear();
+        const selM = CALENDAR_DISPLAY_DATE.getMonth();
+        const HE_MONTHS = ["ינואר","פברואר","מרץ","אפריל","מאי","יוני","יולי","אוגוסט","ספטמבר","אוקטובר","נובמבר","דצמבר"];
+        const years = [todayY - 1, todayY, todayY + 1];
+
+        const picker = document.createElement("div");
+        picker.id = "cal-month-year-picker";
+        picker.style.cssText = [
+          "position:fixed;z-index:99999;",
+          "background:#1e293b;border:1px solid rgba(255,255,255,0.18);",
+          "border-radius:1rem;padding:1rem 0.85rem 0.85rem;",
+          "box-shadow:0 12px 40px rgba(0,0,0,0.6);min-width:240px;",
+          "direction:rtl;"
+        ].join("");
+
+        const titleEl = document.getElementById("cal-month-title");
+        if (titleEl) {
+          const r = titleEl.getBoundingClientRect();
+          picker.style.top = (r.bottom + 8) + "px";
+          picker.style.left = Math.max(8, r.left - 40) + "px";
+        }
+
+        let html = '<div style="display:flex;gap:0.4rem;justify-content:center;margin-bottom:0.7rem;">';
+        years.forEach(yr => {
+          const act = yr === selY;
+          html += `<button onclick="window._calPickerYear(${yr})" style="padding:0.28rem 0.75rem;border-radius:0.5rem;border:none;cursor:pointer;font-weight:700;font-size:0.88rem;${act ? "background:#3b82f6;color:#fff;" : "background:rgba(255,255,255,0.1);color:#94a3b8;"}">${yr}</button>`;
+        });
+        html += '</div>';
+        html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.35rem;">';
+        HE_MONTHS.forEach((mn, idx) => {
+          const act = idx === selM && selY === CALENDAR_DISPLAY_DATE.getFullYear();
+          html += `<button onclick="window._calPickerMonth(${idx})" style="padding:0.32rem 0.1rem;border-radius:0.5rem;border:none;cursor:pointer;font-size:0.78rem;font-weight:600;${act ? "background:#3b82f6;color:#fff;" : "background:rgba(255,255,255,0.08);color:#cbd5e1;"}">${mn}</button>`;
+        });
+        html += '</div>';
+        picker.innerHTML = html;
+        document.body.appendChild(picker);
+
+        window._calPickerYear = function(yr) {
+          CALENDAR_DISPLAY_DATE.setFullYear(yr);
+          buildMonthCalendar();
+          const pk = document.getElementById("cal-month-year-picker");
+          if (pk) pk.remove();
+          openMonthYearPicker();
+        };
+        window._calPickerMonth = function(mIdx) {
+          CALENDAR_DISPLAY_DATE.setMonth(mIdx);
+          buildMonthCalendar();
+          const pk = document.getElementById("cal-month-year-picker");
+          if (pk) pk.remove();
+        };
+
+        setTimeout(function() {
+          document.addEventListener("click", function _closePicker(e) {
+            const pk = document.getElementById("cal-month-year-picker");
+            if (!pk) { document.removeEventListener("click", _closePicker); return; }
+            if (!pk.contains(e.target) && e.target.id !== "cal-month-title" && e.target.id !== "cal-month-heb") {
+              pk.remove();
+              document.removeEventListener("click", _closePicker);
+            }
+          });
+        }, 60);
+      }
+
       function buildMonthCalendar() {
         const ui = getDynamicUiText();
         const d = CALENDAR_DISPLAY_DATE,
@@ -3736,7 +3814,7 @@
               hebDayStr = hebDaysLetters[parseInt(dp.value)] || dp.value;
           } catch (e) {}
 
-          const evs = ALL_EVENTS.filter((e) => e.date === dStr);
+          const evs = (window.ALL_EVENTS_FULL || ALL_EVENTS).filter((e) => e.date === dStr);
           let evHtml = "";
           // Show parsha on Shabbat cells
           const parshaEv = evs.find((e) => e.type === "parashat");
@@ -6795,7 +6873,6 @@
         '<div style="text-align:center;margin-bottom:1.5rem;">'+
           '<div style="font-size:2.2rem;margin-bottom:0.5rem;">'+t.icon+'</div>'+
           '<div style="font-size:0.7rem;letter-spacing:0.12em;color:#7c3aed;font-weight:700;text-transform:uppercase;margin-bottom:0.3rem;">'+(prefixLabel||"דבר תורה ל")+displayName+'</div>'+
-          '<h2 style="font-size:1.2rem;font-weight:800;color:#e2e8f0;margin:0 0 0.2rem;direction:rtl;">'+t.title+'</h2>'+
           (t.source?'<p style="font-size:0.78rem;color:#7c3aed;margin:0;font-weight:600;">— '+t.source+'</p>':'')+
         '</div>'+
         '<div style="height:1px;background:linear-gradient(to right,transparent,rgba(139,92,246,0.4),transparent);margin-bottom:1.25rem;"></div>'+
@@ -6847,7 +6924,6 @@
     if(!item) item={title:"חודש "+month,source:"",text:"דברי תורה על חודש "+month+" יתווספו בקרוב.",icon:"🌙"};
     openTorahPopup([item],"חודש "+month,"דבר תורה לחודש ");
   };
-
 
   window.openParshaTorahModal = function() {
     var raw = stripNikud(window.SHABBAT_PARASHA_NAME||"").replace(/^פרשת\s+/,"").replace(/^שבת\s+/,"").trim();

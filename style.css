@@ -1,0 +1,632 @@
+      body {
+        font-family: "Assistant", sans-serif;
+        transition:
+          background-color 0.5s ease,
+          color 0.5s ease;
+      }
+      .holy-text-style {
+        font-family: 'Frank Ruhl Libre', serif;
+        font-size: 25px;
+        font-weight: 700;
+        line-height: 1.7;
+        text-align: center;
+        color: #000000;
+      }
+
+      /* Mobile-optimized prayer modal: use full width */
+      .prayer-modal-body-mobile {
+        padding: 0.5rem 0.4rem !important;
+      }
+      @media (min-width: 640px) {
+        .prayer-modal-body-mobile {
+          padding: 1.25rem !important;
+        }
+      }
+
+      /* ── Stars Canvas ── */
+      #stars-canvas {
+        position: absolute;
+        inset: 0;
+        z-index: 0;
+        pointer-events: none;
+        opacity: 1;
+        transition: opacity 0.7s ease;
+      }
+
+      /* ── Glass Card ── */
+      .glass-card {
+        background: rgba(255, 255, 255, 0.07);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.15);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .glass-card:hover {
+        background: rgba(255, 255, 255, 0.12);
+        transform: translateY(-3px);
+        box-shadow: 0 8px 40px rgba(0, 0, 0, 0.25);
+      }
+
+      /* ── Filter Chips ── */
+      .chip {
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        border: 1px solid transparent;
+      }
+      .chip:hover:not(.active) {
+        border-color: #3b82f6;
+        color: #3b82f6;
+      }
+      .chip.active {
+        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+        color: white;
+        box-shadow: 0 4px 20px rgba(37, 99, 235, 0.4);
+        border-color: #2563eb;
+      }
+
+      /* ── Event Cards ── */
+      .event-card {
+        transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        opacity: 1;
+        transform: translateY(0);
+        position: relative;
+        overflow: hidden;
+      }
+      .event-card.visible {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      .event-card:hover {
+        transform: translateY(-6px);
+        box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.18);
+      }
+      .event-card::before {
+        content: '';
+        position: absolute;
+        top: 0; right: 0; bottom: 0;
+        width: 4px;
+        border-radius: 0 2rem 2rem 0;
+      }
+      [dir="rtl"] .event-card::before { right: 0; left: auto; border-radius: 0 2rem 2rem 0; }
+      [dir="ltr"] .event-card::before { left: 0; right: auto; border-radius: 2rem 0 0 2rem; }
+      .event-card.card-major::before  { background: linear-gradient(180deg,#3b82f6,#1d4ed8); }
+      .event-card.card-fast::before   { background: linear-gradient(180deg,#f43f5e,#be123c); }
+      .event-card.card-moon::before   { background: linear-gradient(180deg,#a855f7,#7e22ce); }
+      .event-card.card-rosh-chodesh::before { background: linear-gradient(180deg,#10b981,#059669); }
+      .event-card.card-minor::before  { background: linear-gradient(180deg,#94a3b8,#64748b); }
+
+      /* ── Countdown Strip ── */
+      #shabbat-countdown-bar {
+        background: linear-gradient(90deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.06) 100%);
+        border: 1px solid rgba(255,255,255,0.12);
+        border-radius: 1.5rem;
+        padding: 0.75rem 1.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.75rem;
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+      }
+      .countdown-digit {
+        font-variant-numeric: tabular-nums;
+        font-feature-settings: "tnum";
+        letter-spacing: 0.04em;
+        color: #fff;
+        font-weight: 900;
+        font-size: 1.4rem;
+      }
+
+      /* ── Omer Ring ── */
+      .omer-ring-container {
+        position: relative;
+        width: 96px;
+        height: 96px;
+        flex-shrink: 0;
+      }
+      .omer-ring-svg {
+        transform: rotate(-90deg);
+      }
+      .omer-ring-bg { fill: none; stroke: rgba(255,255,255,0.15); stroke-width: 6; }
+      .omer-ring-progress {
+        fill: none;
+        stroke: #fff;
+        stroke-width: 6;
+        stroke-linecap: round;
+        transition: stroke-dashoffset 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+        filter: drop-shadow(0 0 6px rgba(255,255,255,0.4));
+      }
+      .omer-ring-text {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+      }
+
+      /* ── Zmanim Day Bar ── */
+      #zmanim-day-bar {
+        height: 6px;
+        background: rgba(255,255,255,0.1);
+        border-radius: 3px;
+        overflow: hidden;
+        margin-bottom: 1rem;
+      }
+      #zmanim-day-bar-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #60a5fa, #a78bfa);
+        border-radius: 3px;
+        transition: width 1s ease;
+      }
+
+      /* ── Toast Notifications ── */
+      #toast-container {
+        position: fixed;
+        bottom: 5rem;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.5rem;
+        pointer-events: none;
+      }
+      .toast {
+        pointer-events: auto;
+        padding: 0.75rem 1.5rem;
+        border-radius: 1rem;
+        font-weight: 700;
+        font-size: 0.9rem;
+        color: white;
+        opacity: 0;
+        transform: translateY(12px) scale(0.95);
+        transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        max-width: 90vw;
+        text-align: center;
+        backdrop-filter: blur(12px);
+        box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+      }
+      .toast.show {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+      .toast.toast-success { background: linear-gradient(135deg, #059669, #10b981); }
+      .toast.toast-error   { background: linear-gradient(135deg, #be123c, #f43f5e); }
+      .toast.toast-info    { background: linear-gradient(135deg, #1d4ed8, #3b82f6); }
+
+      /* ── Skeleton Loader ── */
+      @keyframes skeleton-pulse {
+        0%, 100% { opacity: 0.5; }
+        50% { opacity: 1; }
+      }
+      .skeleton { animation: skeleton-pulse 1.5s ease-in-out infinite; background: rgba(255,255,255,0.08); border-radius: 0.5rem; }
+
+      /* ── Wave Divider ── */
+      .wave-divider {
+        position: absolute;
+        bottom: -2px;
+        left: 0; right: 0;
+        overflow: hidden;
+        line-height: 0;
+      }
+      .wave-divider svg { display: block; width: 100%; }
+      .notification-toggle-row {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        min-width: 8.5rem;
+        flex-shrink: 0;
+        justify-content: flex-end;
+      }
+      #notif-master-status {
+        min-width: 4.75rem;
+        text-align: center;
+        white-space: nowrap;
+      }
+      #notif-master-toggle {
+        direction: ltr;
+      }
+      html[dir="rtl"] .notification-toggle-row {
+        flex-direction: row-reverse;
+      }
+      html[dir="ltr"] .notification-toggle-row {
+        flex-direction: row;
+      }
+      .loader {
+        border: 4px solid rgba(255, 255, 255, 0.1);
+        border-top: 4px solid #3b82f6;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto;
+      }
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+      .scrollbar-hide::-webkit-scrollbar {
+        display: none;
+      }
+      .scrollbar-hide {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+      html[dir="ltr"] #settings-modal-title {
+        padding-left: 3.5rem;
+      }
+      select option {
+        background-color: #1e293b;
+        color: white;
+      }
+      .cal-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 3px;
+        width: 100%;
+        min-width: 0;
+      }
+      @media (max-width: 640px) {
+        .cal-grid { gap: 2px; }
+      }
+      .cal-header {
+        text-align: center;
+        font-weight: bold;
+        font-size: 0.85rem;
+        padding-bottom: 0.5rem;
+      }
+      .gradient-bg {
+        background: linear-gradient(160deg, #060d1e 0%, #0f172a 40%, #1a2744 100%);
+      }
+      /* ── Bright/Readable Hero Mode (for elderly users) ── */
+      .bg-ocean-readable {
+        background: linear-gradient(160deg,
+          #1e3a8a 0%,
+          #1d4ed8 30%,
+          #2563eb 60%,
+          #0ea5e9 85%,
+          #38bdf8 100%
+        );
+      }
+      /* Readable mode: hide stars canvas */
+      .bg-ocean-readable #stars-canvas {
+        opacity: 0 !important;
+        pointer-events: none;
+      }
+      .compass-ring {
+        background: radial-gradient(
+          circle,
+          transparent 50%,
+          rgba(255, 255, 255, 0.05) 50%
+        );
+      }
+      .compass-direction-label {
+        position: absolute;
+        z-index: 20;
+        color: rgba(191, 219, 254, 0.95);
+        font-weight: 800;
+        font-size: 0.8rem;
+        line-height: 1;
+        text-shadow: 0 0 12px rgba(15, 23, 42, 0.75);
+        pointer-events: none;
+        user-select: none;
+      }
+      .compass-direction-n {
+        top: 0;
+        left: 50%;
+        transform: translateX(-50%);
+      }
+      .compass-direction-e {
+        right: 0;
+        top: 50%;
+        transform: translateY(-50%);
+      }
+      .compass-direction-s {
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+      }
+      .compass-direction-w {
+        left: 0;
+        top: 50%;
+        transform: translateY(-50%);
+      }
+
+      /* ── Font size scaling ── */
+      html.fs-1 { font-size: 108% !important; }
+      html.fs-2 { font-size: 116% !important; }
+      /* Prevent card overflow on larger font */
+      html.fs-1 .zman-card, html.fs-2 .zman-card { overflow: hidden; }
+
+      /* ── Prayer Grid ── */
+      .prayer-btn {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.35rem;
+        background: rgba(255,255,255,0.07);
+        border: 1px solid rgba(255,255,255,0.12);
+        border-radius: 1.25rem;
+        padding: 0.75rem 0.5rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        color: white;
+        min-height: 72px;
+      }
+      .prayer-btn:hover {
+        background: rgba(99,102,241,0.25);
+        border-color: rgba(129,140,248,0.5);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(99,102,241,0.2);
+      }
+      .prayer-icon { font-size: 1.4rem; line-height: 1; }
+      .prayer-label {
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-align: center;
+        line-height: 1.2;
+        color: rgba(226,232,240,0.9);
+      }
+      @media (min-width: 768px) {
+        .prayer-label { font-size: 0.8rem; }
+        .prayer-icon  { font-size: 1.6rem; }
+      }
+
+      /* ── Sefaria Reader Styles ── */
+      #sefaria-modal-content p {
+        font-size: 1.15rem;
+        margin-bottom: 1rem;
+        color: inherit;
+      }
+      #sefaria-modal-content .text-left {
+        text-align: left;
+        direction: ltr;
+      }
+
+      /* ── Blue (Sea) Theme – Search Bar Fix ── */
+      .theme-blue nav[aria-label="סינון וחיפוש"] {
+        background: #ffffff !important;
+        border-color: #e2e8f0 !important;
+      }
+      .theme-blue #mainSearch {
+        background: #f1f5f9;
+        color: #1e293b;
+        border-color: #cbd5e1;
+        transition: all 0.3s ease;
+      }
+      .theme-blue #mainSearch::placeholder {
+        color: #94a3b8;
+      }
+      .theme-blue #mainSearch:focus {
+        border-color: #38bdf8;
+        box-shadow: 0 0 0 3px rgba(56,189,248,0.25), 0 4px 15px rgba(56,189,248,0.1);
+      }
+
+      /* ── Zmanim Card Hover ── */
+      .zman-card {
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .zman-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+      }
+      /* FAB scroll-to-top: desktop only */
+      @media (max-width: 767px) {
+        #fab-top { display: none !important; }
+      }
+
+      /* ── Hero stat cards pulse on load ── */
+      @keyframes fadeSlideUp {
+        from { opacity: 0; transform: translateY(16px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+      #dashboard-state article {
+        animation: fadeSlideUp 0.5s ease forwards;
+      }
+      #dashboard-state article:nth-child(1) { animation-delay: 0.05s; }
+      #dashboard-state article:nth-child(2) { animation-delay: 0.12s; }
+      #dashboard-state article:nth-child(3) { animation-delay: 0.19s; }
+      #dashboard-state article:nth-child(4) { animation-delay: 0.26s; }
+      #dashboard-state article {
+        min-height: 132px;
+      }
+      .dashboard-shabbat-line {
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 0.32rem;
+        margin-bottom: 0.24rem;
+        direction: rtl;
+      }
+      .dashboard-shabbat-line:last-child {
+        margin-bottom: 0;
+      }
+      .dashboard-shabbat-label {
+        color: rgba(191, 219, 254, 0.72);
+        font-size: 0.82rem;
+        font-weight: 800;
+        white-space: nowrap;
+      }
+      .dashboard-shabbat-value {
+        color: #fff;
+        font-size: 0.95rem;
+        font-weight: 900;
+        line-height: 1.1;
+        letter-spacing: 0.01em;
+      }
+      .dashboard-card-title-tight {
+        margin-bottom: 0.35rem;
+      }
+      .dashboard-card-meta-tight {
+        margin-top: 0.28rem;
+      }
+      .zman-meta {
+        display: block;
+        margin-top: 0.35rem;
+        color: rgba(191, 219, 254, 0.68);
+        font-size: 0.72rem;
+        font-weight: 700;
+        line-height: 1.35;
+      }
+      .prayer-richtext h2,
+      .prayer-richtext h3,
+      .prayer-richtext h4 {
+        color: #000000;
+        font-weight: 900;
+        margin: 1rem 0 0.45rem;
+      }
+      .prayer-richtext p,
+      .prayer-richtext li {
+        color: #000000;
+        line-height: 2.02;
+        overflow-wrap: anywhere;
+      }
+      .prayer-richtext ul,
+      .prayer-richtext ol {
+        margin: 0.75rem 0;
+        padding-inline-start: 1.4rem;
+      }
+      .prayer-richtext a {
+        color: #1d4ed8;
+        text-decoration: underline;
+      }
+      .prayer-richtext .seasonal-block {
+        background: rgba(59, 130, 246, 0.06);
+        border: 1px solid rgba(59, 130, 246, 0.18);
+        border-radius: 0.85rem;
+        padding: 0.7rem 0.85rem;
+        margin-bottom: 0.75rem;
+        font-size: 0.82em;
+        color: #1e40af;
+        line-height: 1.65;
+        position: relative;
+      }
+      .prayer-richtext .seasonal-block::before {
+        content: "";
+        display: block;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(59,130,246,0.3), transparent);
+        margin-bottom: 0.6rem;
+      }
+      .prayer-richtext .seasonal-block::after {
+        content: "";
+        display: block;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(59,130,246,0.3), transparent);
+        margin-top: 0.6rem;
+      }
+      /* Supplement/addition styling for prayer texts */
+      .prayer-supplement {
+        color: #1e40af;
+        font-size: 0.60em;
+        line-height: 1.65;
+        background: rgba(59,130,246,0.04);
+        border: 1px solid rgba(59,130,246,0.14);
+        border-right: 3px solid rgba(37,99,235,0.35);
+        border-radius: 0.6rem;
+        padding: 0.55rem 0.75rem;
+        margin: 0.6rem 0;
+        display: block;
+      }
+      .prayer-supplement p,
+      .prayer-supplement li {
+        color: #1e40af !important;
+        line-height: 1.65 !important;
+      }
+      .prayer-supplement strong {
+        color: #1e3a8a;
+      }
+      .prayer-richtext .seasonal-block strong {
+        color: #1d4ed8;
+        font-size: 0.9em;
+      }
+      .prayer-richtext .seasonal-block div {
+        color: #2563eb;
+      }
+      .prayer-richtext .prayer-divider {
+        border: 0;
+        border-top: 1px solid rgba(148, 163, 184, 0.35);
+        margin: 1.35rem 0;
+      }
+      /* Inline prayer additions/supplements styling */
+      .prayer-richtext .prayer-addition,
+      .prayer-richtext [data-addition] {
+        color: #1d4ed8;
+        font-size: 0.88em;
+        border-right: 3px solid rgba(59,130,246,0.3);
+        padding-right: 0.6rem;
+        margin: 0.5rem 0;
+        display: block;
+      }
+      .prayer-source-credit {
+        color: #94a3b8;
+        font-size: 0.76rem;
+        line-height: 1.65;
+      }
+      .prayer-source-credit strong {
+        color: #cbd5e1;
+      }
+      @media (max-width: 767px) {
+        #dashboard-state article {
+          min-height: 114px;
+        }
+        .dashboard-shabbat-label {
+          font-size: 0.72rem;
+        }
+        .dashboard-shabbat-value {
+          font-size: 0.9rem;
+        }
+      }
+
+      /* ── Mobile: shnayim-mikra & daf-yomi same size ── */
+      @media (max-width: 767px) {
+        #halacha-banner .flex-row {
+          flex-direction: column;
+          align-items: stretch;
+          gap: 0.5rem;
+        }
+        #shnayim-mikra-link,
+        #daf-yomi-link {
+          width: 100%;
+          box-sizing: border-box;
+        }
+        #shnayim-mikra-link .shnayim-parsha-suffix {
+          display: none;
+        }
+      }
+
+      /* ── Sync button pulse ── */
+      @keyframes pulse-glow {
+        0%,100% { box-shadow: 0 0 0 0 rgba(37,99,235,0.4); }
+        50%      { box-shadow: 0 0 0 8px rgba(37,99,235,0); }
+      }
+
+      /* ── Footer credits ── */
+      footer a:hover {
+        background: linear-gradient(135deg, rgba(37,99,235,0.08), rgba(139,92,246,0.08));
+      }
+
+      /* ── Calendar day hover ── */
+      #cal-days-grid > div:not([aria-hidden]) {
+        transition: all 0.2s ease;
+        cursor: pointer;
+      }
+      #cal-days-grid > div:not([aria-hidden]):hover {
+        transform: scale(1.04);
+        box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+        z-index: 2;
+      }
+
+      /* ── Scrollbar Styling ── */
+      ::-webkit-scrollbar { width: 6px; height: 6px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background: rgba(148,163,184,0.3); border-radius: 3px; }
+      ::-webkit-scrollbar-thumb:hover { background: rgba(148,163,184,0.5); }

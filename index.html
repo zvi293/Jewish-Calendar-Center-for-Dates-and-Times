@@ -1749,6 +1749,67 @@
       </div>
     </div>
 
+
+    <!-- ═══ כפתור גלילה למעלה — מובייל בלבד ═══ -->
+    <button
+      id="scroll-top-btn"
+      aria-label="גלול למעלה"
+      onclick="window.scrollTo({top:0,behavior:'smooth'})"
+      style="
+        display:none;
+        position:fixed;
+        bottom:1.4rem;
+        left:1.1rem;
+        z-index:9998;
+        width:2.6rem;
+        height:2.6rem;
+        border-radius:50%;
+        border:1px solid rgba(99,102,241,0.35);
+        background:rgba(255,255,255,0.55);
+        backdrop-filter:blur(12px);
+        -webkit-backdrop-filter:blur(12px);
+        box-shadow:0 2px 12px rgba(99,102,241,0.22),0 1px 4px rgba(0,0,0,0.10);
+        cursor:pointer;
+        align-items:center;
+        justify-content:center;
+        transition:opacity .25s,transform .25s;
+        opacity:0;
+      "
+    >
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <polyline points="18 15 12 9 6 15"></polyline>
+      </svg>
+    </button>
+    <script>
+    (function(){
+      var btn = document.getElementById('scroll-top-btn');
+      if (!btn) return;
+      // מובייל בלבד — max-width 768px
+      function isMobile(){ return window.innerWidth <= 768; }
+      // מצא את אלמנט החיפוש כדי לדעת מתי עוברים אותו
+      function getSearchBottom(){
+        var el = document.getElementById('mainSearch');
+        if (!el) return 120;
+        var rect = el.getBoundingClientRect();
+        return window.scrollY + rect.bottom + 40;
+      }
+      var threshold = null;
+      function onScroll(){
+        if (!isMobile()){ btn.style.display='none'; return; }
+        if (threshold === null) threshold = getSearchBottom();
+        if (window.scrollY > threshold){
+          btn.style.display='flex';
+          btn.style.opacity='1';
+        } else {
+          btn.style.opacity='0';
+          setTimeout(function(){ if(parseFloat(btn.style.opacity)===0) btn.style.display='none'; }, 260);
+        }
+      }
+      window.addEventListener('scroll', onScroll, {passive:true});
+      window.addEventListener('resize', function(){ threshold=null; onScroll(); });
+    })();
+    </script>
+
     <script src="script.js"></script>
     </body>
 </html>

@@ -1854,7 +1854,8 @@
             }
 
             if (ev.category === "roshchodesh") {
-              let rcName = CURRENT_LANG === "he" ? ev.hebrew : ev.title;
+              const _rcMonthName = ev.hebrew.replace("ראש חודש ", "").split(" (")[0].trim();
+              let rcName = CURRENT_LANG === "he" ? `ראש חודש ${_rcMonthName}` : ev.title;
               const _rcKeyCheck = ev.hebrew + '_' + ev.date.substring(0, 7);
               if (rcCounts[_rcKeyCheck] > 1) {
                 const countSoFar = newEvents.filter(
@@ -1862,7 +1863,7 @@
                 ).length;
                 rcName =
                   CURRENT_LANG === "he"
-                    ? `${ev.hebrew} - יום ${countSoFar === 0 ? "א'" : "ב'"}`
+                    ? `${countSoFar === 0 ? "א'" : "ב'"} ראש חודש ${_rcMonthName}`
                     : `${ev.title} Day ${countSoFar + 1}`;
               }
 

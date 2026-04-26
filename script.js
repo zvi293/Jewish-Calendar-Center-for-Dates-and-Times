@@ -995,11 +995,13 @@
         updateCurrentCityLabel();
         updateNotifStatusUI();
 
-        const cachedEvents = localStorage.getItem("moadim_cached_events");
+        const cachedEvents = localStorage.getItem("moadim_cached_events_v2");
         if (cachedEvents) {
           ALL_EVENTS = JSON.parse(cachedEvents);
-          const cachedFull = localStorage.getItem("moadim_cached_events_full");
-          window.ALL_EVENTS_FULL = cachedFull ? JSON.parse(cachedFull) : ALL_EVENTS;
+          const cachedFull = localStorage.getItem("moadim_cached_events_full_v2");
+          window.ALL_EVENTS_FULL = cachedFull ? JSON.parse(cachedFull) : null;
+          const _todayY = new Date().getFullYear();
+          window.FETCHED_YEARS = window.FETCHED_YEARS || new Set([_todayY - 1, _todayY, _todayY + 1]);
           showDashboard();
           render();
         }
@@ -1801,15 +1803,15 @@
           let newEvents = [];
           const rcCounts = {};
           [...(y0.items||[]), ...y1.items, ...y2.items].forEach((ev) => {
-            if (ev.category === "roshchodesh")
-              rcCounts[ev.hebrew] = (rcCounts[ev.hebrew] || 0) + 1;
+            if (ev.category === "roshchodesh") {
+              const _rcKey = ev.hebrew + '_' + ev.date.substring(0, 7);
+              rcCounts[_rcKey] = (rcCounts[_rcKey] || 0) + 1;
+            }
           });
 
           [...(y0.items||[]), ...y1.items, ...y2.items].forEach((ev) => {
             const eventDate = new Date(ev.date);
             eventDate.setHours(0, 0, 0, 0);
-            if (eventDate < dateForHebcal && ev.category !== "roshchodesh")
-              return;
 
             const forbidden = [
               // Removed from display: political/minor national figures
@@ -1853,9 +1855,10 @@
 
             if (ev.category === "roshchodesh") {
               let rcName = CURRENT_LANG === "he" ? ev.hebrew : ev.title;
-              if (rcCounts[ev.hebrew] > 1) {
+              const _rcKeyCheck = ev.hebrew + '_' + ev.date.substring(0, 7);
+              if (rcCounts[_rcKeyCheck] > 1) {
                 const countSoFar = newEvents.filter(
-                  (x) => x.originalName === ev.hebrew,
+                  (x) => x.originalName === ev.hebrew && x.date.substring(0, 7) === ev.date.substring(0, 7),
                 ).length;
                 rcName =
                   CURRENT_LANG === "he"
@@ -1876,10 +1879,7 @@
                 });
               }
 
-              if (
-                newEvents.filter((x) => x.originalName === ev.hebrew).length ===
-                1
-              ) {
+              {
                 const startL = new Date(ev.date);
                 startL.setDate(startL.getDate() + 7);
                 const endL = new Date(ev.date);
@@ -1933,8 +1933,6 @@
               }
               return;
             }
-
-            if (eventDate < dateForHebcal) return;
 
             if (ev.category === "fast" || /Tzom|Ta'anit|Tisha/.test(ev.title)) {
               type = "fast";
@@ -1994,12 +1992,13 @@
             })
             .sort((a, b) => new Date(a.date) - new Date(b.date));
           window.ALL_EVENTS_FULL = [...newEvents].sort((a, b) => new Date(a.date) - new Date(b.date));
+          window.FETCHED_YEARS = new Set([cy - 1, cy, cy + 1]);
           localStorage.setItem(
-            "moadim_cached_events",
+            "moadim_cached_events_v2",
             JSON.stringify(ALL_EVENTS),
           );
           localStorage.setItem(
-            "moadim_cached_events_full",
+            "moadim_cached_events_full_v2",
             JSON.stringify(window.ALL_EVENTS_FULL),
           );
 
@@ -3692,16 +3691,56 @@
         }
       }
 
-      function changeMonth(offset) {
+      async function changeMonth(offset) {
         CALENDAR_DISPLAY_DATE.setMonth(
           CALENDAR_DISPLAY_DATE.getMonth() + offset,
         );
+        await ensureYearFetched(CALENDAR_DISPLAY_DATE.getFullYear());
         buildMonthCalendar();
       }
 
       function resetMonth() {
         CALENDAR_DISPLAY_DATE = new Date();
         buildMonthCalendar();
+      }
+
+      async function ensureYearFetched(year) {
+        if (!window.FETCHED_YEARS) window.FETCHED_YEARS = new Set();
+        if (window.FETCHED_YEARS.has(year)) return;
+        window.FETCHED_YEARS.add(year);
+        const grid = document.getElementById("cal-days-grid");
+        if (grid) grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:3rem;color:#94a3b8;font-size:0.9rem;direction:rtl;">טוען נתונים...</div>';
+        try {
+          const data = await fetchHebcalWithCache(
+            `https://www.hebcal.com/hebcal?v=1&cfg=json&year=${year}&i=on&maj=on&min=on&nx=on&mf=on&ss=on&mod=on&s=on`
+          );
+          if (!data || !data.items) return;
+          const parsed = [];
+          data.items.forEach(function(ev) {
+            if (!ev.date || !ev.category) return;
+            if (ev.category === "candles" || ev.category === "havdalah") return;
+            var type = "minor", icon = "📅";
+            var name = ev.hebrew || ev.title || "";
+            if (ev.category === "roshchodesh") {
+              type = "rosh-chodesh"; icon = "🌙";
+            } else if (ev.category === "parashat") {
+              type = "parashat"; icon = "📖";
+              name = "פרשת " + (ev.hebrew || ev.title || "");
+            } else if (ev.category === "holiday") {
+              var lc = (ev.title || "").toLowerCase();
+              if (lc.includes("fast") || lc.includes("tzom")) { type = "fast"; icon = "⚡"; }
+              else if (ev.yomtov) { type = "major"; icon = "✨"; }
+            }
+            parsed.push({ name: name, date: ev.date, type: type, heb: ev.hebrew || "", icon: icon });
+          });
+          if (!window.ALL_EVENTS_FULL) window.ALL_EVENTS_FULL = [];
+          window.ALL_EVENTS_FULL = window.ALL_EVENTS_FULL
+            .filter(function(e) { return !e.date.startsWith(year + "-"); })
+            .concat(parsed)
+            .sort(function(a, b) { return new Date(a.date) - new Date(b.date); });
+        } catch(err) {
+          window.FETCHED_YEARS.delete(year);
+        }
       }
 
       function openMonthYearPicker() {
@@ -3712,7 +3751,8 @@
         const selY = CALENDAR_DISPLAY_DATE.getFullYear();
         const selM = CALENDAR_DISPLAY_DATE.getMonth();
         const HE_MONTHS = ["ינואר","פברואר","מרץ","אפריל","מאי","יוני","יולי","אוגוסט","ספטמבר","אוקטובר","נובמבר","דצמבר"];
-        const years = [todayY - 1, todayY, todayY + 1];
+        const minYear = todayY - 30;
+        const maxYear = todayY + 5;
 
         const picker = document.createElement("div");
         picker.id = "cal-month-year-picker";
@@ -3720,7 +3760,7 @@
           "position:fixed;z-index:99999;",
           "background:#1e293b;border:1px solid rgba(255,255,255,0.18);",
           "border-radius:1rem;padding:1rem 0.85rem 0.85rem;",
-          "box-shadow:0 12px 40px rgba(0,0,0,0.6);min-width:240px;",
+          "box-shadow:0 12px 40px rgba(0,0,0,0.6);min-width:250px;",
           "direction:rtl;"
         ].join("");
 
@@ -3731,30 +3771,39 @@
           picker.style.left = Math.max(8, r.left - 40) + "px";
         }
 
-        let html = '<div style="display:flex;gap:0.4rem;justify-content:center;margin-bottom:0.7rem;">';
-        years.forEach(yr => {
-          const act = yr === selY;
-          html += `<button onclick="window._calPickerYear(${yr})" style="padding:0.28rem 0.75rem;border-radius:0.5rem;border:none;cursor:pointer;font-weight:700;font-size:0.88rem;${act ? "background:#3b82f6;color:#fff;" : "background:rgba(255,255,255,0.1);color:#94a3b8;"}">${yr}</button>`;
-        });
-        html += '</div>';
+        // Year select
+        let yearOpts = "";
+        for (let yr = maxYear; yr >= minYear; yr--) {
+          yearOpts += `<option value="${yr}" ${yr === selY ? "selected" : ""}>${yr}</option>`;
+        }
+        let html = `<div style="margin-bottom:0.7rem;text-align:center;">
+          <select id="cal-year-select" onchange="window._calPickerYear(parseInt(this.value))"
+            style="background:#0f172a;color:#c4b5fd;border:1px solid rgba(139,92,246,0.5);
+            border-radius:0.5rem;padding:0.3rem 0.6rem;font-size:0.95rem;font-weight:700;
+            cursor:pointer;width:100%;">${yearOpts}</select>
+        </div>`;
+
+        // Month grid
         html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.35rem;">';
-        HE_MONTHS.forEach((mn, idx) => {
+        HE_MONTHS.forEach(function(mn, idx) {
           const act = idx === selM && selY === CALENDAR_DISPLAY_DATE.getFullYear();
-          html += `<button onclick="window._calPickerMonth(${idx})" style="padding:0.32rem 0.1rem;border-radius:0.5rem;border:none;cursor:pointer;font-size:0.78rem;font-weight:600;${act ? "background:#3b82f6;color:#fff;" : "background:rgba(255,255,255,0.08);color:#cbd5e1;"}">${mn}</button>`;
+          html += `<button onclick="window._calPickerMonth(${idx})" style="padding:0.35rem 0.1rem;border-radius:0.5rem;border:none;cursor:pointer;font-size:0.78rem;font-weight:600;${act ? "background:#3b82f6;color:#fff;" : "background:rgba(255,255,255,0.08);color:#cbd5e1;"}">${mn}</button>`;
         });
         html += '</div>';
         picker.innerHTML = html;
         document.body.appendChild(picker);
 
-        window._calPickerYear = function(yr) {
+        window._calPickerYear = async function(yr) {
           CALENDAR_DISPLAY_DATE.setFullYear(yr);
+          await ensureYearFetched(yr);
           buildMonthCalendar();
           const pk = document.getElementById("cal-month-year-picker");
           if (pk) pk.remove();
           openMonthYearPicker();
         };
-        window._calPickerMonth = function(mIdx) {
+        window._calPickerMonth = async function(mIdx) {
           CALENDAR_DISPLAY_DATE.setMonth(mIdx);
+          await ensureYearFetched(CALENDAR_DISPLAY_DATE.getFullYear());
           buildMonthCalendar();
           const pk = document.getElementById("cal-month-year-picker");
           if (pk) pk.remove();
@@ -3764,6 +3813,7 @@
           document.addEventListener("click", function _closePicker(e) {
             const pk = document.getElementById("cal-month-year-picker");
             if (!pk) { document.removeEventListener("click", _closePicker); return; }
+            const sel = document.getElementById("cal-year-select");
             if (!pk.contains(e.target) && e.target.id !== "cal-month-title" && e.target.id !== "cal-month-heb") {
               pk.remove();
               document.removeEventListener("click", _closePicker);
@@ -4100,21 +4150,33 @@
 
         function buildStars() {
           stars = [];
-          const count = Math.floor((W * H) / 6000);
+          const isMobile = W < 640;
+          // More stars on mobile (smaller canvas), brighter + faster
+          const density = isMobile ? 3500 : 5000;
+          const count = Math.max(60, Math.floor((W * H) / density));
+          // Speed scale: mobile needs more relative drift to look alive
+          const speedScale = isMobile ? (W / 320) : (W / 900);
           for (let i = 0; i < count; i++) {
             const angle = Math.random() * Math.PI * 2;
-            const driftSpeed = Math.random() * 0.10 + 0.02;
+            // Base drift: noticeably faster than before, scaled to screen
+            const driftSpeed = (Math.random() * 0.16 + 0.05) * speedScale;
+            // Bigger stars on mobile (higher DPI, else they vanish)
+            const baseR = isMobile
+              ? Math.random() * 1.8 + 0.5
+              : Math.random() * 1.6 + 0.35;
             stars.push({
               x: Math.random() * W,
               y: Math.random() * H,
-              r: Math.random() * 1.4 + 0.3,
-              alpha: Math.random() * 0.7 + 0.2,
-              twinkleSpeed: Math.random() * 0.008 + 0.002,
+              r: baseR,
+              alpha: Math.random() * 0.6 + (isMobile ? 0.35 : 0.25),
+              twinkleSpeed: Math.random() * 0.015 + 0.004,   // faster twinkle
               phase: Math.random() * Math.PI * 2,
               vx: Math.cos(angle) * driftSpeed,
               vy: Math.sin(angle) * driftSpeed,
               sparkle: 0,
               sparklePeak: 0,
+              // ~20% of stars get a cross/spike shape when sparkling
+              crossStar: Math.random() < 0.20,
             });
           }
         }
@@ -4124,14 +4186,14 @@
           // Skip drawing when tab hidden (saves CPU), CSS handles visibility per theme
           if (!document.hidden) {
             ctx.clearRect(0, 0, W, H);
-            t += 0.012;
+            t += 0.016;
 
-            // Randomly trigger a sparkle on a random star (~2-3 per second)
-            if (Math.random() < 0.05 && stars.length) {
+            // Sparkle trigger — more frequent (~5-6/sec)
+            if (Math.random() < 0.09 && stars.length) {
               const s = stars[Math.floor(Math.random() * stars.length)];
               if (!s.sparkle) {
-                s.sparkle    = 70 + Math.random() * 60;
-                s.sparklePeak = 0.55 + Math.random() * 0.4;
+                s.sparkle     = 60 + Math.random() * 50;
+                s.sparklePeak = 0.65 + Math.random() * 0.35;
               }
             }
 
@@ -4144,24 +4206,56 @@
               if (s.y < -2)    s.y = H + 2;
               if (s.y > H + 2) s.y = -2;
 
-              // Ambient twinkle
-              let a = s.alpha * (0.5 + 0.5 * Math.sin(t * s.twinkleSpeed * 60 + s.phase));
+              // Ambient twinkle — deeper oscillation so it reads on mobile
+              let a = s.alpha * (0.38 + 0.62 * Math.sin(t * s.twinkleSpeed * 60 + s.phase));
 
               // Sparkle burst
               if (s.sparkle > 0) {
-                const progress = s.sparkle / 90;
+                const progress = s.sparkle / 80;
                 const boost = s.sparklePeak * Math.sin(progress * Math.PI);
                 a = Math.min(1, a + boost);
                 s.sparkle--;
-                // Draw soft glow halo around the sparkling star
-                if (boost > 0.15) {
-                  const grd = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, s.r * 5);
-                  grd.addColorStop(0, 'rgba(220,230,255,' + (boost * 0.55).toFixed(3) + ')');
-                  grd.addColorStop(1, 'rgba(220,230,255,0)');
+
+                // Glow halo
+                if (boost > 0.1) {
+                  const haloR = s.r * (s.crossStar ? 7 : 5);
+                  const grd = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, haloR);
+                  grd.addColorStop(0, 'rgba(210,225,255,' + (boost * 0.65).toFixed(3) + ')');
+                  grd.addColorStop(1, 'rgba(210,225,255,0)');
                   ctx.beginPath();
-                  ctx.arc(s.x, s.y, s.r * 5, 0, Math.PI * 2);
+                  ctx.arc(s.x, s.y, haloR, 0, Math.PI * 2);
                   ctx.fillStyle = grd;
                   ctx.fill();
+
+                  // Cross/spike effect for designated sparkle stars
+                  if (s.crossStar && boost > 0.25) {
+                    const spikeLen = s.r * 6 * boost;
+                    const spikeAlpha = (boost * 0.7).toFixed(3);
+                    ctx.strokeStyle = 'rgba(230,240,255,' + spikeAlpha + ')';
+                    ctx.lineWidth = Math.max(0.5, s.r * 0.5);
+                    ctx.lineCap = 'round';
+                    // Horizontal spike
+                    ctx.beginPath();
+                    ctx.moveTo(s.x - spikeLen, s.y);
+                    ctx.lineTo(s.x + spikeLen, s.y);
+                    ctx.stroke();
+                    // Vertical spike
+                    ctx.beginPath();
+                    ctx.moveTo(s.x, s.y - spikeLen);
+                    ctx.lineTo(s.x, s.y + spikeLen);
+                    ctx.stroke();
+                    // Diagonal spikes (shorter)
+                    const diagLen = spikeLen * 0.55;
+                    ctx.lineWidth = Math.max(0.4, s.r * 0.35);
+                    ctx.beginPath();
+                    ctx.moveTo(s.x - diagLen, s.y - diagLen);
+                    ctx.lineTo(s.x + diagLen, s.y + diagLen);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.moveTo(s.x + diagLen, s.y - diagLen);
+                    ctx.lineTo(s.x - diagLen, s.y + diagLen);
+                    ctx.stroke();
+                  }
                 }
               }
 
@@ -6274,6 +6368,8 @@
       else if (offset === 1) dateLabel.textContent = "מחר";
       else dateLabel.textContent = info.day + " " + info.month;
     }
+    var todayBtn = document.getElementById("hil-today-btn");
+    if (todayBtn) todayBtn.style.display = (offset !== 0) ? "block" : "none";
   }
 
   window.openHilulotModal = function (initOffset) {
@@ -6324,7 +6420,10 @@
             'style="background:rgba(139,92,246,0.2);border:1px solid rgba(139,92,246,0.4);' +
             'color:#c4b5fd;border-radius:0.75rem;padding:0.4rem 0.9rem;cursor:pointer;font-size:1.2rem;" ' +
             'title="יום קודם">‹</button>' +
-          '<span id="hil-datelabel" style="color:#94a3b8;font-size:0.85rem;">' + dateLabel + '</span>' +
+          '<div style="display:flex;flex-direction:column;align-items:center;gap:0.25rem;">' +
+            '<span id="hil-datelabel" style="color:#94a3b8;font-size:0.85rem;">' + dateLabel + '</span>' +
+            '<button id="hil-today-btn" style="background:rgba(251,191,36,0.15);border:1px solid rgba(251,191,36,0.45);color:#fbbf24;border-radius:0.5rem;padding:0.1rem 0.7rem;cursor:pointer;font-size:0.72rem;font-weight:700;display:' + (_dayOffset !== 0 ? 'block' : 'none') + ';">היום</button>' +
+          '</div>' +
           '<button id="hil-next" data-offset="' + (_dayOffset + 1) + '" ' +
             'style="background:rgba(139,92,246,0.2);border:1px solid rgba(139,92,246,0.4);' +
             'color:#c4b5fd;border-radius:0.75rem;padding:0.4rem 0.9rem;cursor:pointer;font-size:1.2rem;" ' +
@@ -6350,6 +6449,8 @@
 
     modal.querySelector("#hil-prev").addEventListener("click", function () { navTo(_dayOffset - 1); });
     modal.querySelector("#hil-next").addEventListener("click", function () { navTo(_dayOffset + 1); });
+    var todayBtnEl = modal.querySelector("#hil-today-btn");
+    if (todayBtnEl) todayBtnEl.addEventListener("click", function () { navTo(0); });
     modal.querySelector("#hil-cal-btn").addEventListener("click", function () {
       modal.remove();
       window.openHilulotCalendar();
@@ -6897,9 +6998,11 @@
       }
       modal.addEventListener("click",function(e){if(e.target===modal)modal.remove();});
     }
-    document.body.appendChild(modal); render(idx);
-    document.addEventListener("keydown",function esc(e){
-      if(e.key==="Escape"){modal.remove();document.removeEventListener("keydown",esc);}
+    document.body.appendChild(modal);
+    modal.setAttribute("tabindex","-1"); modal.focus();
+    render(idx);
+    modal.addEventListener("keydown",function(e){
+      if(e.key==="Escape") modal.remove();
       if(e.key==="ArrowLeft"&&idx<items.length-1){idx++;render(idx);}
       if(e.key==="ArrowRight"&&idx>0){idx--;render(idx);}
     });

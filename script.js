@@ -2249,7 +2249,7 @@ function getHebrewSeasonInfo() {
   const isShabbat = dow === 6;
   const isRoshChodesh =
     heb.includes("א׳") || heb.includes("ב׳") || day === 1 || day === 30;
-  const isChanukah = month.includes("כסלו") || month.includes("טבת");
+  const isChanukah = (month.includes("כסלו") && day >= 25) || (month.includes("טבת") && day <= 3);
   const isPurim =
     month.includes("אדר") && (day === 13 || day === 14 || day === 15);
   const isPesach = month.includes("ניסן") && day >= 15 && day <= 22;
@@ -7098,7 +7098,8 @@ function buildShacharitMizrahiPayload(context) {
   var isMonThu = (dow === 1 || dow === 4);
   var isTachanunDay = !context.isRoshChodesh && !context.isChanukah &&
     !context.isPurim && !context.isPesach && !context.isShavuot &&
-    !context.isSukkot && !context.isRoshHaShana && !context.isYomKippur;
+    !context.isSukkot && !context.isRoshHaShana && !context.isYomKippur &&
+    !context.isShabbat;
   var isHallelDay = context.isRoshChodesh || context.isChanukah ||
     context.isPesach || context.isShavuot || context.isSukkot;
   var isFullHallel = isHallelDay && !context.isRoshChodesh;
@@ -7393,7 +7394,9 @@ function buildShacharitMizrahiPayload(context) {
   parts.push(p("<b>יִֽהְי֥וּ</b> לְרָצ֨וֹן ׀ אִמְרֵי־פִ֡י וְהֶגְי֣וֹן לִבִּ֣י לְפָנֶ֑יךָ יְ֝הֹוָ֗ה צוּרִ֥י וְגֹאֲלִֽי׃ <br><br><small>יש אומרים תפילת רב מגמרה ברכות ט\"ז ע\"ב שכתב החיד\"א ז\"ל בסידורו<br>יְהִי רָצוֹן מִלְּפָנֶיךָ, יְהֹוָה אֱלהֵֽינוּ וֵאלֹהֵי אֲבוֹתֵֽינוּ, שֶׁתִתֶּן לָֽנוּ חַיִּים אֲרוּכִים, חַיִּים שֶׁל שָׁלוֹם, חַיִּים שֶׁל טוֹבָה, חַיִּים שֶׁל בְּרָכָה, חַיִּים שֶׁל פַּרְנָסָה, חַיִּים שֶׁל חִלּוּץ עֲצָמוֹת, חַיִּים שֶׁיֵשׁ בָּהֶם יִרְאַת חֵטְא, חַיִּים שֶׁאֵין בָּהֶם בּוּשָׁה וּכְלִמָּה, חַיִּים שֶׁל עֹֽשֶׁר וְכָבוֹד, חַיִּים שֶׁתְּהֵא בָֽנוּ אַהֲבַת תּוֹרָה וְיִרְאַת שָׁמַֽיִם, חַיִּים שֶׁתְּמַּלֵא אֶת־כָל־מִשְׁאֲלוֹת לִבֵּֽנוּ לְטוֹבָה:</small>"));
   parts.push(p("<b>עֹשֶׂה</b> שָׁלוֹם <small><small>בעשרת ימי תשובה אומר:</small> הַשָּׁלוֹם</small> בִּמְרוֹמָיו, הוּא בְּרַחֲמָיו יַעֲשֶׂה שָׁלוֹם עָלֵֽינוּ, וְעַל כָּל־עַמּוֹ יִשְׂרָאֵל, וְאִמְרוּ אָמֵן:"));
   parts.push(p("<small>יְהִי רָצוֹן מִלְּפָנֶֽיךָ, יְהֹוָה אֱלֹהֵֽינוּ וֵֽאלֹהֵי אֲבוֹתֵֽינוּ, שֶׁתִּבְנֶה בֵּית הַמִּקְדָשׁ בִּמְהֵרָה בְיָמֵֽינוּ, וְתֵן חֶלְקֵֽנוּ בְתוֹרָתָךְ לַעֲשׂוֹת חֻקֵּי רְצוֹנָךְ וּלְעָבְדָךְ בְּלֵבָב שָׁלֵם:</small>"));
-  parts.push(p("<small>בראש חודש אומרים כאן הלל</small> "));
+  if (isHallelDay) {
+    parts.push(p("<small>בראש חודש אומרים כאן הלל</small> "));
+  }
   if (context.isYamimNoraim) {
     var am_parts = [];
     am_parts.push(p("<small>בעשרת ימי תשובה אומרים:</small>"));
@@ -7431,8 +7434,10 @@ function buildShacharitMizrahiPayload(context) {
     am_parts.push(p("<small>אָבִינוּ מַלְכֵּנוּ אַל תְּשִׁיבֵנוּ רֵיקָם מִלְּפָנֶיךָ:</small>"));
     parts.push(sup(am_parts.join('')));
   }
-  parts.push(p("<small>בימים שאין בהם תחנון אומרים</small> "));
-  parts.push(p("<b>יְהִ֤י</b> שֵׁ֣ם יְהֹוָ֣ה מְבֹרָ֑ךְ מֵ֝עַתָּ֗ה וְעַד־עוֹלָֽם׃ מִמִּזְרַח־שֶׁ֥מֶשׁ עַד־מְבוֹא֑וֹ מְ֝הֻלָּ֗ל שֵׁ֣ם יְהֹוָֽה׃ רָ֖ם עַל־כׇּל־גּוֹיִ֥ם ׀ יְהֹוָ֑ה עַ֖ל הַשָּׁמַ֣יִם כְּבוֹדֽוֹ׃ יְהֹוָ֥ה אֲדֹנֵ֑ינוּ מָה־אַדִּ֥יר שִׁ֝מְךָ֗ בְּכׇל־הָאָֽרֶץ׃<br><br><small>ואחר כך אומר הש''צ חצי קדיש</small>"));
+  if (!isTachanunDay) {
+    parts.push(p("<small>בימים שאין בהם תחנון אומרים</small> "));
+    parts.push(p("<b>יְהִ֤י</b> שֵׁ֣ם יְהֹוָ֣ה מְבֹרָ֑ךְ מֵ֝עַתָּ֗ה וְעַד־עוֹלָֽם׃ מִמִּזְרַח־שֶׁ֥מֶשׁ עַד־מְבוֹא֑וֹ מְ֝הֻלָּ֗ל שֵׁ֣ם יְהֹוָֽה׃ רָ֖ם עַל־כׇּל־גּוֹיִ֥ם ׀ יְהֹוָ֑ה עַ֖ל הַשָּׁמַ֣יִם כְּבוֹדֽוֹ׃ יְהֹוָ֥ה אֲדֹנֵ֑ינוּ מָה־אַדִּ֥יר שִׁ֝מְךָ֗ בְּכׇל־הָאָֽרֶץ׃<br><br><small>ואחר כך אומר הש''צ חצי קדיש</small>"));
+  }
   parts.push(hr);
 
   // ─────────────────────────── וידוי ותחנון ───────────────────────────
@@ -7700,7 +7705,8 @@ function buildShacharitAshkenazPayload(context) {
   var isMonThu = (dow === 1 || dow === 4);
   var isTachanunDay = !context.isRoshChodesh && !context.isChanukah &&
     !context.isPurim && !context.isPesach && !context.isShavuot &&
-    !context.isSukkot && !context.isRoshHaShana && !context.isYomKippur;
+    !context.isSukkot && !context.isRoshHaShana && !context.isYomKippur &&
+    !context.isShabbat;
   var isHallelDay = context.isRoshChodesh || context.isChanukah ||
     context.isPesach || context.isShavuot || context.isSukkot;
   var isFullHallel = isHallelDay && !context.isRoshChodesh;
@@ -7880,7 +7886,8 @@ function buildShacharitSfaradPayload(context) {
   var isMonThu = (dow === 1 || dow === 4);
   var isTachanunDay = !context2.isRoshChodesh && !context2.isChanukah &&
     !context2.isPurim && !context2.isPesach && !context2.isShavuot &&
-    !context2.isSukkot && !context2.isRoshHaShana && !context2.isYomKippur;
+    !context2.isSukkot && !context2.isRoshHaShana && !context2.isYomKippur &&
+    !context2.isShabbat;
   var isHallelDay = context2.isRoshChodesh || context2.isChanukah ||
     context2.isPesach || context2.isShavuot || context2.isSukkot;
   var isTorahReadingDay = isMonThu || context2.isShabbat || context2.isRoshChodesh ||

@@ -6406,7 +6406,7 @@ function buildPrayerDbPayload(key, fallbackEntry) {
           .split(/\n(?=פרק )/g)
           .map(
             (chapter, index) =>
-              `${index > 0 ? '<hr class="prayer-divider">' : ""}<p>${chapter.trim().replace(/\n/g, "<br>")}</p>`,
+              `${index > 0 ? '<hr class="prayer-divider">' : ""}<p>${chapter.trim().replace(/\n/g, "<br>").replace(/<br>([א-ת]{1,2}) /g, '<br><span style="font-size:0.5em;">$1</span> ').replace(/: ([א-ת]{1,2}) /g, ': <span style="font-size:0.5em;">$1</span> ')}</p>`,
           )
           .join("")
       : "";

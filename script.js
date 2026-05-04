@@ -622,8 +622,15 @@ window.addEventListener("popstate", function (e) {
     } else {
       removeModalById(modalId);
     }
+  } else {
+    // אין מודלים פתוחים — מונע יציאה מהאפליקציה, חוזר לדף הבית
+    history.pushState(null, "");
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 });
+// ערך בסיס בהיסטוריה בטעינה: מבטיח שכפתור חזור תמיד יישאר בתוך האפליקציה
+history.replaceState({ page: "home" }, "");
+history.pushState({ page: "app" }, "");
 
 // --- Core Variables & Setup ---
 const SITE_URL = "https://jewishcalendar.netlify.app/";
@@ -977,6 +984,7 @@ function openOmerModal() {
   const m = document.getElementById("omer-modal");
   m.classList.remove("hidden");
   setTimeout(() => m.classList.remove("opacity-0"), 10);
+  pushModalState("omer-modal");
 }
 
 function closeOmerModal() {
@@ -2522,8 +2530,6 @@ function openPrayer(key, heLabel, enLabel) {
     mizrahi: "עדות המזרח",
     sfard: "ספרד",
     ashkenaz: "אשכנז",
-    temani_shami: "תימן שאמי",
-    temani_baladi: "תימן בלאדי",
   };
 
   let existing = document.getElementById("prayer-modal");
@@ -3206,6 +3212,7 @@ function showZmanOpinions(key) {
     if (e.target === modal) modal.remove();
   });
   document.body.appendChild(modal);
+  pushModalState("zman-opinions-modal");
 }
 
 async function fetchFastTimes(name, dateStr, elementId) {
@@ -3410,6 +3417,7 @@ function toggleSettings() {
       m.classList.remove("opacity-0");
       m.children[0].classList.remove("scale-95");
     }, 10);
+    pushModalState("settings-modal");
   } else {
     m.classList.add("opacity-0");
     m.children[0].classList.add("scale-95");
@@ -4923,6 +4931,7 @@ function openShabbatInfoModal() {
     }
   });
   document.body.appendChild(overlay);
+  pushModalState("shabbat-info-modal");
   lockBodyScroll();
 }
 
@@ -5720,6 +5729,7 @@ showZmanOpinions = function (key) {
     if (event.target === modal) modal.remove();
   });
   document.body.appendChild(modal);
+  pushModalState("zman-opinions-modal");
 };
 
 const PRAYER_HTML_CACHE = new Map();
@@ -5727,8 +5737,6 @@ const NUSACH_LABELS = {
   mizrahi: "עדות המזרח",
   sfard: "ספרד",
   ashkenaz: "אשכנז",
-  temani_shami: "תימן שאמי",
-  temani_baladi: "תימן בלדי",
 };
 
 const PRAYER_QUERY_DEFS = {

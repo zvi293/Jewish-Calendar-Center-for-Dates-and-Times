@@ -4269,8 +4269,14 @@ function openMonthYearPicker() {
   const titleEl = document.getElementById("cal-month-title");
   if (titleEl) {
     const r = titleEl.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const pickerW = 280; // estimated picker width
+    let leftPos = Math.max(8, r.left - 40);
+    // Clamp so picker doesn't overflow the right edge of the screen (important on mobile)
+    leftPos = Math.min(leftPos, vw - pickerW - 8);
     picker.style.top = r.bottom + 8 + "px";
-    picker.style.left = Math.max(8, r.left - 40) + "px";
+    picker.style.left = leftPos + "px";
+    picker.style.maxWidth = (vw - 16) + "px";
   }
 
   // Year select

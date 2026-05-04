@@ -1058,6 +1058,45 @@ function _stopOmerCountdown() {
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ── 🌙 Levana Countdown Timer (last day) ─────────────────────────────────────
+let _levanaCountdownInterval = null;
+
+function _startLevanaCountdown(endDateStr) {
+  _stopLevanaCountdown();
+  function update() {
+    const el = document.getElementById("levana-countdown-display");
+    if (!el) { _stopLevanaCountdown(); return; }
+    const endDate = new Date(endDateStr);
+    const zman = getApproxZmanim(endDate).e; // e.g. "05:20"
+    const [zh, zm] = zman.split(":").map(Number);
+    const target = new Date(endDate);
+    target.setHours(zh, zm, 0, 0);
+    const diff = target - Date.now();
+    if (diff <= 0) {
+      el.textContent = "00:00:00";
+      _stopLevanaCountdown();
+      return;
+    }
+    const h = Math.floor(diff / 3600000);
+    const min = Math.floor((diff % 3600000) / 60000);
+    const sec = Math.floor((diff % 60000) / 1000);
+    el.textContent =
+      String(h).padStart(2, "0") + ":" +
+      String(min).padStart(2, "0") + ":" +
+      String(sec).padStart(2, "0");
+  }
+  update();
+  _levanaCountdownInterval = setInterval(update, 1000);
+}
+
+function _stopLevanaCountdown() {
+  if (_levanaCountdownInterval) {
+    clearInterval(_levanaCountdownInterval);
+    _levanaCountdownInterval = null;
+  }
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 function openOmerModal() {
   document.getElementById("omer-modal-text").textContent =
     generateOmerText(CURRENT_OMER_DAY);
@@ -2187,8 +2226,14 @@ async function fetchLiveCalendarData() {
       const moonWindowOpen = nextM.heb === "ניתן לברך כעת";
       if (moonWindowOpen && nextM.endDate) {
         const daysToEnd = getDaysDiff(nextM.endDate);
-        document.getElementById("stat-moon").innerHTML =
-          `${nextM.name.replace("קידוש לבנה - ", "")} <br><span class="text-sm font-normal opacity-80" style="color:#fbbf24">(סוף זמן בעוד ${daysToEnd} ימים)</span>`;
+        if (daysToEnd <= 1) {
+          document.getElementById("stat-moon").innerHTML =
+            `${nextM.name.replace("קידוש לבנה - ", "")} <br><span class="text-sm font-normal opacity-80" style="color:#fbbf24">⏱ סוף זמן: <span id="levana-countdown-display">00:00:00</span></span>`;
+          _startLevanaCountdown(nextM.endDate);
+        } else {
+          document.getElementById("stat-moon").innerHTML =
+            `${nextM.name.replace("קידוש לבנה - ", "")} <br><span class="text-sm font-normal opacity-80" style="color:#fbbf24">(סוף זמן בעוד ${daysToEnd} ימים)</span>`;
+        }
       } else {
         document.getElementById("stat-moon").innerHTML =
           `${nextM.name.replace("קידוש לבנה - ", "")} <br><span class="text-sm font-normal opacity-80">(בעוד ${getDaysDiff(nextM.date)} ימים)</span>`;
@@ -2203,8 +2248,14 @@ async function fetchLiveCalendarData() {
       const moonWindowOpen2 = nextM.heb === "ניתן לברך כעת";
       if (moonWindowOpen2 && nextM.endDate) {
         const daysToEnd2 = getDaysDiff(nextM.endDate);
-        document.getElementById("stat-moon").innerHTML =
-          `${nextM.name.replace("Kiddush Levana - ", "")} <br><span class="text-sm font-normal opacity-80" style="color:#fbbf24">(End of window in ${daysToEnd2} days)</span>`;
+        if (daysToEnd2 <= 1) {
+          document.getElementById("stat-moon").innerHTML =
+            `${nextM.name.replace("Kiddush Levana - ", "")} <br><span class="text-sm font-normal opacity-80" style="color:#fbbf24">⏱ End of window: <span id="levana-countdown-display">00:00:00</span></span>`;
+          _startLevanaCountdown(nextM.endDate);
+        } else {
+          document.getElementById("stat-moon").innerHTML =
+            `${nextM.name.replace("Kiddush Levana - ", "")} <br><span class="text-sm font-normal opacity-80" style="color:#fbbf24">(End of window in ${daysToEnd2} days)</span>`;
+        }
       } else {
         document.getElementById("stat-moon").innerHTML =
           `${nextM.name.replace("Kiddush Levana - ", "")} <br><span class="text-sm font-normal opacity-80">(${formatDaysUntilText(getDaysDiff(nextM.date))})</span>`;
@@ -6699,7 +6750,7 @@ function buildBirkatHamazonPayload(context) {
     // הרחמן — תמיד (standard list)
     parts.push(
       p(
-        "הָרַחֲמָן הוּא יִשְׁתַּבַּח עַל כִּסֵּא כְבוֹדוֹ: הָרַחֲמָן הוּא יִשְׁתַּבַּח בַּשָּׁמַֽיִם וּבָאָֽרֶץ: הָרַחֲמָן הוּא יִשְׁתַּבַּח בָּֽנוּ לְדוֹר דּוֹרִים: הָרַחֲמָן הוּא קֶֽרֶן לְעַמּוֹ יָרִים: הָרַחֲמָן הוּא יִתְפָּאַר בָּֽנוּ לְנֵֽצַח נְצָחִים: הָרַחֲמָן הוּא יְפַרְנְסֵֽנוּ בְּכָבוֹד וְלֹא בְבִזּוּי בְּהֶתֵּר וְלֹא בְאִסּוּר בְּנַֽחַת וְלֹא בְצַֽעַר: הָרַחֲמָן הוּא יִתֵּן שָׁלוֹם בֵּינֵֽינוּ: הָרַחֲמָן הוּא יִשְׁלַח בְּרָכָה רְוָחָה וְהַצְלָחָה בְּכָל־מַעֲשֵׂה יָדֵֽינוּ: הָרַחֲמָן הוּא יַצְלִֽיחַ אֶת־דְּרָכֵֽינוּ: הָרַחֲמָן הוּא יִשְׁבֹּר עֹל גָּלוּת מְהֵרָה מֵעַל צַוָּארֵֽינוּ: הָרַחֲמָן הוּא יוֹלִיכֵֽנוּ מְהֵרָה קוֹמְמִיּוּת לְאַרְצֵֽנוּ: הָרַחֲמָן הוּא יִרְפָּאֵֽנוּ רְפוּאָה שְׁלֵמָה, רְפוּאַת הַנֶּֽפֶשׁ וּרְפוּאַת הַגּוּף: הָרַחֲמָן הוּא יִפְתַּח לָנוּ אֶת יָדוֹ הָרְחָבָה: הָרַחֲמָן הוּא יְבָרֵךְ כָּל־אֶחָד וְאֶחָד מִמֶּֽנּוּ בִּשְׁמוֹ הַגָּדוֹל כְּמוֹ שֶׁנִּתְבָּֽרְכֽוּ אֲבוֹתֵֽינוּ אַבְרָהָם יִצְחָק וְיַעֲקֹב, בַּכֹּל מִכֹּל כֹּל, כֵּן יְבָרֵךְ אוֹתָֽנוּ יַֽחַד בְּרָכָה שְׁלֵמָה, וְכֵן יְהִי רָצוֹן וְנֹאמַר אָמֵן: הָרַחֲמָן הוּא יִפְרוֹשׂ עָלֵֽינוּ סֻכַּת שְׁלוֹמוֹ:",
+        "הָרַחֲמָן הוּא יִשְׁתַּבַּח עַל כִּסֵּא כְבוֹדוֹ: הָרַחֲמָן הוּא יִשְׁתַּבַּח בַּשָּׁמַֽיִם וּבָאָֽרֶץ: הָרַחֲמָן הוּא יִשְׁתַּבַּח בָּֽנוּ לְדוֹר דּוֹרִים: הָרַחֲמָן הוּא קֶֽרֶן לְעַמּוֹ יָרִים: הָרַחֲמָן הוּא יִתְפָּאַר בָּֽנוּ לְנֵֽצַח נְצָחִים: הָרַחֲמָן הוּא יְפַרְנְסֵֽנוּ בְּכָבוֹד וְלֹא בְבִזּוּי בְּהֶתֵּר וְלֹא בְאִסּוּר בְּנַֽחַת וְלֹא בְצַֽעַר: הָרַחֲמָן הוּא יִתֵּן שָׁלוֹם בֵּינֵֽינוּ: הָרַחֲמָן הוּא יִשְׁלַח בְּרָכָה רְוָחָה וְהַצְלָחָה בְּכָל־מַעֲשֵׂה יָדֵֽינוּ: הָרַחֲמָן הוּא יַצְלִֽיחַ אֶת־דְּרָכֵֽינוּ: הָרַחֲמָן הוּא יִשְׁבֹּר עֹל גָּלוּת מְהֵרָה מֵעַל צַוָּארֵֽינוּ: הָרַחֲמָן הוּא יוֹלִיכֵֽנוּ מְהֵרָה קוֹמְמִיּוּת לְאַרְצֵֽנוּ: הָרַחֲמָן הוּא יִרְפָּאֵֽנוּ רְפוּאָה שְׁלֵמָה הָרַחֲמָן הוּא יִפְתַּח לָנוּ אֶת יָדוֹ הָרְחָבָה: הָרַחֲמָן הוּא יְבָרֵךְ כָּל־אֶחָד וְאֶחָד מִמֶּֽנּוּ בִּשְׁמוֹ הַגָּדוֹל כְּמוֹ שֶׁנִּתְבָּֽרְכֽוּ אֲבוֹתֵֽינוּ אַבְרָהָם יִצְחָק וְיַעֲקֹב, בַּכֹּל מִכֹּל כֹּל, כֵּן יְבָרֵךְ אוֹתָֽנוּ יַֽחַד בְּרָכָה שְׁלֵמָה, וְכֵן יְהִי רָצוֹן וְנֹאמַר אָמֵן: הָרַחֲמָן הוּא יִפְרוֹשׂ עָלֵֽינוּ סֻכַּת שְׁלוֹמוֹ:",
       ),
     );
 

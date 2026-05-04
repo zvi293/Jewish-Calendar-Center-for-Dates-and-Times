@@ -978,6 +978,86 @@ function getGeoParams() {
   return `geonameid=${GEO_LOCATION}`;
 }
 
+// ── Omer Countdown Timer ──────────────────────────────────────────────────
+let _omerCountdownInterval = null;
+
+function _updateOmerCountdownDisplay() {
+  const display = document.getElementById("omer-timer-display");
+  const label = document.getElementById("omer-timer-label");
+  const sublabel = document.getElementById("omer-timer-sublabel");
+  if (!display) return;
+
+  const now = Date.now();
+  const todayTzeit = window.TZEIT_TIME ? window.TZEIT_TIME.getTime() : null;
+
+  if (!todayTzeit) {
+    display.textContent = "--:--:--";
+    label.textContent = "";
+    sublabel.textContent = "";
+    return;
+  }
+
+  let targetMs, beforeTzeit;
+
+  if (now < todayTzeit) {
+    // Daytime — count down to tonight's tzet
+    targetMs = todayTzeit;
+    beforeTzeit = true;
+  } else {
+    // After tzet — count down to tomorrow's tzet
+    const nextTzeitIso =
+      window._lastZData &&
+      window._lastZData._nextDay &&
+      window._lastZData._nextDay.times &&
+      window._lastZData._nextDay.times.tzeit7083deg;
+    targetMs = nextTzeitIso
+      ? new Date(nextTzeitIso).getTime()
+      : todayTzeit + 24 * 60 * 60 * 1000; // fallback: +24h
+    beforeTzeit = false;
+  }
+
+  const diff = targetMs - now;
+  if (diff <= 0) {
+    display.textContent = "00:00:00";
+    return;
+  }
+
+  const h = Math.floor(diff / 3600000);
+  const min = Math.floor((diff % 3600000) / 60000);
+  const sec = Math.floor((diff % 60000) / 1000);
+  const timeStr =
+    String(h).padStart(2, "0") +
+    ":" +
+    String(min).padStart(2, "0") +
+    ":" +
+    String(sec).padStart(2, "0");
+
+  display.textContent = timeStr;
+
+  if (beforeTzeit) {
+    label.textContent = "⏱ ספירת הלילה בעוד:";
+    sublabel.textContent = "הספירה המוצגת היא של הלילה הקרוב";
+  } else {
+    label.textContent = "🌟 הגיע זמן הספירה!";
+    sublabel.textContent = "ניתן לספור כעת";
+    display.textContent = ""; // hide timer when it's time to count
+  }
+}
+
+function _startOmerCountdown() {
+  _stopOmerCountdown();
+  _updateOmerCountdownDisplay();
+  _omerCountdownInterval = setInterval(_updateOmerCountdownDisplay, 1000);
+}
+
+function _stopOmerCountdown() {
+  if (_omerCountdownInterval) {
+    clearInterval(_omerCountdownInterval);
+    _omerCountdownInterval = null;
+  }
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 function openOmerModal() {
   document.getElementById("omer-modal-text").textContent =
     generateOmerText(CURRENT_OMER_DAY);
@@ -985,12 +1065,14 @@ function openOmerModal() {
   m.classList.remove("hidden");
   setTimeout(() => m.classList.remove("opacity-0"), 10);
   pushModalState("omer-modal");
+  _startOmerCountdown();
 }
 
 function closeOmerModal() {
   const m = document.getElementById("omer-modal");
   m.classList.add("opacity-0");
   setTimeout(() => m.classList.add("hidden"), 300);
+  _stopOmerCountdown();
 }
 
 // --- Sefaria Modal Logic ---

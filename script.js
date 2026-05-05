@@ -13853,12 +13853,19 @@ function closeTehillimModal() {
 
 // ── Dedicated Ben Ish Hai Page ────────────────────────────
 function openBenIshHaiPage() {
-  // Exact Sefaria keys per year (the two years have different parsha groupings)
+
+  // ── Hebrew letter numbering (גימטריה) ──
+  function toHeb(n) {
+    if (n <= 0) return String(n);
+    const map = [[400,'ת'],[300,'ש'],[200,'ר'],[100,'ק'],[90,'צ'],[80,'פ'],[70,'ע'],[60,'ס'],[50,'נ'],[40,'מ'],[30,'ל'],[20,'כ'],[19,'יט'],[18,'יח'],[17,'יז'],[16,'טז'],[15,'טו'],[10,'י'],[9,'ט'],[8,'ח'],[7,'ז'],[6,'ו'],[5,'ה'],[4,'ד'],[3,'ג'],[2,'ב'],[1,'א']];
+    let r = '', rem = n;
+    for (const [v, l] of map) { while (rem >= v) { r += l; rem -= v; } }
+    return r;
+  }
+
   const YEARS = [
     {
-      he: "שנה ראשונה",
-      en: "Halachot 1st Year",
-      color: "#6366f1",
+      he: "שנה ראשונה", en: "Halachot 1st Year", color: "#6366f1",
       parshiyot: [
         { he: "בראשית",         en: "Bereshit" },
         { he: "נח",              en: "Noach" },
@@ -13915,9 +13922,7 @@ function openBenIshHaiPage() {
       ],
     },
     {
-      he: "שנה שניה",
-      en: "Halachot 2nd Year",
-      color: "#f59e0b",
+      he: "שנה שניה", en: "Halachot 2nd Year", color: "#f59e0b",
       parshiyot: [
         { he: "בראשית",         en: "Bereshit" },
         { he: "נח",              en: "Noach" },
@@ -13971,148 +13976,412 @@ function openBenIshHaiPage() {
   ];
 
   let activeYearIdx = 0;
+  let _bihFontSize = 100;
+  let _loadedRange = { start: -1, end: -1 };
+  let _isLoadingNext = false, _isLoadingPrev = false;
+  let _searchAbort = null;
+  let _scrollListener = null;
+  let _titleListener = null;
+  const _cache = {};
 
-  let existing = document.getElementById("ben-ish-hai-modal");
-  if (existing) existing.remove();
+  // ── Bookmarks ──
+  const BM_KEY = "bih_bookmarks_v1";
+  function loadBMs() { try { return JSON.parse(localStorage.getItem(BM_KEY)||"[]"); } catch(e) { return []; } }
+  function saveBMs(b) { try { localStorage.setItem(BM_KEY, JSON.stringify(b)); } catch(e) {} }
+  function addBM(y,p,h,label) { const b=loadBMs(); if(!b.some(x=>x.y===y&&x.p===p&&x.h===h)){b.push({y,p,h,label,ts:Date.now()});saveBMs(b);} }
+  function removeBM(y,p,h) { saveBMs(loadBMs().filter(x=>!(x.y===y&&x.p===p&&x.h===h))); }
+  function isBM(y,p,h) { return loadBMs().some(x=>x.y===y&&x.p===p&&x.h===h); }
 
-  const modal = document.createElement("div");
-  modal.id = "ben-ish-hai-modal";
-  modal.style.cssText =
-    "position:fixed;inset:0;z-index:200;background:rgba(2,6,23,0.95);backdrop-filter:blur(8px);display:flex;flex-direction:column;overflow:hidden;";
+  // ── Fetch halachot (with cache) ──
+  async function fetchHalachot(yIdx, pIdx) {
+    const key = yIdx + "_" + pIdx;
+    if (_cache[key]) return _cache[key];
+    const year = YEARS[yIdx];
+    const parsha = year.parshiyot[pIdx];
+    const ref = "Ben_Ish_Hai,_" + year.en.replace(/ /g,"_") + ",_" + parsha.en.replace(/ /g,"_");
+    const url = "https://www.sefaria.org/api/texts/" + encodeURIComponent(ref) + "?pad=0&lang=he";
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("fail");
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      const texts = (data.he||[]).map(h=>Array.isArray(h)?h.join(" "):(typeof h==="string"?h:String(h))).filter(Boolean);
+      _cache[key] = texts;
+      return texts;
+    } catch(e) {
+      _cache[key] = null;
+      return null;
+    }
+  }
 
-  function buildPage(yearIdx) {
+  // ── Build DOM section for a parsha ──
+  function createParshaSection(yIdx, pIdx, texts) {
+    const year = YEARS[yIdx];
+    const parsha = year.parshiyot[pIdx];
+    const color = year.color;
+    const div = document.createElement("div");
+    div.id = "bih-sec-" + pIdx;
+    div.setAttribute("data-pidx", pIdx);
+    div.style.cssText = "padding-bottom:2rem;";
+
+    const header = document.createElement("div");
+    header.style.cssText = "text-align:center;padding:1.5rem 0 1rem;position:sticky;top:0;background:#faf9f6;z-index:2;border-bottom:1px solid " + color + "44;margin-bottom:1.25rem;";
+    header.innerHTML = '<span style="background:' + color + ';color:#fff;padding:0.3rem 1rem;border-radius:999px;font-size:0.95rem;font-weight:900;">' + parsha.he + '</span><span style="color:#94a3b8;font-size:0.72rem;display:block;margin-top:0.35rem;">' + year.he + (texts && texts.length ? ' · ' + texts.length + ' הלכות' : '') + '</span>';
+    div.appendChild(header);
+
+    if (!texts || texts.length === 0) {
+      const empty = document.createElement("p");
+      empty.style.cssText = "text-align:center;color:#94a3b8;padding:1rem;";
+      empty.textContent = "לא נמצא תוכן לפרשה זו";
+      div.appendChild(empty);
+      return div;
+    }
+
+    const body = document.createElement("div");
+    texts.forEach((h, i) => {
+      const bmed = isBM(yIdx, pIdx, i);
+      const item = document.createElement("div");
+      item.id = "bih-h-" + pIdx + "-" + i;
+      item.style.cssText = "margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:1px solid rgba(0,0,0,0.07);";
+      item.innerHTML =
+        '<div style="display:flex;align-items:center;justify-content:center;gap:0.5rem;margin-bottom:0.5rem;">' +
+          '<span style="color:' + color + ';font-size:0.75rem;font-weight:900;">הלכה ' + toHeb(i+1) + '</span>' +
+          '<button id="bih-bm-' + pIdx + '-' + i + '"' +
+            ' onclick="window._bihBMToggle(' + yIdx + ',' + pIdx + ',' + i + ',\'' + parsha.he.replace(/'/g,"\\'") + ' הלכה ' + toHeb(i+1) + '\')"' +
+            ' title="' + (bmed?"הסר סימניה":"הוסף סימניה") + '"' +
+            ' style="background:none;border:none;cursor:pointer;font-size:1rem;padding:0;opacity:' + (bmed?"1":"0.3") + ';transition:opacity 0.15s;">🔖</button>' +
+        '</div>' +
+        '<div style="direction:rtl;">' + h + '</div>';
+      body.appendChild(item);
+    });
+    div.appendChild(body);
+    return div;
+  }
+
+  // ── Snippet builder for search ──
+  function buildSnippet(text, q) {
+    const idx = text.indexOf(q);
+    if (idx === -1) return text.slice(0,80) + "...";
+    const s = Math.max(0,idx-30), e = Math.min(text.length,idx+q.length+60);
+    let snip = (s>0?"...":"") + text.slice(s,e) + (e<text.length?"...":"");
+    const esc = q.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
+    return snip.replace(new RegExp(esc,"g"),'<mark style="background:#fef08a;border-radius:2px;">'+q+'</mark>');
+  }
+
+  // ── Build grid content ──
+  function buildGridContent(yearIdx, filterQ) {
     activeYearIdx = yearIdx;
     const year = YEARS[yearIdx];
     const color = year.color;
     const parshiyot = year.parshiyot;
 
-    const yearTabsHTML = YEARS.map(
-      (y, i) => `
-      <button onclick="window._benIshHaiSwitchYear(${i})"
-        style="padding:0.35rem 0.9rem;border-radius:999px;font-size:0.8rem;font-weight:700;border:1px solid ${i === yearIdx ? color : "rgba(255,255,255,0.12)"};
-               background:${i === yearIdx ? color : "transparent"};color:${i === yearIdx ? "#fff" : "#94a3b8"};cursor:pointer;white-space:nowrap;transition:all 0.15s;">
-        ${y.he}
-      </button>`
-    ).join("");
+    // Year tabs
+    const tabsEl = document.getElementById("bih-year-bar");
+    if (tabsEl) {
+      tabsEl.innerHTML = YEARS.map((y,i) =>
+        '<button onclick="window._bihSwitchYear(' + i + ')" style="padding:0.35rem 0.9rem;border-radius:999px;font-size:0.8rem;font-weight:700;border:1px solid ' +
+        (i===yearIdx ? color+';background:'+color+';color:#fff' : 'rgba(255,255,255,0.12);background:transparent;color:#94a3b8') +
+        ';cursor:pointer;white-space:nowrap;transition:all 0.15s;">' + y.he + '</button>'
+      ).join("");
+    }
 
-    const parshiyotHTML = parshiyot.map(
-      (p, i) => `
-      <button onclick="window._benIshHaiOpenParsha(${i})"
-        style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:0.75rem;
-               padding:0.5rem 0.25rem;font-size:0.78rem;font-weight:700;color:#e2e8f0;cursor:pointer;
-               transition:all 0.15s;text-align:center;"
-        onmouseover="this.style.background='${color}33';this.style.borderColor='${color}66';"
-        onmouseout="this.style.background='rgba(255,255,255,0.05)';this.style.borderColor='rgba(255,255,255,0.1)';">
-        ${p.he}
-      </button>`
-    ).join("");
+    // Grid
+    const gridEl = document.getElementById("bih-grid-content");
+    if (gridEl) {
+      const filtered = filterQ
+        ? parshiyot.map((p,i)=>({...p,i})).filter(p=>p.he.includes(filterQ)||p.en.toLowerCase().includes(filterQ.toLowerCase()))
+        : parshiyot.map((p,i)=>({...p,i}));
+      gridEl.innerHTML = filtered.map(p =>
+        '<button onclick="window._bihOpenParsha(' + p.i + ')" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:0.75rem;padding:0.5rem 0.25rem;font-size:0.78rem;font-weight:700;color:#e2e8f0;cursor:pointer;transition:all 0.15s;text-align:center;" onmouseover="this.style.background=\'' + color + '33\';this.style.borderColor=\'' + color + '66\';" onmouseout="this.style.background=\'rgba(255,255,255,0.05)\';this.style.borderColor=\'rgba(255,255,255,0.1)\';">' + p.he + '</button>'
+      ).join("");
+    }
 
-    modal.innerHTML = `
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;">
-        <div>
-          <h2 style="color:#f1f5f9;font-size:1.3rem;font-weight:900;margin:0;">בן איש חי</h2>
-          <p style="color:${color};font-size:0.78rem;font-weight:700;margin:0.15rem 0 0;">רבי יוסף חיים מבגדד זצ"ל</p>
-        </div>
-        <button onclick="closeBenIshHaiModal()"
-          style="background:rgba(255,255,255,0.08);border:none;color:#94a3b8;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.1rem;flex-shrink:0;">✕</button>
-      </div>
-      <!-- Year tabs -->
-      <div style="display:flex;gap:0.5rem;padding:0.75rem 1.25rem;flex-shrink:0;">
-        ${yearTabsHTML}
-      </div>
-      <!-- Parsha grid -->
-      <div style="padding:0 1.25rem;overflow-y:auto;flex:1;">
-        <p style="color:#64748b;font-size:0.72rem;margin:0 0 0.75rem;">לחץ על פרשה לקריאת הטקסט המלא</p>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:0.5rem;padding-bottom:1.5rem;">
-          ${parshiyotHTML}
-        </div>
-      </div>
-      <!-- Parsha content pane (hidden initially) -->
-      <div id="ben-ish-hai-content-pane" style="display:none;position:absolute;inset:0;background:rgba(2,6,23,0.98);z-index:10;flex-direction:column;overflow:hidden;">
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border-bottom:1px solid rgba(255,255,255,0.08);">
-          <button id="ben-ish-hai-back-btn" onclick="document.getElementById('ben-ish-hai-content-pane').style.display='none';"
-            style="background:rgba(255,255,255,0.08);border:none;color:#94a3b8;padding:0.4rem 0.8rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;">
-            ← חזרה
-          </button>
-          <h3 id="ben-ish-hai-parsha-title" style="color:#f1f5f9;font-size:1rem;font-weight:900;margin:0;"></h3>
-          <div style="width:60px;"></div>
-        </div>
-        <div id="ben-ish-hai-text-area" style="padding:1.25rem;overflow-y:auto;flex:1;font-family:'David Libre','Frank Ruhl Libre',serif;font-size:1.05rem;line-height:2;color:#e2e8f0;text-align:right;direction:rtl;">
-        </div>
-        <p style="color:#334155;font-size:0.65rem;text-align:center;padding:0.5rem;flex-shrink:0;">מקור: Sefaria.org (CC-BY-SA) | בן איש חי — רבי יוסף חיים</p>
-      </div>`;
+    // Bookmarks panel
+    buildBMPanel();
   }
 
-  window._benIshHaiSwitchYear = (idx) => buildPage(idx);
+  function buildBMPanel() {
+    const panel = document.getElementById("bih-bm-panel");
+    if (!panel) return;
+    const bms = loadBMs().filter(b=>b.y===activeYearIdx);
+    panel.innerHTML =
+      '<div style="border-top:1px solid rgba(255,255,255,0.08);padding-top:0.75rem;margin-top:1rem;">' +
+      '<p style="color:#94a3b8;font-size:0.75rem;font-weight:700;margin-bottom:0.5rem;">📌 סימניות</p>' +
+      (bms.length ? bms.map(b => {
+        const pr = YEARS[b.y]&&YEARS[b.y].parshiyot[b.p];
+        return '<div style="display:flex;align-items:center;gap:0.5rem;padding:0.45rem 0.6rem;background:rgba(255,255,255,0.04);border-radius:0.5rem;margin-bottom:0.35rem;direction:rtl;">' +
+          '<button onclick="window._bihOpenParsha(' + b.p + ',' + b.h + ')" style="background:none;border:none;color:#e2e8f0;cursor:pointer;font-size:0.8rem;text-align:right;flex:1;padding:0;">🔖 ' + (pr?pr.he:"?") + ' — הלכה ' + toHeb(b.h+1) + '</button>' +
+          '<button onclick="window._bihBMRemove(' + b.y + ',' + b.p + ',' + b.h + ')" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:0.78rem;padding:0;flex-shrink:0;">✕</button>' +
+          '</div>';
+      }).join("") : '<p style="color:#64748b;font-size:0.78rem;text-align:center;padding:0.3rem 0;">אין סימניות עדיין</p>') +
+      '</div>';
+  }
 
-  window._benIshHaiOpenParsha = async (parshaIdx) => {
-    const pane = document.getElementById("ben-ish-hai-content-pane");
-    const title = document.getElementById("ben-ish-hai-parsha-title");
-    const area = document.getElementById("ben-ish-hai-text-area");
+  // ── Infinite scroll setup ──
+  function setupScrollLoader(contentArea) {
+    if (_scrollListener) contentArea.removeEventListener("scroll", _scrollListener);
+    if (_titleListener) contentArea.removeEventListener("scroll", _titleListener);
+
+    _scrollListener = async () => {
+      const { scrollTop, scrollHeight, clientHeight } = contentArea;
+      const year = YEARS[activeYearIdx];
+      const sectionsDiv = document.getElementById("bih-parsha-sections");
+      if (!sectionsDiv) return;
+
+      // Load next parsha when near bottom
+      if (!_isLoadingNext && scrollTop + clientHeight > scrollHeight - 600) {
+        const nextIdx = _loadedRange.end + 1;
+        if (nextIdx < year.parshiyot.length) {
+          _isLoadingNext = true;
+          _loadedRange.end = nextIdx;
+          const loader = document.createElement("div");
+          loader.id = "bih-next-loader";
+          loader.style.cssText = "text-align:center;padding:1rem;color:#94a3b8;font-size:0.85rem;";
+          loader.textContent = "טוען " + year.parshiyot[nextIdx].he + "...";
+          sectionsDiv.appendChild(loader);
+          const texts = await fetchHalachot(activeYearIdx, nextIdx);
+          const ldr = document.getElementById("bih-next-loader");
+          if (ldr) ldr.remove();
+          const section = createParshaSection(activeYearIdx, nextIdx, texts);
+          sectionsDiv.appendChild(section);
+          _isLoadingNext = false;
+        }
+      }
+
+      // Load previous parsha when near top
+      if (!_isLoadingPrev && scrollTop < 600) {
+        const prevIdx = _loadedRange.start - 1;
+        if (prevIdx >= 0) {
+          _isLoadingPrev = true;
+          _loadedRange.start = prevIdx;
+          const texts = await fetchHalachot(activeYearIdx, prevIdx);
+          const prevHeight = sectionsDiv.scrollHeight;
+          const section = createParshaSection(activeYearIdx, prevIdx, texts);
+          sectionsDiv.insertBefore(section, sectionsDiv.firstChild);
+          contentArea.scrollTop += sectionsDiv.scrollHeight - prevHeight;
+          _isLoadingPrev = false;
+        }
+      }
+    };
+
+    _titleListener = () => {
+      const sections = contentArea.querySelectorAll("[data-pidx]");
+      const mid = contentArea.getBoundingClientRect().top + contentArea.clientHeight / 3;
+      let best = null;
+      sections.forEach(s => {
+        const r = s.getBoundingClientRect();
+        if (r.top <= mid && r.bottom >= mid) best = s;
+      });
+      if (!best && sections.length) best = sections[0];
+      if (best) {
+        const pIdx = parseInt(best.getAttribute("data-pidx"));
+        const parsha = YEARS[activeYearIdx].parshiyot[pIdx];
+        const titleEl = document.getElementById("bih-reading-title");
+        if (titleEl && parsha) titleEl.textContent = parsha.he;
+      }
+    };
+
+    contentArea.addEventListener("scroll", _scrollListener);
+    contentArea.addEventListener("scroll", _titleListener);
+  }
+
+  // ── Apply font size ──
+  function applyFontSize() {
+    const area = document.getElementById("bih-content-area");
+    if (area) area.style.fontSize = _bihFontSize + "%";
+    const lbl = document.getElementById("bih-font-label");
+    if (lbl) lbl.textContent = _bihFontSize + "%";
+  }
+
+  // ── Modal HTML ──
+  let existing = document.getElementById("ben-ish-hai-modal");
+  if (existing) existing.remove();
+
+  const modal = document.createElement("div");
+  modal.id = "ben-ish-hai-modal";
+  modal.style.cssText = "position:fixed;inset:0;z-index:200;background:rgba(2,6,23,0.95);backdrop-filter:blur(8px);overflow:hidden;";
+
+  modal.innerHTML =
+    /* ── Grid view ── */
+    '<div id="bih-grid-view" style="position:absolute;inset:0;display:flex;flex-direction:column;overflow:hidden;">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;">' +
+        '<div><h2 style="color:#f1f5f9;font-size:1.3rem;font-weight:900;margin:0;">בן איש חי</h2>' +
+        '<p style="color:#6366f1;font-size:0.78rem;font-weight:700;margin:0.15rem 0 0;">רבי יוסף חיים מבגדד זצ"ל</p></div>' +
+        '<div style="display:flex;gap:0.5rem;align-items:center;">' +
+          '<button onclick="window._bihOpenSearch()" style="background:rgba(255,255,255,0.08);border:none;color:#e2e8f0;padding:0.4rem 0.8rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;">🔍 חיפוש</button>' +
+          '<button onclick="closeBenIshHaiModal()" style="background:rgba(255,255,255,0.08);border:none;color:#94a3b8;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.1rem;flex-shrink:0;">✕</button>' +
+        '</div>' +
+      '</div>' +
+      '<div style="display:flex;gap:0.5rem;padding:0.6rem 1.25rem;flex-shrink:0;align-items:center;flex-wrap:wrap;border-bottom:1px solid rgba(255,255,255,0.05);">' +
+        '<div id="bih-year-bar" style="display:flex;gap:0.4rem;flex-wrap:wrap;flex:1;"></div>' +
+        '<input id="bih-parsha-filter" type="search" placeholder="🔍 פרשה..." oninput="window._bihFilterGrid(this.value)" style="padding:0.3rem 0.7rem;border-radius:999px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.07);color:#e2e8f0;font-size:0.8rem;direction:rtl;width:120px;outline:none;">' +
+      '</div>' +
+      '<div style="overflow-y:auto;flex:1;padding:0.75rem 1.25rem 0;">' +
+        '<p style="color:#64748b;font-size:0.72rem;margin:0 0 0.65rem;">לחץ על פרשה לקריאת הטקסט המלא</p>' +
+        '<div id="bih-grid-content" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:0.5rem;"></div>' +
+        '<div id="bih-bm-panel"></div>' +
+        '<div style="height:1.5rem;"></div>' +
+      '</div>' +
+    '</div>' +
+
+    /* ── Reading pane ── */
+    '<div id="bih-reading-pane" style="display:none;position:absolute;inset:0;background:#faf9f6;z-index:10;flex-direction:column;overflow:hidden;">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;padding:0.7rem 1rem;border-bottom:1px solid rgba(0,0,0,0.09);background:#faf9f6;flex-shrink:0;gap:0.5rem;">' +
+        '<button onclick="window._bihCloseReading()" style="background:rgba(0,0,0,0.06);border:none;color:#1e293b;padding:0.4rem 0.75rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;white-space:nowrap;flex-shrink:0;">← חזרה</button>' +
+        '<h3 id="bih-reading-title" style="color:#1e293b;font-size:0.95rem;font-weight:900;margin:0;text-align:center;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></h3>' +
+        '<button onclick="window._bihOpenSearch()" style="background:rgba(0,0,0,0.06);border:none;color:#1e293b;padding:0.4rem 0.75rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;white-space:nowrap;flex-shrink:0;">🔍 חיפוש</button>' +
+      '</div>' +
+      '<div id="bih-content-area" style="overflow-y:auto;flex:1;padding:0.5rem 1.5rem 1rem;font-family:\'David Libre\',\'Frank Ruhl Libre\',serif;font-size:100%;line-height:2;color:#1e293b;text-align:center;direction:rtl;">' +
+        '<div id="bih-parsha-sections"></div>' +
+      '</div>' +
+      '<div style="display:flex;align-items:center;justify-content:center;gap:0.75rem;padding:0.5rem 1rem;border-top:1px solid rgba(0,0,0,0.08);background:#faf9f6;flex-shrink:0;">' +
+        '<button onclick="window._bihFontDec()" style="background:rgba(0,0,0,0.06);border:none;color:#1e293b;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:1.2rem;font-weight:700;line-height:1;">−</button>' +
+        '<span id="bih-font-label" style="color:#64748b;font-size:0.8rem;min-width:3rem;text-align:center;">100%</span>' +
+        '<button onclick="window._bihFontInc()" style="background:rgba(0,0,0,0.06);border:none;color:#1e293b;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:1.2rem;font-weight:700;line-height:1;">+</button>' +
+      '</div>' +
+    '</div>' +
+
+    /* ── Search overlay ── */
+    '<div id="bih-search-overlay" style="display:none;position:absolute;inset:0;background:#faf9f6;z-index:20;flex-direction:column;overflow:hidden;">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;padding:0.7rem 1rem;border-bottom:1px solid rgba(0,0,0,0.09);background:#faf9f6;flex-shrink:0;gap:0.5rem;">' +
+        '<button onclick="window._bihCloseSearch()" style="background:rgba(0,0,0,0.06);border:none;color:#1e293b;padding:0.4rem 0.75rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;white-space:nowrap;flex-shrink:0;">← חזרה</button>' +
+        '<h3 style="color:#1e293b;font-size:0.95rem;font-weight:900;margin:0;text-align:center;flex:1;">חיפוש בבן איש חי</h3>' +
+        '<div style="width:70px;flex-shrink:0;"></div>' +
+      '</div>' +
+      '<div style="display:flex;gap:0.5rem;padding:0.65rem 1rem;border-bottom:1px solid rgba(0,0,0,0.07);flex-shrink:0;">' +
+        '<input id="bih-search-query" type="search" placeholder="הקלד מילה לחיפוש בכל הספר..." onkeydown="if(event.key===\'Enter\')window._bihRunSearch()" style="flex:1;padding:0.45rem 0.85rem;border-radius:999px;border:1px solid rgba(0,0,0,0.18);background:#fff;color:#1e293b;font-size:0.9rem;direction:rtl;outline:none;">' +
+        '<button onclick="window._bihRunSearch()" style="background:#6366f1;border:none;color:#fff;padding:0.45rem 1rem;border-radius:999px;cursor:pointer;font-size:0.85rem;font-weight:700;white-space:nowrap;">חפש</button>' +
+      '</div>' +
+      '<div id="bih-search-year-label" style="padding:0.3rem 1rem;flex-shrink:0;"></div>' +
+      '<p id="bih-search-status" style="color:#64748b;font-size:0.78rem;padding:0.2rem 1rem;margin:0;flex-shrink:0;"></p>' +
+      '<div id="bih-search-results" style="overflow-y:auto;flex:1;"></div>' +
+    '</div>';
+
+  // ── Wire up global functions ──
+  window._bihSwitchYear = (idx) => {
+    _loadedRange = { start:-1, end:-1 };
+    buildGridContent(idx);
+  };
+  window._bihFilterGrid = (q) => buildGridContent(activeYearIdx, q);
+
+  window._bihOpenParsha = async (parshaIdx, scrollToHalacha) => {
     const year = YEARS[activeYearIdx];
-    const color = year.color;
-    const yearHe = year.he;
     const parsha = year.parshiyot[parshaIdx];
+    _loadedRange = { start: parshaIdx, end: parshaIdx };
+    _isLoadingNext = false;
+    _isLoadingPrev = false;
 
-    if (!pane || !title || !area) return;
+    const pane = document.getElementById("bih-reading-pane");
+    const contentArea = document.getElementById("bih-content-area");
+    const sectionsDiv = document.getElementById("bih-parsha-sections");
+    const titleEl = document.getElementById("bih-reading-title");
+    if (!pane || !contentArea || !sectionsDiv) return;
+
     pane.style.display = "flex";
     pane.style.flexDirection = "column";
-    title.textContent = `${parsha.he} — ${yearHe}`;
-    area.innerHTML = `<div style="text-align:center;padding:2rem;"><div style="width:36px;height:36px;border:3px solid ${color};border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 1rem;"></div><p style="color:#64748b;">טוען ${parsha.he}...</p></div>`;
+    if (titleEl) titleEl.textContent = parsha.he;
+    applyFontSize();
 
-    // Build exact Sefaria ref: spaces → underscores
-    const yearKey = year.en.replace(/ /g, "_");
-    const parshaKey = parsha.en.replace(/ /g, "_");
-    const refKey = `Ben_Ish_Hai,_${yearKey},_${parshaKey}`;
-    const sefariaUrl = `https://www.sefaria.org.il/${encodeURIComponent(refKey.replace(/_/g, " "))}?lang=he`;
+    sectionsDiv.innerHTML = '<div style="text-align:center;padding:3rem 1rem;"><div style="width:36px;height:36px;border:3px solid ' + year.color + ';border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 1rem;"></div><p style="color:#94a3b8;">טוען ' + parsha.he + '...</p></div>';
 
-    try {
-      // pad=0 returns all halachot in the parsha
-      const url = `https://www.sefaria.org/api/texts/${encodeURIComponent(refKey)}?pad=0&lang=he`;
-      const res = await fetch(url);
-      if (!res.ok) throw new Error("fetch failed");
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
+    const texts = await fetchHalachot(activeYearIdx, parshaIdx);
+    sectionsDiv.innerHTML = "";
+    sectionsDiv.appendChild(createParshaSection(activeYearIdx, parshaIdx, texts));
 
-      let heTexts = data.he || [];
-      // Flatten: each item may be a string or a single-element array
-      heTexts = heTexts.map(h =>
-        Array.isArray(h) ? h.join(" ") : (typeof h === "string" ? h : String(h))
-      ).filter(Boolean);
+    contentArea.scrollTop = 0;
+    if (scrollToHalacha !== undefined) {
+      setTimeout(() => {
+        document.getElementById("bih-h-" + parshaIdx + "-" + scrollToHalacha)?.scrollIntoView({behavior:"smooth",block:"start"});
+      }, 150);
+    }
+    setupScrollLoader(contentArea);
+  };
 
-      if (!heTexts.length) throw new Error("no text");
+  window._bihCloseReading = () => {
+    const pane = document.getElementById("bih-reading-pane");
+    if (pane) pane.style.display = "none";
+    const ca = document.getElementById("bih-content-area");
+    if (ca && _scrollListener) ca.removeEventListener("scroll", _scrollListener);
+    if (ca && _titleListener) ca.removeEventListener("scroll", _titleListener);
+    _scrollListener = null; _titleListener = null;
+    buildBMPanel();
+  };
 
-      const halachotHTML = heTexts.map((h, i) =>
-        `<div style="margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:1px solid rgba(255,255,255,0.06);">
-          <span style="color:${color};font-size:0.75rem;font-weight:900;display:block;margin-bottom:0.4rem;">הלכה ${i + 1}</span>
-          <span>${h}</span>
-        </div>`
-      ).join("");
+  window._bihFontInc = () => { _bihFontSize = Math.min(200, _bihFontSize+10); applyFontSize(); };
+  window._bihFontDec = () => { _bihFontSize = Math.max(60, _bihFontSize-10); applyFontSize(); };
 
-      area.innerHTML = `
-        <p style="color:#64748b;font-size:0.72rem;margin-bottom:1rem;">בן איש חי | ${parsha.he} | ${yearHe} | ${heTexts.length} הלכות</p>
-        <div style="line-height:2.1;">${halachotHTML}</div>
-        <a href="${sefariaUrl}" target="_blank"
-          style="color:#60a5fa;font-size:0.8rem;display:block;text-align:center;margin-top:1rem;padding-bottom:1rem;">
-          📖 פתח ב-Sefaria ←
-        </a>`;
-    } catch (err) {
-      area.innerHTML = `
-        <p style="color:#ef4444;text-align:center;margin-bottom:1rem;">לא ניתן לטעון את הטקסט כעת.</p>
-        <div style="text-align:center;">
-          <a href="${sefariaUrl}" target="_blank"
-            style="background:${color};color:#fff;padding:0.6rem 1.5rem;border-radius:999px;text-decoration:none;font-weight:700;font-size:0.9rem;">
-            📖 פתח ${parsha.he} ב-Sefaria
-          </a>
-        </div>`;
+  window._bihOpenSearch = () => {
+    const ov = document.getElementById("bih-search-overlay");
+    if (ov) { ov.style.display = "flex"; ov.style.flexDirection = "column"; }
+    const lbl = document.getElementById("bih-search-year-label");
+    if (lbl) lbl.innerHTML = '<span style="font-size:0.78rem;color:#64748b;">מחפש ב' + YEARS[activeYearIdx].he + '</span>';
+    document.getElementById("bih-search-query")?.focus();
+  };
+  window._bihCloseSearch = () => {
+    if (_searchAbort) { _searchAbort.abort(); _searchAbort = null; }
+    const ov = document.getElementById("bih-search-overlay");
+    if (ov) ov.style.display = "none";
+  };
+
+  window._bihRunSearch = async () => {
+    const q = document.getElementById("bih-search-query")?.value?.trim();
+    if (!q || q.length < 2) return;
+    if (_searchAbort) { _searchAbort.abort(); }
+    _searchAbort = new AbortController();
+    const signal = _searchAbort.signal;
+
+    const statusEl = document.getElementById("bih-search-status");
+    const resultsEl = document.getElementById("bih-search-results");
+    if (statusEl) statusEl.textContent = "מחפש...";
+    if (resultsEl) resultsEl.innerHTML = "";
+
+    const year = YEARS[activeYearIdx];
+    let total = 0;
+
+    for (let p = 0; p < year.parshiyot.length; p++) {
+      if (signal.aborted) break;
+      if (statusEl) statusEl.textContent = "מחפש... " + (p+1) + " / " + year.parshiyot.length + " פרשיות";
+      const texts = await fetchHalachot(activeYearIdx, p);
+      if (signal.aborted || !texts) continue;
+      for (let h = 0; h < texts.length; h++) {
+        const stripped = texts[h].replace(/<[^>]*>/g,"");
+        if (stripped.includes(q)) {
+          total++;
+          if (resultsEl) {
+            const btn = document.createElement("button");
+            btn.style.cssText = "display:block;width:100%;text-align:right;padding:0.75rem 1rem;border:none;border-bottom:1px solid rgba(0,0,0,0.07);cursor:pointer;background:none;direction:rtl;transition:background 0.1s;";
+            btn.innerHTML = '<span style="color:' + year.color + ';font-size:0.75rem;font-weight:900;">' + year.parshiyot[p].he + ' — הלכה ' + toHeb(h+1) + '</span>' +
+              '<p style="margin:0.2rem 0 0;font-size:0.83rem;color:#374151;line-height:1.5;">' + buildSnippet(stripped,q) + '</p>';
+            btn.onmouseenter = () => btn.style.background="#f1f5f9";
+            btn.onmouseleave = () => btn.style.background="none";
+            const cp = p, ch = h;
+            btn.onclick = () => { window._bihCloseSearch(); window._bihOpenParsha(cp, ch); };
+            resultsEl.appendChild(btn);
+          }
+        }
+      }
+    }
+    if (!signal.aborted && statusEl) {
+      statusEl.textContent = total > 0 ? 'נמצאו ' + total + ' תוצאות עבור "' + q + '"' : 'לא נמצאו תוצאות עבור "' + q + '"';
     }
   };
 
-  buildPage(activeYearIdx);
-  modal.addEventListener("click", (e) => {
-    if (e.target === modal) closeBenIshHaiModal();
-  });
+  window._bihBMToggle = (y,p,h,label) => {
+    if (isBM(y,p,h)) {
+      removeBM(y,p,h);
+      const btn = document.getElementById("bih-bm-"+p+"-"+h);
+      if (btn) { btn.style.opacity="0.3"; btn.title="הוסף סימניה"; }
+    } else {
+      addBM(y,p,h,label);
+      const btn = document.getElementById("bih-bm-"+p+"-"+h);
+      if (btn) { btn.style.opacity="1"; btn.title="הסר סימניה"; }
+    }
+  };
+  window._bihBMRemove = (y,p,h) => { removeBM(y,p,h); buildBMPanel(); };
+
+  modal.addEventListener("click", (e) => { if (e.target === modal) closeBenIshHaiModal(); });
   document.body.appendChild(modal);
+  buildGridContent(activeYearIdx);
   lockBodyScroll();
   pushModalState("ben-ish-hai-modal");
 }

@@ -1,8 +1,5 @@
-      body {
-        font-family: "Assistant", sans-serif;
-        transition:
-          background-color 0.5s ease,
-          color 0.5s ease;
+      /* Disable long-press text selection everywhere */
+      *, *::before, *::after {
         -webkit-user-select: none;
         user-select: none;
         -webkit-touch-callout: none;
@@ -13,6 +10,13 @@
         -webkit-user-select: text;
         user-select: text;
         -webkit-touch-callout: default;
+      }
+
+      body {
+        font-family: "Assistant", sans-serif;
+        transition:
+          background-color 0.5s ease,
+          color 0.5s ease;
       }
       .holy-text-style {
         font-family: 'Frank Ruhl Libre', serif;

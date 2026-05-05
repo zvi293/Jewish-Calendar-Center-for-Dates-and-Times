@@ -589,19 +589,15 @@ function removeModalById(modalId) {
   unlockBodyScroll();
 }
 window.addEventListener("popstate", function (e) {
-  // Inner reading-pane back (not a full modal close)
-  if (e.state && e.state.bihReadingPane) {
-    window._bihOnReadingPaneClose && window._bihOnReadingPaneClose();
-    return;
-  }
-  if (e.state && e.state.tehillimPsalmPane) {
-    window._tehillimOnPsalmClose && window._tehillimOnPsalmClose();
-    return;
-  }
   if (_activeModals.length > 0) {
     const modalId = _activeModals.pop();
+    // Inner reading-pane states — hide pane but keep parent modal open
+    if (modalId === "bih-reading-pane") {
+      window._bihOnReadingPaneClose && window._bihOnReadingPaneClose();
+    } else if (modalId === "tehillim-psalm-pane") {
+      window._tehillimOnPsalmClose && window._tehillimOnPsalmClose();
     // Close the specific modal
-    if (
+    } else if (
       modalId === "prayer-modal" ||
       modalId === "tehillim-modal" ||
       modalId === "ben-ish-hai-modal" ||
@@ -13854,10 +13850,15 @@ function closeTehillimModal() {
   const el = document.getElementById("tehillim-modal");
   if (el) el.remove();
   unlockBodyScroll();
-  if (_activeModals[_activeModals.length - 1] === "tehillim-modal") {
+  // Pop all tehillim-related states (psalm-pane + modal itself)
+  let steps = 0;
+  while (_activeModals.length > 0 &&
+    (_activeModals[_activeModals.length - 1] === "tehillim-psalm-pane" ||
+     _activeModals[_activeModals.length - 1] === "tehillim-modal")) {
     _activeModals.pop();
-    history.back();
+    steps++;
   }
+  if (steps > 0) history.go(-steps);
 }
 
 // ── Dedicated Ben Ish Hai Page ────────────────────────────
@@ -14375,10 +14376,10 @@ function openBenIshHaiPage() {
   // ── Wire up global functions ──
   window._bihSetMode = (mode) => {
     _bihMode = mode;
-    if (_bihReadingPaneInHistory) {
-      // Replace reading-pane history entry so back from grid closes the modal, not an orphaned pane state
+    if (_activeModals[_activeModals.length - 1] === "bih-reading-pane") {
+      // Replace reading-pane history entry so pressing back from grid closes the modal correctly
+      _activeModals.pop();
       history.replaceState({ modal: "ben-ish-hai-modal" }, "");
-      _bihReadingPaneInHistory = false;
     }
     const pane = document.getElementById("bih-reading-pane");
     if (pane) pane.style.display = "none";
@@ -14401,9 +14402,8 @@ function openBenIshHaiPage() {
     const titleEl = document.getElementById("bih-reading-title");
     if (!pane || !contentArea || !sectionsDiv) return;
 
-    if (!_bihReadingPaneInHistory) {
-      history.pushState({ bihReadingPane: true }, "");
-      _bihReadingPaneInHistory = true;
+    if (_activeModals[_activeModals.length - 1] !== "bih-reading-pane") {
+      pushModalState("bih-reading-pane");
     }
     pane.style.display = "flex"; pane.style.flexDirection = "column";
     if (titleEl) titleEl.textContent = parsha.he;
@@ -14441,10 +14441,10 @@ function openBenIshHaiPage() {
   };
 
   window._bihCloseReading = () => {
-    if (_bihReadingPaneInHistory) {
+    if (_activeModals[_activeModals.length - 1] === "bih-reading-pane") {
       history.back(); // popstate will call _bihOnReadingPaneClose
     } else {
-      window._bihOnReadingPaneClose();
+      window._bihOnReadingPaneClose && window._bihOnReadingPaneClose();
     }
   };
 
@@ -14551,10 +14551,15 @@ function closeBenIshHaiModal() {
   const el = document.getElementById("ben-ish-hai-modal");
   if (el) el.remove();
   unlockBodyScroll();
-  if (_activeModals[_activeModals.length - 1] === "ben-ish-hai-modal") {
+  // Pop all BIH-related states (reading-pane + modal itself)
+  let steps = 0;
+  while (_activeModals.length > 0 &&
+    (_activeModals[_activeModals.length - 1] === "bih-reading-pane" ||
+     _activeModals[_activeModals.length - 1] === "ben-ish-hai-modal")) {
     _activeModals.pop();
-    history.back();
+    steps++;
   }
+  if (steps > 0) history.go(-steps);
 }
 
 
@@ -14891,10 +14896,10 @@ openTehillimPage = function () {
   };
 
   window._tehillimClosePsalm = () => {
-    if (window._tehillimPsalmInHistory) {
+    if (_activeModals[_activeModals.length - 1] === "tehillim-psalm-pane") {
       history.back(); // popstate will call _tehillimOnPsalmClose
     } else {
-      window._tehillimOnPsalmClose();
+      window._tehillimOnPsalmClose && window._tehillimOnPsalmClose();
     }
   };
 
@@ -14940,9 +14945,8 @@ openTehillimPage = function () {
     const title = document.getElementById("psalm-title");
     const area = document.getElementById("psalm-text-area");
     if (!pane || !title || !area) return;
-    if (!window._tehillimPsalmInHistory) {
-      history.pushState({ tehillimPsalmPane: true }, "");
-      window._tehillimPsalmInHistory = true;
+    if (_activeModals[_activeModals.length - 1] !== "tehillim-psalm-pane") {
+      pushModalState("tehillim-psalm-pane");
     }
     pane.style.display = "flex";
     window._tehillimLoadedChapters = new Set();

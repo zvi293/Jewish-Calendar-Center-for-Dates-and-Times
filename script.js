@@ -602,6 +602,7 @@ window.addEventListener("popstate", function (e) {
       modalId === "prayer-modal" ||
       modalId === "tehillim-modal" ||
       modalId === "ben-ish-hai-modal" ||
+      modalId === "shir-hashirim-modal" ||
       modalId === "calendar-day-modal" ||
       modalId === "zman-opinions-modal"
     ) {
@@ -14329,6 +14330,100 @@ function closeTehillimModal() {
     steps++;
   }
   if (steps > 0) history.go(-steps);
+}
+
+// ── Dedicated Shir HaShirim Page ─────────────────────────
+function openShirHashirimPage() {
+  const CHAPTERS = 8;
+  const HEB_NUMS = ['א','ב','ג','ד','ה','ו','ז','ח'];
+  const HEB_VERSE = ['א','ב','ג','ד','ה','ו','ז','ח','ט','י','יא','יב','יג','יד','טו','טז','יז','יח','יט','כ'];
+  const COLOR = '#be185d';
+  const CLOSING_PRAYER = 'רִבּוֹן כָּל הָעוֹלָמִים, יְהִי רָצוֹן מִלְּפָנֶיךָ יְהֹוָה אֱלֹהֵינוּ וֵאלֹהֵי אֲבוֹתֵינוּ, שֶׁבִּזְכוּת שִׁיר הַשִּׁירִים אֲשֶׁר קָרָאנוּ, שֶׁהוּא קֹדֶשׁ קָדָשִׁים, בִּזְכוּת פְּסוּקָיו, וּבִזְכוּת תֵּבוֹתָיו, וּבִזְכוּת אוֹתִיּוֹתָיו, וּבִזְכוּת נְקֻדּוֹתָיו, וּבִזְכוּת טְעָמָיו וְצֵרוּפָיו וּרְמָזָיו וְסוֹדוֹתָיו הַקְּדוֹשִׁים וְהַטְּהוֹרִים הַנּוֹרָאִים הַיּוֹצְאִים מִמֶּנּוּ, שֶׁתְּהֵא שָׁעָה זוֹ שְׁעַת רַחֲמִים, שְׁעַת הַקְשָׁבָה, שְׁעַת הַאֲזָנָה, וְנִקְרָאֲךָ וְתַעֲנֵנוּ, נַעֲתִיר לְךָ וְתֵעָתֵר לָנוּ, וְתִהְיֶה עוֹלָה לְפָנֶיךָ קְרִיאַת שִׁיר הַשִּׁירִים כְּאִלּוּ הִשַּׂגְנוּ כָּל־הַסּוֹדוֹת הַנִּפְלָאִים וְהַנּוֹרָאִים אֲשֶׁר הֵם חֲתוּמִים וּסְתוּמִים בּוֹ בְּכָל־תְּנָאָיו, וְנִזְכֶּה לְמָקוֹם שֶׁהַנְּפָשׁוֹת, הָרוּחוֹת וְהַנְּשָׁמוֹת, נֶחְצָבוֹת מִשָּׁם, וּכְאִלּוּ עָשִׂינוּ כָּל־מַה־שֶּׁמֻּטָּל עָלֵינוּ לְהַשִּׂיג בֵּין בְּגִלְגּוּל זֶה, בֵּין בְּגִלְגּוּלִים אֲחֵרִים, וְלִהְיוֹת מִן הָעוֹלִים וְהַזּוֹכִים לָעוֹלָם הַבָּא, עִם שְׁאָר צַדִּיקִים וַחֲסִידִים. וּמַלֵּא כָּל־מִשְׁאֲלוֹת לִבֵּנוּ לְטוֹבָה, וְתִהְיֶה עִם לְבָבֵנוּ וְאִמְרֵי פִינוּ בְּעֵת מַחְשְׁבוֹתֵינוּ, וְעִם יָדֵינוּ בְּעֵת מַעֲבָּדֵינוּ, וְתִשְׁלַח בְּרָכָה וְהַצְלָחָה וְהַרְוָחָה בְּכָל־מַעֲשֵׂי יָדֵינוּ, וּמֵעָפָר עָנְיֵנוּ תְּקִימֵנוּ, וּמֵאַשְׁפּוֹת דַּלּוּתֵנוּ תְּרוֹמְמֵנוּ, וְתָשִׁיב שְׁכִינָתְךָ לְעִיר קָדְשְׁךָ בִּמְהֵרָה בְיָמֵינוּ, אָמֵן:';
+
+  let existing = document.getElementById('shir-hashirim-modal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'shir-hashirim-modal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:200;background:rgba(2,6,23,0.95);backdrop-filter:blur(8px);display:flex;flex-direction:column;overflow:hidden;';
+
+  modal.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;">
+      <div>
+        <h2 style="color:#f1f5f9;font-size:1.3rem;font-weight:900;margin:0;">שִׁיר הַשִּׁירִים</h2>
+        <p style="color:${COLOR};font-size:0.78rem;font-weight:700;margin:0.15rem 0 0;">אֲשֶׁר לִשְׁלֹמֹה</p>
+      </div>
+      <button onclick="closeShirHashirimModal()"
+        style="background:rgba(255,255,255,0.08);border:none;color:#94a3b8;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.1rem;flex-shrink:0;">✕</button>
+    </div>
+    <div id="shir-scroll-area" style="overflow-y:auto;flex:1;background:#ffffff;"></div>`;
+
+  // Append font size bar
+  const fontBar = createFontSizeBar('#shir-scroll-area');
+  fontBar.style.background = 'rgba(255,255,255,0.97)';
+  fontBar.style.borderTop = '1px solid rgba(0,0,0,0.09)';
+  modal.appendChild(fontBar);
+
+  document.body.appendChild(modal);
+  lockBodyScroll();
+  pushModalState('shir-hashirim-modal');
+
+  // Load all chapters
+  const scrollArea = document.getElementById('shir-scroll-area');
+  scrollArea.innerHTML = `<div style="text-align:center;padding:3rem 1rem;"><div style="width:40px;height:40px;border:3px solid ${COLOR};border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 1rem;"></div><p style="color:#9ca3af;font-size:0.9rem;">טוען את שיר השירים...</p></div>`;
+  applyPrayerFontSize('#shir-scroll-area');
+
+  (async () => {
+    try {
+      const fetches = Array.from({ length: CHAPTERS }, (_, i) =>
+        fetch(`https://www.sefaria.org/api/texts/Song_of_Songs.${i + 1}?lang=he&context=0`).then(r => r.json())
+      );
+      const results = await Promise.all(fetches);
+
+      let html = '<div style="max-width:640px;margin:0 auto;padding:1.5rem 1.25rem 0.5rem;font-family:\'David Libre\',\'Frank Ruhl Libre\',serif;direction:rtl;text-align:center;color:#1a1a1a;">';
+
+      results.forEach((data, idx) => {
+        const heTexts = data.he || [];
+        const verses = heTexts.map((v, i) => {
+          const clean = typeof v === 'string' ? v : Array.isArray(v) ? v.join('') : String(v);
+          return `<span style="color:${COLOR};font-size:0.75em;font-weight:700;margin-left:0.3rem;">(${HEB_VERSE[i] || (i + 1)})</span>${clean}`;
+        }).join(' &nbsp;');
+
+        html += `
+          <div style="margin-bottom:2rem;">
+            <div style="display:inline-block;padding:0.3rem 1.4rem;background:${COLOR}18;border:1.5px solid ${COLOR}44;border-radius:999px;margin-bottom:1.2rem;">
+              <span style="color:${COLOR};font-size:1rem;font-weight:900;">פֶּרֶק ${HEB_NUMS[idx]}</span>
+            </div>
+            <div style="line-height:2.4;">${verses}</div>
+          </div>
+          ${idx < CHAPTERS - 1 ? `<div style="border-top:1px solid ${COLOR}22;margin:0.5rem 0 2rem;"></div>` : ''}`;
+      });
+
+      // Closing prayer
+      html += `
+        <div style="margin:1rem 0 2rem;">
+          <div style="border-top:2px solid ${COLOR}44;margin-bottom:1.8rem;"></div>
+          <p style="line-height:2.4;color:#1a1a1a;">${CLOSING_PRAYER}</p>
+        </div>
+      </div>`;
+
+      scrollArea.innerHTML = html;
+      applyPrayerFontSize('#shir-scroll-area');
+    } catch (err) {
+      const area = document.getElementById('shir-scroll-area');
+      if (area) area.innerHTML = `<p style="color:#ef4444;text-align:center;padding:2rem;">לא ניתן לטעון את הטקסט כעת.</p>`;
+    }
+  })();
+}
+
+function closeShirHashirimModal() {
+  const el = document.getElementById('shir-hashirim-modal');
+  if (el) el.remove();
+  unlockBodyScroll();
+  if (_activeModals[_activeModals.length - 1] === 'shir-hashirim-modal') {
+    _activeModals.pop();
+    history.back();
+  }
 }
 
 // ── Dedicated Ben Ish Hai Page ────────────────────────────

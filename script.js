@@ -477,6 +477,7 @@ function setupModalBackdropClose() {
   bindModalBackdropClose("sefaria-modal", closeSefariaModal);
   bindModalBackdropClose("compass-modal", closeCompass);
   bindModalBackdropClose("calendar-modal", closeCalendar);
+  bindModalBackdropClose("chok-israel-modal", closeChokLeIsraelModal);
 }
 
 // --- Navbar Scroll Logic ---
@@ -610,6 +611,8 @@ window.addEventListener("popstate", function (e) {
     } else if (modalId === "sefaria-modal") {
       closeSefariaModal();
       unlockBodyScroll();
+    } else if (modalId === "chok-israel-modal") {
+      closeChokLeIsraelModal();
     } else if (modalId === "calendar-modal") {
       closeCalendar();
       unlockBodyScroll();
@@ -1508,6 +1511,455 @@ function closeSefariaModal() {
   }
 }
 
+/* ── חוק לישראל ─────────────────────────────────────────── */
+const CHOK_RASHI_KEY = 'moadim_chok_rashi';
+const CHOK_BARTENURA_KEY = 'moadim_chok_bartenura';
+
+let _chokLeIsraelData = null;
+let _chokLeIsraelSheetCache = {};
+let _chokLeIsraelSheetsIndex = null;
+let _chokLeIsraelFetchDate = '';
+let _chokLeIsraelLastDate = new Date().toDateString();
+let _chokCurrentSheet = null;
+let _chokRashiCache = {};      // ref → null | 'loading' | string[]
+let _chokBartenuraCache = {};  // ref → null | 'loading' | string[]
+
+function getChokRashi() { return localStorage.getItem(CHOK_RASHI_KEY) === 'true'; }
+function getChokBartenura() { return localStorage.getItem(CHOK_BARTENURA_KEY) === 'true'; }
+
+function toggleChokRashi() {
+  localStorage.setItem(CHOK_RASHI_KEY, getChokRashi() ? 'false' : 'true');
+  renderChokContent();
+  fetchChokCommentaries();
+}
+function toggleChokBartenura() {
+  localStorage.setItem(CHOK_BARTENURA_KEY, getChokBartenura() ? 'false' : 'true');
+  renderChokContent();
+  fetchChokCommentaries();
+}
+window.toggleChokRashi = toggleChokRashi;
+window.toggleChokBartenura = toggleChokBartenura;
+
+async function fetchChokLeIsraelData() {
+  try {
+    const now = new Date();
+    const todayStr =
+      now.getFullYear() +
+      '-' +
+      String(now.getMonth() + 1).padStart(2, '0') +
+      '-' +
+      String(now.getDate()).padStart(2, '0');
+    if (_chokLeIsraelFetchDate === todayStr && _chokLeIsraelData) return;
+    _chokLeIsraelFetchDate = todayStr;
+
+    // JS getDay(): 0=Sun,1=Mon,2=Tue,3=Wed,4=Thu,5=Fri,6=Sat
+    const dayMap = [
+      'יום ראשון', 'יום שני', 'יום שלישי', 'יום רביעי',
+      'יום חמישי', 'יום שישי', 'ליל שישי',
+    ];
+    const dayName = dayMap[now.getDay()];
+
+    // Fetch today's calendar from Sefaria (date-keyed → cache auto-expires next day)
+    const calData = await fetchHebcalWithCache(
+      'https://www.sefaria.org/api/calendars?diaspora=1&timezone=Asia%2FJerusalem&date=' + todayStr
+    );
+    const chokItem = (calData.calendar_items || []).find(
+      (i) => i.title && i.title.he && i.title.he.includes('חק לישראל')
+    );
+    if (!chokItem) return;
+
+    const parshaHe = (chokItem.displayValue && chokItem.displayValue.he) || '';
+    const textEl = document.getElementById('chok-israel-text');
+    if (textEl) textEl.textContent = parshaHe || 'פרשת השבוע';
+
+    // Fetch collection sheet index once per session (in-memory only — too large for localStorage)
+    if (!_chokLeIsraelSheetsIndex) {
+      const res = await fetch(
+        'https://www.sefaria.org/api/collections/%D7%97%D7%A7-%D7%9C%D7%99%D7%A9%D7%A8%D7%90%D7%9C',
+        { signal: AbortSignal.timeout(10000) }
+      );
+      const collData = await res.json();
+      _chokLeIsraelSheetsIndex = collData.sheets || [];
+    }
+
+    // Find sheet matching today's parasha + day of week
+    let matchSheet = _chokLeIsraelSheetsIndex.find(
+      (s) => s.title.includes('פרשת ' + parshaHe) && s.title.includes(dayName)
+    );
+    if (!matchSheet) {
+      matchSheet = _chokLeIsraelSheetsIndex.find((s) => s.title.includes('פרשת ' + parshaHe));
+    }
+
+    if (matchSheet) {
+      _chokLeIsraelData = { sheetId: matchSheet.id, parshaHe, dayHe: dayName };
+      const btn = document.getElementById('chok-israel-btn');
+      if (btn) btn.onclick = (e) => { e.preventDefault(); openChokLeIsraelModal(); };
+    }
+  } catch (e) {
+    console.warn('Chok LeIsrael fetch error:', e);
+  }
+}
+
+async function openChokLeIsraelModal() {
+  if (!_chokLeIsraelData) {
+    await fetchChokLeIsraelData();
+    if (!_chokLeIsraelData) return;
+  }
+  const m = document.getElementById('chok-israel-modal');
+  if (!m) return;
+
+  const titleEl = document.getElementById('chok-israel-modal-title');
+  const contentEl = document.getElementById('chok-israel-modal-content');
+  if (titleEl) {
+    titleEl.textContent =
+      'חוק לישראל — ' + _chokLeIsraelData.parshaHe + ' — ' + _chokLeIsraelData.dayHe;
+  }
+  if (contentEl) {
+    contentEl.innerHTML =
+      '<div class="animate-pulse text-center py-10 text-slate-400">טוען...</div>';
+  }
+
+  m.classList.remove('hidden');
+  requestAnimationFrame(() => m.classList.remove('opacity-0'));
+  lockBodyScroll();
+  pushModalState('chok-israel-modal');
+  applyPrayerFontSize('#chok-israel-modal-content');
+
+  try {
+    if (!_chokLeIsraelSheetCache[_chokLeIsraelData.sheetId]) {
+      const res = await fetch(
+        'https://www.sefaria.org/api/sheets/' + _chokLeIsraelData.sheetId,
+        { signal: AbortSignal.timeout(10000) }
+      );
+      _chokLeIsraelSheetCache[_chokLeIsraelData.sheetId] = await res.json();
+    }
+    _chokCurrentSheet = _chokLeIsraelSheetCache[_chokLeIsraelData.sheetId];
+    renderChokContent();
+    // Fetch commentaries in background if any toggle is on
+    if (getChokRashi() || getChokBartenura()) fetchChokCommentaries();
+  } catch (e) {
+    if (contentEl) {
+      contentEl.innerHTML =
+        '<p class="text-center text-slate-500 py-10">שגיאה בטעינת התוכן. אנא נסה שוב.</p>';
+    }
+  }
+}
+
+// Colors per section
+const _CHOK_SECTION_STYLES = {
+  'תורה':    { bg: '#eff6ff', border: '#3b82f6', text: '#1e40af',  emoji: '📖' },
+  'נביאים':  { bg: '#f0fdf4', border: '#22c55e', text: '#166534',  emoji: '📜' },
+  'כתובים':  { bg: '#fff7ed', border: '#f97316', text: '#9a3412',  emoji: '✍️' },
+  'משנה':    { bg: '#faf5ff', border: '#a855f7', text: '#6b21a8',  emoji: '📚' },
+  'גמרא':    { bg: '#f0fdfa', border: '#14b8a6', text: '#0f766e',  emoji: '🕯️' },
+  'הלכה':    { bg: '#fff1f2', border: '#f43f5e', text: '#9f1239',  emoji: '⚖️' },
+  'מוסר':    { bg: '#f8fafc', border: '#64748b', text: '#1e293b',  emoji: '💭' },
+};
+const _CHOK_RASHI_SECTIONS = new Set(['תורה', 'נביאים', 'כתובים', 'גמרא']);
+const _CHOK_VERSE_LABEL_SECTIONS = new Set(['תורה', 'נביאים', 'כתובים']); // sections that get פסוק א/ב/ג labels
+const _CHOK_HEB_NUMS = ['א','ב','ג','ד','ה','ו','ז','ח','ט','י','יא','יב','יג','יד','טו','טז','יז','יח','יט','כ'];
+function _chokHebNum(n) { return _CHOK_HEB_NUMS[n - 1] || String(n); }
+
+// Converts a number to Hebrew verse numeral (e.g. 13 → י״ג)
+function _numToHebVerseNum(n) {
+  if (n <= 0 || n > 999) return String(n);
+  const s = ['','א','ב','ג','ד','ה','ו','ז','ח','ט'];
+  const t = ['','י','כ','ל','מ','נ','ס','ע','פ','צ'];
+  const h = ['','ק','ר','ש','ת','תק','תר','תש','תת','תתק'];
+  let r = '', nn = n;
+  if (nn >= 100) { r += h[Math.floor(nn/100)]; nn %= 100; }
+  if (nn === 15) { r += 'ט"ו'; return r; }
+  if (nn === 16) { r += 'ט"ז'; return r; }
+  if (nn >= 10) { r += t[Math.floor(nn/10)]; nn %= 10; }
+  r += s[nn];
+  if (r.length === 1) return r + "'";
+  return r.slice(0, -1) + '"' + r.slice(-1);
+}
+
+// Embeds Rashi comments inline in Gemara text by matching the dibur hamatchil
+function _buildGemaraWithInlineRashi(gemaraHtml, rashiComments) {
+  if (!rashiComments || !rashiComments.length) return gemaraHtml;
+  let result = gemaraHtml;
+  const unmatched = [];
+  const blockBase = 'display:block;margin:0.6rem 0;padding:0.45rem 0.75rem;' +
+    'background:rgba(124,58,237,0.08);border:2px solid rgba(124,58,237,0.25);border-right:4px solid #7c3aed;border-radius:0.4rem;' +
+    'font-size:0.82em;line-height:1.7;';
+
+  for (const rashiText of rashiComments) {
+    if (!rashiText || typeof rashiText !== 'string') continue;
+
+    // Rashi format: "DIBUR_HAMATCHIL. rashi" — extract the dibur (everything before first . : – -)
+    const diburMatch = rashiText.match(/^([^.־:–—\-]{2,40})[.־:–—\-]/);
+
+    // Build colored rashiHtml: dibur in amber, rest in purple (with !important to override .holy-text-style)
+    let inner;
+    if (diburMatch) {
+      const dibur = diburMatch[1].trim();
+      const rest = rashiText.slice(diburMatch[0].length).trim();
+      inner = `<span style="color:#b45309 !important;font-weight:700;">${dibur}</span>` +
+              `<span style="color:#6b7280 !important;"> — </span>` +
+              `<span style="color:#4c1d95 !important;">${rest}</span>`;
+    } else {
+      inner = `<span style="color:#4c1d95 !important;">${rashiText}</span>`;
+    }
+    const rashiHtml = `<div style="${blockBase}"><span style="font-size:0.75em;color:#7c3aed !important;font-weight:700;display:block;margin-bottom:0.15rem;">📝 רש״י</span>${inner}</div>`;
+
+    if (diburMatch) {
+      const dibur = diburMatch[1].trim();
+      // Escape for regex — search in raw HTML (avoid matching inside HTML tags)
+      const esc = dibur.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      // (?![^<]*>) prevents matching inside an HTML attribute
+      const rx = new RegExp('(' + esc + ')(?![^<]*>)', '');
+      if (rx.test(result)) {
+        result = result.replace(rx, '$1' + rashiHtml);
+        continue;
+      }
+      // Fallback: try first word only (min 3 chars)
+      const firstWord = dibur.split(/\s+/)[0];
+      if (firstWord.length >= 3) {
+        const rxWord = new RegExp('(' + firstWord.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')(?![^<]*>)', '');
+        if (rxWord.test(result)) {
+          result = result.replace(rxWord, '$1' + rashiHtml);
+          continue;
+        }
+      }
+    }
+    unmatched.push(rashiText);
+  }
+
+  // Any comment whose dibur wasn't found — append as a small block at the end
+  if (unmatched.length) {
+    result += `<div style="margin-top:0.8rem;padding:0.5rem 0.7rem;border-radius:0.5rem;background:rgba(124,58,237,0.05);border:1px solid rgba(124,58,237,0.15);">
+      <div style="font-size:0.63rem;color:#7c3aed !important;font-weight:700;margin-bottom:0.3rem;">📝 רש״י:</div>
+      ${unmatched.map(t => `<p style="line-height:1.8;margin:0 0 0.2rem 0;color:#4c1d95 !important;font-size:0.9em;">${t}</p>`).join('')}
+    </div>`;
+  }
+  return result;
+}
+
+function renderChokContent() {
+  const sheet = _chokCurrentSheet;
+  const contentEl = document.getElementById('chok-israel-modal-content');
+  if (!sheet || !contentEl) return;
+
+  const showRashi = getChokRashi();
+  const showBartenura = getChokBartenura();
+
+  // Inject toggle buttons into the font bar
+  const fontBar = document.getElementById('chok-israel-font-bar');
+  if (fontBar) {
+    const existing = document.getElementById('chok-israel-toggles');
+    if (existing) existing.remove();
+    fontBar.insertAdjacentHTML('afterbegin', `
+      <div id="chok-israel-toggles" style="display:flex;flex-wrap:nowrap;gap:0.6rem;align-items:center;margin-left:0.5rem;">
+        <label style="display:flex;align-items:center;gap:0.25rem;cursor:pointer;font-size:0.7rem;font-weight:700;color:#7c3aed;user-select:none;white-space:nowrap;">
+          <input type="checkbox" onchange="toggleChokRashi()" ${showRashi ? 'checked' : ''} style="width:0.9rem;height:0.9rem;accent-color:#7c3aed;cursor:pointer;">
+          פירוש רש״י
+        </label>
+        <label style="display:flex;align-items:center;gap:0.25rem;cursor:pointer;font-size:0.7rem;font-weight:700;color:#0891b2;user-select:none;white-space:nowrap;">
+          <input type="checkbox" onchange="toggleChokBartenura()" ${showBartenura ? 'checked' : ''} style="width:0.9rem;height:0.9rem;accent-color:#0891b2;cursor:pointer;">
+          ברטנורא
+        </label>
+      </div>`);
+    fontBar.style.flexWrap = 'wrap';
+    fontBar.style.gap = '0.4rem';
+    fontBar.style.justifyContent = 'center';
+    fontBar.style.alignItems = 'center';
+  }
+
+  const sources = sheet.sources || [];
+  let html = '<div dir="rtl" style="text-align:center;">';
+  let currentSection = '';
+
+  for (const src of sources) {
+    if (src.outsideText) {
+      // Check for section header
+      const headerMatch = src.outsideText.match(/<h1><b>(.*?)<\/b><\/h1>/);
+      if (headerMatch) {
+        currentSection = headerMatch[1];
+        const c = _CHOK_SECTION_STYLES[currentSection] || { bg: '#f8fafc', border: '#94a3b8', text: '#334155', emoji: '📄' };
+        html += `<div style="margin:1.8rem auto 0.8rem;text-align:center;">
+          <div style="display:inline-block;padding:0.35rem 1.8rem;background:${c.bg};border-radius:2rem;border:2.5px solid ${c.border};">
+            <span style="font-size:1.1rem;font-weight:900;color:${c.text};">${c.emoji} ${currentSection}</span>
+          </div>
+        </div>`;
+      } else {
+        // Small instructional text — show dimmed
+        const cleaned = src.outsideText.replace(/<\/?small>/g, '').replace(/<\/?h[1-6]>/g, '');
+        html += `<div style="margin:0.4rem auto 0.6rem;color:#94a3b8;font-size:0.78rem;max-width:32rem;">${cleaned}</div>`;
+      }
+    } else if (src.text && src.text.he) {
+      html += `<div style="margin-bottom:1.4rem;padding:0.9rem 1rem;border-radius:0.75rem;border:1px solid rgba(0,0,0,0.06);background:rgba(0,0,0,0.01);">`;
+      if (src.heRef) {
+        html += `<div style="font-size:0.68rem;color:#94a3b8;font-weight:600;margin-bottom:0.4rem;">${src.heRef}</div>`;
+      }
+
+      // Gemara: embed Rashi inline in the text
+      if (showRashi && currentSection === 'גמרא' && src.ref) {
+        const rashiVal = _chokRashiCache[src.ref];
+        if (rashiVal && rashiVal.verses) {
+          const allComments = rashiVal.verses.flat().filter(Boolean);
+          html += _buildGemaraWithInlineRashi(src.text.he, allComments);
+        } else {
+          html += src.text.he;
+          if (rashiVal === 'loading') {
+            html += `<div style="margin-top:0.4rem;font-size:0.75rem;color:#7c3aed;font-style:italic;opacity:0.7;">טוען פירוש רש״י...</div>`;
+          }
+        }
+      } else {
+        html += src.text.he;
+      }
+
+      // Rashi block — for Torah / Nevi'im / Ketuvim (per-verse, with labels)
+      if (showRashi && _CHOK_VERSE_LABEL_SECTIONS.has(currentSection) && src.ref) {
+        const rashiVal = _chokRashiCache[src.ref];
+        if (rashiVal && rashiVal.verses) {
+          const hasAny = rashiVal.verses.some(v => v.length > 0);
+          if (hasAny) {
+            html += `<div style="margin-top:0.8rem;padding:0.6rem 0.8rem;border-radius:0.5rem;background:rgba(124,58,237,0.05);border:1px solid rgba(124,58,237,0.18);">
+              <div style="font-size:0.65rem;color:#7c3aed;font-weight:900;margin-bottom:0.5rem;">📝 רש״י:</div>`;
+            const startVerse = rashiVal.startVerse || 1;
+            rashiVal.verses.forEach((verseTexts, i) => {
+              if (!verseTexts.length) return;
+              const verseNum = startVerse + i;
+              html += `<div style="font-size:0.63rem;color:#7c3aed;font-weight:700;margin:0.45rem 0 0.2rem;">פסוק ${_numToHebVerseNum(verseNum)}</div>`;
+              html += verseTexts.map(t => `<p style="line-height:1.85;margin:0 0 0.25rem 0;color:#4c1d95;font-size:0.92em;">${t}</p>`).join('');
+            });
+            html += `</div>`;
+          }
+        } else if (rashiVal === 'loading') {
+          html += `<div style="margin-top:0.4rem;font-size:0.75rem;color:#7c3aed;font-style:italic;opacity:0.7;">טוען פירוש רש״י...</div>`;
+        }
+      }
+
+      // Bartenura block
+      if (showBartenura && currentSection === 'משנה' && src.ref) {
+        const bartVal = _chokBartenuraCache[src.ref];
+        if (Array.isArray(bartVal) && bartVal.length > 0) {
+          html += `<div style="margin-top:0.8rem;padding:0.6rem 0.8rem;border-radius:0.5rem;background:rgba(8,145,178,0.05);border:1px solid rgba(8,145,178,0.18);">
+            <div style="font-size:0.65rem;color:#0891b2;font-weight:900;margin-bottom:0.35rem;">📖 ר׳ עובדיה מברטנורא:</div>
+            ${bartVal.map(t => `<p style="line-height:1.85;margin:0 0 0.25rem 0;color:#164e63;font-size:0.92em;">${t}</p>`).join('')}
+          </div>`;
+        } else if (bartVal === 'loading') {
+          html += `<div style="margin-top:0.4rem;font-size:0.75rem;color:#0891b2;font-style:italic;opacity:0.7;">טוען פירוש ברטנורא...</div>`;
+        }
+      }
+
+      html += `</div>`;
+    }
+  }
+  html += '</div>';
+  contentEl.innerHTML = html || '<p class="text-center text-slate-500 py-10">לא נמצא תוכן</p>';
+  applyPrayerFontSize('#chok-israel-modal-content');
+}
+
+async function fetchChokCommentaries() {
+  const sheet = _chokCurrentSheet;
+  if (!sheet) return;
+  const showRashi = getChokRashi();
+  const showBartenura = getChokBartenura();
+  if (!showRashi && !showBartenura) return;
+
+  const sources = sheet.sources || [];
+  let currentSection = '';
+  const promises = [];
+
+  for (const src of sources) {
+    if (src.outsideText) {
+      const m = src.outsideText.match(/<h1><b>(.*?)<\/b><\/h1>/);
+      if (m) currentSection = m[1];
+    } else if (src.ref) {
+      const ref = src.ref;
+
+      if (showRashi && _CHOK_RASHI_SECTIONS.has(currentSection) && _chokRashiCache[ref] === undefined) {
+        _chokRashiCache[ref] = 'loading';
+        const _rashiSection = currentSection; // capture for closure
+        promises.push(
+          fetch(
+            'https://www.sefaria.org/api/texts/' + encodeURIComponent('Rashi on ' + ref) + '?lang=he&context=0',
+            { signal: AbortSignal.timeout(8000) }
+          )
+            .then(r => r.json())
+            .then(data => {
+              if (data && data.he) {
+                const raw = data.he;
+                // Parse as per-verse array (each element = one verse's Rashi)
+                const versesArr = Array.isArray(raw) ? raw : [raw];
+                const verses = versesArr.map(v => {
+                  if (!v) return [];
+                  if (typeof v === 'string') return v.trim() ? [v] : [];
+                  // nested arrays (array of comments per verse)
+                  return [].concat(...[v].flat(3)).filter(t => typeof t === 'string' && t.trim());
+                });
+                const hasAny = verses.some(v => v.length > 0);
+                // Extract start verse from ref e.g. "Leviticus 25:11-15" → 11
+                const verseMatch = ref.match(/:(\d+)/);
+                const startVerse = verseMatch ? parseInt(verseMatch[1], 10) : 1;
+                _chokRashiCache[ref] = hasAny ? { verses, startVerse } : null;
+              } else {
+                _chokRashiCache[ref] = null;
+              }
+            })
+            .catch(() => { _chokRashiCache[ref] = null; })
+        );
+      }
+
+      if (showBartenura && currentSection === 'משנה' && _chokBartenuraCache[ref] === undefined) {
+        _chokBartenuraCache[ref] = 'loading';
+        promises.push(
+          fetch(
+            'https://www.sefaria.org/api/texts/' + encodeURIComponent('Bartenura on ' + ref) + '?lang=he&context=0',
+            { signal: AbortSignal.timeout(8000) }
+          )
+            .then(r => r.json())
+            .then(data => {
+              if (data && data.he) {
+                const flat = [].concat(...[data.he].flat(3)).filter(t => typeof t === 'string' && t.trim());
+                _chokBartenuraCache[ref] = flat.length > 0 ? flat : null;
+              } else {
+                _chokBartenuraCache[ref] = null;
+              }
+            })
+            .catch(() => { _chokBartenuraCache[ref] = null; })
+        );
+      }
+    }
+  }
+
+  if (promises.length > 0) {
+    await Promise.allSettled(promises);
+    renderChokContent();
+  }
+}
+
+function closeChokLeIsraelModal() {
+  const m = document.getElementById('chok-israel-modal');
+  if (!m) return;
+  m.classList.add('opacity-0');
+  setTimeout(() => m.classList.add('hidden'), 300);
+  unlockBodyScroll();
+  if (_activeModals[_activeModals.length - 1] === 'chok-israel-modal') {
+    _activeModals.pop();
+    history.back();
+  }
+}
+window.openChokLeIsraelModal = openChokLeIsraelModal;
+window.closeChokLeIsraelModal = closeChokLeIsraelModal;
+
+// Midnight auto-refresh: re-fetch when calendar day changes
+setInterval(() => {
+  const today = new Date().toDateString();
+  if (today !== _chokLeIsraelLastDate) {
+    _chokLeIsraelLastDate = today;
+    _chokLeIsraelData = null;
+    _chokLeIsraelFetchDate = '';
+    _chokCurrentSheet = null;
+    _chokRashiCache = {};
+    _chokBartenuraCache = {};
+    fetchChokLeIsraelData();
+  }
+}, 60000);
+
 /* ── KosherZmanim helper ─────────────────────────────────── */
 function getLocationCoords() {
   // Try GPS first
@@ -1900,6 +2352,9 @@ async function fetchLiveCalendarData() {
         openSefariaModal(displayDaf, dafEvent.title);
       };
     }
+
+    // טעינת חוק לישראל (fire-and-forget)
+    fetchChokLeIsraelData();
 
     renderZmanimGrid(zData);
 

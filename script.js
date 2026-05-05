@@ -1691,18 +1691,18 @@ function _buildGemaraWithInlineRashi(gemaraHtml, rashiComments) {
     // Rashi format: "DIBUR_HAMATCHIL. rashi" — extract the dibur (everything before first . : – -)
     const diburMatch = rashiText.match(/^([^.־:–—\-]{2,40})[.־:–—\-]/);
 
-    // Build colored rashiHtml: dibur in amber, rest in purple (with !important to override .holy-text-style)
+    // Build colored rashiHtml: dibur in amber, rest in purple (classes override .holy-text-style via !important in CSS)
     let inner;
     if (diburMatch) {
       const dibur = diburMatch[1].trim();
       const rest = rashiText.slice(diburMatch[0].length).trim();
-      inner = `<span style="color:#b45309 !important;font-weight:700;">${dibur}</span>` +
-              `<span style="color:#6b7280 !important;"> — </span>` +
-              `<span style="color:#4c1d95 !important;">${rest}</span>`;
+      inner = `<span class="chok-rashi-dibur">${dibur}</span>` +
+              `<span class="chok-rashi-sep"> — </span>` +
+              `<span class="chok-rashi-rest">${rest}</span>`;
     } else {
-      inner = `<span style="color:#4c1d95 !important;">${rashiText}</span>`;
+      inner = `<span class="chok-rashi-rest">${rashiText}</span>`;
     }
-    const rashiHtml = `<div style="${blockBase}"><span style="font-size:0.75em;color:#7c3aed !important;font-weight:700;display:block;margin-bottom:0.15rem;">📝 רש״י</span>${inner}</div>`;
+    const rashiHtml = `<div style="${blockBase}"><span class="chok-rashi-label">📝 רש״י</span>${inner}</div>`;
 
     if (diburMatch) {
       const dibur = diburMatch[1].trim();
@@ -1727,12 +1727,22 @@ function _buildGemaraWithInlineRashi(gemaraHtml, rashiComments) {
     unmatched.push(rashiText);
   }
 
-  // Any comment whose dibur wasn't found — append as a small block at the end
+  // Any comment whose dibur wasn't found — each gets its own styled card
   if (unmatched.length) {
-    result += `<div style="margin-top:0.8rem;padding:0.5rem 0.7rem;border-radius:0.5rem;background:rgba(124,58,237,0.05);border:1px solid rgba(124,58,237,0.15);">
-      <div style="font-size:0.63rem;color:#7c3aed !important;font-weight:700;margin-bottom:0.3rem;">📝 רש״י:</div>
-      ${unmatched.map(t => `<p style="line-height:1.8;margin:0 0 0.2rem 0;color:#4c1d95 !important;font-size:0.9em;">${t}</p>`).join('')}
-    </div>`;
+    result += unmatched.map(t => {
+      const m = t.match(/^([^.־:–—\-]{2,40})[.־:–—\-]/);
+      let inner;
+      if (m) {
+        const dibur = m[1].trim();
+        const rest = t.slice(m[0].length).trim();
+        inner = `<span class="chok-rashi-dibur">${dibur}</span>` +
+                `<span class="chok-rashi-sep"> — </span>` +
+                `<span class="chok-rashi-rest">${rest}</span>`;
+      } else {
+        inner = `<span class="chok-rashi-rest">${t}</span>`;
+      }
+      return `<div style="${blockBase}"><span class="chok-rashi-label">📝 רש״י</span>${inner}</div>`;
+    }).join('');
   }
   return result;
 }
@@ -1850,6 +1860,11 @@ function renderChokContent() {
   }
   html += '</div>';
   contentEl.innerHTML = html || '<p class="text-center text-slate-500 py-10">לא נמצא תוכן</p>';
+  // Force Rashi colors via JS setProperty (overrides .holy-text-style inheritance reliably)
+  contentEl.querySelectorAll('.chok-rashi-dibur').forEach(el => el.style.setProperty('color', '#b45309', 'important'));
+  contentEl.querySelectorAll('.chok-rashi-sep').forEach(el => el.style.setProperty('color', '#6b7280', 'important'));
+  contentEl.querySelectorAll('.chok-rashi-rest').forEach(el => el.style.setProperty('color', '#4c1d95', 'important'));
+  contentEl.querySelectorAll('.chok-rashi-label').forEach(el => el.style.setProperty('color', '#7c3aed', 'important'));
   applyPrayerFontSize('#chok-israel-modal-content');
 }
 

@@ -26,6 +26,11 @@
         text-align: center;
         color: #000000;
       }
+      /* Chok L'Israel Rashi inline colors — must override .holy-text-style */
+      .chok-rashi-dibur { color: #b45309 !important; font-weight: 700; }
+      .chok-rashi-sep   { color: #6b7280 !important; }
+      .chok-rashi-rest  { color: #4c1d95 !important; }
+      .chok-rashi-label { color: #7c3aed !important; font-size: 0.75em; font-weight: 700; display: block; margin-bottom: 0.15rem; }
 
       /* Mobile-optimized prayer modal: use full width */
       .prayer-modal-body-mobile {

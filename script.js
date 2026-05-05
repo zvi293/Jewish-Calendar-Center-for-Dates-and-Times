@@ -16455,13 +16455,27 @@ document.addEventListener("keydown", (e) => {
 
   function getHebInfo(offset) {
     var d = new Date();
-    // אחרי צאת הכוכבים – נחשב כיום הבא (לפי הזמן בו האתר משתמש לסיום שבת)
+    // אחרי צאת הכוכבים – נחשב כיום הבא
+    // נשתמש בקביעה הקיימת של המערכת (displayDate) שכבר מתחשבת בצאת הכוכבים
+    // כפול fallback ל-TZEIT_TIME במקרה ש-displayDate עדיין לא נטען.
     try {
-      var _tz = window.TZEIT_TIME;
-      if (_tz instanceof Date && !isNaN(_tz.getTime())) {
-        var _now = new Date();
-        if (_now >= _tz && _now.toDateString() === _tz.toDateString()) {
+      var shifted = false;
+      var ctx = window._livePrayerContextData;
+      if (ctx && ctx.displayDate instanceof Date && !isNaN(ctx.displayDate.getTime())) {
+        var _now0 = new Date(); _now0.setHours(0, 0, 0, 0);
+        var _disp0 = new Date(ctx.displayDate); _disp0.setHours(0, 0, 0, 0);
+        if (_disp0.getTime() > _now0.getTime()) {
           d.setDate(d.getDate() + 1);
+          shifted = true;
+        }
+      }
+      if (!shifted) {
+        var _tz = window.TZEIT_TIME;
+        if (_tz instanceof Date && !isNaN(_tz.getTime())) {
+          var _now = new Date();
+          if (_now >= _tz && _now.toDateString() === _tz.toDateString()) {
+            d.setDate(d.getDate() + 1);
+          }
         }
       }
     } catch (e) {}

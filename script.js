@@ -589,6 +589,15 @@ function removeModalById(modalId) {
   unlockBodyScroll();
 }
 window.addEventListener("popstate", function (e) {
+  // Inner reading-pane back (not a full modal close)
+  if (e.state && e.state.bihReadingPane) {
+    window._bihOnReadingPaneClose && window._bihOnReadingPaneClose();
+    return;
+  }
+  if (e.state && e.state.tehillimPsalmPane) {
+    window._tehillimOnPsalmClose && window._tehillimOnPsalmClose();
+    return;
+  }
   if (_activeModals.length > 0) {
     const modalId = _activeModals.pop();
     // Close the specific modal
@@ -14033,6 +14042,7 @@ function openBenIshHaiPage() {
 
   // _bihMode: "y0" = Year 1 halachot, "y1" = Year 2 halachot, "drashot" = Drashot
   let _bihMode = "y0";
+  let _bihReadingPaneInHistory = false;
   let _bihFontSize = 100;
   let _loadedRange = { start: -1, end: -1 };
   let _isLoadingNext = false, _isLoadingPrev = false;
@@ -14365,6 +14375,11 @@ function openBenIshHaiPage() {
   // ── Wire up global functions ──
   window._bihSetMode = (mode) => {
     _bihMode = mode;
+    if (_bihReadingPaneInHistory) {
+      // Replace reading-pane history entry so back from grid closes the modal, not an orphaned pane state
+      history.replaceState({ modal: "ben-ish-hai-modal" }, "");
+      _bihReadingPaneInHistory = false;
+    }
     const pane = document.getElementById("bih-reading-pane");
     if (pane) pane.style.display = "none";
     buildGridContent();
@@ -14386,6 +14401,10 @@ function openBenIshHaiPage() {
     const titleEl = document.getElementById("bih-reading-title");
     if (!pane || !contentArea || !sectionsDiv) return;
 
+    if (!_bihReadingPaneInHistory) {
+      history.pushState({ bihReadingPane: true }, "");
+      _bihReadingPaneInHistory = true;
+    }
     pane.style.display = "flex"; pane.style.flexDirection = "column";
     if (titleEl) titleEl.textContent = parsha.he;
     applyFontSize();
@@ -14410,13 +14429,23 @@ function openBenIshHaiPage() {
     setupScrollLoader(contentArea);
   };
 
-  window._bihCloseReading = () => {
+  // Called by popstate when bihReadingPane state is popped
+  window._bihOnReadingPaneClose = () => {
     const pane = document.getElementById("bih-reading-pane");
     if (pane) pane.style.display = "none";
     const ca = document.getElementById("bih-content-area");
     if (ca) { if(_scrollListener) ca.removeEventListener("scroll",_scrollListener); if(_titleListener) ca.removeEventListener("scroll",_titleListener); }
     _scrollListener = null; _titleListener = null;
+    _bihReadingPaneInHistory = false;
     buildBMPanel();
+  };
+
+  window._bihCloseReading = () => {
+    if (_bihReadingPaneInHistory) {
+      history.back(); // popstate will call _bihOnReadingPaneClose
+    } else {
+      window._bihOnReadingPaneClose();
+    }
   };
 
   window._bihFontInc = () => { _bihFontSize = Math.min(200,_bihFontSize+10); applyFontSize(); };
@@ -14760,8 +14789,12 @@ openTehillimPage = function () {
                 <h2 style="color:#000000;font-size:1.3rem;font-weight:900;margin:0;">ספר תהילים</h2>
                 <p style="color:#1d4ed8;font-size:0.82rem;font-weight:700;margin:0.15rem 0 0;">יום ${plan.day} · פרקים ${rangeLabel}</p>
               </div>
-              <button onclick="closeTehillimModal()" style="background:rgba(0,0,0,0.06);border:none;color:#64748b;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.1rem;">✕</button>
+              <div style="display:flex;align-items:center;gap:0.5rem;">
+                <button onclick="window._thToggleBMPanel()" id="th-bm-toggle-btn" style="background:rgba(0,0,0,0.06);border:none;color:#64748b;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1rem;" title="סמניות">📌</button>
+                <button onclick="closeTehillimModal()" style="background:rgba(0,0,0,0.06);border:none;color:#64748b;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.1rem;">✕</button>
+              </div>
             </div>
+            <div id="th-bm-panel" style="display:none;background:#fffbeb;border-bottom:1px solid #fde68a;padding:0.75rem 1.25rem;flex-shrink:0;max-height:40vh;overflow-y:auto;"></div>
             <div style="display:flex;gap:0.4rem;padding:0.75rem 1.25rem;overflow-x:auto;flex-shrink:0;background:#faf9f6;">
               ${dayPlans
                 .map((item, itemIndex) => {
@@ -14779,7 +14812,7 @@ openTehillimPage = function () {
             </div>
             <div id="psalm-content-pane" style="display:none;position:absolute;inset:0;background:#faf9f6;z-index:10;flex-direction:column;overflow:hidden;">
               <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border-bottom:1px solid rgba(0,0,0,0.08);background:#faf9f6;">
-                <button onclick="document.getElementById('psalm-content-pane').style.display='none'" style="background:rgba(0,0,0,0.06);border:none;color:#64748b;padding:0.4rem 0.8rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;">חזרה</button>
+                <button onclick="window._tehillimClosePsalm()" style="background:rgba(0,0,0,0.06);border:none;color:#64748b;padding:0.4rem 0.8rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;">← חזרה</button>
                 <h3 id="psalm-title" style="color:#000000;font-size:1rem;font-weight:900;margin:0;">תהילים</h3>
                 <div style="width:60px;"></div>
               </div>
@@ -14794,9 +14827,10 @@ openTehillimPage = function () {
           `;
   };
 
-  window._tehillimSwitchDay = (index) => renderDay(index);
+  window._tehillimSwitchDay = (index) => { renderDay(index); window._thBuildBMPanel(); };
   window._tehillimLoadedChapters = new Set();
   window._tehillimCurrentChapter = 1;
+  window._tehillimPsalmInHistory = false;
 
   // Bookmarks
   const TH_BM_KEY = "tehillim_bookmarks_v1";
@@ -14814,6 +14848,53 @@ openTehillimPage = function () {
       btn.style.border = active ? "1.5px solid #f59e0b" : "1.5px solid #d1d5db";
       btn.style.color = active ? "#92400e" : "#64748b";
       btn.style.background = active ? "#fffbeb" : "transparent";
+    }
+    window._thBuildBMPanel();
+  };
+
+  window._thBuildBMPanel = () => {
+    const panel = document.getElementById("th-bm-panel");
+    if (!panel) return;
+    const bms = thLoadBMs().slice().sort((a,b)=>a-b);
+    if (!bms.length) {
+      panel.innerHTML = '<p style="color:#92400e;font-size:0.78rem;margin:0;text-align:center;">אין סמניות שמורות</p>';
+      return;
+    }
+    panel.innerHTML =
+      '<p style="color:#92400e;font-size:0.78rem;font-weight:900;margin:0 0 0.5rem;">📌 פרקים מסומנים:</p>'+
+      '<div style="display:flex;flex-wrap:wrap;gap:0.4rem;">'+
+      bms.map(ch =>
+        '<div style="display:flex;align-items:center;gap:0.25rem;">'+
+          '<button onclick="window._tehillimOpenPsalm('+ch+')" style="background:#fff;border:1.5px solid #f59e0b;border-radius:999px;padding:0.25rem 0.7rem;font-size:0.78rem;font-weight:800;color:#92400e;cursor:pointer;">פרק '+toHebrewPsalmNumber(ch)+'</button>'+
+          '<button onclick="window._thToggleBM('+ch+')" style="background:none;border:none;color:#94a3b8;font-size:0.8rem;cursor:pointer;" title="הסר">✕</button>'+
+        '</div>'
+      ).join("")+
+      '</div>';
+  };
+
+  window._thToggleBMPanel = () => {
+    const panel = document.getElementById("th-bm-panel");
+    if (!panel) return;
+    if (panel.style.display === "none") {
+      window._thBuildBMPanel();
+      panel.style.display = "block";
+    } else {
+      panel.style.display = "none";
+    }
+  };
+
+  // Psalm reading pane back-navigation
+  window._tehillimOnPsalmClose = () => {
+    const pane = document.getElementById("psalm-content-pane");
+    if (pane) pane.style.display = "none";
+    window._tehillimPsalmInHistory = false;
+  };
+
+  window._tehillimClosePsalm = () => {
+    if (window._tehillimPsalmInHistory) {
+      history.back(); // popstate will call _tehillimOnPsalmClose
+    } else {
+      window._tehillimOnPsalmClose();
     }
   };
 
@@ -14859,6 +14940,10 @@ openTehillimPage = function () {
     const title = document.getElementById("psalm-title");
     const area = document.getElementById("psalm-text-area");
     if (!pane || !title || !area) return;
+    if (!window._tehillimPsalmInHistory) {
+      history.pushState({ tehillimPsalmPane: true }, "");
+      window._tehillimPsalmInHistory = true;
+    }
     pane.style.display = "flex";
     window._tehillimLoadedChapters = new Set();
     window._tehillimCurrentChapter = chapter;

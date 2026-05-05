@@ -13854,7 +13854,6 @@ function closeTehillimModal() {
 // ── Dedicated Ben Ish Hai Page ────────────────────────────
 function openBenIshHaiPage() {
 
-  // ── Hebrew letter numbering (גימטריה) ──
   function toHeb(n) {
     if (n <= 0) return String(n);
     const map = [[400,'ת'],[300,'ש'],[200,'ר'],[100,'ק'],[90,'צ'],[80,'פ'],[70,'ע'],[60,'ס'],[50,'נ'],[40,'מ'],[30,'ל'],[20,'כ'],[19,'יט'],[18,'יח'],[17,'יז'],[16,'טז'],[15,'טו'],[10,'י'],[9,'ט'],[8,'ח'],[7,'ז'],[6,'ו'],[5,'ה'],[4,'ד'],[3,'ג'],[2,'ב'],[1,'א']];
@@ -13863,123 +13862,182 @@ function openBenIshHaiPage() {
     return r;
   }
 
+  // 54 drashot parshiyot (exact Sefaria keys)
+  const DRASHOT_PARSHIYOT = [
+    { he: "בראשית",       key: "Bereshit" },
+    { he: "נח",            key: "Noach" },
+    { he: "לך לך",         key: "Lech Lecha" },
+    { he: "וירא",          key: "Vayera" },
+    { he: "חיי שרה",       key: "Chayei Sara" },
+    { he: "תולדות",        key: "Toldot" },
+    { he: "ויצא",          key: "Vayetzei" },
+    { he: "וישלח",         key: "Vayishlach" },
+    { he: "וישב",          key: "Vayeshev" },
+    { he: "מקץ",           key: "Miketz" },
+    { he: "ויגש",          key: "Vayigash" },
+    { he: "ויחי",          key: "Vayechi" },
+    { he: "שמות",          key: "Shemot" },
+    { he: "וארא",          key: "Vaera" },
+    { he: "בא",            key: "Bo" },
+    { he: "בשלח",          key: "Beshalach" },
+    { he: "יתרו",          key: "Yitro" },
+    { he: "משפטים",        key: "Mishpatim" },
+    { he: "תרומה",         key: "Terumah" },
+    { he: "תצוה",          key: "Tetzaveh" },
+    { he: "כי תשא",        key: "Ki Tisa" },
+    { he: "ויקהל",         key: "Vayakhel" },
+    { he: "פקודי",         key: "Pekudei" },
+    { he: "ויקרא",         key: "Vayikra" },
+    { he: "צו",            key: "Tzav" },
+    { he: "שמיני",         key: "Shmini" },
+    { he: "תזריע",         key: "Tazria" },
+    { he: "מצורע",         key: "Metzora" },
+    { he: "אחרי מות",      key: "Achrei Mot" },
+    { he: "קדושים",        key: "Kedoshim" },
+    { he: "אמור",          key: "Emor" },
+    { he: "בהר",           key: "Behar" },
+    { he: "בחוקותי",       key: "Bechukotai" },
+    { he: "במדבר",         key: "Bamidbar" },
+    { he: "נשא",           key: "Nasso" },
+    { he: "בהעלותך",       key: "Beha'alotcha" },
+    { he: "שלח",           key: "Sh'lach" },
+    { he: "קרח",           key: "Korach" },
+    { he: "חקת",           key: "Chukat" },
+    { he: "בלק",           key: "Balak" },
+    { he: "פינחס",         key: "Pinchas" },
+    { he: "מטות",          key: "Matot" },
+    { he: "מסעי",          key: "Masei" },
+    { he: "דברים",         key: "Devarim" },
+    { he: "ואתחנן",        key: "Vaetchanan" },
+    { he: "עקב",           key: "Eikev" },
+    { he: "ראה",           key: "Re'eh" },
+    { he: "שופטים",        key: "Shoftim" },
+    { he: "כי תצא",        key: "Ki Teitzei" },
+    { he: "כי תבוא",       key: "Ki Tavo" },
+    { he: "נצבים",         key: "Nitzavim" },
+    { he: "וילך",          key: "Vayeilech" },
+    { he: "האזינו",        key: "Ha'Azinu" },
+    { he: "וזאת הברכה",    key: "V'Zot HaBerachah" },
+  ];
+
+  // dr = drashot key used as preface; null = no drashot (Chanukah)
   const YEARS = [
-    {
-      he: "שנה ראשונה", en: "Halachot 1st Year", color: "#6366f1",
+    { he: "שנה ראשונה", en: "Halachot 1st Year", color: "#6366f1",
       parshiyot: [
-        { he: "בראשית",         en: "Bereshit" },
-        { he: "נח",              en: "Noach" },
-        { he: "לך לך",           en: "Lech Lecha" },
-        { he: "וירא",            en: "Vayera" },
-        { he: "חיי שרה",         en: "Chayei Sara" },
-        { he: "תולדות",          en: "Toldot" },
-        { he: "ויצא",            en: "Vayetzei" },
-        { he: "וישלח",           en: "Vayishlach" },
-        { he: "וישב",            en: "Vayeshev" },
-        { he: "חנוכה",           en: "Chanukah" },
-        { he: "מקץ",             en: "Miketz" },
-        { he: "ויגש",            en: "Vayigash" },
-        { he: "ויחי",            en: "Vayechi" },
-        { he: "שמות",            en: "Shemot" },
-        { he: "וארא",            en: "Vaera" },
-        { he: "בא",              en: "Bo" },
-        { he: "בשלח",            en: "Beshalach" },
-        { he: "יתרו",            en: "Yitro" },
-        { he: "משפטים",          en: "Mishpatim" },
-        { he: "תרומה",           en: "Terumah" },
-        { he: "תצוה",            en: "Tetzaveh" },
-        { he: "כי תשא",          en: "Ki Tisa" },
-        { he: "ויקהל",           en: "Vayakhel" },
-        { he: "פקודי",           en: "Pekudei" },
-        { he: "ויקרא",           en: "Vayikra" },
-        { he: "צו",              en: "Tzav" },
-        { he: "שמיני",           en: "Shmini" },
-        { he: "תזריע-מצורע",     en: "Tazria Metzora" },
-        { he: "אחרי-קדושים",     en: "Achrei Mot Kedoshim" },
-        { he: "אמור",            en: "Emor" },
-        { he: "בהר-בחקותי",      en: "Behar Bechukotai" },
-        { he: "במדבר",           en: "Bamidbar" },
-        { he: "נשא",             en: "Nasso" },
-        { he: "בהעלותך",         en: "Beha'alotcha" },
-        { he: "שלח",             en: "Sh'lach" },
-        { he: "קרח",             en: "Korach" },
-        { he: "חקת",             en: "Chukat" },
-        { he: "בלק",             en: "Balak" },
-        { he: "פינחס",           en: "Pinchas" },
-        { he: "מטות",            en: "Matot" },
-        { he: "מסעי",            en: "Masei" },
-        { he: "דברים",           en: "Devarim" },
-        { he: "ואתחנן",          en: "Vaetchanan" },
-        { he: "עקב",             en: "Eikev" },
-        { he: "ראה",             en: "Re'eh" },
-        { he: "שופטים",          en: "Shoftim" },
-        { he: "כי תצא",          en: "Ki Teitzei" },
-        { he: "כי תבוא",         en: "Ki Tavo" },
-        { he: "נצבים",           en: "Nitzavim" },
-        { he: "וילך",            en: "Vayeilech" },
-        { he: "האזינו",          en: "Ha'Azinu" },
-        { he: "וזאת הברכה",      en: "V'Zot HaBerachah" },
+        { he: "בראשית",       en: "Bereshit",            dr: "Bereshit" },
+        { he: "נח",            en: "Noach",               dr: "Noach" },
+        { he: "לך לך",         en: "Lech Lecha",          dr: "Lech Lecha" },
+        { he: "וירא",          en: "Vayera",              dr: "Vayera" },
+        { he: "חיי שרה",       en: "Chayei Sara",         dr: "Chayei Sara" },
+        { he: "תולדות",        en: "Toldot",              dr: "Toldot" },
+        { he: "ויצא",          en: "Vayetzei",            dr: "Vayetzei" },
+        { he: "וישלח",         en: "Vayishlach",          dr: "Vayishlach" },
+        { he: "וישב",          en: "Vayeshev",            dr: "Vayeshev" },
+        { he: "חנוכה",         en: "Chanukah",            dr: null },
+        { he: "מקץ",           en: "Miketz",              dr: "Miketz" },
+        { he: "ויגש",          en: "Vayigash",            dr: "Vayigash" },
+        { he: "ויחי",          en: "Vayechi",             dr: "Vayechi" },
+        { he: "שמות",          en: "Shemot",              dr: "Shemot" },
+        { he: "וארא",          en: "Vaera",               dr: "Vaera" },
+        { he: "בא",            en: "Bo",                  dr: "Bo" },
+        { he: "בשלח",          en: "Beshalach",           dr: "Beshalach" },
+        { he: "יתרו",          en: "Yitro",               dr: "Yitro" },
+        { he: "משפטים",        en: "Mishpatim",           dr: "Mishpatim" },
+        { he: "תרומה",         en: "Terumah",             dr: "Terumah" },
+        { he: "תצוה",          en: "Tetzaveh",            dr: "Tetzaveh" },
+        { he: "כי תשא",        en: "Ki Tisa",             dr: "Ki Tisa" },
+        { he: "ויקהל",         en: "Vayakhel",            dr: "Vayakhel" },
+        { he: "פקודי",         en: "Pekudei",             dr: "Pekudei" },
+        { he: "ויקרא",         en: "Vayikra",             dr: "Vayikra" },
+        { he: "צו",            en: "Tzav",                dr: "Tzav" },
+        { he: "שמיני",         en: "Shmini",              dr: "Shmini" },
+        { he: "תזריע-מצורע",   en: "Tazria Metzora",      dr: "Tazria" },
+        { he: "אחרי-קדושים",   en: "Achrei Mot Kedoshim", dr: "Achrei Mot" },
+        { he: "אמור",          en: "Emor",                dr: "Emor" },
+        { he: "בהר-בחקותי",    en: "Behar Bechukotai",    dr: "Behar" },
+        { he: "במדבר",         en: "Bamidbar",            dr: "Bamidbar" },
+        { he: "נשא",           en: "Nasso",               dr: "Nasso" },
+        { he: "בהעלותך",       en: "Beha'alotcha",        dr: "Beha'alotcha" },
+        { he: "שלח",           en: "Sh'lach",             dr: "Sh'lach" },
+        { he: "קרח",           en: "Korach",              dr: "Korach" },
+        { he: "חקת",           en: "Chukat",              dr: "Chukat" },
+        { he: "בלק",           en: "Balak",               dr: "Balak" },
+        { he: "פינחס",         en: "Pinchas",             dr: "Pinchas" },
+        { he: "מטות",          en: "Matot",               dr: "Matot" },
+        { he: "מסעי",          en: "Masei",               dr: "Masei" },
+        { he: "דברים",         en: "Devarim",             dr: "Devarim" },
+        { he: "ואתחנן",        en: "Vaetchanan",          dr: "Vaetchanan" },
+        { he: "עקב",           en: "Eikev",               dr: "Eikev" },
+        { he: "ראה",           en: "Re'eh",               dr: "Re'eh" },
+        { he: "שופטים",        en: "Shoftim",             dr: "Shoftim" },
+        { he: "כי תצא",        en: "Ki Teitzei",          dr: "Ki Teitzei" },
+        { he: "כי תבוא",       en: "Ki Tavo",             dr: "Ki Tavo" },
+        { he: "נצבים",         en: "Nitzavim",            dr: "Nitzavim" },
+        { he: "וילך",          en: "Vayeilech",           dr: "Vayeilech" },
+        { he: "האזינו",        en: "Ha'Azinu",            dr: "Ha'Azinu" },
+        { he: "וזאת הברכה",    en: "V'Zot HaBerachah",    dr: "V'Zot HaBerachah" },
       ],
     },
-    {
-      he: "שנה שניה", en: "Halachot 2nd Year", color: "#f59e0b",
+    { he: "שנה שניה", en: "Halachot 2nd Year", color: "#f59e0b",
       parshiyot: [
-        { he: "בראשית",         en: "Bereshit" },
-        { he: "נח",              en: "Noach" },
-        { he: "לך לך",           en: "Lech Lecha" },
-        { he: "וירא",            en: "Vayera" },
-        { he: "חיי שרה",         en: "Chayei Sara" },
-        { he: "תולדות",          en: "Toldot" },
-        { he: "ויצא",            en: "Vayetzei" },
-        { he: "וישלח",           en: "Vayishlach" },
-        { he: "וישב",            en: "Vayeshev" },
-        { he: "מקץ",             en: "Miketz" },
-        { he: "ויגש",            en: "Vayigash" },
-        { he: "ויחי",            en: "Vayechi" },
-        { he: "שמות",            en: "Shemot" },
-        { he: "וארא",            en: "Vaera" },
-        { he: "בא",              en: "Bo" },
-        { he: "בשלח",            en: "Beshalach" },
-        { he: "יתרו",            en: "Yitro" },
-        { he: "משפטים",          en: "Mishpatim" },
-        { he: "תרומה",           en: "Terumah" },
-        { he: "תצוה",            en: "Tetzaveh" },
-        { he: "כי תשא",          en: "Ki Tisa" },
-        { he: "ויקהל",           en: "Vayakhel" },
-        { he: "פקודי",           en: "Pekudei" },
-        { he: "ויקרא",           en: "Vayikra" },
-        { he: "צו",              en: "Tzav" },
-        { he: "שמיני",           en: "Shmini" },
-        { he: "תזריע",           en: "Tazria" },
-        { he: "מצורע",           en: "Metzora" },
-        { he: "אחרי מות",        en: "Achrei Mot" },
-        { he: "קדושים",          en: "Kedoshim" },
-        { he: "אמור",            en: "Emor" },
-        { he: "בהר-בחקותי",      en: "Behar Bechukotai" },
-        { he: "נשא",             en: "Nasso" },
-        { he: "בהעלותך",         en: "Beha'alotcha" },
-        { he: "שלח",             en: "Sh'lach" },
-        { he: "קרח",             en: "Korach" },
-        { he: "חקת",             en: "Chukat" },
-        { he: "בלק",             en: "Balak" },
-        { he: "פינחס",           en: "Pinchas" },
-        { he: "מטות",            en: "Matot" },
-        { he: "מסעי",            en: "Masei" },
-        { he: "ואתחנן",          en: "Vaetchanan" },
-        { he: "עקב",             en: "Eikev" },
-        { he: "ראה",             en: "Re'eh" },
-        { he: "שופטים",          en: "Shoftim" },
-        { he: "כי תצא",          en: "Ki Teitzei" },
-        { he: "כי תבוא",         en: "Ki Tavo" },
+        { he: "בראשית",       en: "Bereshit",            dr: "Bereshit" },
+        { he: "נח",            en: "Noach",               dr: "Noach" },
+        { he: "לך לך",         en: "Lech Lecha",          dr: "Lech Lecha" },
+        { he: "וירא",          en: "Vayera",              dr: "Vayera" },
+        { he: "חיי שרה",       en: "Chayei Sara",         dr: "Chayei Sara" },
+        { he: "תולדות",        en: "Toldot",              dr: "Toldot" },
+        { he: "ויצא",          en: "Vayetzei",            dr: "Vayetzei" },
+        { he: "וישלח",         en: "Vayishlach",          dr: "Vayishlach" },
+        { he: "וישב",          en: "Vayeshev",            dr: "Vayeshev" },
+        { he: "מקץ",           en: "Miketz",              dr: "Miketz" },
+        { he: "ויגש",          en: "Vayigash",            dr: "Vayigash" },
+        { he: "ויחי",          en: "Vayechi",             dr: "Vayechi" },
+        { he: "שמות",          en: "Shemot",              dr: "Shemot" },
+        { he: "וארא",          en: "Vaera",               dr: "Vaera" },
+        { he: "בא",            en: "Bo",                  dr: "Bo" },
+        { he: "בשלח",          en: "Beshalach",           dr: "Beshalach" },
+        { he: "יתרו",          en: "Yitro",               dr: "Yitro" },
+        { he: "משפטים",        en: "Mishpatim",           dr: "Mishpatim" },
+        { he: "תרומה",         en: "Terumah",             dr: "Terumah" },
+        { he: "תצוה",          en: "Tetzaveh",            dr: "Tetzaveh" },
+        { he: "כי תשא",        en: "Ki Tisa",             dr: "Ki Tisa" },
+        { he: "ויקהל",         en: "Vayakhel",            dr: "Vayakhel" },
+        { he: "פקודי",         en: "Pekudei",             dr: "Pekudei" },
+        { he: "ויקרא",         en: "Vayikra",             dr: "Vayikra" },
+        { he: "צו",            en: "Tzav",                dr: "Tzav" },
+        { he: "שמיני",         en: "Shmini",              dr: "Shmini" },
+        { he: "תזריע",         en: "Tazria",              dr: "Tazria" },
+        { he: "מצורע",         en: "Metzora",             dr: "Metzora" },
+        { he: "אחרי מות",      en: "Achrei Mot",          dr: "Achrei Mot" },
+        { he: "קדושים",        en: "Kedoshim",            dr: "Kedoshim" },
+        { he: "אמור",          en: "Emor",                dr: "Emor" },
+        { he: "בהר-בחקותי",    en: "Behar Bechukotai",    dr: "Behar" },
+        { he: "נשא",           en: "Nasso",               dr: "Nasso" },
+        { he: "בהעלותך",       en: "Beha'alotcha",        dr: "Beha'alotcha" },
+        { he: "שלח",           en: "Sh'lach",             dr: "Sh'lach" },
+        { he: "קרח",           en: "Korach",              dr: "Korach" },
+        { he: "חקת",           en: "Chukat",              dr: "Chukat" },
+        { he: "בלק",           en: "Balak",               dr: "Balak" },
+        { he: "פינחס",         en: "Pinchas",             dr: "Pinchas" },
+        { he: "מטות",          en: "Matot",               dr: "Matot" },
+        { he: "מסעי",          en: "Masei",               dr: "Masei" },
+        { he: "ואתחנן",        en: "Vaetchanan",          dr: "Vaetchanan" },
+        { he: "עקב",           en: "Eikev",               dr: "Eikev" },
+        { he: "ראה",           en: "Re'eh",               dr: "Re'eh" },
+        { he: "שופטים",        en: "Shoftim",             dr: "Shoftim" },
+        { he: "כי תצא",        en: "Ki Teitzei",          dr: "Ki Teitzei" },
+        { he: "כי תבוא",       en: "Ki Tavo",             dr: "Ki Tavo" },
       ],
     },
   ];
 
-  let activeYearIdx = 0;
+  // _bihMode: "y0" = Year 1 halachot, "y1" = Year 2 halachot, "drashot" = Drashot
+  let _bihMode = "y0";
   let _bihFontSize = 100;
   let _loadedRange = { start: -1, end: -1 };
   let _isLoadingNext = false, _isLoadingPrev = false;
   let _searchAbort = null;
+  let _searchDebounce = null;
   let _scrollListener = null;
   let _titleListener = null;
   const _cache = {};
@@ -13992,173 +14050,230 @@ function openBenIshHaiPage() {
   function removeBM(y,p,h) { saveBMs(loadBMs().filter(x=>!(x.y===y&&x.p===p&&x.h===h))); }
   function isBM(y,p,h) { return loadBMs().some(x=>x.y===y&&x.p===p&&x.h===h); }
 
-  // ── Fetch halachot (with cache) ──
+  // ── Helpers ──
+  function getYIdx() { return _bihMode === "y1" ? 1 : 0; }
+  function getColor() { return _bihMode === "drashot" ? "#10b981" : YEARS[getYIdx()].color; }
+  function getParshiyot() { return _bihMode === "drashot" ? DRASHOT_PARSHIYOT : YEARS[getYIdx()].parshiyot; }
+
+  function flatten(arr) {
+    return (arr||[]).map(h=>Array.isArray(h)?h.join(" "):(typeof h==="string"?h:String(h))).filter(Boolean);
+  }
+
+  // ── Fetch functions (cached) ──
   async function fetchHalachot(yIdx, pIdx) {
-    const key = yIdx + "_" + pIdx;
-    if (_cache[key]) return _cache[key];
-    const year = YEARS[yIdx];
-    const parsha = year.parshiyot[pIdx];
-    const ref = "Ben_Ish_Hai,_" + year.en.replace(/ /g,"_") + ",_" + parsha.en.replace(/ /g,"_");
-    const url = "https://www.sefaria.org/api/texts/" + encodeURIComponent(ref) + "?pad=0&lang=he";
+    const key = "h_"+yIdx+"_"+pIdx;
+    if (_cache[key] !== undefined) return _cache[key];
+    const year = YEARS[yIdx], parsha = year.parshiyot[pIdx];
+    const ref = "Ben_Ish_Hai,_"+year.en.replace(/ /g,"_")+",_"+parsha.en.replace(/ /g,"_");
+    const url = "https://www.sefaria.org/api/texts/"+encodeURIComponent(ref)+"?pad=0&lang=he";
     try {
       const res = await fetch(url);
       if (!res.ok) throw new Error("fail");
       const data = await res.json();
       if (data.error) throw new Error(data.error);
-      const texts = (data.he||[]).map(h=>Array.isArray(h)?h.join(" "):(typeof h==="string"?h:String(h))).filter(Boolean);
-      _cache[key] = texts;
-      return texts;
-    } catch(e) {
-      _cache[key] = null;
-      return null;
-    }
+      _cache[key] = flatten(data.he);
+      return _cache[key];
+    } catch(e) { _cache[key] = []; return []; }
   }
 
-  // ── Build DOM section for a parsha ──
-  function createParshaSection(yIdx, pIdx, texts) {
-    const year = YEARS[yIdx];
-    const parsha = year.parshiyot[pIdx];
-    const color = year.color;
+  async function fetchDrashot(drKey) {
+    if (!drKey) return [];
+    const key = "dr_"+drKey;
+    if (_cache[key] !== undefined) return _cache[key];
+    const ref = "Ben_Ish_Hai,_Drashot,_"+drKey.replace(/ /g,"_");
+    const url = "https://www.sefaria.org/api/texts/"+encodeURIComponent(ref)+"?pad=0&lang=he";
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("fail");
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      _cache[key] = flatten(data.he);
+      return _cache[key];
+    } catch(e) { _cache[key] = []; return []; }
+  }
+
+  // ── Create DOM section: halachot with drashot preface ──
+  function createHalachotSection(yIdx, pIdx, texts, drTexts) {
+    const year = YEARS[yIdx], parsha = year.parshiyot[pIdx], color = year.color;
     const div = document.createElement("div");
-    div.id = "bih-sec-" + pIdx;
-    div.setAttribute("data-pidx", pIdx);
-    div.style.cssText = "padding-bottom:2rem;";
+    div.id = "bih-sec-"+pIdx; div.setAttribute("data-pidx", pIdx); div.style.paddingBottom = "2rem";
 
-    const header = document.createElement("div");
-    header.style.cssText = "text-align:center;padding:1.5rem 0 1rem;position:sticky;top:0;background:#faf9f6;z-index:2;border-bottom:1px solid " + color + "44;margin-bottom:1.25rem;";
-    header.innerHTML = '<span style="background:' + color + ';color:#fff;padding:0.3rem 1rem;border-radius:999px;font-size:0.95rem;font-weight:900;">' + parsha.he + '</span><span style="color:#94a3b8;font-size:0.72rem;display:block;margin-top:0.35rem;">' + year.he + (texts && texts.length ? ' · ' + texts.length + ' הלכות' : '') + '</span>';
-    div.appendChild(header);
+    // Sticky header
+    const hdr = document.createElement("div");
+    hdr.style.cssText = "text-align:center;padding:1.25rem 0 0.75rem;position:sticky;top:0;background:#faf9f6;z-index:2;border-bottom:2px solid "+color+"44;margin-bottom:1.25rem;";
+    hdr.innerHTML = '<span style="background:'+color+';color:#fff;padding:0.3rem 1rem;border-radius:999px;font-size:0.95rem;font-weight:900;">'+parsha.he+'</span>'+
+      '<span style="color:#94a3b8;font-size:0.72rem;display:block;margin-top:0.35rem;">'+year.he+(texts&&texts.length?' · '+texts.length+' הלכות':'')+'</span>';
+    div.appendChild(hdr);
 
-    if (!texts || texts.length === 0) {
+
+    if (!texts || !texts.length) {
       const empty = document.createElement("p");
       empty.style.cssText = "text-align:center;color:#94a3b8;padding:1rem;";
       empty.textContent = "לא נמצא תוכן לפרשה זו";
-      div.appendChild(empty);
-      return div;
+      div.appendChild(empty); return div;
     }
 
     const body = document.createElement("div");
     texts.forEach((h, i) => {
       const bmed = isBM(yIdx, pIdx, i);
       const item = document.createElement("div");
-      item.id = "bih-h-" + pIdx + "-" + i;
+      item.id = "bih-h-"+pIdx+"-"+i;
       item.style.cssText = "margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:1px solid rgba(0,0,0,0.07);";
       item.innerHTML =
-        '<div style="display:flex;align-items:center;justify-content:center;gap:0.5rem;margin-bottom:0.5rem;">' +
-          '<span style="color:' + color + ';font-size:0.75rem;font-weight:900;">הלכה ' + toHeb(i+1) + '</span>' +
-          '<button id="bih-bm-' + pIdx + '-' + i + '"' +
-            ' onclick="window._bihBMToggle(' + yIdx + ',' + pIdx + ',' + i + ',\'' + parsha.he.replace(/'/g,"\\'") + ' הלכה ' + toHeb(i+1) + '\')"' +
-            ' title="' + (bmed?"הסר סימניה":"הוסף סימניה") + '"' +
-            ' style="background:none;border:none;cursor:pointer;font-size:1rem;padding:0;opacity:' + (bmed?"1":"0.3") + ';transition:opacity 0.15s;">🔖</button>' +
-        '</div>' +
-        '<div style="direction:rtl;">' + h + '</div>';
+        '<div style="display:flex;align-items:center;justify-content:center;gap:0.6rem;margin-bottom:0.5rem;">'+
+          '<span style="color:'+color+';font-size:0.78rem;font-weight:900;">הלכה '+toHeb(i+1)+'</span>'+
+          '<button id="bih-bm-'+pIdx+'-'+i+'" '+
+            'onclick="window._bihBMToggle('+yIdx+','+pIdx+','+i+',\''+parsha.he.replace(/'/g,"\\'")+' הלכה '+toHeb(i+1)+'\')" '+
+            'style="border:1.5px solid '+(bmed?'#f59e0b':'#d1d5db')+';background:'+(bmed?'#fef9c3':'#fff')+';color:'+(bmed?'#92400e':'#9ca3af')+';padding:0.15rem 0.5rem;border-radius:0.35rem;cursor:pointer;font-size:0.72rem;font-weight:600;white-space:nowrap;transition:all 0.15s;">'+
+            (bmed?'🔖 מסומן':'🔖 סמן')+'</button>'+
+        '</div>'+
+        '<div style="direction:rtl;">'+h+'</div>';
       body.appendChild(item);
     });
     div.appendChild(body);
     return div;
   }
 
-  // ── Snippet builder for search ──
-  function buildSnippet(text, q) {
-    const idx = text.indexOf(q);
-    if (idx === -1) return text.slice(0,80) + "...";
-    const s = Math.max(0,idx-30), e = Math.min(text.length,idx+q.length+60);
-    let snip = (s>0?"...":"") + text.slice(s,e) + (e<text.length?"...":"");
-    const esc = q.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
-    return snip.replace(new RegExp(esc,"g"),'<mark style="background:#fef08a;border-radius:2px;">'+q+'</mark>');
+  // ── Create DOM section: drashot ──
+  function createDrashotSection(pIdx, parshaHe, texts) {
+    const color = "#10b981";
+    const div = document.createElement("div");
+    div.id = "bih-sec-"+pIdx; div.setAttribute("data-pidx", pIdx); div.style.paddingBottom = "2rem";
+
+    const hdr = document.createElement("div");
+    hdr.style.cssText = "text-align:center;padding:1.25rem 0 0.75rem;position:sticky;top:0;background:#faf9f6;z-index:2;border-bottom:2px solid "+color+"44;margin-bottom:1.25rem;";
+    hdr.innerHTML = '<span style="background:'+color+';color:#fff;padding:0.3rem 1rem;border-radius:999px;font-size:0.95rem;font-weight:900;">'+parshaHe+'</span>'+
+      '<span style="color:#94a3b8;font-size:0.72rem;display:block;margin-top:0.35rem;">דרשות — בן איש חי</span>';
+    div.appendChild(hdr);
+
+    if (!texts || !texts.length) {
+      const empty = document.createElement("p"); empty.style.cssText="text-align:center;color:#94a3b8;padding:1rem;";
+      empty.textContent="לא נמצא תוכן"; div.appendChild(empty); return div;
+    }
+    const body = document.createElement("div");
+    texts.forEach((t,i) => {
+      const item = document.createElement("div");
+      item.id = "bih-h-"+pIdx+"-"+i;
+      item.style.cssText = "margin-bottom:1.25rem;padding-bottom:1rem;border-bottom:1px solid rgba(0,0,0,0.07);direction:rtl;";
+      item.innerHTML = t;
+      body.appendChild(item);
+    });
+    div.appendChild(body);
+    return div;
   }
 
-  // ── Build grid content ──
-  function buildGridContent(yearIdx, filterQ) {
-    activeYearIdx = yearIdx;
-    const year = YEARS[yearIdx];
-    const color = year.color;
-    const parshiyot = year.parshiyot;
+  // ── Snippet for search ──
+  function buildSnippet(text, q) {
+    const idx = text.indexOf(q);
+    if (idx===-1) return text.slice(0,80)+"...";
+    const s=Math.max(0,idx-30), e=Math.min(text.length,idx+q.length+60);
+    let snip=(s>0?"...":"")+text.slice(s,e)+(e<text.length?"...":"");
+    const esc=q.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
+    return snip.replace(new RegExp(esc,"g"),'<mark style="background:#fef08a;border-radius:2px;">'+q+"</mark>");
+  }
 
-    // Year tabs
+  // ── Build grid ──
+  function buildGridContent() {
+    const color = getColor();
+    const parshiyot = getParshiyot();
+    const TABS = [
+      {label:"שנה ראשונה", mode:"y0", color:"#6366f1"},
+      {label:"שנה שניה",   mode:"y1", color:"#f59e0b"},
+      {label:"דרשות",      mode:"drashot", color:"#10b981"},
+    ];
+
     const tabsEl = document.getElementById("bih-year-bar");
     if (tabsEl) {
-      tabsEl.innerHTML = YEARS.map((y,i) =>
-        '<button onclick="window._bihSwitchYear(' + i + ')" style="padding:0.35rem 0.9rem;border-radius:999px;font-size:0.8rem;font-weight:700;border:1px solid ' +
-        (i===yearIdx ? color+';background:'+color+';color:#fff' : 'rgba(255,255,255,0.12);background:transparent;color:#94a3b8') +
-        ';cursor:pointer;white-space:nowrap;transition:all 0.15s;">' + y.he + '</button>'
+      tabsEl.innerHTML = TABS.map(t=>
+        '<button onclick="window._bihSetMode(\''+t.mode+'\')" style="padding:0.35rem 0.9rem;border-radius:999px;font-size:0.8rem;font-weight:700;border:1px solid '+
+        (_bihMode===t.mode ? t.color+';background:'+t.color+';color:#fff' : 'rgba(255,255,255,0.12);background:transparent;color:#94a3b8')+
+        ';cursor:pointer;white-space:nowrap;transition:all 0.15s;">'+t.label+'</button>'
       ).join("");
     }
 
-    // Grid
     const gridEl = document.getElementById("bih-grid-content");
     if (gridEl) {
-      const filtered = filterQ
-        ? parshiyot.map((p,i)=>({...p,i})).filter(p=>p.he.includes(filterQ)||p.en.toLowerCase().includes(filterQ.toLowerCase()))
-        : parshiyot.map((p,i)=>({...p,i}));
-      gridEl.innerHTML = filtered.map(p =>
-        '<button onclick="window._bihOpenParsha(' + p.i + ')" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:0.75rem;padding:0.5rem 0.25rem;font-size:0.78rem;font-weight:700;color:#e2e8f0;cursor:pointer;transition:all 0.15s;text-align:center;" onmouseover="this.style.background=\'' + color + '33\';this.style.borderColor=\'' + color + '66\';" onmouseout="this.style.background=\'rgba(255,255,255,0.05)\';this.style.borderColor=\'rgba(255,255,255,0.1)\';">' + p.he + '</button>'
+      gridEl.innerHTML = parshiyot.map((p,i)=>
+        '<button onclick="window._bihOpenParsha('+i+')" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:0.75rem;padding:0.5rem 0.25rem;font-size:0.78rem;font-weight:700;color:#e2e8f0;cursor:pointer;transition:all 0.15s;text-align:center;" onmouseover="this.style.background=\''+color+'33\';this.style.borderColor=\''+color+'66\';" onmouseout="this.style.background=\'rgba(255,255,255,0.05)\';this.style.borderColor=\'rgba(255,255,255,0.1)\';">'+p.he+'</button>'
       ).join("");
     }
 
-    // Bookmarks panel
     buildBMPanel();
   }
 
   function buildBMPanel() {
     const panel = document.getElementById("bih-bm-panel");
     if (!panel) return;
-    const bms = loadBMs().filter(b=>b.y===activeYearIdx);
+    if (_bihMode === "drashot") { panel.innerHTML = ""; return; }
+    const yIdx = getYIdx();
+    const bms = loadBMs().filter(b=>b.y===yIdx);
     panel.innerHTML =
-      '<div style="border-top:1px solid rgba(255,255,255,0.08);padding-top:0.75rem;margin-top:1rem;">' +
-      '<p style="color:#94a3b8;font-size:0.75rem;font-weight:700;margin-bottom:0.5rem;">📌 סימניות</p>' +
-      (bms.length ? bms.map(b => {
-        const pr = YEARS[b.y]&&YEARS[b.y].parshiyot[b.p];
-        return '<div style="display:flex;align-items:center;gap:0.5rem;padding:0.45rem 0.6rem;background:rgba(255,255,255,0.04);border-radius:0.5rem;margin-bottom:0.35rem;direction:rtl;">' +
-          '<button onclick="window._bihOpenParsha(' + b.p + ',' + b.h + ')" style="background:none;border:none;color:#e2e8f0;cursor:pointer;font-size:0.8rem;text-align:right;flex:1;padding:0;">🔖 ' + (pr?pr.he:"?") + ' — הלכה ' + toHeb(b.h+1) + '</button>' +
-          '<button onclick="window._bihBMRemove(' + b.y + ',' + b.p + ',' + b.h + ')" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:0.78rem;padding:0;flex-shrink:0;">✕</button>' +
+      '<div style="border-top:1px solid rgba(255,255,255,0.08);padding-top:0.75rem;margin-top:1rem;">'+
+      '<p style="color:#94a3b8;font-size:0.75rem;font-weight:700;margin-bottom:0.5rem;">📌 סימניות</p>'+
+      (bms.length ? bms.map(b=>{
+        const pr=YEARS[b.y]&&YEARS[b.y].parshiyot[b.p];
+        return '<div style="display:flex;align-items:center;gap:0.5rem;padding:0.45rem 0.6rem;background:rgba(255,255,255,0.04);border-radius:0.5rem;margin-bottom:0.35rem;direction:rtl;">'+
+          '<button onclick="window._bihOpenParsha('+b.p+','+b.h+')" style="background:none;border:none;color:#e2e8f0;cursor:pointer;font-size:0.8rem;text-align:right;flex:1;padding:0;">🔖 '+(pr?pr.he:"?")+' — הלכה '+toHeb(b.h+1)+'</button>'+
+          '<button onclick="window._bihBMRemove('+b.y+','+b.p+','+b.h+')" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:0.78rem;padding:0;flex-shrink:0;">✕</button>'+
           '</div>';
-      }).join("") : '<p style="color:#64748b;font-size:0.78rem;text-align:center;padding:0.3rem 0;">אין סימניות עדיין</p>') +
+      }).join("") : '<p style="color:#64748b;font-size:0.78rem;text-align:center;padding:0.3rem 0;">אין סימניות עדיין</p>')+
       '</div>';
   }
 
-  // ── Infinite scroll setup ──
+  // ── Infinite scroll ──
   function setupScrollLoader(contentArea) {
     if (_scrollListener) contentArea.removeEventListener("scroll", _scrollListener);
     if (_titleListener) contentArea.removeEventListener("scroll", _titleListener);
 
     _scrollListener = async () => {
-      const { scrollTop, scrollHeight, clientHeight } = contentArea;
-      const year = YEARS[activeYearIdx];
+      const {scrollTop, scrollHeight, clientHeight} = contentArea;
+      const parshiyot = getParshiyot();
       const sectionsDiv = document.getElementById("bih-parsha-sections");
       if (!sectionsDiv) return;
 
-      // Load next parsha when near bottom
-      if (!_isLoadingNext && scrollTop + clientHeight > scrollHeight - 600) {
-        const nextIdx = _loadedRange.end + 1;
-        if (nextIdx < year.parshiyot.length) {
-          _isLoadingNext = true;
-          _loadedRange.end = nextIdx;
+      // Load next
+      if (!_isLoadingNext && scrollTop+clientHeight > scrollHeight-700) {
+        const nextIdx = _loadedRange.end+1;
+        if (nextIdx < parshiyot.length) {
+          _isLoadingNext = true; _loadedRange.end = nextIdx;
           const loader = document.createElement("div");
           loader.id = "bih-next-loader";
           loader.style.cssText = "text-align:center;padding:1rem;color:#94a3b8;font-size:0.85rem;";
-          loader.textContent = "טוען " + year.parshiyot[nextIdx].he + "...";
+          loader.textContent = "טוען "+parshiyot[nextIdx].he+"...";
           sectionsDiv.appendChild(loader);
-          const texts = await fetchHalachot(activeYearIdx, nextIdx);
-          const ldr = document.getElementById("bih-next-loader");
-          if (ldr) ldr.remove();
-          const section = createParshaSection(activeYearIdx, nextIdx, texts);
+
+          let section;
+          if (_bihMode === "drashot") {
+            const texts = await fetchDrashot(parshiyot[nextIdx].key);
+            section = createDrashotSection(nextIdx, parshiyot[nextIdx].he, texts);
+          } else {
+            const yIdx = getYIdx();
+            const texts = await fetchHalachot(yIdx, nextIdx);
+            section = createHalachotSection(yIdx, nextIdx, texts);
+          }
+          document.getElementById("bih-next-loader")?.remove();
           sectionsDiv.appendChild(section);
           _isLoadingNext = false;
         }
       }
 
-      // Load previous parsha when near top
-      if (!_isLoadingPrev && scrollTop < 600) {
-        const prevIdx = _loadedRange.start - 1;
+      // Load previous
+      if (!_isLoadingPrev && scrollTop < 700) {
+        const prevIdx = _loadedRange.start-1;
         if (prevIdx >= 0) {
-          _isLoadingPrev = true;
-          _loadedRange.start = prevIdx;
-          const texts = await fetchHalachot(activeYearIdx, prevIdx);
-          const prevHeight = sectionsDiv.scrollHeight;
-          const section = createParshaSection(activeYearIdx, prevIdx, texts);
+          _isLoadingPrev = true; _loadedRange.start = prevIdx;
+          let section;
+          if (_bihMode === "drashot") {
+            const texts = await fetchDrashot(parshiyot[prevIdx].key);
+            section = createDrashotSection(prevIdx, parshiyot[prevIdx].he, texts);
+          } else {
+            const yIdx = getYIdx();
+            const texts = await fetchHalachot(yIdx, prevIdx);
+            section = createHalachotSection(yIdx, prevIdx, texts);
+          }
+          const prevH = sectionsDiv.scrollHeight;
           sectionsDiv.insertBefore(section, sectionsDiv.firstChild);
-          contentArea.scrollTop += sectionsDiv.scrollHeight - prevHeight;
+          contentArea.scrollTop += sectionsDiv.scrollHeight - prevH;
           _isLoadingPrev = false;
         }
       }
@@ -14166,18 +14281,15 @@ function openBenIshHaiPage() {
 
     _titleListener = () => {
       const sections = contentArea.querySelectorAll("[data-pidx]");
-      const mid = contentArea.getBoundingClientRect().top + contentArea.clientHeight / 3;
+      const mid = contentArea.getBoundingClientRect().top + contentArea.clientHeight/3;
       let best = null;
-      sections.forEach(s => {
-        const r = s.getBoundingClientRect();
-        if (r.top <= mid && r.bottom >= mid) best = s;
-      });
-      if (!best && sections.length) best = sections[0];
+      sections.forEach(s => { const r=s.getBoundingClientRect(); if(r.top<=mid&&r.bottom>=mid) best=s; });
+      if (!best && sections.length) best=sections[0];
       if (best) {
         const pIdx = parseInt(best.getAttribute("data-pidx"));
-        const parsha = YEARS[activeYearIdx].parshiyot[pIdx];
-        const titleEl = document.getElementById("bih-reading-title");
-        if (titleEl && parsha) titleEl.textContent = parsha.he;
+        const p = getParshiyot()[pIdx];
+        const el = document.getElementById("bih-reading-title");
+        if (el && p) el.textContent = p.he;
       }
     };
 
@@ -14185,91 +14297,88 @@ function openBenIshHaiPage() {
     contentArea.addEventListener("scroll", _titleListener);
   }
 
-  // ── Apply font size ──
   function applyFontSize() {
     const area = document.getElementById("bih-content-area");
-    if (area) area.style.fontSize = _bihFontSize + "%";
+    if (area) area.style.fontSize = _bihFontSize+"%";
     const lbl = document.getElementById("bih-font-label");
-    if (lbl) lbl.textContent = _bihFontSize + "%";
+    if (lbl) lbl.textContent = _bihFontSize+"%";
   }
 
   // ── Modal HTML ──
   let existing = document.getElementById("ben-ish-hai-modal");
   if (existing) existing.remove();
-
   const modal = document.createElement("div");
   modal.id = "ben-ish-hai-modal";
   modal.style.cssText = "position:fixed;inset:0;z-index:200;background:rgba(2,6,23,0.95);backdrop-filter:blur(8px);overflow:hidden;";
 
   modal.innerHTML =
-    /* ── Grid view ── */
-    '<div id="bih-grid-view" style="position:absolute;inset:0;display:flex;flex-direction:column;overflow:hidden;">' +
-      '<div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;">' +
-        '<div><h2 style="color:#f1f5f9;font-size:1.3rem;font-weight:900;margin:0;">בן איש חי</h2>' +
-        '<p style="color:#6366f1;font-size:0.78rem;font-weight:700;margin:0.15rem 0 0;">רבי יוסף חיים מבגדד זצ"ל</p></div>' +
-        '<div style="display:flex;gap:0.5rem;align-items:center;">' +
-          '<button onclick="window._bihOpenSearch()" style="background:rgba(255,255,255,0.08);border:none;color:#e2e8f0;padding:0.4rem 0.8rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;">🔍 חיפוש</button>' +
-          '<button onclick="closeBenIshHaiModal()" style="background:rgba(255,255,255,0.08);border:none;color:#94a3b8;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.1rem;flex-shrink:0;">✕</button>' +
-        '</div>' +
-      '</div>' +
-      '<div style="display:flex;gap:0.5rem;padding:0.6rem 1.25rem;flex-shrink:0;align-items:center;flex-wrap:wrap;border-bottom:1px solid rgba(255,255,255,0.05);">' +
-        '<div id="bih-year-bar" style="display:flex;gap:0.4rem;flex-wrap:wrap;flex:1;"></div>' +
-        '<input id="bih-parsha-filter" type="search" placeholder="🔍 פרשה..." oninput="window._bihFilterGrid(this.value)" style="padding:0.3rem 0.7rem;border-radius:999px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.07);color:#e2e8f0;font-size:0.8rem;direction:rtl;width:120px;outline:none;">' +
-      '</div>' +
-      '<div style="overflow-y:auto;flex:1;padding:0.75rem 1.25rem 0;">' +
-        '<p style="color:#64748b;font-size:0.72rem;margin:0 0 0.65rem;">לחץ על פרשה לקריאת הטקסט המלא</p>' +
-        '<div id="bih-grid-content" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:0.5rem;"></div>' +
-        '<div id="bih-bm-panel"></div>' +
-        '<div style="height:1.5rem;"></div>' +
-      '</div>' +
-    '</div>' +
+    '<div id="bih-grid-view" style="position:absolute;inset:0;display:flex;flex-direction:column;overflow:hidden;">'+
+      '<div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;">'+
+        '<div><h2 style="color:#f1f5f9;font-size:1.3rem;font-weight:900;margin:0;">בן איש חי</h2>'+
+        '<p style="color:#6366f1;font-size:0.78rem;font-weight:700;margin:0.15rem 0 0;">רבי יוסף חיים מבגדד זצ"ל</p></div>'+
+        '<div style="display:flex;gap:0.5rem;align-items:center;">'+
+          '<button onclick="window._bihOpenSearch()" style="background:rgba(255,255,255,0.08);border:none;color:#e2e8f0;padding:0.4rem 0.8rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;">🔍 חיפוש</button>'+
+          '<button onclick="closeBenIshHaiModal()" style="background:rgba(255,255,255,0.08);border:none;color:#94a3b8;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.1rem;flex-shrink:0;">✕</button>'+
+        '</div>'+
+      '</div>'+
+      '<div style="display:flex;gap:0.4rem;padding:0.6rem 1.25rem;flex-shrink:0;flex-wrap:wrap;border-bottom:1px solid rgba(255,255,255,0.05);">'+
+        '<div id="bih-year-bar" style="display:flex;gap:0.4rem;flex-wrap:wrap;"></div>'+
+      '</div>'+
+      '<div style="overflow-y:auto;flex:1;padding:0.75rem 1.25rem 0;">'+
+        '<p style="color:#64748b;font-size:0.72rem;margin:0 0 0.65rem;">לחץ על פרשה לקריאת הטקסט המלא</p>'+
+        '<div id="bih-grid-content" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:0.5rem;"></div>'+
+        '<div id="bih-bm-panel"></div>'+
+        '<div style="height:1.5rem;"></div>'+
+      '</div>'+
+    '</div>'+
 
-    /* ── Reading pane ── */
-    '<div id="bih-reading-pane" style="display:none;position:absolute;inset:0;background:#faf9f6;z-index:10;flex-direction:column;overflow:hidden;">' +
-      '<div style="display:flex;align-items:center;justify-content:space-between;padding:0.7rem 1rem;border-bottom:1px solid rgba(0,0,0,0.09);background:#faf9f6;flex-shrink:0;gap:0.5rem;">' +
-        '<button onclick="window._bihCloseReading()" style="background:rgba(0,0,0,0.06);border:none;color:#1e293b;padding:0.4rem 0.75rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;white-space:nowrap;flex-shrink:0;">← חזרה</button>' +
-        '<h3 id="bih-reading-title" style="color:#1e293b;font-size:0.95rem;font-weight:900;margin:0;text-align:center;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></h3>' +
-        '<button onclick="window._bihOpenSearch()" style="background:rgba(0,0,0,0.06);border:none;color:#1e293b;padding:0.4rem 0.75rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;white-space:nowrap;flex-shrink:0;">🔍 חיפוש</button>' +
-      '</div>' +
-      '<div id="bih-content-area" style="overflow-y:auto;flex:1;padding:0.5rem 1.5rem 1rem;font-family:\'David Libre\',\'Frank Ruhl Libre\',serif;font-size:100%;line-height:2;color:#1e293b;text-align:center;direction:rtl;">' +
-        '<div id="bih-parsha-sections"></div>' +
-      '</div>' +
-      '<div style="display:flex;align-items:center;justify-content:center;gap:0.75rem;padding:0.5rem 1rem;border-top:1px solid rgba(0,0,0,0.08);background:#faf9f6;flex-shrink:0;">' +
-        '<button onclick="window._bihFontDec()" style="background:rgba(0,0,0,0.06);border:none;color:#1e293b;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:1.2rem;font-weight:700;line-height:1;">−</button>' +
-        '<span id="bih-font-label" style="color:#64748b;font-size:0.8rem;min-width:3rem;text-align:center;">100%</span>' +
-        '<button onclick="window._bihFontInc()" style="background:rgba(0,0,0,0.06);border:none;color:#1e293b;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:1.2rem;font-weight:700;line-height:1;">+</button>' +
-      '</div>' +
-    '</div>' +
+    '<div id="bih-reading-pane" style="display:none;position:absolute;inset:0;background:#faf9f6;z-index:10;flex-direction:column;overflow:hidden;">'+
+      '<div style="display:flex;align-items:center;justify-content:space-between;padding:0.7rem 1rem;border-bottom:1px solid rgba(0,0,0,0.09);background:#faf9f6;flex-shrink:0;gap:0.5rem;">'+
+        '<button onclick="window._bihCloseReading()" style="background:rgba(0,0,0,0.06);border:none;color:#1e293b;padding:0.4rem 0.75rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;white-space:nowrap;flex-shrink:0;">← חזרה</button>'+
+        '<h3 id="bih-reading-title" style="color:#1e293b;font-size:0.95rem;font-weight:900;margin:0;text-align:center;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></h3>'+
+        '<button onclick="window._bihOpenSearch()" style="background:rgba(0,0,0,0.06);border:none;color:#1e293b;padding:0.4rem 0.75rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;white-space:nowrap;flex-shrink:0;">🔍 חיפוש</button>'+
+      '</div>'+
+      '<div id="bih-content-area" style="overflow-y:auto;flex:1;padding:0.5rem 1.5rem 1rem;font-family:\'David Libre\',\'Frank Ruhl Libre\',serif;font-size:100%;line-height:2;color:#1e293b;text-align:center;direction:rtl;">'+
+        '<div id="bih-parsha-sections"></div>'+
+      '</div>'+
+      '<div style="display:flex;align-items:center;justify-content:center;gap:0.75rem;padding:0.5rem 1rem;border-top:1px solid rgba(0,0,0,0.08);background:#faf9f6;flex-shrink:0;">'+
+        '<button onclick="window._bihFontDec()" style="background:rgba(0,0,0,0.06);border:none;color:#1e293b;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:1.2rem;font-weight:700;line-height:1;">−</button>'+
+        '<span id="bih-font-label" style="color:#64748b;font-size:0.8rem;min-width:3rem;text-align:center;">100%</span>'+
+        '<button onclick="window._bihFontInc()" style="background:rgba(0,0,0,0.06);border:none;color:#1e293b;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:1.2rem;font-weight:700;line-height:1;">+</button>'+
+      '</div>'+
+    '</div>'+
 
-    /* ── Search overlay ── */
-    '<div id="bih-search-overlay" style="display:none;position:absolute;inset:0;background:#faf9f6;z-index:20;flex-direction:column;overflow:hidden;">' +
-      '<div style="display:flex;align-items:center;justify-content:space-between;padding:0.7rem 1rem;border-bottom:1px solid rgba(0,0,0,0.09);background:#faf9f6;flex-shrink:0;gap:0.5rem;">' +
-        '<button onclick="window._bihCloseSearch()" style="background:rgba(0,0,0,0.06);border:none;color:#1e293b;padding:0.4rem 0.75rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;white-space:nowrap;flex-shrink:0;">← חזרה</button>' +
-        '<h3 style="color:#1e293b;font-size:0.95rem;font-weight:900;margin:0;text-align:center;flex:1;">חיפוש בבן איש חי</h3>' +
-        '<div style="width:70px;flex-shrink:0;"></div>' +
-      '</div>' +
-      '<div style="display:flex;gap:0.5rem;padding:0.65rem 1rem;border-bottom:1px solid rgba(0,0,0,0.07);flex-shrink:0;">' +
-        '<input id="bih-search-query" type="search" placeholder="הקלד מילה לחיפוש בכל הספר..." onkeydown="if(event.key===\'Enter\')window._bihRunSearch()" style="flex:1;padding:0.45rem 0.85rem;border-radius:999px;border:1px solid rgba(0,0,0,0.18);background:#fff;color:#1e293b;font-size:0.9rem;direction:rtl;outline:none;">' +
-        '<button onclick="window._bihRunSearch()" style="background:#6366f1;border:none;color:#fff;padding:0.45rem 1rem;border-radius:999px;cursor:pointer;font-size:0.85rem;font-weight:700;white-space:nowrap;">חפש</button>' +
-      '</div>' +
-      '<div id="bih-search-year-label" style="padding:0.3rem 1rem;flex-shrink:0;"></div>' +
-      '<p id="bih-search-status" style="color:#64748b;font-size:0.78rem;padding:0.2rem 1rem;margin:0;flex-shrink:0;"></p>' +
-      '<div id="bih-search-results" style="overflow-y:auto;flex:1;"></div>' +
+    '<div id="bih-search-overlay" style="display:none;position:absolute;inset:0;background:#faf9f6;z-index:20;flex-direction:column;overflow:hidden;">'+
+      '<div style="display:flex;align-items:center;justify-content:space-between;padding:0.7rem 1rem;border-bottom:1px solid rgba(0,0,0,0.09);background:#faf9f6;flex-shrink:0;gap:0.5rem;">'+
+        '<button onclick="window._bihCloseSearch()" style="background:rgba(0,0,0,0.06);border:none;color:#1e293b;padding:0.4rem 0.75rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;flex-shrink:0;">← חזרה</button>'+
+        '<h3 style="color:#1e293b;font-size:0.95rem;font-weight:900;margin:0;text-align:center;flex:1;">חיפוש בבן איש חי</h3>'+
+        '<div style="width:70px;flex-shrink:0;"></div>'+
+      '</div>'+
+      '<div style="display:flex;gap:0.5rem;padding:0.65rem 1rem;border-bottom:1px solid rgba(0,0,0,0.07);flex-shrink:0;">'+
+        '<input id="bih-search-query" type="search" placeholder="הקלד מילה לחיפוש בכל הספר..." oninput="window._bihSearchInput(this.value)" style="flex:1;padding:0.45rem 0.85rem;border-radius:999px;border:1px solid rgba(0,0,0,0.18);background:#fff;color:#1e293b;font-size:0.9rem;direction:rtl;outline:none;">'+
+      '</div>'+
+      '<div id="bih-search-year-label" style="padding:0.25rem 1rem;flex-shrink:0;"></div>'+
+      '<p id="bih-search-status" style="color:#64748b;font-size:0.78rem;padding:0.1rem 1rem;margin:0;flex-shrink:0;"></p>'+
+      '<div id="bih-search-results" style="overflow-y:auto;flex:1;"></div>'+
     '</div>';
 
   // ── Wire up global functions ──
-  window._bihSwitchYear = (idx) => {
-    _loadedRange = { start:-1, end:-1 };
-    buildGridContent(idx);
+  window._bihSetMode = (mode) => {
+    _bihMode = mode;
+    const pane = document.getElementById("bih-reading-pane");
+    if (pane) pane.style.display = "none";
+    buildGridContent();
   };
-  window._bihFilterGrid = (q) => buildGridContent(activeYearIdx, q);
 
   window._bihOpenParsha = async (parshaIdx, scrollToHalacha) => {
-    const year = YEARS[activeYearIdx];
-    const parsha = year.parshiyot[parshaIdx];
-    _loadedRange = { start: parshaIdx, end: parshaIdx };
-    _isLoadingNext = false;
-    _isLoadingPrev = false;
+    const isDrashot = _bihMode === "drashot";
+    const yIdx = getYIdx();
+    const parshiyot = getParshiyot();
+    const parsha = parshiyot[parshaIdx];
+    const color = getColor();
+
+    _loadedRange = {start:parshaIdx, end:parshaIdx};
+    _isLoadingNext = false; _isLoadingPrev = false;
 
     const pane = document.getElementById("bih-reading-pane");
     const contentArea = document.getElementById("bih-content-area");
@@ -14277,22 +14386,26 @@ function openBenIshHaiPage() {
     const titleEl = document.getElementById("bih-reading-title");
     if (!pane || !contentArea || !sectionsDiv) return;
 
-    pane.style.display = "flex";
-    pane.style.flexDirection = "column";
+    pane.style.display = "flex"; pane.style.flexDirection = "column";
     if (titleEl) titleEl.textContent = parsha.he;
     applyFontSize();
 
-    sectionsDiv.innerHTML = '<div style="text-align:center;padding:3rem 1rem;"><div style="width:36px;height:36px;border:3px solid ' + year.color + ';border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 1rem;"></div><p style="color:#94a3b8;">טוען ' + parsha.he + '...</p></div>';
+    sectionsDiv.innerHTML = '<div style="text-align:center;padding:3rem 1rem;"><div style="width:36px;height:36px;border:3px solid '+color+';border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 1rem;"></div><p style="color:#94a3b8;">טוען '+parsha.he+'...</p></div>';
 
-    const texts = await fetchHalachot(activeYearIdx, parshaIdx);
+    let section;
+    if (isDrashot) {
+      const texts = await fetchDrashot(parsha.key);
+      section = createDrashotSection(parshaIdx, parsha.he, texts);
+    } else {
+      const texts = await fetchHalachot(yIdx, parshaIdx);
+      section = createHalachotSection(yIdx, parshaIdx, texts);
+    }
+
     sectionsDiv.innerHTML = "";
-    sectionsDiv.appendChild(createParshaSection(activeYearIdx, parshaIdx, texts));
-
+    sectionsDiv.appendChild(section);
     contentArea.scrollTop = 0;
     if (scrollToHalacha !== undefined) {
-      setTimeout(() => {
-        document.getElementById("bih-h-" + parshaIdx + "-" + scrollToHalacha)?.scrollIntoView({behavior:"smooth",block:"start"});
-      }, 150);
+      setTimeout(() => { document.getElementById("bih-h-"+parshaIdx+"-"+scrollToHalacha)?.scrollIntoView({behavior:"smooth",block:"start"}); }, 150);
     }
     setupScrollLoader(contentArea);
   };
@@ -14301,26 +14414,43 @@ function openBenIshHaiPage() {
     const pane = document.getElementById("bih-reading-pane");
     if (pane) pane.style.display = "none";
     const ca = document.getElementById("bih-content-area");
-    if (ca && _scrollListener) ca.removeEventListener("scroll", _scrollListener);
-    if (ca && _titleListener) ca.removeEventListener("scroll", _titleListener);
+    if (ca) { if(_scrollListener) ca.removeEventListener("scroll",_scrollListener); if(_titleListener) ca.removeEventListener("scroll",_titleListener); }
     _scrollListener = null; _titleListener = null;
     buildBMPanel();
   };
 
-  window._bihFontInc = () => { _bihFontSize = Math.min(200, _bihFontSize+10); applyFontSize(); };
-  window._bihFontDec = () => { _bihFontSize = Math.max(60, _bihFontSize-10); applyFontSize(); };
+  window._bihFontInc = () => { _bihFontSize = Math.min(200,_bihFontSize+10); applyFontSize(); };
+  window._bihFontDec = () => { _bihFontSize = Math.max(60,_bihFontSize-10); applyFontSize(); };
 
   window._bihOpenSearch = () => {
     const ov = document.getElementById("bih-search-overlay");
     if (ov) { ov.style.display = "flex"; ov.style.flexDirection = "column"; }
     const lbl = document.getElementById("bih-search-year-label");
-    if (lbl) lbl.innerHTML = '<span style="font-size:0.78rem;color:#64748b;">מחפש ב' + YEARS[activeYearIdx].he + '</span>';
+    if (lbl) {
+      const label = _bihMode==="drashot" ? "דרשות" : _bihMode==="y1" ? "שנה שניה" : "שנה ראשונה";
+      lbl.innerHTML = '<span style="font-size:0.78rem;color:#94a3b8;">מחפש ב'+label+'</span>';
+    }
     document.getElementById("bih-search-query")?.focus();
   };
   window._bihCloseSearch = () => {
     if (_searchAbort) { _searchAbort.abort(); _searchAbort = null; }
+    clearTimeout(_searchDebounce);
     const ov = document.getElementById("bih-search-overlay");
     if (ov) ov.style.display = "none";
+  };
+
+  window._bihSearchInput = (val) => {
+    clearTimeout(_searchDebounce);
+    const statusEl = document.getElementById("bih-search-status");
+    const resultsEl = document.getElementById("bih-search-results");
+    if (!val || val.trim().length < 2) {
+      if (_searchAbort) { _searchAbort.abort(); _searchAbort = null; }
+      if (statusEl) statusEl.textContent = "";
+      if (resultsEl) resultsEl.innerHTML = "";
+      return;
+    }
+    if (statusEl) statusEl.textContent = "מחפש...";
+    _searchDebounce = setTimeout(() => window._bihRunSearch(), 500);
   };
 
   window._bihRunSearch = async () => {
@@ -14330,18 +14460,20 @@ function openBenIshHaiPage() {
     _searchAbort = new AbortController();
     const signal = _searchAbort.signal;
 
+    const isDrashot = _bihMode === "drashot";
+    const yIdx = getYIdx();
+    const color = getColor();
+    const parshiyot = getParshiyot();
     const statusEl = document.getElementById("bih-search-status");
     const resultsEl = document.getElementById("bih-search-results");
     if (statusEl) statusEl.textContent = "מחפש...";
     if (resultsEl) resultsEl.innerHTML = "";
-
-    const year = YEARS[activeYearIdx];
     let total = 0;
 
-    for (let p = 0; p < year.parshiyot.length; p++) {
+    for (let p = 0; p < parshiyot.length; p++) {
       if (signal.aborted) break;
-      if (statusEl) statusEl.textContent = "מחפש... " + (p+1) + " / " + year.parshiyot.length + " פרשיות";
-      const texts = await fetchHalachot(activeYearIdx, p);
+      if (statusEl) statusEl.textContent = "מחפש... "+(p+1)+" / "+parshiyot.length;
+      const texts = isDrashot ? await fetchDrashot(parshiyot[p].key) : await fetchHalachot(yIdx, p);
       if (signal.aborted || !texts) continue;
       for (let h = 0; h < texts.length; h++) {
         const stripped = texts[h].replace(/<[^>]*>/g,"");
@@ -14350,38 +14482,38 @@ function openBenIshHaiPage() {
           if (resultsEl) {
             const btn = document.createElement("button");
             btn.style.cssText = "display:block;width:100%;text-align:right;padding:0.75rem 1rem;border:none;border-bottom:1px solid rgba(0,0,0,0.07);cursor:pointer;background:none;direction:rtl;transition:background 0.1s;";
-            btn.innerHTML = '<span style="color:' + year.color + ';font-size:0.75rem;font-weight:900;">' + year.parshiyot[p].he + ' — הלכה ' + toHeb(h+1) + '</span>' +
-              '<p style="margin:0.2rem 0 0;font-size:0.83rem;color:#374151;line-height:1.5;">' + buildSnippet(stripped,q) + '</p>';
-            btn.onmouseenter = () => btn.style.background="#f1f5f9";
-            btn.onmouseleave = () => btn.style.background="none";
-            const cp = p, ch = h;
-            btn.onclick = () => { window._bihCloseSearch(); window._bihOpenParsha(cp, ch); };
+            const label = isDrashot ? parshiyot[p].he+" — סעיף "+toHeb(h+1) : parshiyot[p].he+" — הלכה "+toHeb(h+1);
+            btn.innerHTML = '<span style="color:'+color+';font-size:0.75rem;font-weight:900;">'+label+'</span>'+
+              '<p style="margin:0.2rem 0 0;font-size:0.83rem;color:#374151;line-height:1.5;">'+buildSnippet(stripped,q)+'</p>';
+            btn.onmouseenter=()=>btn.style.background="#f1f5f9";
+            btn.onmouseleave=()=>btn.style.background="none";
+            const cp=p, ch=h;
+            btn.onclick=()=>{ window._bihCloseSearch(); window._bihOpenParsha(cp,ch); };
             resultsEl.appendChild(btn);
           }
         }
       }
     }
-    if (!signal.aborted && statusEl) {
-      statusEl.textContent = total > 0 ? 'נמצאו ' + total + ' תוצאות עבור "' + q + '"' : 'לא נמצאו תוצאות עבור "' + q + '"';
-    }
+    if (!signal.aborted && statusEl)
+      statusEl.textContent = total>0 ? 'נמצאו '+total+' תוצאות עבור "'+q+'"' : 'לא נמצאו תוצאות עבור "'+q+'"';
   };
 
   window._bihBMToggle = (y,p,h,label) => {
     if (isBM(y,p,h)) {
       removeBM(y,p,h);
-      const btn = document.getElementById("bih-bm-"+p+"-"+h);
-      if (btn) { btn.style.opacity="0.3"; btn.title="הוסף סימניה"; }
+      const btn=document.getElementById("bih-bm-"+p+"-"+h);
+      if(btn){btn.style.border="1.5px solid #d1d5db";btn.style.background="#fff";btn.style.color="#9ca3af";btn.innerHTML="🔖 סמן";}
     } else {
       addBM(y,p,h,label);
-      const btn = document.getElementById("bih-bm-"+p+"-"+h);
-      if (btn) { btn.style.opacity="1"; btn.title="הסר סימניה"; }
+      const btn=document.getElementById("bih-bm-"+p+"-"+h);
+      if(btn){btn.style.border="1.5px solid #f59e0b";btn.style.background="#fef9c3";btn.style.color="#92400e";btn.innerHTML="🔖 מסומן";}
     }
   };
   window._bihBMRemove = (y,p,h) => { removeBM(y,p,h); buildBMPanel(); };
 
-  modal.addEventListener("click", (e) => { if (e.target === modal) closeBenIshHaiModal(); });
+  modal.addEventListener("click", (e) => { if(e.target===modal) closeBenIshHaiModal(); });
   document.body.appendChild(modal);
-  buildGridContent(activeYearIdx);
+  buildGridContent();
   lockBodyScroll();
   pushModalState("ben-ish-hai-modal");
 }
@@ -14395,6 +14527,7 @@ function closeBenIshHaiModal() {
     history.back();
   }
 }
+
 
 function renderPrayerModalShell(title, isPopup) {
   let existing = document.getElementById("prayer-modal");

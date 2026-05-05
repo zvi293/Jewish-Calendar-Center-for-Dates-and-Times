@@ -634,6 +634,16 @@ window.addEventListener("popstate", function (e) {
       if (el) el.remove();
       _motzeiShabbatModalOpen = false;
       unlockBodyScroll();
+    } else if (modalId === "sn-reader-pane") {
+      window._snOnReaderClose && window._snOnReaderClose();
+    } else if (modalId === "sn-sections-view") {
+      window._snOnSectionsClose && window._snOnSectionsClose();
+    } else if (modalId === "sn-subbook-view") {
+      window._snOnSubBookClose && window._snOnSubBookClose();
+    } else if (modalId === "sn-search-view") {
+      window._snOnSearchClose && window._snOnSearchClose();
+    } else if (modalId === "sn-modal") {
+      closeSefarimNosafimModal();
     } else {
       removeModalById(modalId);
     }
@@ -18771,3 +18781,595 @@ document.addEventListener("keydown", (e) => {
     openTorahPopup(items, "פרשת " + displayName, "דבר תורה ל");
   };
 })();
+
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ── ספרים נוספים (Sefarim Nosafim) ──
+// ══════════════════════════════════════════════════════════════════════════════
+
+function openSefarimNosafimPage() {
+
+  // ── Hebrew numeral helper ──
+  function toHN(n) {
+    if (n <= 0) return String(n);
+    var tbl = [[400,"ת"],[300,"ש"],[200,"ר"],[100,"ק"],[90,"צ"],[80,"פ"],[70,"ע"],
+      [60,"ס"],[50,"נ"],[40,"מ"],[30,"ל"],[20,"כ"],[16,"טז"],[15,"טו"],[10,"י"],
+      [9,"ט"],[8,"ח"],[7,"ז"],[6,"ו"],[5,"ה"],[4,"ד"],[3,"ג"],[2,"ב"],[1,"א"]];
+    var r = "";
+    for (var _i = 0; _i < tbl.length; _i++) {
+      var v = tbl[_i][0], h = tbl[_i][1];
+      while (n >= v) { r += h; n -= v; }
+    }
+    return r;
+  }
+
+  // ── Snippet builder ──
+  function snip(text, q) {
+    var i = text.indexOf(q);
+    if (i < 0) return text.slice(0, 80) + "...";
+    var s = Math.max(0, i - 40), e = Math.min(text.length, i + q.length + 60);
+    var esc = q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return (s > 0 ? "…" : "") + text.slice(s, e).replace(new RegExp(esc, "g"),
+      "<mark style=\"background:#fef08a;border-radius:2px;\">$&</mark>") + (e < text.length ? "…" : "");
+  }
+
+  // ── Flatten Sefaria he array ──
+  function flatText(he) {
+    if (!he) return "";
+    if (!Array.isArray(he)) return String(he);
+    return he.map(function(v) { return Array.isArray(v) ? v.map(function(x){ return String(x||""); }).join(" ") : String(v||""); }).join("\n");
+  }
+
+  // ── Render paragraphs ──
+  function renderParagraphs(he, color) {
+    if (!Array.isArray(he) || he.length === 0)
+      return "<p style=\"color:#9ca3af;text-align:center;padding:2rem;\">לא נמצא טקסט לסעיף זה</p>";
+    return he.map(function(v, i) {
+      var txt = Array.isArray(v) ? v.join("<br>") : String(v || "");
+      if (!txt.trim()) return "";
+      return "<p style=\"margin:0 0 1.4rem;line-height:2.3;\">" +
+        "<span style=\"color:" + color + ";font-size:0.73em;font-weight:700;margin-left:0.35rem;\">[" + (i + 1) + "]</span>" +
+        txt + "</p>";
+    }).filter(Boolean).join("");
+  }
+
+  // ── State ──
+  var _fs = parseInt(localStorage.getItem("sn-fs") || "100");
+  var _bk = null, _sbk = null, _sec = null;
+  var _sAb = null, _sDeb = null, _searchBid = "all";
+
+  // ── Bookmarks ──
+  var BM_STORE = "sn-bm2";
+  function _bmAll() { try { return JSON.parse(localStorage.getItem(BM_STORE) || "{}"); } catch(e) { return {}; } }
+  function _bmSave(d) { localStorage.setItem(BM_STORE, JSON.stringify(d)); }
+  function _bmGet(bid) { return _bmAll()[bid] || []; }
+  function _bmHas(bid, key) { return _bmGet(bid).some(function(b){ return b.key === key; }); }
+  function _bmAdd(bid, key, label, sub) {
+    var d = _bmAll(), arr = d[bid] || [];
+    if (!arr.find(function(b){ return b.key === key; }))
+      arr.unshift({ key: key, label: label, sub: sub || null, ts: Date.now() });
+    d[bid] = arr; _bmSave(d);
+  }
+  function _bmRemove(bid, key) {
+    var d = _bmAll(); d[bid] = (d[bid] || []).filter(function(b){ return b.key !== key; }); _bmSave(d);
+  }
+
+  // ── Section builder helper ──
+  function secs(count, labelFn, refFn) {
+    return Array.from({ length: count }, function(_, i) { return { he: labelFn(i+1), ref: refFn(i+1) }; });
+  }
+
+  // ── Fetch from Sefaria ──
+  async function fetchSec(ref, signal) {
+    try {
+      var opts = signal ? { signal: signal } : {};
+      var r = await fetch("https://www.sefaria.org/api/texts/" + encodeURIComponent(ref) + "?pad=0&lang=he&context=0", opts);
+      var d = await r.json();
+      return d.he || [];
+    } catch(e) { return []; }
+  }
+
+  // ── Book Definitions ──
+  var CATS = [
+    { id: "halakha", he: "הלכה",   color: "#1d4ed8" },
+    { id: "musar",   he: "מוסר",   color: "#15803d" },
+    { id: "emunah",  he: "אמונה",  color: "#6d28d9" },
+    { id: "tefilot", he: "תפילות", color: "#b45309" }
+  ];
+
+  var BOOKS = [
+    { id:"shulchan-aruch", he:"שולחן ערוך", subtitle:"רבי יוסף קארו",
+      cat:"halakha", color:"#1d4ed8", icon:"📜",
+      credit:"הטקסט מ-Sefaria.org — נחלת הכלל",
+      creditUrl:"https://www.sefaria.org/Shulchan_Arukh",
+      type:"multi",
+      subBooks:[
+        {id:"oc",he:"אורח חיים", sections:secs(697,function(i){return "סימן "+toHN(i);},function(i){return "Shulchan_Arukh,_Orach_Chaim."+i;})},
+        {id:"yd",he:"יורה דעה",  sections:secs(403,function(i){return "סימן "+toHN(i);},function(i){return "Shulchan_Arukh,_Yoreh_Deah."+i;})},
+        {id:"eh",he:"אבן העזר",  sections:secs(178,function(i){return "סימן "+toHN(i);},function(i){return "Shulchan_Arukh,_Even_HaEzer."+i;})},
+        {id:"cm",he:"חושן משפט", sections:secs(427,function(i){return "סימן "+toHN(i);},function(i){return "Shulchan_Arukh,_Choshen_Mishpat."+i;})}
+      ]},
+    { id:"mishna-berura", he:"משנה ברורה", subtitle:"החפץ חיים — רבי ישראל מאיר הכהן",
+      cat:"halakha", color:"#2563eb", icon:"📖",
+      credit:"הטקסט מ-Sefaria.org — נחלת הכלל",
+      creditUrl:"https://www.sefaria.org/Mishnah_Berurah",
+      type:"flat",
+      sections:secs(697,function(i){return "סימן "+toHN(i);},function(i){return "Mishnah_Berurah."+i;})},
+    { id:"sefer-hamidot", he:"ספר המידות", subtitle:"רבי נחמן מברסלב",
+      cat:"musar", color:"#16a34a", icon:"🌿",
+      credit:"הטקסט מ-Sefaria.org — נחלת הכלל",
+      creditUrl:"https://www.sefaria.org/Sefer_HaMiddot",
+      type:"flat",
+      sections:secs(65,function(i){return "אות "+toHN(i);},function(i){return "Sefer_HaMiddot."+i;})},
+    { id:"orchot-tzadikim", he:"אורחות צדיקים", subtitle:'מחבר אנונימי (המאה הט"ו)',
+      cat:"musar", color:"#059669", icon:"🌳",
+      credit:"הטקסט מ-Sefaria.org — נחלת הכלל",
+      creditUrl:"https://www.sefaria.org/Orchot_Tzaddikim",
+      type:"flat",
+      sections:secs(31,function(i){return "שער "+toHN(i);},function(i){return "Orchot_Tzaddikim."+i;})},
+    { id:"mesillat-yesharim", he:"מסילת ישרים", subtitle:'רבי משה חיים לוצאטו (רמח"ל)',
+      cat:"musar", color:"#047857", icon:"🧭",
+      credit:"הטקסט מ-Sefaria.org — נחלת הכלל",
+      creditUrl:"https://www.sefaria.org/Mesillat_Yesharim",
+      type:"flat",
+      sections:secs(26,function(i){return "פרק "+toHN(i);},function(i){return "Mesillat_Yesharim."+i;})},
+    { id:"shmirat-halashon", he:"שמירת הלשון", subtitle:"החפץ חיים — רבי ישראל מאיר הכהן",
+      cat:"musar", color:"#0f766e", icon:"💬",
+      credit:"הטקסט מ-Sefaria.org — נחלת הכלל",
+      creditUrl:"https://www.sefaria.org/Shmirat_HaLashon",
+      type:"flat",
+      sections:secs(30,function(i){return "פרק "+toHN(i);},function(i){return "Shmirat_HaLashon."+i;})},
+    { id:"chovot-halevavot", he:"חובת הלבבות", subtitle:"רבי בחיי אבן פקודה",
+      cat:"emunah", color:"#7c3aed", icon:"💎",
+      credit:"הטקסט מ-Sefaria.org — נחלת הכלל",
+      creditUrl:"https://www.sefaria.org/Duties_of_the_Heart",
+      type:"flat",
+      sections:secs(10,function(i){return "שער "+toHN(i);},function(i){return "Duties_of_the_Heart."+i;})},
+    { id:"noam-elimelech", he:"נועם אלימלך", subtitle:"רבי אלימלך מליז\'נסק",
+      cat:"emunah", color:"#6d28d9", icon:"✨",
+      credit:"הטקסט מ-Sefaria.org — נחלת הכלל",
+      creditUrl:"https://www.sefaria.org/Noam_Elimelech",
+      type:"flat",
+      sections:secs(54,function(i){return "פרשה "+toHN(i);},function(i){return "Noam_Elimelech."+i;})},
+    { id:"likutey-moharan", he:'ליקוטי מוהר"ן', subtitle:"רבי נחמן מברסלב",
+      cat:"emunah", color:"#5b21b6", icon:"🌊",
+      credit:"הטקסט מ-Sefaria.org — נחלת הכלל",
+      creditUrl:"https://www.sefaria.org/Likutey_Moharan",
+      type:"multi",
+      subBooks:[
+        {id:"p1",he:"חלק ראשון",sections:secs(286,function(i){return "תורה "+toHN(i);},function(i){return "Likutey_Moharan."+i;})},
+        {id:"p2",he:"חלק שני",  sections:secs(125,function(i){return "תורה "+toHN(i);},function(i){return "Likutey_Moharan_II."+i;})}
+      ]},
+    { id:"bereishit-taman", he:"בראשית תמן", subtitle:'תיקון מ"ח — האר"י הקדוש',
+      cat:"tefilot", color:"#b45309", icon:"🕯️",
+      credit:"מתוך תיקוני הזוהר הקדוש — נחלת הכלל", creditUrl:"",
+      type:"hardcoded",
+      intro:"והוא תיקון מ\"ח מתיקוני הזוהר הקדוש, והוא סגולה נפלאה – שתיקן רבינו המאור הגדול, האר\"י ז\"ל – לומר בכל יום ויום (אחר התפילה), ואמירתו מסוגלת לתיקון עוון פגם הברית, והוא מתקן נפשו, רוחו ונשמתו של האומר, והיצר הרע, המקטרג, אינו יכול לו, ולא יראה במיתת בניו חלילה, ויזכה ליראת השם, ויצליח בכל דרכיו, וניצול ממחלת הנפילה, ויגבה וירום מזלו ולא יבוא לידי עניות חלילה, ואויביו יפלו תחתיו ויזכה לאריכות ימים ולעולם הבא.",
+      content:"בְּרֵאשִׁית תַּמָּן תְּרֵ״י תַּמָּן שַׁבָּ״ת, כְּגַוְונָא דָא בְּ׳ רֵאשִׁי״ת בָּ״רָא שִׁי״ת, וְאִינוּן תְּרֵי שַׁבָּתוֹת, עֲלַיְיהוּ אִתְּמַר ׳וְשָׁמְרוּ בְנֵי יִשְׂרָאֵל אֶת הַשַּׁבָּת לַעֲשׂוֹת אֶת הַשַּׁבָּת׳ וְגוֹמֵר, תְּרֵין זִמְנִין אַדְכִּיר הָכָא שַׁבָּת, לָקֳבֵל שְׁכִינְתָּא עִלָּאָה וְתַתָּאָה; ׳לְדֹרֹתָם׳, מַאי לְדֹרֹתָם, אֶלָּא זַכָּאָה אִיהוּ מָאן דְּעָבִיד לוֹן דִּירָה בְּשַׁבָּת בִּתְרֵי בָתֵּי לִבָּא, וְאִתְפְּנֵי מִתַּמָּן יֵצֶר הָרָע דְּאִיהוּ חִלּוּל שַׁבָּת, בְּרִית עוֹלָם דָּא צַדִּיק, דְּשַׁרְיָין תַּרְוַיְיהוּ עֲלֵיהּ, חַד לְאַמְלָאָה לֵיהּ וְחַד לְאִתְמַלְיָא מִינֵיהּ. ׳בְּנֵי יִשְׂרָאֵל׳ אִינוּן תְּרֵין כֻּלְיָין נֶצַח וָהוֹד, בְּנוֹי דְּיִשְׂרָאֵל סָבָא עַמּוּדָא דְאֶמְצָעִיתָא, תְּלַת ׳שְׁבִיעִי׳ ׳שְׁבִיעִי׳ ׳שְׁבִיעִי׳ אִלֵּין תְּלַת אֲבָהָן, עֹנֶג שַׁבָּת ׳וְנָ״הָר יוֹצֵא מֵעֵדֶ״ן לְהַשְׁקוֹת אֶת הַגָּ״ן׳, ׳וְנָהָר׳, אִית נָהָר וְאִית נָהָר, אִית נָהָר דְּאִתְקְרֵי נָהָר פְּלָגָיו, וְאִית נָהָר דְּאִתְקְרֵי נַחַל קְדוּמִים, עֵדֶן עִלָּאָה עֲלֵיהּ אִתְּמַר ׳עַיִן לֹא רָאֲתָה אלהי״ם זוּלָתֶךָ׳, הַאי נָהָר אִיהוּ ו׳, דְּנָפִיק מֵעֵדֶן עִלָּאָה דְאִיהוּ א׳, וְאַעֲבַר בֵּין אַבָּא וְאִימָּא, וְאָזִיל חֲמֵשׁ מֵאוֹת שָׁנָה, וּמָטֵי עַד צַדִּיק שְׁבִיעִי, וּמִתַּמָּן אַשְׁקֵי לְגִנְּתָא דְאִיהִי שְׁכִינְתָּא תַּתָּאָה. זַכָּאָה אִיהוּ מָאן דְּנָטִיר דִּירָה לְשַׁבָּת דְּאִיהוּ לִבָּא, דְלָא אִתְקְרִיב תַּמָּן עֲצִיבוּ דִטְחוֹל, וְכַעַס דְּמָרָה דְאִיהוּ נוּרָא דְגֵיהִנָּם, דַּעֲלָהּ אִתְּמַר ׳לֹא תְבַעֲרוּ אֵשׁ בְּכֹל מוֹשְׁבוֹתֵיכֶם בְּיוֹם הַשַּׁבָּת׳, וְהָכִי הוּא וַדַּאי דְּכָל מָאן דְּכָעִיס כְּאִלּוּ אוֹקִיד נוּרָא דְגֵיהִנָּם, אַרְבָּעִים מְלָאכוֹת חָסֵר חַד אִינוּן לָקֳבֵל אַרְבָּעִים מַלְקִיּוֹת חָסֵר חַד בְּשַׁבָּת, וְאִינוּן עֲשָׂרָה דְלָקָה אָדָם וַעֲשָׂרָה לְחַוָּה וַעֲשָׂרָה לְנָחָשׁ וְתִשְׁעָה לְאַרְעָא, וּבְגִין דָּא אָמְרוּ מָארֵי מַתְנִיתִין ׳אֵין לוֹקִין בְּשַׁבָּת׳, דְּאִלֵּין מְלָאכוֹת אִינוּן חֲשִׁיבִין לְיִשְׂרָאֵל לָקֳבֵל מַלְקִיּוֹת. ׳יְצִיאוֹת הַשַּׁבָּת שְׁתַּיִם׳, אִינוּן עֲקִירָה וְהַנָּחָה, דְעָבִיד לוֹן בְּבַת אַחַת, מָאן דְּאַעֲקַר חֵפֶץ מֵאַתְרֵיהּ וְאַנַּח לֵיהּ לְבַר מֵאַתְרֵיהּ וּמֵרְשׁוּתֵיהּ, כְּאִלּוּ אַעֲקַר אִילָנָא דְחַיֵּי דְּאִיהוּ אוֹת בְּרִית, וְאַנַּח לֵיהּ בִּרְשׁוּ נוּכְרָאָה, מָאן דְּעָבִיד דָּא גָרִים דְּאִעֲקַר נִשְׁמָתֵיהּ מֵרְשׁוּת דִּילָהּ, וְאַנַּח לָהּ בִּרְשׁוּ אָחֳרָא דְאִיהִי מָרָה וּטְחוֹל, וְדָא גָרַם לְיִשְׂרָאֵל דְּאִתְעַקְרוּ מֵאַרְעָא דְיִשְׂרָאֵל, וְאִתְגַּלִּיאוּ בְּאַרְעָא נוּכְרָאָה דְאִיהִי רְשׁוּת הָרַבִּים, וְהָכִי אִיהוּ מָאן דְּאַעִיל אוֹת בְּרִית קֹדֶשׁ דִּילֵיהּ בִּרְשׁוּ נוּכְרָאָה, שַׁבְּתַא״י אִיהוּ טְחוֹל חַמָּ״ה, אִתְּתָא בִּישָׁא מָרָה, שַׁבְּתַא״י עֲלֵיהּ אִתְּמַר ׳וְהַבּוֹר רֵק אֵין בּוֹ מָיִם׳ – ׳מַיִם אֵין בּוֹ אֲבָל נְחָשִׁים וְעַקְרַבִּים יֶשׁ בּוֹ׳, וְאִיהוּ רָעָב וְצִמָּאוֹן וְקִינָה וְהֶסְפֵּד וַחֲשׁוֹכָא וְקִבְלָא, וְאִיהִי גָלוּתָא לְיִשְׂרָאֵל. וּצְרִיכִין יִשְׂרָאֵל לְמֶעֱבַד לָהּ שִׁנּוּי בְּכֹלָּא וְהָא אוּקְמוּהָ, וְאִיהוּ דִבּוּר דְּחוֹל דְּאִיהוּ אָסוּר בְּשַׁבָּת, וְכַד לָא אַשְׁכַּחַת אֲתַר לְשַׁרְיָא תַּמָּן, אִיהִי בָרְחַת, כְּגַוְונָא דְשִׁפְחָה דְאַבְרָהָם דְּאִתְּמַר בָּהּ ׳מִפְּנֵי שָׂרַי גְּבִרְתִּי אָנֹכִי בֹּרַחַת׳. טְחוֹל עֲלָהּ אִתְּמַר ׳שַׁל נְעָלֶיךָ מֵעַל רַגְלֶיךָ׳, נַעַל מְטוּנָף דְּטִפָּה סְרוּחָה; ׳כִּי הַמָּקוֹם אֲשֶׁר אַתָּה עוֹמֵד עָלָיו אַדְמַת קֹדֶשׁ הוּא׳, דָא שַׁבָּת, וַעֲלֵיהּ אָמְרַת שְׁכִינְתָּא ׳פָּשַׁטְתִּי אֶת כֻּתָּנְתִּי אֵיכָכָה אֶלְבָּשֶׁנָּה, רָחַצְתִּי אֶת רַגְלַי אֵיכָכָה אֲטַנְּפֵם׳, וּבְגִין דָּא צָרִיךְ בַּר נַשׁ בְּשַׁבָּת לְשַׁנּוּיֵי בִּלְבוּשִׁין בִּשְׁרַגָּא בְּמַאֲכָלִין, וְצָרִיךְ לְמֶהֱוֵי מוֹסִיף מֵחוֹל עַל הַקֹּדֶשׁ, וְכָל הַמּוֹסִיף מוֹסִיפִין לֵיהּ נֶפֶשׁ יְתֵירָה בְּשַׁבָּת, וְכָל הַגּוֹרֵעַ גּוֹרְעִין לֵיהּ הַהִיא נֶפֶשׁ יְתֵירָה חַס וְשָׁלוֹם."}
+  ];
+
+  // ── Font size ──
+  function applyFS() {
+    var c = document.getElementById("sn-reader-content");
+    if (c) c.style.fontSize = _fs + "%";
+    var l = document.getElementById("sn-fs-label");
+    if (l) l.textContent = _fs + "%";
+  }
+  window._snFontInc = function() { _fs = Math.min(200, _fs+10); localStorage.setItem("sn-fs", _fs); applyFS(); };
+  window._snFontDec = function() { _fs = Math.max(60,  _fs-10); localStorage.setItem("sn-fs", _fs); applyFS(); };
+
+  // ── Bookmark panel ──
+  function buildBMPanel() {
+    var panel = document.getElementById("sn-bm-panel");
+    if (!panel) return;
+    var all = _bmAll(), entries = [];
+    Object.keys(all).forEach(function(bid) {
+      var book = BOOKS.find(function(b){ return b.id === bid; });
+      if (!book) return;
+      (all[bid]||[]).forEach(function(bm){ entries.push({book:book,bm:bm}); });
+    });
+    entries.sort(function(a,b){ return b.bm.ts - a.bm.ts; });
+    if (!entries.length) {
+      panel.innerHTML = "<p style=\"color:#94a3b8;font-size:0.82rem;text-align:center;padding:0.5rem 0;\">אין סימניות שמורות</p>";
+      return;
+    }
+    panel.innerHTML = entries.map(function(e) {
+      return "<div style=\"display:flex;align-items:center;justify-content:space-between;padding:0.35rem 0;border-bottom:1px solid rgba(245,158,11,0.15);\">"+
+        "<button onclick=\"window._snBMGoto(\'" + e.book.id + "\',\'" + e.bm.key + "\');\" style=\"background:none;border:none;cursor:pointer;text-align:right;flex:1;padding:0;\">"+
+          "<span style=\"color:#f59e0b;font-size:0.72rem;font-weight:700;display:block;\">" + e.book.he + (e.bm.sub ? " — " + e.bm.sub : "") + "</span>"+
+          "<span style=\"color:#1e293b;font-size:0.82rem;\">" + e.bm.label + "</span>"+
+        "</button>"+
+        "<button onclick=\"window._snBMRemove(\'" + e.book.id + "\',\'" + e.bm.key + "\');\" style=\"background:none;border:none;cursor:pointer;color:#94a3b8;font-size:0.9rem;padding:0.2rem 0.4rem;flex-shrink:0;\">✕</button>"+
+      "</div>";
+    }).join("");
+  }
+
+  function updateBMBtn() {
+    var btn = document.getElementById("sn-reader-bm-btn");
+    if (!btn || !_bk) return;
+    var key = (_sbk ? _sbk.id : "") + "|" + _sec;
+    var active = _bmHas(_bk.id, key);
+    btn.style.background = active ? "rgba(245,158,11,0.2)" : "rgba(0,0,0,0.06)";
+    btn.style.color = active ? "#92400e" : "#1e293b";
+  }
+
+  window._snToggleBookmark = function() {
+    if (!_bk) return;
+    var key = (_sbk ? _sbk.id : "") + "|" + _sec;
+    var sections = _sbk ? _sbk.sections : (_bk.sections||[]);
+    var s = _bk.type === "hardcoded" ? {he:_bk.he} : (sections[_sec]||{he:""});
+    if (_bmHas(_bk.id, key)) { _bmRemove(_bk.id, key); }
+    else { _bmAdd(_bk.id, key, s.he, _sbk ? _sbk.he : null); }
+    updateBMBtn(); buildBMPanel();
+  };
+  window._snBMRemove = function(bid, key) { _bmRemove(bid, key); buildBMPanel(); if(_bk&&_bk.id===bid) updateBMBtn(); };
+  window._snBMGoto = function(bid, key) {
+    var book = BOOKS.find(function(b){ return b.id === bid; });
+    if (!book) return;
+    var parts = key.split("|"), sbid = parts[0], sidx = parseInt(parts[1]);
+    _bk = book;
+    _sbk = (book.type === "multi" && sbid) ? (book.subBooks.find(function(s){ return s.id === sbid; })||null) : null;
+    var panel = document.getElementById("sn-bm-panel");
+    if (panel) panel.style.display = "none";
+    if (book.type === "hardcoded") { _sec = 0; openHardcoded(book); }
+    else { _sec = isNaN(sidx) ? 0 : sidx; window._snOpenSection(_sec); }
+  };
+  window._snToggleBMPanel = function() {
+    var p = document.getElementById("sn-bm-panel");
+    if (!p) return;
+    var hidden = !p.style.display || p.style.display === "none";
+    p.style.display = hidden ? "block" : "none";
+    if (hidden) buildBMPanel();
+  };
+
+  // ── View management ──
+  var ALL_VIEWS = ["sn-books-view","sn-subbook-view","sn-sections-view","sn-reader-view","sn-search-view"];
+  function showView(id) {
+    ALL_VIEWS.forEach(function(v) {
+      var el = document.getElementById(v);
+      if (el) el.style.display = v === id ? "flex" : "none";
+    });
+  }
+
+  // ── popstate callbacks ──
+  window._snOnReaderClose = function() {
+    if (_bk && _bk.type === "hardcoded") { showView("sn-books-view"); }
+    else if (_bk) { buildSectionsGrid(); showView("sn-sections-view"); }
+    else { showView("sn-books-view"); }
+  };
+  window._snOnSectionsClose = function() {
+    if (_bk && _bk.type === "multi") { buildSubBookView(_bk); showView("sn-subbook-view"); }
+    else { showView("sn-books-view"); }
+  };
+  window._snOnSubBookClose = function() { showView("sn-books-view"); _bk = null; _sbk = null; };
+  window._snOnSearchClose = function() {
+    if (_sAb) { _sAb.abort(); _sAb = null; }
+    clearTimeout(_sDeb);
+    var ov = document.getElementById("sn-search-view");
+    if (ov) ov.style.display = "none";
+  };
+
+  // ── Books landing ──
+  function buildBooksView() {
+    var grid = document.getElementById("sn-books-grid");
+    if (!grid) return;
+    grid.innerHTML = CATS.map(function(cat) {
+      var books = BOOKS.filter(function(b){ return b.cat === cat.id; });
+      return "<div style=\"margin-bottom:1.25rem;\">"+
+        "<div style=\"display:flex;align-items:center;gap:0.4rem;margin-bottom:0.65rem;\">"+
+          "<span style=\"color:"+cat.color+";font-weight:900;font-size:0.85rem;\">"+cat.he+"</span>"+
+          "<div style=\"flex:1;height:1px;background:"+cat.color+"33;\"></div>"+
+        "</div>"+
+        "<div style=\"display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:0.5rem;\">"+
+        books.map(function(bk){
+          return "<button onclick=\"window._snOpenBook(\'" + bk.id + "\');\" "+
+            "style=\"background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:1rem;padding:0.75rem 0.5rem;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:0.3rem;transition:background 0.15s;text-align:center;\" "+
+            "onmouseenter=\"this.style.background=\'rgba(255,255,255,0.14)\';\" onmouseleave=\"this.style.background=\'rgba(255,255,255,0.05)\';\" >"+
+            "<span style=\"font-size:1.4rem;\">"+bk.icon+"</span>"+
+            "<span style=\"color:#f1f5f9;font-size:0.78rem;font-weight:700;line-height:1.25;\">"+bk.he+"</span>"+
+            "<span style=\"color:#94a3b8;font-size:0.62rem;line-height:1.2;\">"+bk.subtitle+"</span>"+
+          "</button>";
+        }).join("")+
+        "</div></div>";
+    }).join("");
+  }
+
+  // ── Open book ──
+  window._snOpenBook = function(bid) {
+    var book = BOOKS.find(function(b){ return b.id === bid; });
+    if (!book) return;
+    _bk = book; _sbk = null; _sec = null;
+    if (book.type === "hardcoded") { _sec = 0; openHardcoded(book); }
+    else if (book.type === "multi") { buildSubBookView(book); showView("sn-subbook-view"); pushModalState("sn-subbook-view"); }
+    else { buildSectionsGrid(); showView("sn-sections-view"); pushModalState("sn-sections-view"); }
+  };
+
+  // ── Sub-book view ──
+  function buildSubBookView(book) {
+    var t = document.getElementById("sn-subbook-title");
+    var g = document.getElementById("sn-subbook-grid");
+    if (t) t.textContent = book.he;
+    if (!g) return;
+    g.innerHTML = book.subBooks.map(function(sb){
+      return "<button onclick=\"window._snOpenSubBook(\'" + sb.id + "\');\" "+
+        "style=\"background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:1.25rem;padding:1.5rem 1rem;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:0.5rem;transition:background 0.15s;\" "+
+        "onmouseenter=\"this.style.background=\'rgba(255,255,255,0.15)\';\" onmouseleave=\"this.style.background=\'rgba(255,255,255,0.07)\';\" >"+
+        "<span style=\"color:#f1f5f9;font-size:1rem;font-weight:900;\">"+sb.he+"</span>"+
+        "<span style=\"color:#94a3b8;font-size:0.75rem;\">"+sb.sections.length+" סעיפים</span>"+
+      "</button>";
+    }).join("");
+  }
+  window._snOpenSubBook = function(sbid) {
+    if (!_bk) return;
+    _sbk = _bk.subBooks.find(function(s){ return s.id === sbid; }) || null;
+    if (!_sbk) return;
+    buildSectionsGrid(); showView("sn-sections-view"); pushModalState("sn-sections-view");
+  };
+
+  // ── Sections grid ──
+  function buildSectionsGrid() {
+    var t = document.getElementById("sn-sections-title");
+    var sub = document.getElementById("sn-sections-subtitle");
+    var fi = document.getElementById("sn-sections-filter");
+    var sections = _sbk ? _sbk.sections : (_bk ? _bk.sections : []);
+    if (t) t.textContent = (_sbk ? _bk.he + " — " + _sbk.he : (_bk ? _bk.he : ""));
+    if (sub) sub.textContent = sections.length + " סעיפים";
+    if (fi) fi.value = "";
+    renderSectionsChunk(sections);
+  }
+  function renderSectionsChunk(sections) {
+    var g = document.getElementById("sn-sections-grid");
+    if (!g || !_bk) return;
+    if (!sections.length) {
+      g.innerHTML = "<p style=\"color:#94a3b8;text-align:center;padding:2rem;grid-column:1/-1;\">לא נמצאו תוצאות</p>"; return;
+    }
+    var allSecs = _sbk ? _sbk.sections : _bk.sections;
+    g.innerHTML = sections.map(function(sec) {
+      var idx = allSecs.findIndex(function(s){ return s.ref === sec.ref; });
+      return "<button onclick=\"window._snOpenSection(" + (idx >= 0 ? idx : 0) + ");\" "+
+        "style=\"background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:0.6rem;padding:0.45rem 0.25rem;cursor:pointer;font-size:0.74rem;color:#e2e8f0;transition:background 0.15s;font-weight:600;text-align:center;\" "+
+        "onmouseenter=\"this.style.background=\'rgba(255,255,255,0.15)\';\" onmouseleave=\"this.style.background=\'rgba(255,255,255,0.06)\';\" >"+
+        sec.he + "</button>";
+    }).join("");
+  }
+  window._snFilterSections = function(val) {
+    if (!_bk) return;
+    var all = _sbk ? _sbk.sections : _bk.sections;
+    renderSectionsChunk(val.trim() ? all.filter(function(s){ return s.he.includes(val.trim()); }) : all);
+  };
+
+  // ── Open section (reader) ──
+  window._snOpenSection = async function(idx) {
+    if (!_bk) return;
+    var sections = _sbk ? _sbk.sections : _bk.sections;
+    var sec = sections[idx];
+    if (!sec) return;
+    _sec = idx;
+    var content = document.getElementById("sn-reader-content");
+    var title   = document.getElementById("sn-reader-title");
+    if (!content || !title) return;
+    title.textContent = (_sbk ? _sbk.he + " — " : "") + sec.he;
+    applyFS(); updateBMBtn();
+    content.innerHTML = "<div style=\"text-align:center;padding:3rem 1rem;\"><div style=\"width:36px;height:36px;border:3px solid " + _bk.color + ";border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 1rem;\"></div><p style=\"color:#94a3b8;\">טוען...</p></div>";
+    showView("sn-reader-view");
+    pushModalState("sn-reader-pane");
+    var he = await fetchSec(sec.ref);
+    content.innerHTML =
+      "<div style=\"max-width:680px;margin:0 auto;padding:1.5rem 1rem 0.5rem;font-family:\'David Libre\',\'Frank Ruhl Libre\',serif;direction:rtl;color:#1e293b;\">" +
+      renderParagraphs(he, _bk.color) +
+      "<div style=\"margin-top:2rem;padding-top:1rem;border-top:1px solid rgba(0,0,0,0.1);text-align:center;\">" +
+        (_bk.creditUrl
+          ? "<a href=\"" + _bk.creditUrl + "\" target=\"_blank\" rel=\"noopener\" style=\"color:#94a3b8;font-size:0.7rem;text-decoration:none;\">" + _bk.credit + "</a>"
+          : "<span style=\"color:#94a3b8;font-size:0.7rem;\">" + _bk.credit + "</span>") +
+      "</div><div style=\"height:2rem;\"></div></div>";
+    content.scrollTop = 0;
+  };
+
+  // ── Hardcoded reader ──
+  function openHardcoded(book) {
+    var content = document.getElementById("sn-reader-content");
+    var title   = document.getElementById("sn-reader-title");
+    if (!content || !title) return;
+    title.textContent = book.he;
+    applyFS(); updateBMBtn();
+    content.innerHTML =
+      "<div style=\"max-width:680px;margin:0 auto;padding:1.5rem 1rem 0.5rem;font-family:\'David Libre\',\'Frank Ruhl Libre\',serif;direction:rtl;color:#1e293b;\">" +
+      "<div style=\"background:#fef3c7;border:1.5px solid rgba(245,158,11,0.4);border-radius:1rem;padding:1rem 1.25rem;margin-bottom:1.75rem;line-height:1.9;font-size:0.9em;color:#78350f;\">" + book.intro + "</div>" +
+      "<p style=\"line-height:2.4;text-align:center;\">" + book.content + "</p>" +
+      "<div style=\"margin-top:2rem;padding-top:1rem;border-top:1px solid rgba(0,0,0,0.1);text-align:center;\"><span style=\"color:#94a3b8;font-size:0.7rem;\">" + book.credit + "</span></div>" +
+      "<div style=\"height:2rem;\"></div></div>";
+    content.scrollTop = 0;
+    showView("sn-reader-view");
+    pushModalState("sn-reader-pane");
+  }
+
+  // ── Search ──
+  window._snOpenSearch = function() {
+    var ov = document.getElementById("sn-search-view");
+    if (!ov) return;
+    ov.style.display = "flex"; ov.style.flexDirection = "column";
+    var sel = document.getElementById("sn-search-book-sel");
+    if (sel) {
+      var preselect = _bk ? _bk.id : "all";
+      _searchBid = preselect;
+      sel.innerHTML = "<option value=\"all\">כל הספרים</option>" +
+        BOOKS.map(function(b){ return "<option value=\""+b.id+"\""+( b.id===preselect?" selected":"")+">"+b.he+"</option>"; }).join("");
+      sel.onchange = function() { _searchBid = sel.value; window._snSearchRun(); };
+    }
+    setTimeout(function(){ var inp = document.getElementById("sn-search-input"); if(inp) inp.focus(); }, 80);
+    pushModalState("sn-search-view");
+  };
+  window._snCloseSearch = function() {
+    if (_activeModals[_activeModals.length-1] === "sn-search-view") { history.back(); }
+    else { window._snOnSearchClose && window._snOnSearchClose(); }
+  };
+  window._snSearchInput = function(val) {
+    clearTimeout(_sDeb);
+    var st = document.getElementById("sn-search-status");
+    var re = document.getElementById("sn-search-results");
+    if (!val || val.trim().length < 2) {
+      if (_sAb) { _sAb.abort(); _sAb = null; }
+      if (st) st.textContent = ""; if (re) re.innerHTML = ""; return;
+    }
+    if (st) st.textContent = "מחפש...";
+    _sDeb = setTimeout(function(){ window._snSearchRun(); }, 400);
+  };
+  window._snSearchRun = async function() {
+    var q = (document.getElementById("sn-search-input")||{}).value;
+    if (!q) return; q = q.trim(); if (q.length < 2) return;
+    if (_sAb) _sAb.abort();
+    _sAb = new AbortController();
+    var sig = _sAb.signal;
+    var st = document.getElementById("sn-search-status");
+    var re = document.getElementById("sn-search-results");
+    if (st) st.textContent = "מחפש...";
+    if (re) re.innerHTML = "";
+    var total = 0;
+    var booksToSearch = _searchBid === "all" ? BOOKS : BOOKS.filter(function(b){ return b.id === _searchBid; });
+    for (var bi = 0; bi < booksToSearch.length; bi++) {
+      if (sig.aborted) break;
+      var book = booksToSearch[bi];
+      if (book.type === "hardcoded") {
+        var txt = (book.intro + " " + book.content).replace(/<[^>]*>/g, "");
+        if (txt.includes(q)) {
+          total++;
+          if (re) {
+            var btn = document.createElement("button");
+            btn.style.cssText = "display:block;width:100%;text-align:right;padding:0.75rem 1rem;border:none;border-bottom:1px solid rgba(0,0,0,0.07);cursor:pointer;background:none;direction:rtl;";
+            btn.innerHTML = "<span style=\"color:"+book.color+";font-size:0.75rem;font-weight:900;\">"+book.he+"</span><p style=\"margin:0.2rem 0 0;font-size:0.83rem;color:#374151;line-height:1.5;\">"+snip(txt,q)+"</p>";
+            (function(bk){ btn.onclick = function(){ window._snCloseSearch(); _bk=bk; _sec=0; openHardcoded(bk); }; })(book);
+            re.appendChild(btn);
+          }
+        }
+        continue;
+      }
+      var subBooksToSearch = book.type === "multi" ? book.subBooks : [null];
+      for (var si = 0; si < subBooksToSearch.length; si++) {
+        if (sig.aborted) break;
+        var sb = subBooksToSearch[si];
+        var sections = sb ? sb.sections : book.sections;
+        for (var p = 0; p < sections.length; p++) {
+          if (sig.aborted) break;
+          if (st) st.textContent = "מחפש ב" + book.he + (sb?" — "+sb.he:"") + "... ("+(p+1)+"/"+sections.length+")";
+          var he = await fetchSec(sections[p].ref, sig);
+          if (sig.aborted) break;
+          var secText = flatText(he).replace(/<[^>]*>/g, "");
+          if (secText.includes(q)) {
+            total++;
+            if (re) {
+              var rbtn = document.createElement("button");
+              rbtn.style.cssText = "display:block;width:100%;text-align:right;padding:0.75rem 1rem;border:none;border-bottom:1px solid rgba(0,0,0,0.07);cursor:pointer;background:none;direction:rtl;transition:background 0.1s;";
+              rbtn.innerHTML = "<span style=\"color:"+book.color+";font-size:0.75rem;font-weight:900;\">"+book.he+(sb?" — "+sb.he:"")+" — "+sections[p].he+"</span>"+
+                "<p style=\"margin:0.2rem 0 0;font-size:0.83rem;color:#374151;line-height:1.5;\">"+snip(secText,q)+"</p>";
+              rbtn.onmouseenter = function(){ this.style.background="#f1f5f9"; };
+              rbtn.onmouseleave = function(){ this.style.background="none"; };
+              (function(cbk, csb, cp){ rbtn.onclick = function(){ window._snCloseSearch(); _bk=cbk; _sbk=csb; _sec=cp; window._snOpenSection(cp); }; })(book,sb,p);
+              re.appendChild(rbtn);
+            }
+          }
+        }
+      }
+    }
+    if (!sig.aborted && st)
+      st.textContent = total > 0 ? "נמצאו "+total+' תוצאות עבור "'+q+'"' : 'לא נמצאו תוצאות עבור "'+q+'"';
+  };
+
+  // ── Modal HTML ──
+  var existing = document.getElementById("sn-modal");
+  if (existing) existing.remove();
+  var modal = document.createElement("div");
+  modal.id = "sn-modal";
+  modal.style.cssText = "position:fixed;inset:0;z-index:200;background:rgba(2,6,23,0.95);backdrop-filter:blur(8px);overflow:hidden;";
+  modal.innerHTML = [
+    // VIEW 1: Books
+    "<div id=\"sn-books-view\" style=\"position:absolute;inset:0;display:flex;flex-direction:column;overflow:hidden;\">",
+      "<div style=\"display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;\">",
+        "<div><h2 style=\"color:#f1f5f9;font-size:1.3rem;font-weight:900;margin:0;\">ספרים נוספים</h2>",
+        "<p style=\"color:#6366f1;font-size:0.78rem;font-weight:700;margin:0.15rem 0 0;\">ספריית קודש</p></div>",
+        "<div style=\"display:flex;gap:0.5rem;align-items:center;\">",
+          "<button onclick=\"window._snOpenSearch();\" style=\"background:rgba(255,255,255,0.08);border:none;color:#e2e8f0;padding:0.4rem 0.8rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;\">🔍 חיפוש</button>",
+          "<button onclick=\"window._snToggleBMPanel();\" style=\"background:rgba(255,255,255,0.08);border:none;color:#e2e8f0;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1rem;flex-shrink:0;\" title=\"סימניות\">📌</button>",
+          "<button onclick=\"closeSefarimNosafimModal();\" style=\"background:rgba(255,255,255,0.08);border:none;color:#94a3b8;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.1rem;flex-shrink:0;\">✕</button>",
+        "</div>",
+      "</div>",
+      "<div id=\"sn-bm-panel\" style=\"display:none;background:rgba(245,158,11,0.1);border-bottom:1px solid rgba(245,158,11,0.25);padding:0.75rem 1.25rem;flex-shrink:0;max-height:40vh;overflow-y:auto;direction:rtl;\"></div>",
+      "<div style=\"overflow-y:auto;flex:1;padding:1rem 1.25rem 1.5rem;\"><div id=\"sn-books-grid\"></div></div>",
+    "</div>",
+    // VIEW 2: Sub-books
+    "<div id=\"sn-subbook-view\" style=\"display:none;position:absolute;inset:0;flex-direction:column;overflow:hidden;\">",
+      "<div style=\"display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;\">",
+        "<button onclick=\"history.back();\" style=\"background:rgba(255,255,255,0.08);border:none;color:#e2e8f0;padding:0.4rem 0.8rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;flex-shrink:0;\">← חזרה</button>",
+        "<h2 id=\"sn-subbook-title\" style=\"color:#f1f5f9;font-size:1.1rem;font-weight:900;margin:0;flex:1;text-align:center;\"></h2>",
+        "<button onclick=\"closeSefarimNosafimModal();\" style=\"background:rgba(255,255,255,0.08);border:none;color:#94a3b8;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.1rem;flex-shrink:0;\">✕</button>",
+      "</div>",
+      "<div style=\"overflow-y:auto;flex:1;padding:2rem 1.25rem;display:flex;align-items:flex-start;justify-content:center;\">",
+        "<div id=\"sn-subbook-grid\" style=\"display:grid;grid-template-columns:repeat(2,1fr);gap:1rem;max-width:380px;width:100%;\"></div>",
+      "</div>",
+    "</div>",
+    // VIEW 3: Sections
+    "<div id=\"sn-sections-view\" style=\"display:none;position:absolute;inset:0;flex-direction:column;overflow:hidden;\">",
+      "<div style=\"display:flex;align-items:center;justify-content:space-between;padding:0.75rem 1rem;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;gap:0.5rem;\">",
+        "<button onclick=\"history.back();\" style=\"background:rgba(255,255,255,0.08);border:none;color:#e2e8f0;padding:0.4rem 0.75rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;flex-shrink:0;\">← חזרה</button>",
+        "<div style=\"flex:1;min-width:0;text-align:center;\">",
+          "<h3 id=\"sn-sections-title\" style=\"color:#f1f5f9;font-size:0.9rem;font-weight:900;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;\"></h3>",
+          "<span id=\"sn-sections-subtitle\" style=\"color:#6366f1;font-size:0.7rem;\"></span>",
+        "</div>",
+        "<button onclick=\"window._snOpenSearch();\" style=\"background:rgba(255,255,255,0.08);border:none;color:#e2e8f0;padding:0.4rem 0.75rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;flex-shrink:0;\">🔍</button>",
+      "</div>",
+      "<div style=\"padding:0.5rem 1rem;border-bottom:1px solid rgba(255,255,255,0.05);flex-shrink:0;\">",
+        "<input id=\"sn-sections-filter\" type=\"search\" placeholder=\"סנן סעיף...\" oninput=\"window._snFilterSections(this.value);\" style=\"width:100%;box-sizing:border-box;padding:0.4rem 0.85rem;border-radius:999px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.07);color:#f1f5f9;font-size:0.85rem;direction:rtl;outline:none;\"/>",
+      "</div>",
+      "<div style=\"overflow-y:auto;flex:1;padding:0.75rem 1rem 1rem;\"><div id=\"sn-sections-grid\" style=\"display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:0.4rem;\"></div><div style=\"height:1.5rem;\"></div></div>",
+    "</div>",
+    // VIEW 4: Reader
+    "<div id=\"sn-reader-view\" style=\"display:none;position:absolute;inset:0;background:#faf9f6;flex-direction:column;overflow:hidden;\">",
+      "<div style=\"display:flex;align-items:center;justify-content:space-between;padding:0.7rem 1rem;border-bottom:1px solid rgba(0,0,0,0.09);background:#faf9f6;flex-shrink:0;gap:0.5rem;\">",
+        "<button onclick=\"history.back();\" style=\"background:rgba(0,0,0,0.06);border:none;color:#1e293b;padding:0.4rem 0.75rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;white-space:nowrap;flex-shrink:0;\">← חזרה</button>",
+        "<h3 id=\"sn-reader-title\" style=\"color:#1e293b;font-size:0.9rem;font-weight:900;margin:0;text-align:center;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:rtl;\"></h3>",
+        "<div style=\"display:flex;gap:0.35rem;flex-shrink:0;\">",
+          "<button id=\"sn-reader-bm-btn\" onclick=\"window._snToggleBookmark();\" style=\"background:rgba(0,0,0,0.06);border:none;color:#1e293b;padding:0.4rem 0.55rem;border-radius:999px;cursor:pointer;font-size:0.82rem;\" title=\"סימנייה\">🔖</button>",
+          "<button onclick=\"window._snOpenSearch();\" style=\"background:rgba(0,0,0,0.06);border:none;color:#1e293b;padding:0.4rem 0.55rem;border-radius:999px;cursor:pointer;font-size:0.82rem;\">🔍</button>",
+        "</div>",
+      "</div>",
+      "<div id=\"sn-reader-content\" style=\"overflow-y:auto;flex:1;text-align:center;direction:rtl;line-height:2;font-size:100%;\"></div>",
+      "<div style=\"display:flex;align-items:center;justify-content:center;gap:0.75rem;padding:0.5rem 1rem;border-top:1px solid rgba(0,0,0,0.08);background:#faf9f6;flex-shrink:0;\">",
+        "<button onclick=\"window._snFontDec();\" style=\"background:rgba(0,0,0,0.06);border:none;color:#1e293b;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:1.2rem;font-weight:700;line-height:1;\">−</button>",
+        "<span id=\"sn-fs-label\" style=\"color:#64748b;font-size:0.8rem;min-width:3rem;text-align:center;\">100%</span>",
+        "<button onclick=\"window._snFontInc();\" style=\"background:rgba(0,0,0,0.06);border:none;color:#1e293b;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:1.2rem;font-weight:700;line-height:1;\">+</button>",
+      "</div>",
+    "</div>",
+    // VIEW 5: Search
+    "<div id=\"sn-search-view\" style=\"display:none;position:absolute;inset:0;background:#faf9f6;flex-direction:column;overflow:hidden;\">",
+      "<div style=\"display:flex;align-items:center;justify-content:space-between;padding:0.7rem 1rem;border-bottom:1px solid rgba(0,0,0,0.09);background:#faf9f6;flex-shrink:0;gap:0.5rem;\">",
+        "<button onclick=\"window._snCloseSearch();\" style=\"background:rgba(0,0,0,0.06);border:none;color:#1e293b;padding:0.4rem 0.75rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;flex-shrink:0;\">← חזרה</button>",
+        "<h3 style=\"color:#1e293b;font-size:0.95rem;font-weight:900;margin:0;text-align:center;flex:1;\">חיפוש בספרים</h3>",
+        "<div style=\"width:60px;flex-shrink:0;\"></div>",
+      "</div>",
+      "<div style=\"padding:0.6rem 1rem;border-bottom:1px solid rgba(0,0,0,0.07);flex-shrink:0;display:flex;flex-direction:column;gap:0.5rem;\">",
+        "<select id=\"sn-search-book-sel\" style=\"width:100%;padding:0.4rem 0.75rem;border-radius:999px;border:1px solid rgba(0,0,0,0.15);background:#fff;color:#1e293b;font-size:0.85rem;direction:rtl;outline:none;cursor:pointer;\"></select>",
+        "<input id=\"sn-search-input\" type=\"search\" placeholder=\"הקלד לחיפוש — תוצאות מופיעות תוך כדי הקלדה\" oninput=\"window._snSearchInput(this.value);\" style=\"width:100%;box-sizing:border-box;padding:0.45rem 0.85rem;border-radius:999px;border:1px solid rgba(0,0,0,0.18);background:#fff;color:#1e293b;font-size:0.9rem;direction:rtl;outline:none;\"/>",
+      "</div>",
+      "<p id=\"sn-search-status\" style=\"color:#64748b;font-size:0.78rem;padding:0.3rem 1rem;margin:0;flex-shrink:0;min-height:1.5rem;\"></p>",
+      "<div id=\"sn-search-results\" style=\"overflow-y:auto;flex:1;direction:rtl;\"></div>",
+    "</div>"
+  ].join("");
+
+  document.body.appendChild(modal);
+  lockBodyScroll();
+  pushModalState("sn-modal");
+  buildBooksView();
+  buildBMPanel();
+}
+
+function closeSefarimNosafimModal() {
+  var el = document.getElementById("sn-modal");
+  if (el) el.remove();
+  unlockBodyScroll();
+  var snStates = ["sn-reader-pane","sn-sections-view","sn-subbook-view","sn-search-view","sn-modal"];
+  var steps = 0;
+  while (_activeModals.length > 0 && snStates.includes(_activeModals[_activeModals.length-1])) {
+    _activeModals.pop(); steps++;
+  }
+  if (steps > 0) history.go(-steps);
+}

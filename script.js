@@ -18897,7 +18897,7 @@ function openSefarimNosafimPage() {
       type:"flat",
       sections:secs(697,function(i){return "סימן "+toHN(i);},function(i){return "Mishnah_Berurah."+i;})},
     { id:"sefer-hamidot", he:"ספר המידות", subtitle:"רבי נחמן מברסלב",
-      cat:"musar", color:"#16a34a", icon:"🌿",
+      cat:"emunah", color:"#16a34a", icon:"🌿",
       credit:"הטקסט מ-Sefaria.org — נחלת הכלל",
       creditUrl:"https://www.sefaria.org/Sefer_HaMiddot",
       type:"flat",
@@ -19078,7 +19078,7 @@ function openSefarimNosafimPage() {
       type:"flat",
       sections:secs(26,function(i){return "פרק "+toHN(i);},function(i){return "Mesillat_Yesharim."+i;})},
     { id:"shmirat-halashon", he:"שמירת הלשון", subtitle:"החפץ חיים — רבי ישראל מאיר הכהן",
-      cat:"musar", color:"#0f766e", icon:"💬",
+      cat:"halakha", color:"#0f766e", icon:"💬",
       credit:"הטקסט מ-Sefaria.org — נחלת הכלל",
       creditUrl:"https://www.sefaria.org/Shemirat_HaLashon",
       type:"multi",
@@ -19094,7 +19094,7 @@ function openSefarimNosafimPage() {
         }
       ]},
     { id:"chovot-halevavot", he:"חובת הלבבות", subtitle:"רבי בחיי אבן פקודה",
-      cat:"emunah", color:"#7c3aed", icon:"💎",
+      cat:"musar", color:"#7c3aed", icon:"💎",
       credit:"הטקסט מ-Sefaria.org — נחלת הכלל",
       creditUrl:"https://www.sefaria.org/Duties_of_the_Heart",
       type:"flat",
@@ -19112,7 +19112,7 @@ function openSefarimNosafimPage() {
         {he:"שער אהבת ה׳",          ref:"Duties of the Heart, Tenth Treatise on Devotion to God"}
       ]},
     { id:"noam-elimelech", he:"נועם אלימלך", subtitle:"רבי אלימלך מליז\'נסק",
-      cat:"emunah", color:"#6d28d9", icon:"✨",
+      cat:"musar", color:"#6d28d9", icon:"✨",
       credit:"הטקסט מ-Sefaria.org — נחלת הכלל",
       creditUrl:"https://www.sefaria.org/Noam_Elimelech",
       type:"multi",
@@ -19269,6 +19269,50 @@ function openSefarimNosafimPage() {
     if (hidden) buildBMPanel();
   };
 
+  // ── Book-specific bookmarks panel (shown inside subbook/sections/reader views) ──
+  function buildBookBMPanel() {
+    var panel = document.getElementById("sn-book-bm-panel");
+    if (!panel || !_bk) return;
+    var bms = _bmGet(_bk.id);
+    var header = "<div style=\"display:flex;align-items:center;justify-content:space-between;margin:0 0 0.5rem;\">" +
+      "<span style=\"color:#f59e0b;font-size:0.8rem;font-weight:900;\">📌 סימניות — " + _bk.he + "</span>" +
+      "<button onclick=\"window._snToggleBookBMPanel();\" style=\"background:none;border:none;color:#94a3b8;font-size:1rem;cursor:pointer;padding:0;\">✕</button>" +
+      "</div>";
+    if (!bms.length) {
+      panel.innerHTML = header + "<p style=\"color:#94a3b8;font-size:0.82rem;text-align:center;padding:0.5rem 0;margin:0;\">אין סימניות שמורות בספר זה</p>";
+      return;
+    }
+    panel.innerHTML = header + bms.map(function(bm) {
+      return "<div style=\"display:flex;align-items:center;justify-content:space-between;padding:0.35rem 0;border-bottom:1px solid rgba(245,158,11,0.15);\">" +
+        "<button onclick=\"window._snBookBMGoto('" + bm.key + "');\" style=\"background:none;border:none;cursor:pointer;text-align:right;flex:1;padding:0;\">" +
+          (bm.sub ? "<span style=\"color:#f59e0b;font-size:0.7rem;font-weight:700;display:block;\">" + bm.sub + "</span>" : "") +
+          "<span style=\"color:#1e293b;font-size:0.82rem;\">" + bm.label + "</span>" +
+        "</button>" +
+        "<button onclick=\"window._snBookBMRemove('" + bm.key + "');\" style=\"background:none;border:none;cursor:pointer;color:#94a3b8;font-size:0.9rem;padding:0.2rem 0.4rem;flex-shrink:0;\">✕</button>" +
+      "</div>";
+    }).join("");
+  }
+  window._snToggleBookBMPanel = function() {
+    var p = document.getElementById("sn-book-bm-panel");
+    if (!p || !_bk) return;
+    var hidden = !p.style.display || p.style.display === "none";
+    p.style.display = hidden ? "block" : "none";
+    if (hidden) buildBookBMPanel();
+  };
+  window._snBookBMGoto = function(key) {
+    if (!_bk) return;
+    var p = document.getElementById("sn-book-bm-panel");
+    if (p) p.style.display = "none";
+    window._snBMGoto(_bk.id, key);
+  };
+  window._snBookBMRemove = function(key) {
+    if (!_bk) return;
+    _bmRemove(_bk.id, key);
+    buildBookBMPanel();
+    updateBMBtn();
+    buildBMPanel();
+  };
+
   // ── View management ──
   var ALL_VIEWS = ["sn-books-view","sn-subbook-view","sn-sections-view","sn-reader-view","sn-search-view"];
   function showView(id) {
@@ -19276,6 +19320,8 @@ function openSefarimNosafimPage() {
       var el = document.getElementById(v);
       if (el) el.style.display = v === id ? "flex" : "none";
     });
+    var bp = document.getElementById("sn-book-bm-panel");
+    if (bp) bp.style.display = "none";
   }
 
   // ── popstate callbacks ──
@@ -19385,7 +19431,29 @@ function openSefarimNosafimPage() {
     renderSectionsChunk(val.trim() ? all.filter(function(s){ return s.he.includes(val.trim()); }) : all);
   };
 
-  // ── Open section (reader) ──
+  // ── Open section (reader) — continuous scroll ──
+  var _snLoadedIdx = null;
+
+  async function _snLoadChapter(idx, area, prepend) {
+    if (!_bk) return;
+    var sections = _sbk ? _sbk.sections : _bk.sections;
+    if (idx < 0 || idx >= sections.length) return;
+    if (!_snLoadedIdx) _snLoadedIdx = new Set();
+    if (_snLoadedIdx.has(idx)) return;
+    _snLoadedIdx.add(idx);
+    var sec = sections[idx];
+    var chapterDiv = document.createElement("div");
+    chapterDiv.id = "sn-chapter-" + idx;
+    chapterDiv.setAttribute("data-sn-idx", String(idx));
+    chapterDiv.style.cssText = "max-width:680px;margin:0 auto;padding:1.25rem 1rem 1rem;font-family:'David Libre','Frank Ruhl Libre',serif;direction:rtl;color:#1e293b;border-bottom:1px solid rgba(0,0,0,0.08);";
+    var heading = "<h4 style=\"color:" + _bk.color + ";font-size:1.05rem;font-weight:900;margin:0 0 0.85rem;text-align:center;\">" + (_sbk ? _sbk.he + " — " : "") + sec.he + "</h4>";
+    chapterDiv.innerHTML = heading + "<p style=\"color:#94a3b8;text-align:center;\">טוען...</p>";
+    if (prepend && area.firstChild) area.insertBefore(chapterDiv, area.firstChild);
+    else area.appendChild(chapterDiv);
+    var he = await fetchSec(sec.ref);
+    chapterDiv.innerHTML = heading + renderParagraphs(he, _bk.color);
+  }
+
   window._snOpenSection = async function(idx) {
     if (!_bk) return;
     var sections = _sbk ? _sbk.sections : _bk.sections;
@@ -19397,19 +19465,79 @@ function openSefarimNosafimPage() {
     if (!content || !title) return;
     title.textContent = (_sbk ? _sbk.he + " — " : "") + sec.he;
     applyFS(); updateBMBtn();
+    content.onscroll = null;
     content.innerHTML = "<div style=\"text-align:center;padding:3rem 1rem;\"><div style=\"width:36px;height:36px;border:3px solid " + _bk.color + ";border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 1rem;\"></div><p style=\"color:#94a3b8;\">טוען...</p></div>";
     showView("sn-reader-view");
     pushModalState("sn-reader-pane");
-    var he = await fetchSec(sec.ref);
-    content.innerHTML =
-      "<div style=\"max-width:680px;margin:0 auto;padding:1.5rem 1rem 0.5rem;font-family:\'David Libre\',\'Frank Ruhl Libre\',serif;direction:rtl;color:#1e293b;\">" +
-      renderParagraphs(he, _bk.color) +
-      "<div style=\"margin-top:2rem;padding-top:1rem;border-top:1px solid rgba(0,0,0,0.1);text-align:center;\">" +
-        (_bk.creditUrl
-          ? "<a href=\"" + _bk.creditUrl + "\" target=\"_blank\" rel=\"noopener\" style=\"color:#94a3b8;font-size:0.7rem;text-decoration:none;\">" + _bk.credit + "</a>"
-          : "<span style=\"color:#94a3b8;font-size:0.7rem;\">" + _bk.credit + "</span>") +
-      "</div><div style=\"height:2rem;\"></div></div>";
-    content.scrollTop = 0;
+
+    // Build skeleton: chapters area + credit footer
+    content.innerHTML = "";
+    var area = document.createElement("div");
+    area.id = "sn-reader-area";
+    area.style.cssText = "padding:0.25rem 0 0;";
+    content.appendChild(area);
+    var cred = document.createElement("div");
+    cred.id = "sn-reader-credit";
+    cred.style.cssText = "max-width:680px;margin:0.5rem auto 2rem;padding:1rem;text-align:center;border-top:1px solid rgba(0,0,0,0.1);";
+    cred.innerHTML = (_bk.creditUrl
+      ? "<a href=\"" + _bk.creditUrl + "\" target=\"_blank\" rel=\"noopener\" style=\"color:#94a3b8;font-size:0.7rem;text-decoration:none;\">" + _bk.credit + "</a>"
+      : "<span style=\"color:#94a3b8;font-size:0.7rem;\">" + _bk.credit + "</span>");
+    content.appendChild(cred);
+
+    _snLoadedIdx = new Set();
+
+    // Load prev (if exists), current, next (if exists)
+    if (idx > 0) await _snLoadChapter(idx - 1, area, false);
+    await _snLoadChapter(idx, area, false);
+    if (idx < sections.length - 1) await _snLoadChapter(idx + 1, area, false);
+
+    // Scroll to current chapter
+    var currentEl = document.getElementById("sn-chapter-" + idx);
+    if (currentEl) currentEl.scrollIntoView({ block: "start" });
+
+    // Infinite scroll: load more on near-edges, update title/_sec on scroll
+    content.onscroll = async function() {
+      var scrollTop = content.scrollTop;
+      var scrollHeight = content.scrollHeight;
+      var clientHeight = content.clientHeight;
+
+      if (scrollHeight - scrollTop - clientHeight < 250) {
+        var loadedArr = Array.from(_snLoadedIdx);
+        if (loadedArr.length) {
+          var maxLoaded = Math.max.apply(null, loadedArr);
+          if (maxLoaded < sections.length - 1) await _snLoadChapter(maxLoaded + 1, area, false);
+        }
+      }
+      if (scrollTop < 250) {
+        var loadedArr2 = Array.from(_snLoadedIdx);
+        if (loadedArr2.length) {
+          var minLoaded = Math.min.apply(null, loadedArr2);
+          if (minLoaded > 0) {
+            var prevH = content.scrollHeight;
+            await _snLoadChapter(minLoaded - 1, area, true);
+            content.scrollTop += content.scrollHeight - prevH;
+          }
+        }
+      }
+
+      // Update title/_sec/bookmark btn based on visible chapter
+      var chapters = area.querySelectorAll("[data-sn-idx]");
+      var areaRect = content.getBoundingClientRect();
+      for (var i = 0; i < chapters.length; i++) {
+        var ch = chapters[i];
+        var rect = ch.getBoundingClientRect();
+        if (rect.top >= areaRect.top - 50 && rect.top < areaRect.top + 150) {
+          var num = parseInt(ch.getAttribute("data-sn-idx"));
+          if (!isNaN(num) && num !== _sec) {
+            _sec = num;
+            var s = sections[num];
+            if (s) title.textContent = (_sbk ? _sbk.he + " — " : "") + s.he;
+            updateBMBtn();
+          }
+          break;
+        }
+      }
+    };
   };
 
   // ── Hardcoded reader ──
@@ -19547,6 +19675,7 @@ function openSefarimNosafimPage() {
       "<div style=\"display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;\">",
         "<button onclick=\"history.back();\" style=\"background:rgba(255,255,255,0.08);border:none;color:#e2e8f0;padding:0.4rem 0.8rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;flex-shrink:0;\">← חזרה</button>",
         "<h2 id=\"sn-subbook-title\" style=\"color:#f1f5f9;font-size:1.1rem;font-weight:900;margin:0;flex:1;text-align:center;\"></h2>",
+        "<button onclick=\"window._snToggleBookBMPanel();\" style=\"background:rgba(255,255,255,0.08);border:none;color:#e2e8f0;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:0.95rem;flex-shrink:0;margin-left:0.4rem;\" title=\"סימניות הספר\">📌</button>",
         "<button onclick=\"closeSefarimNosafimModal();\" style=\"background:rgba(255,255,255,0.08);border:none;color:#94a3b8;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.1rem;flex-shrink:0;\">✕</button>",
       "</div>",
       "<div style=\"overflow-y:auto;flex:1;padding:2rem 1.25rem;display:flex;align-items:flex-start;justify-content:center;\">",
@@ -19561,6 +19690,7 @@ function openSefarimNosafimPage() {
           "<h3 id=\"sn-sections-title\" style=\"color:#f1f5f9;font-size:0.9rem;font-weight:900;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;\"></h3>",
           "<span id=\"sn-sections-subtitle\" style=\"color:#6366f1;font-size:0.7rem;\"></span>",
         "</div>",
+        "<button onclick=\"window._snToggleBookBMPanel();\" style=\"background:rgba(255,255,255,0.08);border:none;color:#e2e8f0;padding:0.4rem 0.6rem;border-radius:999px;cursor:pointer;font-size:0.85rem;flex-shrink:0;margin-left:0.35rem;\" title=\"סימניות הספר\">📌</button>",
         "<button onclick=\"window._snOpenSearch();\" style=\"background:rgba(255,255,255,0.08);border:none;color:#e2e8f0;padding:0.4rem 0.75rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;flex-shrink:0;\">🔍</button>",
       "</div>",
       "<div style=\"padding:0.5rem 1rem;border-bottom:1px solid rgba(255,255,255,0.05);flex-shrink:0;\">",
@@ -19575,6 +19705,7 @@ function openSefarimNosafimPage() {
         "<h3 id=\"sn-reader-title\" style=\"color:#1e293b;font-size:0.9rem;font-weight:900;margin:0;text-align:center;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:rtl;\"></h3>",
         "<div style=\"display:flex;gap:0.35rem;flex-shrink:0;\">",
           "<button id=\"sn-reader-bm-btn\" onclick=\"window._snToggleBookmark();\" style=\"background:rgba(0,0,0,0.06);border:none;color:#1e293b;padding:0.4rem 0.55rem;border-radius:999px;cursor:pointer;font-size:0.82rem;\" title=\"סימנייה\">🔖</button>",
+          "<button onclick=\"window._snToggleBookBMPanel();\" style=\"background:rgba(0,0,0,0.06);border:none;color:#1e293b;padding:0.4rem 0.55rem;border-radius:999px;cursor:pointer;font-size:0.82rem;\" title=\"סימניות הספר\">📌</button>",
           "<button onclick=\"window._snOpenSearch();\" style=\"background:rgba(0,0,0,0.06);border:none;color:#1e293b;padding:0.4rem 0.55rem;border-radius:999px;cursor:pointer;font-size:0.82rem;\">🔍</button>",
         "</div>",
       "</div>",
@@ -19598,7 +19729,9 @@ function openSefarimNosafimPage() {
       "</div>",
       "<p id=\"sn-search-status\" style=\"color:#64748b;font-size:0.78rem;padding:0.3rem 1rem;margin:0;flex-shrink:0;min-height:1.5rem;\"></p>",
       "<div id=\"sn-search-results\" style=\"overflow-y:auto;flex:1;direction:rtl;\"></div>",
-    "</div>"
+    "</div>",
+    // Book-specific bookmarks floating panel (overlay on subbook/sections/reader views)
+    "<div id=\"sn-book-bm-panel\" style=\"display:none;position:absolute;top:60px;right:12px;left:12px;z-index:50;background:rgba(254,243,199,0.98);border:1.5px solid rgba(245,158,11,0.5);border-radius:0.85rem;padding:0.75rem 1rem;max-height:55vh;overflow-y:auto;direction:rtl;box-shadow:0 8px 24px rgba(0,0,0,0.25);\"></div>"
   ].join("");
 
   document.body.appendChild(modal);

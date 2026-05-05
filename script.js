@@ -14215,21 +14215,30 @@ function openBenIshHaiPage() {
   function buildBMPanel() {
     const panel = document.getElementById("bih-bm-panel");
     if (!panel) return;
-    if (_bihMode === "drashot") { panel.innerHTML = ""; return; }
     const yIdx = getYIdx();
-    const bms = loadBMs().filter(b=>b.y===yIdx);
+    const bms = loadBMs().filter(b => _bihMode === "drashot" ? false : b.y === yIdx);
     panel.innerHTML =
-      '<div style="border-top:1px solid rgba(255,255,255,0.08);padding-top:0.75rem;margin-top:1rem;">'+
-      '<p style="color:#94a3b8;font-size:0.75rem;font-weight:700;margin-bottom:0.5rem;">📌 סימניות</p>'+
-      (bms.length ? bms.map(b=>{
-        const pr=YEARS[b.y]&&YEARS[b.y].parshiyot[b.p];
-        return '<div style="display:flex;align-items:center;gap:0.5rem;padding:0.45rem 0.6rem;background:rgba(255,255,255,0.04);border-radius:0.5rem;margin-bottom:0.35rem;direction:rtl;">'+
+      '<p style="color:#f59e0b;font-size:0.75rem;font-weight:900;margin:0 0 0.5rem;">📌 סימניות שמורות:</p>'+
+      (bms.length ? '<div style="display:flex;flex-direction:column;gap:0.3rem;">'+bms.map(b=>{
+        const pr = YEARS[b.y] && YEARS[b.y].parshiyot[b.p];
+        return '<div style="display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0.6rem;background:rgba(255,255,255,0.06);border-radius:0.5rem;direction:rtl;">'+
           '<button onclick="window._bihOpenParsha('+b.p+','+b.h+')" style="background:none;border:none;color:#e2e8f0;cursor:pointer;font-size:0.8rem;text-align:right;flex:1;padding:0;">🔖 '+(pr?pr.he:"?")+' — הלכה '+toHeb(b.h+1)+'</button>'+
-          '<button onclick="window._bihBMRemove('+b.y+','+b.p+','+b.h+')" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:0.78rem;padding:0;flex-shrink:0;">✕</button>'+
-          '</div>';
-      }).join("") : '<p style="color:#64748b;font-size:0.78rem;text-align:center;padding:0.3rem 0;">אין סימניות עדיין</p>')+
-      '</div>';
+          '<button onclick="window._bihBMRemove('+b.y+','+b.p+','+b.h+')" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:0.8rem;padding:0;flex-shrink:0;" title="הסר">✕</button>'+
+        '</div>';
+      }).join("")+'</div>'
+      : '<p style="color:#94a3b8;font-size:0.78rem;text-align:center;margin:0;">אין סימניות עדיין</p>');
   }
+
+  window._bihToggleBMPanel = () => {
+    const panel = document.getElementById("bih-bm-panel");
+    if (!panel) return;
+    if (panel.style.display === "none") {
+      buildBMPanel();
+      panel.style.display = "block";
+    } else {
+      panel.style.display = "none";
+    }
+  };
 
   // ── Infinite scroll ──
   function setupScrollLoader(contentArea) {
@@ -14329,16 +14338,17 @@ function openBenIshHaiPage() {
         '<p style="color:#6366f1;font-size:0.78rem;font-weight:700;margin:0.15rem 0 0;">רבי יוסף חיים מבגדד זצ"ל</p></div>'+
         '<div style="display:flex;gap:0.5rem;align-items:center;">'+
           '<button onclick="window._bihOpenSearch()" style="background:rgba(255,255,255,0.08);border:none;color:#e2e8f0;padding:0.4rem 0.8rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;">🔍 חיפוש</button>'+
+          '<button onclick="window._bihToggleBMPanel()" id="bih-bm-pin-btn" style="background:rgba(255,255,255,0.08);border:none;color:#e2e8f0;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1rem;flex-shrink:0;" title="סימניות">📌</button>'+
           '<button onclick="closeBenIshHaiModal()" style="background:rgba(255,255,255,0.08);border:none;color:#94a3b8;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.1rem;flex-shrink:0;">✕</button>'+
         '</div>'+
       '</div>'+
       '<div style="display:flex;gap:0.4rem;padding:0.6rem 1.25rem;flex-shrink:0;flex-wrap:wrap;border-bottom:1px solid rgba(255,255,255,0.05);">'+
         '<div id="bih-year-bar" style="display:flex;gap:0.4rem;flex-wrap:wrap;"></div>'+
       '</div>'+
+      '<div id="bih-bm-panel" style="display:none;background:rgba(245,158,11,0.1);border-bottom:1px solid rgba(245,158,11,0.25);padding:0.75rem 1.25rem;flex-shrink:0;max-height:40vh;overflow-y:auto;"></div>'+
       '<div style="overflow-y:auto;flex:1;padding:0.75rem 1.25rem 0;">'+
         '<p style="color:#64748b;font-size:0.72rem;margin:0 0 0.65rem;">לחץ על פרשה לקריאת הטקסט המלא</p>'+
         '<div id="bih-grid-content" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:0.5rem;"></div>'+
-        '<div id="bih-bm-panel"></div>'+
         '<div style="height:1.5rem;"></div>'+
       '</div>'+
     '</div>'+

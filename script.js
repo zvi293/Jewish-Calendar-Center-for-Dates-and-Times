@@ -619,6 +619,11 @@ window.addEventListener("popstate", function (e) {
         setTimeout(() => el.classList.add("hidden"), 300);
       }
       unlockBodyScroll();
+    } else if (modalId === "motzei-shabbat-modal") {
+      const el = document.getElementById(modalId);
+      if (el) el.remove();
+      _motzeiShabbatModalOpen = false;
+      unlockBodyScroll();
     } else {
       removeModalById(modalId);
     }
@@ -5135,6 +5140,378 @@ function startShabbatCountdown() {
   clearInterval(countdownInterval);
   tick();
   countdownInterval = setInterval(tick, 1000);
+}
+
+// ═══════════════════════════════════════════════════════
+// ✦  מוצאי שבת — MOTZEI SHABBAT / YOM TOV BUTTON & MODAL
+// ═══════════════════════════════════════════════════════
+
+// Set to false to enable real calendar-based visibility logic
+const _MOTZEI_DEMO_MODE = true;
+
+// Tracks whether modal is open — prevents scroll-lock accumulation on tab switches
+let _motzeiShabbatModalOpen = false;
+
+const BESHT_STORIES = [
+  {
+    title: "הניגון שפתח שערי שמים",
+    text: "ביום הכיפורים ראה הבעל שם טוב שגזרה קשה נגזרה על ישראל ואין יכולת לבטלה. ישב בדממה ורוחו עגומה עליו. לפתע נכנס ילד פשוט שלא ידע כלל לקרוא, ורצה להשתתף בתפילה. הוציא חליל מחיקו וניגן ניגון תמים מלבו. הרים הבעל שם טוב ראשו ואמר בשמחה: 'הניגון הזה פתח את כל השערים — הגזרה בטלה!'"
+  },
+  {
+    title: "תפילת הרועה",
+    text: "רועה פשוט לא ידע לקרוא ולא ידע להתפלל. מדי יום בשדה, הצמיד פיו לאדמה ואמר: 'ריבונו של עולם, אם היו לי צאן, הייתי מביא לך מהן — זה כל אשר אני יכול.' שמע הבעל שם טוב ואמר לתלמידיו: 'תפילה זו עולה לשמים יותר מאלף נוסחאות — שכן לבו היה שלם.'"
+  },
+  {
+    title: "הנסיעה ללא מפה",
+    text: "פעם אחת יצא הבעל שם טוב לדרך בעגלתו. שאלו תלמידיו: 'לאן אנחנו נוסעים?' אמר: 'אסייח לסוסים ואלכה.' הסוסים פנו דרכם עצמם, והגיעו לעיירה שבה חי יהודי שנגזרה עליו גזרה. ביטל הבעל שם טוב את הגזרה וחזר. שאלו: 'מניין ידעת?' אמר: 'נשמות ישראל שולחות — ולבי שומע.'"
+  },
+  {
+    title: "גחלת של שמחת שבת",
+    text: "בערב שבת אחד ראה הבעל שם טוב צדיק נסתר המעלה גחלים לכבוד שבת. שאל: 'מה אתה עושה?' אמר: 'מחמם את ביתי לכבוד המלכה.' אמר לתלמידיו: 'ראיתם? גחלת אחת של שמחת שבת שווה יותר מכל הלימוד שלי — כי יש בה אהבה.'"
+  },
+  {
+    title: "המצווה שבסתר",
+    text: "גבאי עשיר בא לבעל שם טוב ואמר שהוא תומך בלימוד תורה. שאל הבעל שם טוב: 'ומה אתה עושה בלילה כשאתה לבד?' שתק האיש. אמר הבעש\"ט: 'כשאדם עושה מצוות מפני שאחרים רואים, הוא מקבל שכרו בעולם הזה. כשהוא עושה בסתר — שם נמצאת הנשמה האמיתית.'"
+  },
+  {
+    title: "ריקוד הגאולה",
+    text: "בשמחת תורה אחת ריקד הבעל שם טוב כל הלילה. תלמידיו השתוממו. בשחר שאלוהו: 'מה ראית בריקוד?' אמר: 'ראיתי כל ספרי תורה פתוחים בשמים, וכל אות ואות מרקדת לפני הקב\"ה. כשריקדנו למטה — ריקדנו עם האותיות.'"
+  },
+  {
+    title: "מתי תבוא הגאולה",
+    text: "שאל תלמיד: 'רבי, מתי תבוא הגאולה?' אמר הבעל שם טוב: 'כאשר כל יהודי ידע לספר את סיפורו ולא יתבייש בו. כי כל נשמה היא סיפור, וכל סיפור — ניצוץ אלוהי. כשנדע לספר — נדע לחיות. וכשנדע לחיות — יבוא הגואל.'"
+  },
+  {
+    title: "הדמעה הנסתרת",
+    text: "בא אל הבעל שם טוב אדם שפניו קשים ולבו אטום. אמר: 'רבי, אני רוצה לחזור בתשובה אך אינני יכול לבכות.' השיב הבעש\"ט: 'הדמעה שאתה מנסה לשפוך ואינה יוצאת — היא יקרה בעיני הקב\"ה מאלף דמעות ששוטפות בנקל, כי יש בה את כל כאב לבך.'"
+  },
+  {
+    title: "הצדיק הנסתר בשוק",
+    text: "שלח הבעש\"ט תלמיד לשוק ואמר: 'ראה אם תמצא שם צדיק.' חזר התלמיד ואמר: 'ראיתי רק סוחרים ורועשים.' אמר הרב: 'לא ראית. הלך שנית.' חזר ואמר: 'ראיתי אשה זקנה שנתנה פרוסת לחם לעני ולא פנתה לראות אם ראוה.' אמר הבעש\"ט: 'מצאת. זוהי הצדיקת.'"
+  },
+  {
+    title: "הנשמה שחזרה",
+    text: "בא תלמיד ואמר: 'רבי, חלמתי שנשמתי יצאה ממני.' אמר הבעש\"ט: 'ומה הרגשת?' אמר: 'שלווה.' אמר: 'כך צריך אדם לחיות — כאילו נשמתו תצא בכל רגע, ואז כל רגע שלם. הפחד ממוות הוא שמונע מאתנו לחיות.'"
+  },
+  {
+    title: "המלמד ובנו",
+    text: "מלמד עני בא לבעש\"ט ואמר: 'בני חולה ואין לי כסף לרפא אותו.' אמר הבעש\"ט: 'לך ולמד עם ילדי ישראל בשמחה — זו התרופה.' הלך המלמד ולימד בשמחה כפולה. שבוע לאחר מכן חזר ואמר: 'בני נרפא.' אמר הבעש\"ט: 'שמחת מצווה היא סגולה לכל דבר.'"
+  },
+  {
+    title: "מסע הנשמות",
+    text: "אמר הבעש\"ט: 'כל נשמה יורדת לעולם הזה לתקן ניצוץ אחד. פעמים שהניצוץ הוא בחוצות השוק, ופעמים שהוא בבית מדרש. לכן אין לשפוט אדם לפי מקומו — שפוט לפי אם הוא מאיר.'"
+  },
+  {
+    title: "שלושת המחסומים",
+    text: "שאל תלמיד: 'רבי, כיצד יכול אדם פשוט לעמוד לפני המלך?' אמר הבעש\"ט: 'יש שלושה מחסומים: ספק, יאוש, וגאווה. כשתסיר אותם — לא יוותר שום מרחק בינך לבין הקב\"ה. האדם הפשוט הוא לפעמים הקרוב ביותר.'"
+  }
+];
+
+function updateMotzeiShabbatBtn() {
+  const btn = document.getElementById("btn-motzei-shabbat");
+  if (!btn) return;
+
+  let show = false;
+
+  if (_MOTZEI_DEMO_MODE) {
+    show = true;
+  } else {
+    const now = Date.now();
+    const tzeitMs = window.TZEIT_TIME ? window.TZEIT_TIME.getTime() : null;
+    const alotIso = window._lastZData && window._lastZData.times && window._lastZData.times.alotHaShachar;
+    const alotMs = alotIso ? new Date(alotIso).getTime() : null;
+
+    if (tzeitMs && now >= tzeitMs) {
+      const dow = new Date().getDay();
+      const wasShabbat = dow === 0;
+      const todayIso = new Date().toISOString().slice(0, 10);
+      const wasYomTov = (window.ALL_EVENTS || []).some(
+        (e) => e.type === "major" && e.date === todayIso
+      );
+      if (wasShabbat || wasYomTov) {
+        if (!alotMs || now < alotMs) {
+          show = true;
+        }
+      }
+    }
+  }
+
+  if (show) {
+    btn.classList.remove("hidden");
+    btn.classList.add("flex");
+    setTimeout(() => btn.classList.remove("opacity-0"), 50);
+  } else {
+    btn.classList.add("hidden");
+    btn.classList.remove("flex");
+    btn.classList.add("opacity-0");
+  }
+}
+
+function _getMotzeiOccasion() {
+  if (_MOTZEI_DEMO_MODE) return { type: "shabbat", name: "שבת" };
+
+  const dow = new Date().getDay();
+  if (dow === 0 || dow === 6) {
+    const tzeitMs = window.TZEIT_TIME ? window.TZEIT_TIME.getTime() : null;
+    if (dow === 6 && tzeitMs && Date.now() >= tzeitMs) return { type: "shabbat", name: "שבת" };
+    if (dow === 0) return { type: "shabbat", name: "שבת" };
+  }
+
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const todayEvent = (window.ALL_EVENTS || []).find(
+    (e) => e.type === "major" && e.date === todayIso
+  );
+  if (todayEvent) {
+    const n = (todayEvent.name || "") + (todayEvent.heb || "");
+    if (/כיפור|Kippur/i.test(n))                        return { type: "yomkippur", name: "יום הכיפורים" };
+    if (/ראש השנה|Rosh|Hashana/i.test(n))               return { type: "yomtov",    name: "ראש השנה" };
+    if (/סוכות|Sukkot/i.test(n))                        return { type: "yomtov",    name: "סוכות" };
+    if (/שמיני עצרת|שמחת תורה|Shmini|Simchat/i.test(n)) return { type: "yomtov",    name: "שמיני עצרת / שמחת תורה" };
+    if (/פסח|Passover|Pesach/i.test(n))                 return { type: "yomtov",    name: "פסח" };
+    if (/שבועות|Shavuot/i.test(n))                      return { type: "yomtov",    name: "שבועות" };
+    return { type: "yomtov", name: todayEvent.name || "יום טוב" };
+  }
+
+  return { type: "shabbat", name: "שבת" };
+}
+
+function openMotzeiShabbatModal(activeTab) {
+  const alreadyOpen = _motzeiShabbatModalOpen;
+  document.getElementById("motzei-shabbat-modal")?.remove();
+  _motzeiShabbatModalOpen = true;
+
+  const tab = activeTab || "havdalah";
+  const occasion  = _getMotzeiOccasion();
+  const isShabbat   = occasion.type === "shabbat";
+  const isYomKippur = occasion.type === "yomkippur";
+  const nusach = (typeof CURRENT_NUSACH !== "undefined" ? CURRENT_NUSACH : null) ||
+                 localStorage.getItem("nusach") || "mizrahi";
+  const isMizrahi = nusach === "mizrahi";
+
+  const story = BESHT_STORIES[Math.floor(Math.random() * BESHT_STORIES.length)];
+
+  const tabs = [
+    { id: "havdalah", label: "✡️ הבדלה" },
+    { id: "bracha",   label: "🍇 ברכה אחרונה" },
+    { id: "seuda4",   label: "🍞 סעודה רביעית" },
+    { id: "tefillah", label: "🙏 תפילה" },
+    { id: "besht",    label: "📖 בעש\"ט" }
+  ];
+
+  function tabBtn(id, label) {
+    const active = id === tab;
+    return `<button onclick="openMotzeiShabbatModal('${id}')" style="flex:1;padding:8px 4px;border:none;border-radius:10px;font-size:0.75rem;font-weight:700;cursor:pointer;transition:all .2s;background:${active ? "rgba(255,255,255,0.2)" : "transparent"};color:${active ? "#fff" : "rgba(255,255,255,0.5)"};">${label}</button>`;
+  }
+
+  function block(titleHtml, bodyHtml, accent) {
+    const bg = accent
+      ? "background:rgba(99,102,241,0.2);border:1px solid rgba(99,102,241,0.4);"
+      : "background:rgba(255,255,255,0.07);";
+    const titleColor = accent ? "#a5b4fc" : "#fbbf24";
+    return `<div style="${bg}border-radius:14px;padding:14px;margin-bottom:10px;">
+      <div style="font-size:0.7rem;color:${titleColor};font-weight:700;margin-bottom:8px;">${titleHtml}</div>
+      <p style="font-size:0.84rem;line-height:1.95;color:rgba(255,255,255,0.95);">${bodyHtml}</p>
+    </div>`;
+  }
+
+  function noteBox(text) {
+    return `<div style="background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.3);border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:0.72rem;color:rgba(251,191,36,0.85);line-height:1.7;">${text}</div>`;
+  }
+
+  // ── הבדלה — nusach-aware, occasion-aware ──────────────────────────────────
+  const titleLine = isShabbat
+    ? "סדר הבדלה — מוצאי שבת קודש"
+    : isYomKippur
+      ? "סדר הבדלה — מוצאי יום הכיפורים"
+      : `סדר הבדלה — מוצאי ${occasion.name}`;
+
+  const nusachLabel = (typeof NUSACH_LABELS !== "undefined" && NUSACH_LABELS[nusach])
+    ? NUSACH_LABELS[nusach] : nusach;
+
+  // Detect Rosh Chodesh
+  const _todayIsoH = new Date().toISOString().slice(0, 10);
+  const isRoshChodesh = (window.ALL_EVENTS || []).some(
+    e => e.date === _todayIsoH && /ראש חודש|Rosh Chodesh/i.test(e.name || e.heb || "")
+  );
+
+  let havdalahText = "";
+
+  if (isMizrahi) {
+    // ══ נוסח עדות המזרח ══
+    if (isShabbat) {
+      havdalahText +=
+        `רִאשׁוֹן לְצִיּוֹן הִנֵּה הִנָּם, וְלִירוּשָׁלַיִם מְבַשֵּׂר אֶתֵּן. אַל תִּשְׂמְחִי אֹיַבְתִּי לִי כִּי נָפַלְתִּי קָמְתִּי, כִּי אֵשֵׁב בַּחֹשֶׁךְ יְהֹוָה אוֹר לִי. לַיְּהוּדִים הָיְתָה אוֹרָה וְשִׂמְחָה וְשָׂשׂוֹן וִיקָר. וַיְהִי דָוִד לְכָל דְּרָכָו מַשְׂכִּיל וַיהֹוָה עִמּוֹ. וְנֹחַ מָצָא חֵן בְּעֵינֵי יְהֹוָה. כֵּן נִמְצָא חֵן וְתִמְצְאוּ חֵן וְשֵׂכֶל טוֹב בְּעֵינֵי אֱלֹהִים וְאָדָם.<br><br>` +
+        `קוּמִי אוֹרִי כִּי בָא אוֹרֵךְ, וּכְבוֹד יְהֹוָה עָלַיִךְ זָרָח. כִּי הִנֵּה הַחֹשֶׁךְ יְכַסֶּה אֶרֶץ וַעֲרָפֶל לְאֻמִּים, וְעָלַיִךְ יִזְרַח יְהֹוָה וּכְבוֹדוֹ עָלַיִךְ יֵרָאֶה.<br><br>` +
+        `כּוֹס יְשׁוּעוֹת אֶשָּׂא, וּבְשֵׁם יְהֹוָה אֶקְרָא.<br>` +
+        `אָנָּא יְהֹוָה הוֹשִׁיעָה נָּא. אָנָּא יְהֹוָה הַצְלִיחָה נָא.<br>` +
+        `הַצְלִיחֵנוּ, הַצְלִיחַ דְּרָכֵינוּ, הַצְלִיחַ לִמּוּדֵינוּ, וּשְׁלַח בְּרָכָה רְוָחָה וְהַצְלָחָה בְּכָל מַעֲשֵׂה יָדֵינוּ. לַיְּהוּדִים הָיְתָה אוֹרָה וְשִׂמְחָה וְשָׂשׂוֹן וִיקָר — כֵּן יִהְיֶה עִמָּנוּ.<br><br>` +
+        `סַבְרִי מָרָנָן וְרַבּוֹתַי — עוֹנִים: לְחַיִּים!<br><br>` +
+        `בָּרוּךְ אַתָּה יְהֹוָה אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, בּוֹרֵא פְּרִי הַגָּפֶן.<br><br>` +
+        `בָּרוּךְ אַתָּה יְהֹוָה אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, בּוֹרֵא עֲצֵי בְשָׂמִים.<br><span style="font-size:0.75rem;color:rgba(255,255,255,0.45);">(לחילופין: עִשְׂבֵּי בְשָׂמִים / מִינֵי בְשָׂמִים)</span><br><br>` +
+        `<span style="font-size:0.73rem;color:rgba(255,255,255,0.45);">יכוף ראשי אצבעותיו כלפי הנר, הגודל מכוסה תחת הארבע אצבעות (בא"ח ויצא ט"ו)</span><br>` +
+        `בָּרוּךְ אַתָּה יְהֹוָה אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, בּוֹרֵא מְאוֹרֵי הָאֵשׁ.<br><br>` +
+        `בָּרוּךְ אַתָּה יְהֹוָה אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, הַמַּבְדִּיל בֵּין קֹדֶשׁ לְחוֹל, וּבֵין אוֹר לְחֹשֶׁךְ, וּבֵין יִשְׂרָאֵל לָעַמִּים, וּבֵין יוֹם הַשְּׁבִיעִי לְשֵׁשֶׁת יְמֵי הַמַּעֲשֶׂה. בָּרוּךְ אַתָּה יְהֹוָה, הַמַּבְדִּיל בֵּין קֹדֶשׁ לְחוֹל.`;
+    } else if (isYomKippur) {
+      havdalahText +=
+        `סַבְרִי מָרָנָן וְרַבּוֹתַי — עוֹנִים: לְחַיִּים!<br><br>` +
+        `בָּרוּךְ אַתָּה יְהֹוָה אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, בּוֹרֵא פְּרִי הַגָּפֶן.<br><br>` +
+        `בָּרוּךְ אַתָּה יְהֹוָה אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, בּוֹרֵא מְאוֹרֵי הָאֵשׁ.<br><br>` +
+        `בָּרוּךְ אַתָּה יְהֹוָה אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, הַמַּבְדִּיל בֵּין קֹדֶשׁ לְחוֹל, וּבֵין אוֹר לְחֹשֶׁךְ, וּבֵין יִשְׂרָאֵל לָעַמִּים, וּבֵין יוֹם הַשְּׁבִיעִי לְשֵׁשֶׁת יְמֵי הַמַּעֲשֶׂה. בָּרוּךְ אַתָּה יְהֹוָה, הַמַּבְדִּיל בֵּין קֹדֶשׁ לְחוֹל.`;
+    } else {
+      havdalahText +=
+        `<span style="font-size:0.72rem;color:rgba(251,191,36,0.8);">⚠️ במוצאי יום טוב: אין מברכים על הבשמים ועל הנר.</span><br><br>` +
+        `סַבְרִי מָרָנָן וְרַבּוֹתַי — עוֹנִים: לְחַיִּים!<br><br>` +
+        `בָּרוּךְ אַתָּה יְהֹוָה אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, בּוֹרֵא פְּרִי הַגָּפֶן.<br><br>` +
+        `בָּרוּךְ אַתָּה יְהֹוָה אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, הַמַּבְדִּיל בֵּין קֹדֶשׁ לְחוֹל, וּבֵין אוֹר לְחֹשֶׁךְ, וּבֵין יִשְׂרָאֵל לָעַמִּים, וּבֵין יוֹם הַשְּׁבִיעִי לְשֵׁשֶׁת יְמֵי הַמַּעֲשֶׂה. בָּרוּךְ אַתָּה יְהֹוָה, הַמַּבְדִּיל בֵּין קֹדֶשׁ לְחוֹל.`;
+    }
+  } else {
+    // ══ נוסח ספרד / אשכנז ══
+    if (isShabbat) {
+      havdalahText +=
+        `הִנֵּה אֵל יְשׁוּעָתִי אֶבְטַח וְלֹא אֶפְחָד, כִּי עָזִּי וְזִמְרָת יָהּ יְהֹוָה, וַיְהִי לִי לִישׁוּעָה. וּשְׁאַבְתֶּם מַיִם בְּשָׂשׂוֹן מִמַּעַיְנֵי הַיְשׁוּעָה. לַיהֹוָה הַיְשׁוּעָה, עַל עַמְּךָ בִרְכָתֶךָ סֶּלָה. יְהֹוָה צְבָאוֹת עִמָּנוּ, מִשְׂגָּב לָנוּ אֱלֹהֵי יַעֲקֹב סֶּלָה. יְהֹוָה צְבָאוֹת, אַשְׁרֵי אָדָם בֹּטֵחַ בָּךְ. יְהֹוָה הוֹשִׁיעָה, הַמֶּלֶךְ יַעֲנֵנוּ בְיוֹם קָרְאֵנוּ. לַיְּהוּדִים הָיְתָה אוֹרָה וְשִׂמְחָה וְשָׂשׂוֹן וִיקָר — כֵּן תִּהְיֶה לָּנוּ. כּוֹס יְשׁוּעוֹת אֶשָּׂא, וּבְשֵׁם יְהֹוָה אֶקְרָא.<br><br>` +
+        `וְיִתֶּן לְךָ הָאֱלֹהִים מִטַּל הַשָּׁמַיִם וּמִשְׁמַנֵּי הָאָרֶץ, וְרֹב דָּגָן וְתִירֹשׁ. יַעַבְדוּךָ עַמִּים וְיִשְׁתַּחֲווּ לְךָ לְאֻמִּים. הֱוֵה גְבִיר לְאַחֶיךָ, וְיִשְׁתַּחֲווּ לְךָ בְּנֵי אִמֶּךָ. אוֹרְרֶיךָ אָרוּר, וּמְבָרֲכֶיךָ בָּרוּךְ. הִנֵּה אָנֹכִי שׁוֹלֵחַ מַלְאָךְ לְפָנֶיךָ לִשְׁמָרְךָ בַּדָּרֶךְ. כִּי מַלְאָכָיו יְצַוֶּה לָּךְ לִשְׁמָרְךָ בְּכָל דְּרָכֶיךָ.<br><br>` +
+        `סַבְרִי מָרָנָן וְרַבּוֹתַי — עוֹנִים: לְחַיִּים!<br><br>` +
+        `בָּרוּךְ אַתָּה יְהֹוָה אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, בּוֹרֵא פְּרִי הַגָּפֶן.<br><br>` +
+        `בָּרוּךְ אַתָּה יְהֹוָה אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, בּוֹרֵא מִינֵי בְשָׂמִים.<br><br>` +
+        `בָּרוּךְ אַתָּה יְהֹוָה אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, בּוֹרֵא מְאוֹרֵי הָאֵשׁ.<br><br>` +
+        `בָּרוּךְ אַתָּה יְהֹוָה אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, הַמַּבְדִּיל בֵּין קֹדֶשׁ לְחוֹל, בֵּין אוֹר לְחֹשֶׁךְ, בֵּין יִשְׂרָאֵל לָעַמִּים, בֵּין יוֹם הַשְּׁבִיעִי לְשֵׁשֶׁת יְמֵי הַמַּעֲשֶׂה. בָּרוּךְ אַתָּה יְהֹוָה, הַמַּבְדִּיל בֵּין קֹדֶשׁ לְחוֹל.`;
+    } else if (isYomKippur) {
+      havdalahText +=
+        `סַבְרִי מָרָנָן וְרַבּוֹתַי — עוֹנִים: לְחַיִּים!<br><br>` +
+        `בָּרוּךְ אַתָּה יְהֹוָה אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, בּוֹרֵא פְּרִי הַגָּפֶן.<br><br>` +
+        `בָּרוּךְ אַתָּה יְהֹוָה אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, בּוֹרֵא מְאוֹרֵי הָאֵשׁ.<br><br>` +
+        `בָּרוּךְ אַתָּה יְהֹוָה אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, הַמַּבְדִּיל בֵּין קֹדֶשׁ לְחוֹל, בֵּין אוֹר לְחֹשֶׁךְ, בֵּין יִשְׂרָאֵל לָעַמִּים, בֵּין יוֹם הַשְּׁבִיעִי לְשֵׁשֶׁת יְמֵי הַמַּעֲשֶׂה. בָּרוּךְ אַתָּה יְהֹוָה, הַמַּבְדִּיל בֵּין קֹדֶשׁ לְחוֹל.`;
+    } else {
+      havdalahText +=
+        `<span style="font-size:0.72rem;color:rgba(251,191,36,0.8);">⚠️ במוצאי יום טוב: אין מברכים על הבשמים ועל הנר.</span><br><br>` +
+        `סַבְרִי מָרָנָן וְרַבּוֹתַי — עוֹנִים: לְחַיִּים!<br><br>` +
+        `בָּרוּךְ אַתָּה יְהֹוָה אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, בּוֹרֵא פְּרִי הַגָּפֶן.<br><br>` +
+        `בָּרוּךְ אַתָּה יְהֹוָה אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, הַמַּבְדִּיל בֵּין קֹדֶשׁ לְחוֹל, בֵּין אוֹר לְחֹשֶׁךְ, בֵּין יִשְׂרָאֵל לָעַמִּים, בֵּין יוֹם הַשְּׁבִיעִי לְשֵׁשֶׁת יְמֵי הַמַּעֲשֶׂה. בָּרוּךְ אַתָּה יְהֹוָה, הַמַּבְדִּיל בֵּין קֹדֶשׁ לְחוֹל.`;
+    }
+  }
+
+  const havdalahHTML = `<div style="direction:rtl;text-align:right;">
+    <p style="font-size:0.75rem;color:rgba(255,255,255,0.5);margin-bottom:12px;line-height:1.6;text-align:center;">${titleLine}<br><span style="color:rgba(255,255,255,0.3);">נוסח: ${nusachLabel}</span></p>
+    <div style="background:rgba(255,255,255,0.07);border-radius:14px;padding:16px;margin-bottom:10px;">
+      <p style="font-size:0.84rem;line-height:2.1;color:rgba(255,255,255,0.95);">${havdalahText}</p>
+    </div>
+  </div>`;
+
+  // ── ברכה אחרונה — ברכת מעין שלוש ──────────────────────────────────────────
+  let brachaText = "";
+
+  if (isMizrahi) {
+    brachaText =
+      `בָּרוּךְ אַתָּה יְהֹוָה, אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם<br><br>` +
+      `עַל הַגֶּפֶן וְעַל פְּרִי הַגֶּפֶן<br><br>` +
+      `וְעַל תְּנוּבַת הַשָּׂדֶה, וְעַל אֶרֶץ חֶמְדָּה טוֹבָה וּרְחָבָה, שֶׁרָצִיתָ וְהִנְחַלְתָּ לַאֲבוֹתֵינוּ, לֶאֱכֹל מִפִּרְיָהּ וְלִשְׂבּוֹעַ מִטּוּבָהּ. רַחֵם יְהֹוָה אֱלֹהֵינוּ עָלֵינוּ וְעַל יִשְׂרָאֵל עַמָּךְ, וְעַל יְרוּשָׁלַיִם עִירָךְ, וְעַל הַר צִיּוֹן מִשְׁכַּן כְּבוֹדָךְ, וְעַל מִזְבָּחָךְ וְעַל הֵיכָלָךְ. וּבְנֵה יְרוּשָׁלַיִם עִיר הַקֹּדֶשׁ בִּמְהֵרָה בְיָמֵינוּ, וְהַעֲלֵנוּ לְתוֹכָהּ, וְשַׂמְּחֵנוּ בְּבִנְיָנָהּ, וּנְבָרְכָךְ עָלֶיהָ בִּקְדֻשָּׁה וּבְטָהֳרָה.` +
+      (isRoshChodesh ? `<br><br><span style="color:#fbbf24;">וְזָכְרֵנוּ לְטוֹבָה בְּיוֹם רֹאשׁ חֹדֶשׁ הַזֶּה.</span>` : ``) +
+      `<br><br>כִּי אַתָּה טוֹב וּמֵטִיב לַכֹּל, וְנוֹדֶה לְךָ עַל הָאָרֶץ<br><br>וְעַל פְּרִי הַגֶּפֶן<br><br>בָּרוּךְ אַתָּה יְהֹוָה, עַל הָאָרֶץ וְעַל פְּרִי הַגֶּפֶן.`;
+  } else {
+    // ספרד / אשכנז
+    brachaText =
+      `בָּרוּךְ אַתָּה יְהֹוָה אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, עַל הַגֶּפֶן וְעַל פְּרִי הַגֶּפֶן, וְעַל תְּנוּבַת הַשָּׂדֶה וְעַל אֶרֶץ חֶמְדָּה טוֹבָה וּרְחָבָה שֶׁרָצִיתָ וְהִנְחַלְתָּ לַאֲבוֹתֵינוּ לֶאֱכֹל מִפִּרְיָהּ וְלִשְׂבּוֹעַ מִטּוּבָהּ. רַחֵם נָא יְהֹוָה אֱלֹהֵינוּ עַל יִשְׂרָאֵל עַמֶּךָ וְעַל יְרוּשָׁלַיִם עִירֶךָ וְעַל צִיּוֹן מִשְׁכַּן כְּבוֹדֶךָ וְעַל מִזְבְּחֶךָ וְעַל הֵיכָלֶךָ. וּבְנֵה יְרוּשָׁלַיִם עִיר הַקֹּדֶשׁ בִּמְהֵרָה בְיָמֵינוּ וְהַעֲלֵנוּ לְתוֹכָהּ וְשַׂמְּחֵנוּ בְּבִנְיָנָהּ וְנֹאכַל מִפִּרְיָהּ וְנִשְׂבַּע מִטּוּבָהּ וּנְבָרֶכְךָ עָלֶיהָ בִּקְדֻשָּׁה וּבְטָהֳרָה.` +
+      (isRoshChodesh ? `<br><br><span style="color:#fbbf24;">וְזָכְרֵנוּ לְטוֹבָה בְּיוֹם רֹאשׁ חֹדֶשׁ הַזֶּה.</span>` : ``) +
+      `<br><br>כִּי אַתָּה יְהֹוָה טוֹב וּמֵטִיב לַכֹּל, וְנוֹדֶה לְּךָ עַל הָאָרֶץ וְעַל פְּרִי הַגָּפֶן. בָּרוּךְ אַתָּה יְהֹוָה, עַל הָאָרֶץ וְעַל פְּרִי הַגָּפֶן.`;
+  }
+
+  const brachaHTML = `<div style="direction:rtl;text-align:right;">
+    <p style="font-size:0.75rem;color:rgba(255,255,255,0.5);margin-bottom:12px;line-height:1.6;text-align:center;">ברכת מעין שלוש (על הגפן) — נאמרת לאחר שתיית יין או ענבים</p>
+    <div style="background:rgba(255,255,255,0.07);border-radius:14px;padding:16px;margin-bottom:10px;">
+      <p style="font-size:0.84rem;line-height:2.1;color:rgba(255,255,255,0.95);">${brachaText}</p>
+    </div>
+  </div>`;
+
+
+    // ── סעודה רביעית ────────────────────────────────────────────────────────────
+  const seuda4HTML = `<div style="direction:rtl;text-align:right;">
+    ${block("לשם יחוד — לפני הסעודה",
+      `לְשֵׁם יִחוּד קוּדְשָׁא בְּרִיךְ הוּא וּשְׁכִינְתֵּיהּ, בִּדְחִילוּ וּרְחִימוּ, וּרְחִימוּ וּדְחִילוּ, לְיַחֲדָא שֵׁם יוֹד הֵא בְּוָאו הֵא בְּיִחוּדָא שְׁלִים, בְּשֵׁם כָּל יִשְׂרָאֵל, הִנֵּה אֲנִי בָּא לִסְעוֹד סְעוּדָה רְבִיעִית שֶׁל שַׁבָּת, שֶׁהִיא סְעוּדַת דָּוִד הַמֶּלֶךְ עָלָיו הַשָּׁלוֹם, לְתַקֵּן אֶת שָׁרְשָׁהּ בְּמָקוֹם עֶלְיוֹן, וּלְהַמְשִׁיךְ עָלֶיהָ קְדֻשָּׁה מִקְדֻשַּׁת סְעוּדָה רִאשׁוֹנָה, שְׁנִיָּה וּשְׁלִישִׁית, וּלְגָרֵשׁ אֶת הַחִיצוֹנִים בְּכֹחַ הַשֵּׁם הַמְּרֻמָּז בְּרָאשֵׁי תֵבֹת: "אֱלֹהִים יְבָרְכֵנוּ וְיִירְאוּ אֹתוֹ כָּל אַפְסֵי אָרֶץ". וִיהִי רָצוֹן מִלְּפָנֶיךָ ה' אֱלֹהַי וֵאלֹהֵי אֲבוֹתַי, שֶׁיַּעֲלֶה לְפָנֶיךָ כְּאִלּוּ כִּוַּנְתִּי בְּכָל הַכַּוָּנוֹת שֶׁכִּוְּנוּ רַבּוֹתֵינוּ בִּסְעוּדָה זוֹ. וִיהִי נֹעַם אֲדֹנָי אֱלֹהֵינוּ עָלֵינוּ, וּמַעֲשֵׂה יָדֵינוּ כּוֹנְנָה עָלֵינוּ, וּמַעֲשֵׂה יָדֵינוּ כּוֹנְנֵהוּ.`
+    )}
+    <div style="background:rgba(255,255,255,0.07);border-radius:14px;padding:14px;margin-bottom:10px;">
+      <div style="font-size:0.7rem;color:#fbbf24;font-weight:700;margin-bottom:6px;">מלווה מלכה — סעודה רביעית</div>
+      <p style="font-size:0.8rem;line-height:1.8;color:rgba(255,255,255,0.8);">מנהג ישראל קדוש לאכול "מלווה מלכה" במוצאי שבת — לכבוד המלכה שבת, כשם שמלווים מלך היוצא. האכילה במוצאי שבת מסייעת לנשמה להיפרד בנחת.</p>
+    </div>
+    <div style="background:rgba(255,255,255,0.07);border-radius:14px;padding:14px;margin-bottom:10px;">
+      <div style="font-size:0.7rem;color:#fbbf24;font-weight:700;margin-bottom:8px;">המבדיל</div>
+      <p style="font-size:0.85rem;line-height:2.1;color:rgba(255,255,255,0.95);">הַמַּבְדִּיל בֵּין קֹדֶשׁ לְחֹל, חַטֹּאתֵינוּ הוּא יִמְחֹל,<br>זַרְעֵנוּ וְכַסְפֵּנוּ יַרְבֶּה כַחוֹל, וְכַכּוֹכָבִים בַּלָּיְלָה.<br><br>שָׁבוּעַ טוֹב! 🌟</p>
+    </div>
+    <div style="background:rgba(255,255,255,0.07);border-radius:14px;padding:14px;margin-bottom:14px;">
+      <div style="font-size:0.7rem;color:#fbbf24;font-weight:700;margin-bottom:8px;">אליהו הנביא</div>
+      <p style="font-size:0.85rem;line-height:2.1;color:rgba(255,255,255,0.95);">אֵלִיָּהוּ הַנָּבִיא, אֵלִיָּהוּ הַתִּשְׁבִּי,<br>אֵלִיָּהוּ הַגִּלְעָדִי —<br>בִּמְהֵרָה בְּיָמֵינוּ יָבֹא אֵלֵינוּ,<br>עִם מָשִׁיחַ בֶּן דָּוִד. 🕊️</p>
+    </div>
+    <div style="display:flex;gap:10px;margin-bottom:10px;">
+      <button onclick="_motzeiShabbatModalOpen=false;document.getElementById('motzei-shabbat-modal').remove();unlockBodyScroll();openPrayer('birkat-hamazon','ברכת המזון','Birkat Hamazon')"
+        style="flex:1;padding:12px 8px;border:none;border-radius:14px;background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;font-size:0.82rem;font-weight:800;cursor:pointer;">
+        🍞 ברכת המזון
+      </button>
+      <button onclick="_motzeiShabbatModalOpen=false;document.getElementById('motzei-shabbat-modal').remove();unlockBodyScroll();openPrayer('al-hamichya','ברכת מעין שלוש','Al HaMichya')"
+        style="flex:1;padding:12px 8px;border:none;border-radius:14px;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;font-size:0.82rem;font-weight:800;cursor:pointer;">
+        🍇 ברכת מעין שלוש
+      </button>
+    </div>
+  </div>`;
+
+  // ── תפילה ────────────────────────────────────────────────────────────────────
+  const tefillahHTML = `<div style="direction:rtl;text-align:right;">
+    ${block(
+      "תפילה למוצאי שבת — רבי לוי יצחק מברדיטשוב זצ\"ל",
+      `אֱלֹהֵי אַבְרָהָם, אֱלֹהֵי יִצְחָק וֵאלֹהֵי יַעֲקֹב, שְׁמֹר וְהַצֵּל אֶת עַמְּךָ יִשְׂרָאֵל אֲהוּבֶיךָ מִכָּל רָע, לְמַעַן שֵׁם תְּהִלָּתֶךָ. הִנֵּה שַׁבָּת קֹדֶשׁ הָאֲהוּבָה עוֹבֶרֶת.<br><br>וִיהִי רָצוֹן מִלְּפָנֶיךָ, שֶׁיָּבוֹא עָלֵינוּ הַשָּׁבוּעַ הַבָּא לֶאֱמוּנָה שְׁלֵמָה, לֶאֱמוּנַת חֲכָמִים, לְאַהֲבַת חֲבֵרִים, לִדְבֵקוּת הַבּוֹרֵא בָּרוּךְ הוּא, לְהַאֲמִין בִּשְׁלשָׁה עָשָׂר עִקָּרִים שֶׁלָּךְ, וּבִגְאוּלָה קְרוֹבָה בִּמְהֵרָה בְיָמֵינוּ, וּבִתְחִיַּת הַמֵּתִים, וּבִנְבוּאַת מֹשֶׁה רַבֵּנוּ עָלָיו הַשָּׁלוֹם.<br><br>רִבּוֹנוֹ שֶׁל עוֹלָם, אַתָּה הַנּוֹתֵן לַיָּעֵף כֹּחַ, תֵּן כֹּחַ גַּם לִילָדֶיךָ רְחוּמֶיךָ הַיְּהוּדִים, לְהַלֵּל שִׁמְךָ וְלַעֲבֹד אוֹתְךָ לְבַדֶּךָ. וְהַשָּׁבוּעַ הַבָּא, יָבוֹא עָלֵינוּ לִבְרִיאוּת וּלְמַזָּל, וּלְהַצְלָחָה וְלִבְרָכָה וּלְחֶסֶד, וּלְבָנֵי חַיֵּי וּמְזוֹנֵי, לָנוּ וּלְכָל יִשְׂרָאֵל, וְנֹאמַר אָמֵן.`,
+      true
+    )}
+  </div>`;
+
+  // ── בעש"ט ──────────────────────────────────────────────────────────────────
+  const beshtHTML = `<div style="direction:rtl;text-align:right;">
+    <div style="background:rgba(255,255,255,0.07);border-radius:14px;padding:16px;margin-bottom:12px;">
+      <div style="font-size:0.78rem;color:#fbbf24;font-weight:800;margin-bottom:10px;">✨ ${story.title}</div>
+      <p style="font-size:0.82rem;line-height:1.9;color:rgba(255,255,255,0.9);">${story.text}</p>
+    </div>
+    <button onclick="openMotzeiShabbatModal('besht')" style="width:100%;padding:10px;border:1px solid rgba(255,255,255,0.15);border-radius:12px;background:transparent;color:rgba(255,255,255,0.55);font-size:0.8rem;font-weight:700;cursor:pointer;transition:all .2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='transparent'">🔄 סיפור אחר</button>
+  </div>`;
+
+  const contentMap = {
+    havdalah: havdalahHTML,
+    bracha:   brachaHTML,
+    seuda4:   seuda4HTML,
+    tefillah: tefillahHTML,
+    besht:    beshtHTML
+  };
+
+  const overlay = document.createElement("div");
+  overlay.id = "motzei-shabbat-modal";
+  overlay.style.cssText = "position:fixed;inset:0;z-index:500;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);";
+
+  overlay.innerHTML = `
+    <div style="background:linear-gradient(160deg,#1a1f3a,#0f1628);border:1px solid rgba(255,255,255,0.1);border-radius:24px 24px 0 0;padding:20px 20px 36px;width:100%;max-width:480px;max-height:82vh;overflow-y:auto;color:#fff;box-shadow:0 -20px 60px rgba(0,0,0,0.5);position:relative;">
+      <button onclick="_motzeiShabbatModalOpen=false;document.getElementById('motzei-shabbat-modal').remove();unlockBodyScroll();"
+        style="position:absolute;top:14px;left:16px;background:rgba(255,255,255,0.1);border:none;color:rgba(255,255,255,0.7);font-size:1.2rem;cursor:pointer;border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;" aria-label="סגור">×</button>
+      <div style="text-align:center;margin-bottom:16px;padding-top:4px;">
+        <div style="font-size:1.4rem;margin-bottom:4px;">✨</div>
+        <div style="font-size:1.05rem;font-weight:800;color:#fde68a;">סדר מוצאי שבת וחג</div>
+      </div>
+      <div style="display:flex;gap:4px;background:rgba(255,255,255,0.07);padding:4px;border-radius:12px;margin-bottom:16px;">
+        ${tabs.map(t => tabBtn(t.id, t.label)).join("")}
+      </div>
+      <div id="motzei-tab-content">
+        ${contentMap[tab] || ""}
+      </div>
+    </div>`;
+
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) {
+      _motzeiShabbatModalOpen = false;
+      overlay.remove();
+      unlockBodyScroll();
+    }
+  });
+
+  document.body.appendChild(overlay);
+
+  if (!alreadyOpen) {
+    pushModalState("motzei-shabbat-modal");
+    lockBodyScroll();
+  }
 }
 
 // ═══════════════════════════════════════════════════════
@@ -13790,6 +14167,7 @@ window.showDashboard = function () {
   setTimeout(() => {
     startShabbatCountdown();
     if (CURRENT_OMER_DAY > 0) updateOmerRing(CURRENT_OMER_DAY);
+    updateMotzeiShabbatBtn();
   }, 600);
 };
 

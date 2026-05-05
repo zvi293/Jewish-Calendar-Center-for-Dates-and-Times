@@ -652,3 +652,41 @@
       ::-webkit-scrollbar-track { background: transparent; }
       ::-webkit-scrollbar-thumb { background: rgba(148,163,184,0.3); border-radius: 3px; }
       ::-webkit-scrollbar-thumb:hover { background: rgba(148,163,184,0.5); }
+
+      /* ── Theme circle (settings panel) ── */
+      .theme-circle {
+        cursor: pointer;
+        position: relative;
+      }
+      .theme-circle.theme-circle-active {
+        border-color: #2563eb !important;
+        box-shadow: 0 0 0 3px rgba(37,99,235,0.35), 0 4px 14px rgba(37,99,235,0.25);
+        transform: scale(1.08);
+      }
+
+      /* ── Contact-modal copy toast animation ── */
+      @keyframes fadeInOut {
+        0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.92); }
+        15%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        85%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        100% { opacity: 0; transform: translate(-50%, -50%) scale(0.92); }
+      }
+
+      /* ── Theme circle (settings panel) ── */
+      .theme-circle {
+        cursor: pointer;
+        position: relative;
+      }
+      .theme-circle.theme-circle-active {
+        border-color: #2563eb !important;
+        box-shadow: 0 0 0 3px rgba(37,99,235,0.35), 0 4px 14px rgba(37,99,235,0.25);
+        transform: scale(1.08);
+      }
+
+      /* ── Contact-modal copy toast animation ── */
+      @keyframes fadeInOut {
+        0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.92); }
+        15%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        85%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        100% { opacity: 0; transform: translate(-50%, -50%) scale(0.92); }
+      }

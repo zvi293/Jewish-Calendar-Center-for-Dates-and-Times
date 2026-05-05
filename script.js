@@ -671,7 +671,7 @@ let ZMANIM_METHOD = localStorage.getItem("moadim_method") || "MGA";
 let GPS_COORDS = JSON.parse(localStorage.getItem("moadim_gps")) || null;
 let compassListener = null;
 let CALENDAR_DISPLAY_DATE = new Date();
-let CURRENT_THEME = ["light", "blue"].includes(
+let CURRENT_THEME = ["light", "dark", "blue"].includes(
   localStorage.getItem("moadim_theme"),
 )
   ? localStorage.getItem("moadim_theme")
@@ -871,51 +871,70 @@ function updateCompassDirectionLabels() {
 function applyTheme(theme) {
   const html = document.documentElement;
   const header = document.getElementById("hero-section");
-  const iconMoon = document.getElementById("theme-icon-moon");
-  const iconSun = document.getElementById("theme-icon-sun");
-  const iconWave = document.getElementById("theme-icon-wave");
   const glowWrap = header
     ? header.querySelector(".absolute.inset-0.z-0")
     : null;
   const wavePath = document.querySelector(".wave-divider path");
   const themeMetaTag = document.querySelector('meta[name="theme-color"]');
-  const nextTheme = theme === "blue" ? "blue" : "light";
+  let nextTheme;
+  if (theme === "blue") nextTheme = "blue";
+  else if (theme === "dark") nextTheme = "dark";
+  else nextTheme = "light";
 
-  // Hide all icons
-  [iconMoon, iconSun, iconWave].forEach(
-    (el) => el && el.classList.add("hidden"),
-  );
   CURRENT_THEME = nextTheme;
   localStorage.setItem("moadim_theme", nextTheme);
   html.classList.remove("dark");
+  html.classList.remove("theme-blue");
 
   if (nextTheme === "blue") {
     html.classList.add("theme-blue");
-    header.classList.remove("gradient-bg");
-    header.classList.add("bg-ocean-readable");
+    if (header) {
+      header.classList.remove("gradient-bg");
+      header.classList.add("bg-ocean-readable");
+    }
     // CSS rule `.bg-ocean-readable #stars-canvas { opacity:0 }` hides stars automatically
     if (glowWrap) glowWrap.style.opacity = "0";
     if (wavePath) wavePath.style.fill = "rgb(248 250 252)";
     if (themeMetaTag) themeMetaTag.content = "#0284c7";
-    if (iconMoon) iconMoon.classList.remove("hidden");
+  } else if (nextTheme === "dark") {
+    html.classList.add("dark");
+    if (header) {
+      header.classList.remove("bg-ocean-readable");
+      header.classList.add("gradient-bg");
+    }
+    if (glowWrap) glowWrap.style.opacity = "1";
+    if (wavePath) wavePath.style.fill = "rgb(15 23 42)";
+    if (themeMetaTag) themeMetaTag.content = "#0f172a";
   } else {
     // light — default stars background
-    html.classList.remove("theme-blue");
-    header.classList.remove("bg-ocean-readable");
-    header.classList.add("gradient-bg");
+    if (header) {
+      header.classList.remove("bg-ocean-readable");
+      header.classList.add("gradient-bg");
+    }
     if (glowWrap) glowWrap.style.opacity = "1";
     if (wavePath) wavePath.style.fill = "rgb(248 250 252)";
     if (themeMetaTag) themeMetaTag.content = "#0f172a";
-    if (iconWave) iconWave.classList.remove("hidden");
   }
+
+  // Highlight the active theme circle in the settings panel
+  ["light", "dark", "blue"].forEach((t) => {
+    const el = document.getElementById("theme-circle-" + t);
+    if (!el) return;
+    if (t === nextTheme) {
+      el.classList.add("theme-circle-active");
+    } else {
+      el.classList.remove("theme-circle-active");
+    }
+  });
 }
 
 function toggleTheme() {
-  if (CURRENT_THEME === "light") CURRENT_THEME = "blue";
-  else CURRENT_THEME = "light";
-
-  localStorage.setItem("moadim_theme", CURRENT_THEME);
-  applyTheme(CURRENT_THEME);
+  // Cycle: light -> dark -> blue -> light
+  let next;
+  if (CURRENT_THEME === "light") next = "dark";
+  else if (CURRENT_THEME === "dark") next = "blue";
+  else next = "light";
+  applyTheme(next);
 }
 
 function initApp() {
@@ -5110,7 +5129,33 @@ function getNotifStatusLabel(enabled) {
   return enabled ? "פעיל" : "כבוי";
 }
 
+// ── OneSignal helpers ──
+// Considered "ready" only when init() actually completed successfully.
+// The window.OneSignalReady flag is set true in index.html after init.
+function isOneSignalReady() {
+  return (
+    typeof window !== "undefined" &&
+    window.OneSignalReady === true &&
+    window.OneSignal &&
+    window.OneSignal.User &&
+    window.OneSignal.User.PushSubscription
+  );
+}
+
+function isOneSignalSubscribed() {
+  try {
+    if (!isOneSignalReady()) return false;
+    return !!window.OneSignal.User.PushSubscription.optedIn;
+  } catch (e) {
+    return false;
+  }
+}
+
 function isNotifMasterActive() {
+  // OneSignal is the source of truth when ready; fall back to legacy check otherwise.
+  if (isOneSignalReady()) {
+    return getNotifMasterPreference() && isOneSignalSubscribed();
+  }
   return (
     getNotifMasterPreference() &&
     "Notification" in window &&
@@ -5119,8 +5164,16 @@ function isNotifMasterActive() {
 }
 
 function toggleNotificationsMaster() {
+  // If currently active → opt out of OneSignal and disable.
   if (isNotifMasterActive()) {
     setNotifMasterPreference(false);
+    if (isOneSignalReady()) {
+      try {
+        window.OneSignal.User.PushSubscription.optOut();
+      } catch (e) {
+        console.warn("[OneSignal] optOut failed:", e);
+      }
+    }
     updateNotifStatusUI();
     return;
   }
@@ -5129,12 +5182,6 @@ function toggleNotificationsMaster() {
     setNotifMasterPreference(false);
     updateNotifStatusUI();
     alert("הדפדפן שלך אינו תומך בהתראות פוש.");
-    return;
-  }
-
-  if (Notification.permission === "granted") {
-    setNotifMasterPreference(true);
-    updateNotifStatusUI();
     return;
   }
 
@@ -5155,17 +5202,63 @@ function requestNotificationPermission() {
     alert("הדפדפן שלך אינו תומך בהתראות פוש.");
     return;
   }
-  Notification.requestPermission().then((permission) => {
-    setNotifMasterPreference(permission === "granted");
-    updateNotifStatusUI();
-    if (permission === "granted") {
-      new Notification(SITE_NAME, {
-        body: "התראות זמנים הופעלו בהצלחה!",
-        icon: "/icon-192.png",
+
+  // Prefer OneSignal flow (handles permission prompt + push subscription).
+  const useOneSignal = () => {
+    try {
+      window.OneSignalDeferred = window.OneSignalDeferred || [];
+      window.OneSignalDeferred.push(async function (OneSignal) {
+        try {
+          await OneSignal.User.PushSubscription.optIn();
+          const subscribed = !!OneSignal.User.PushSubscription.optedIn;
+          setNotifMasterPreference(subscribed);
+          updateNotifStatusUI();
+          if (subscribed && Notification.permission === "granted") {
+            try {
+              new Notification(SITE_NAME, {
+                body: "התראות זמנים הופעלו בהצלחה!",
+                icon: "/icon-192.png",
+              });
+            } catch (e) {}
+          }
+        } catch (err) {
+          console.warn("[OneSignal] optIn failed, falling back:", err);
+          fallbackBrowserPermission();
+        }
       });
+    } catch (e) {
+      console.warn("[OneSignal] deferred enqueue failed:", e);
+      fallbackBrowserPermission();
     }
-  });
+  };
+
+  const fallbackBrowserPermission = () => {
+    Notification.requestPermission().then((permission) => {
+      setNotifMasterPreference(permission === "granted");
+      updateNotifStatusUI();
+      if (permission === "granted") {
+        try {
+          new Notification(SITE_NAME, {
+            body: "התראות זמנים הופעלו בהצלחה!",
+            icon: "/icon-192.png",
+          });
+        } catch (e) {}
+      }
+    });
+  };
+
+  // Only route through OneSignal if init() actually succeeded.
+  // If init failed (or hasn't completed), fall back to the native API
+  // immediately so we keep the user-gesture context for permission prompt.
+  if (typeof window !== "undefined" && window.OneSignalReady === true) {
+    useOneSignal();
+  } else {
+    fallbackBrowserPermission();
+  }
 }
+
+// Expose for OneSignal init callback
+window.updateNotifStatusUI = updateNotifStatusUI;
 
 function updateNotifStatusUI() {
   const enabled = isNotifMasterActive();
@@ -15351,16 +15444,74 @@ window.showContactModal = function () {
               ראיתם משהו חסר או רוצים לפנות אלינו?<br>
               <span style="color:#64748b;font-size:0.85rem;">לחצו על כתובת המייל ושלחו לנו הודעה — נשמח לשמוע ממכם.</span>
             </p>
-            <a href="mailto:nzweb295@gmail.com" style="display:inline-flex;align-items:center;justify-content:center;gap:0.5rem;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;text-decoration:none;font-weight:800;padding:0.85rem 1.5rem;border-radius:1rem;font-size:1rem;box-shadow:0 8px 20px rgba(99,102,241,0.3);transition:transform 0.15s;direction:ltr;" onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform='scale(1)'">
-              <span style="font-size:1.1rem;">📧</span>
-              <span>nzweb295@gmail.com</span>
+            <div style="display:flex;align-items:center;justify-content:center;gap:0.5rem;flex-wrap:wrap;">
+              <a href="mailto:nzweb295@gmail.com" style="display:inline-flex;align-items:center;justify-content:center;gap:0.5rem;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;text-decoration:none;font-weight:800;padding:0.85rem 1.5rem;border-radius:1rem;font-size:1rem;box-shadow:0 8px 20px rgba(99,102,241,0.3);transition:transform 0.15s;direction:ltr;" onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform='scale(1)'">
+                <span style="font-size:1.1rem;">📧</span>
+                <span>nzweb295@gmail.com</span>
+              </a>
+              <button type="button" onclick="copyContactEmail(this)" aria-label="העתק כתובת מייל" title="העתק כתובת מייל" style="display:inline-flex;align-items:center;justify-content:center;background:#f1f5f9;border:1px solid #cbd5e1;color:#475569;width:48px;height:48px;border-radius:1rem;cursor:pointer;transition:all 0.15s;box-shadow:0 4px 12px rgba(0,0,0,0.06);" onmouseover="this.style.background='#e2e8f0';this.style.transform='scale(1.05)'" onmouseout="this.style.background='#f1f5f9';this.style.transform='scale(1)'">
+                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                  <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"></path>
+                </svg>
+              </button>
+            </div>
+            <p style="color:#94a3b8;font-size:0.72rem;margin:1rem 0 1rem;">לחיצה על הכתובת תפתח את אפליקציית המייל שלכם</p>
+            <a href="https://www.paypal.com/donate/?hosted_button_id=88H6AJG95Y3PQ" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;justify-content:center;gap:0.5rem;background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#1a1a1a;text-decoration:none;font-weight:800;padding:0.85rem 1.8rem;border-radius:1rem;font-size:1rem;box-shadow:0 8px 20px rgba(251,191,36,0.35);transition:transform 0.15s;" onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform='scale(1)'">
+              <span style="font-size:1.1rem;">💛</span>
+              <span>תרומה ב-PayPal</span>
             </a>
-            <p style="color:#94a3b8;font-size:0.72rem;margin:1rem 0 0;">לחיצה על הכתובת תפתח את אפליקציית המייל שלכם</p>
+            <p style="color:#94a3b8;font-size:0.72rem;margin:0.7rem 0 0;">לחיצה על הכפתור תפתח את דף התרומה ב-PayPal</p>
           </div>`;
   overlay.addEventListener("click", (event) => {
     if (event.target === overlay) overlay.remove();
   });
   document.body.appendChild(overlay);
+};
+
+window.copyContactEmail = function (btn) {
+  const email = "nzweb295@gmail.com";
+  const showToast = () => {
+    let toast = document.getElementById("contact-copy-toast");
+    if (toast) toast.remove();
+    toast = document.createElement("div");
+    toast.id = "contact-copy-toast";
+    toast.textContent = "✓ הכתובת הועתקה ללוח";
+    toast.style.cssText =
+      "position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9999;background:#16a34a;color:white;font-weight:700;padding:0.85rem 1.5rem;border-radius:1rem;box-shadow:0 10px 30px rgba(0,0,0,0.25);font-size:0.95rem;direction:rtl;animation:fadeInOut 1.6s ease forwards;";
+    document.body.appendChild(toast);
+    setTimeout(() => {
+      if (toast && toast.parentNode) toast.remove();
+    }, 1600);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(email).then(showToast, () => {
+      // Fallback
+      const ta = document.createElement("textarea");
+      ta.value = email;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        document.execCommand("copy");
+      } catch (e) {}
+      document.body.removeChild(ta);
+      showToast();
+    });
+  } else {
+    const ta = document.createElement("textarea");
+    ta.value = email;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+      document.execCommand("copy");
+    } catch (e) {}
+    document.body.removeChild(ta);
+    showToast();
+  }
 };
 
 openPrayer = async function (key, heLabel, enLabel) {
@@ -19972,7 +20123,6 @@ function openGlobalSmartSearch() {
     }
   }, 50);
 }
-
 function closeSefarimNosafimModal() {
   var el = document.getElementById("sn-modal");
   if (el) el.remove();

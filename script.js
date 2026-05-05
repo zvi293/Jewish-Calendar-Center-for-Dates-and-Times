@@ -5147,7 +5147,7 @@ function startShabbatCountdown() {
 // ═══════════════════════════════════════════════════════
 
 // Set to false to enable real calendar-based visibility logic
-const _MOTZEI_DEMO_MODE = true;
+const _MOTZEI_DEMO_MODE = false;
 
 // Tracks whether modal is open — prevents scroll-lock accumulation on tab switches
 let _motzeiShabbatModalOpen = false;

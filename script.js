@@ -18885,7 +18885,7 @@ function openSefarimNosafimPage() {
       creditUrl:"https://www.sefaria.org/Shulchan_Arukh",
       type:"multi",
       subBooks:[
-        {id:"oc",he:"אורח חיים", sections:secs(697,function(i){return "סימן "+toHN(i);},function(i){return "Shulchan_Arukh,_Orach_Chaim."+i;})},
+        {id:"oc",he:"אורח חיים", sections:secs(697,function(i){return "סימן "+toHN(i);},function(i){return "Shulchan_Arukh,_Orach_Chayim."+i;})},
         {id:"yd",he:"יורה דעה",  sections:secs(403,function(i){return "סימן "+toHN(i);},function(i){return "Shulchan_Arukh,_Yoreh_Deah."+i;})},
         {id:"eh",he:"אבן העזר",  sections:secs(178,function(i){return "סימן "+toHN(i);},function(i){return "Shulchan_Arukh,_Even_HaEzer."+i;})},
         {id:"cm",he:"חושן משפט", sections:secs(427,function(i){return "סימן "+toHN(i);},function(i){return "Shulchan_Arukh,_Choshen_Mishpat."+i;})}
@@ -19619,3 +19619,4 @@ function closeSefarimNosafimModal() {
   }
   if (steps > 0) history.go(-steps);
 }
+

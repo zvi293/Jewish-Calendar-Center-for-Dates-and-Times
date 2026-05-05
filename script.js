@@ -595,6 +595,7 @@ window.addEventListener("popstate", function (e) {
     if (
       modalId === "prayer-modal" ||
       modalId === "tehillim-modal" ||
+      modalId === "ben-ish-hai-modal" ||
       modalId === "calendar-day-modal" ||
       modalId === "zman-opinions-modal"
     ) {
@@ -13845,6 +13846,282 @@ function closeTehillimModal() {
   if (el) el.remove();
   unlockBodyScroll();
   if (_activeModals[_activeModals.length - 1] === "tehillim-modal") {
+    _activeModals.pop();
+    history.back();
+  }
+}
+
+// ── Dedicated Ben Ish Hai Page ────────────────────────────
+function openBenIshHaiPage() {
+  // Exact Sefaria keys per year (the two years have different parsha groupings)
+  const YEARS = [
+    {
+      he: "שנה ראשונה",
+      en: "Halachot 1st Year",
+      color: "#6366f1",
+      parshiyot: [
+        { he: "בראשית",         en: "Bereshit" },
+        { he: "נח",              en: "Noach" },
+        { he: "לך לך",           en: "Lech Lecha" },
+        { he: "וירא",            en: "Vayera" },
+        { he: "חיי שרה",         en: "Chayei Sara" },
+        { he: "תולדות",          en: "Toldot" },
+        { he: "ויצא",            en: "Vayetzei" },
+        { he: "וישלח",           en: "Vayishlach" },
+        { he: "וישב",            en: "Vayeshev" },
+        { he: "חנוכה",           en: "Chanukah" },
+        { he: "מקץ",             en: "Miketz" },
+        { he: "ויגש",            en: "Vayigash" },
+        { he: "ויחי",            en: "Vayechi" },
+        { he: "שמות",            en: "Shemot" },
+        { he: "וארא",            en: "Vaera" },
+        { he: "בא",              en: "Bo" },
+        { he: "בשלח",            en: "Beshalach" },
+        { he: "יתרו",            en: "Yitro" },
+        { he: "משפטים",          en: "Mishpatim" },
+        { he: "תרומה",           en: "Terumah" },
+        { he: "תצוה",            en: "Tetzaveh" },
+        { he: "כי תשא",          en: "Ki Tisa" },
+        { he: "ויקהל",           en: "Vayakhel" },
+        { he: "פקודי",           en: "Pekudei" },
+        { he: "ויקרא",           en: "Vayikra" },
+        { he: "צו",              en: "Tzav" },
+        { he: "שמיני",           en: "Shmini" },
+        { he: "תזריע-מצורע",     en: "Tazria Metzora" },
+        { he: "אחרי-קדושים",     en: "Achrei Mot Kedoshim" },
+        { he: "אמור",            en: "Emor" },
+        { he: "בהר-בחקותי",      en: "Behar Bechukotai" },
+        { he: "במדבר",           en: "Bamidbar" },
+        { he: "נשא",             en: "Nasso" },
+        { he: "בהעלותך",         en: "Beha'alotcha" },
+        { he: "שלח",             en: "Sh'lach" },
+        { he: "קרח",             en: "Korach" },
+        { he: "חקת",             en: "Chukat" },
+        { he: "בלק",             en: "Balak" },
+        { he: "פינחס",           en: "Pinchas" },
+        { he: "מטות",            en: "Matot" },
+        { he: "מסעי",            en: "Masei" },
+        { he: "דברים",           en: "Devarim" },
+        { he: "ואתחנן",          en: "Vaetchanan" },
+        { he: "עקב",             en: "Eikev" },
+        { he: "ראה",             en: "Re'eh" },
+        { he: "שופטים",          en: "Shoftim" },
+        { he: "כי תצא",          en: "Ki Teitzei" },
+        { he: "כי תבוא",         en: "Ki Tavo" },
+        { he: "נצבים",           en: "Nitzavim" },
+        { he: "וילך",            en: "Vayeilech" },
+        { he: "האזינו",          en: "Ha'Azinu" },
+        { he: "וזאת הברכה",      en: "V'Zot HaBerachah" },
+      ],
+    },
+    {
+      he: "שנה שניה",
+      en: "Halachot 2nd Year",
+      color: "#f59e0b",
+      parshiyot: [
+        { he: "בראשית",         en: "Bereshit" },
+        { he: "נח",              en: "Noach" },
+        { he: "לך לך",           en: "Lech Lecha" },
+        { he: "וירא",            en: "Vayera" },
+        { he: "חיי שרה",         en: "Chayei Sara" },
+        { he: "תולדות",          en: "Toldot" },
+        { he: "ויצא",            en: "Vayetzei" },
+        { he: "וישלח",           en: "Vayishlach" },
+        { he: "וישב",            en: "Vayeshev" },
+        { he: "מקץ",             en: "Miketz" },
+        { he: "ויגש",            en: "Vayigash" },
+        { he: "ויחי",            en: "Vayechi" },
+        { he: "שמות",            en: "Shemot" },
+        { he: "וארא",            en: "Vaera" },
+        { he: "בא",              en: "Bo" },
+        { he: "בשלח",            en: "Beshalach" },
+        { he: "יתרו",            en: "Yitro" },
+        { he: "משפטים",          en: "Mishpatim" },
+        { he: "תרומה",           en: "Terumah" },
+        { he: "תצוה",            en: "Tetzaveh" },
+        { he: "כי תשא",          en: "Ki Tisa" },
+        { he: "ויקהל",           en: "Vayakhel" },
+        { he: "פקודי",           en: "Pekudei" },
+        { he: "ויקרא",           en: "Vayikra" },
+        { he: "צו",              en: "Tzav" },
+        { he: "שמיני",           en: "Shmini" },
+        { he: "תזריע",           en: "Tazria" },
+        { he: "מצורע",           en: "Metzora" },
+        { he: "אחרי מות",        en: "Achrei Mot" },
+        { he: "קדושים",          en: "Kedoshim" },
+        { he: "אמור",            en: "Emor" },
+        { he: "בהר-בחקותי",      en: "Behar Bechukotai" },
+        { he: "נשא",             en: "Nasso" },
+        { he: "בהעלותך",         en: "Beha'alotcha" },
+        { he: "שלח",             en: "Sh'lach" },
+        { he: "קרח",             en: "Korach" },
+        { he: "חקת",             en: "Chukat" },
+        { he: "בלק",             en: "Balak" },
+        { he: "פינחס",           en: "Pinchas" },
+        { he: "מטות",            en: "Matot" },
+        { he: "מסעי",            en: "Masei" },
+        { he: "ואתחנן",          en: "Vaetchanan" },
+        { he: "עקב",             en: "Eikev" },
+        { he: "ראה",             en: "Re'eh" },
+        { he: "שופטים",          en: "Shoftim" },
+        { he: "כי תצא",          en: "Ki Teitzei" },
+        { he: "כי תבוא",         en: "Ki Tavo" },
+      ],
+    },
+  ];
+
+  let activeYearIdx = 0;
+
+  let existing = document.getElementById("ben-ish-hai-modal");
+  if (existing) existing.remove();
+
+  const modal = document.createElement("div");
+  modal.id = "ben-ish-hai-modal";
+  modal.style.cssText =
+    "position:fixed;inset:0;z-index:200;background:rgba(2,6,23,0.95);backdrop-filter:blur(8px);display:flex;flex-direction:column;overflow:hidden;";
+
+  function buildPage(yearIdx) {
+    activeYearIdx = yearIdx;
+    const year = YEARS[yearIdx];
+    const color = year.color;
+    const parshiyot = year.parshiyot;
+
+    const yearTabsHTML = YEARS.map(
+      (y, i) => `
+      <button onclick="window._benIshHaiSwitchYear(${i})"
+        style="padding:0.35rem 0.9rem;border-radius:999px;font-size:0.8rem;font-weight:700;border:1px solid ${i === yearIdx ? color : "rgba(255,255,255,0.12)"};
+               background:${i === yearIdx ? color : "transparent"};color:${i === yearIdx ? "#fff" : "#94a3b8"};cursor:pointer;white-space:nowrap;transition:all 0.15s;">
+        ${y.he}
+      </button>`
+    ).join("");
+
+    const parshiyotHTML = parshiyot.map(
+      (p, i) => `
+      <button onclick="window._benIshHaiOpenParsha(${i})"
+        style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:0.75rem;
+               padding:0.5rem 0.25rem;font-size:0.78rem;font-weight:700;color:#e2e8f0;cursor:pointer;
+               transition:all 0.15s;text-align:center;"
+        onmouseover="this.style.background='${color}33';this.style.borderColor='${color}66';"
+        onmouseout="this.style.background='rgba(255,255,255,0.05)';this.style.borderColor='rgba(255,255,255,0.1)';">
+        ${p.he}
+      </button>`
+    ).join("");
+
+    modal.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;">
+        <div>
+          <h2 style="color:#f1f5f9;font-size:1.3rem;font-weight:900;margin:0;">בן איש חי</h2>
+          <p style="color:${color};font-size:0.78rem;font-weight:700;margin:0.15rem 0 0;">רבי יוסף חיים מבגדד זצ"ל</p>
+        </div>
+        <button onclick="closeBenIshHaiModal()"
+          style="background:rgba(255,255,255,0.08);border:none;color:#94a3b8;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.1rem;flex-shrink:0;">✕</button>
+      </div>
+      <!-- Year tabs -->
+      <div style="display:flex;gap:0.5rem;padding:0.75rem 1.25rem;flex-shrink:0;">
+        ${yearTabsHTML}
+      </div>
+      <!-- Parsha grid -->
+      <div style="padding:0 1.25rem;overflow-y:auto;flex:1;">
+        <p style="color:#64748b;font-size:0.72rem;margin:0 0 0.75rem;">לחץ על פרשה לקריאת הטקסט המלא</p>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:0.5rem;padding-bottom:1.5rem;">
+          ${parshiyotHTML}
+        </div>
+      </div>
+      <!-- Parsha content pane (hidden initially) -->
+      <div id="ben-ish-hai-content-pane" style="display:none;position:absolute;inset:0;background:rgba(2,6,23,0.98);z-index:10;flex-direction:column;overflow:hidden;">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border-bottom:1px solid rgba(255,255,255,0.08);">
+          <button id="ben-ish-hai-back-btn" onclick="document.getElementById('ben-ish-hai-content-pane').style.display='none';"
+            style="background:rgba(255,255,255,0.08);border:none;color:#94a3b8;padding:0.4rem 0.8rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;">
+            ← חזרה
+          </button>
+          <h3 id="ben-ish-hai-parsha-title" style="color:#f1f5f9;font-size:1rem;font-weight:900;margin:0;"></h3>
+          <div style="width:60px;"></div>
+        </div>
+        <div id="ben-ish-hai-text-area" style="padding:1.25rem;overflow-y:auto;flex:1;font-family:'David Libre','Frank Ruhl Libre',serif;font-size:1.05rem;line-height:2;color:#e2e8f0;text-align:right;direction:rtl;">
+        </div>
+        <p style="color:#334155;font-size:0.65rem;text-align:center;padding:0.5rem;flex-shrink:0;">מקור: Sefaria.org (CC-BY-SA) | בן איש חי — רבי יוסף חיים</p>
+      </div>`;
+  }
+
+  window._benIshHaiSwitchYear = (idx) => buildPage(idx);
+
+  window._benIshHaiOpenParsha = async (parshaIdx) => {
+    const pane = document.getElementById("ben-ish-hai-content-pane");
+    const title = document.getElementById("ben-ish-hai-parsha-title");
+    const area = document.getElementById("ben-ish-hai-text-area");
+    const year = YEARS[activeYearIdx];
+    const color = year.color;
+    const yearHe = year.he;
+    const parsha = year.parshiyot[parshaIdx];
+
+    if (!pane || !title || !area) return;
+    pane.style.display = "flex";
+    pane.style.flexDirection = "column";
+    title.textContent = `${parsha.he} — ${yearHe}`;
+    area.innerHTML = `<div style="text-align:center;padding:2rem;"><div style="width:36px;height:36px;border:3px solid ${color};border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 1rem;"></div><p style="color:#64748b;">טוען ${parsha.he}...</p></div>`;
+
+    // Build exact Sefaria ref: spaces → underscores
+    const yearKey = year.en.replace(/ /g, "_");
+    const parshaKey = parsha.en.replace(/ /g, "_");
+    const refKey = `Ben_Ish_Hai,_${yearKey},_${parshaKey}`;
+    const sefariaUrl = `https://www.sefaria.org.il/${encodeURIComponent(refKey.replace(/_/g, " "))}?lang=he`;
+
+    try {
+      // pad=0 returns all halachot in the parsha
+      const url = `https://www.sefaria.org/api/texts/${encodeURIComponent(refKey)}?pad=0&lang=he`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("fetch failed");
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+
+      let heTexts = data.he || [];
+      // Flatten: each item may be a string or a single-element array
+      heTexts = heTexts.map(h =>
+        Array.isArray(h) ? h.join(" ") : (typeof h === "string" ? h : String(h))
+      ).filter(Boolean);
+
+      if (!heTexts.length) throw new Error("no text");
+
+      const halachotHTML = heTexts.map((h, i) =>
+        `<div style="margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:1px solid rgba(255,255,255,0.06);">
+          <span style="color:${color};font-size:0.75rem;font-weight:900;display:block;margin-bottom:0.4rem;">הלכה ${i + 1}</span>
+          <span>${h}</span>
+        </div>`
+      ).join("");
+
+      area.innerHTML = `
+        <p style="color:#64748b;font-size:0.72rem;margin-bottom:1rem;">בן איש חי | ${parsha.he} | ${yearHe} | ${heTexts.length} הלכות</p>
+        <div style="line-height:2.1;">${halachotHTML}</div>
+        <a href="${sefariaUrl}" target="_blank"
+          style="color:#60a5fa;font-size:0.8rem;display:block;text-align:center;margin-top:1rem;padding-bottom:1rem;">
+          📖 פתח ב-Sefaria ←
+        </a>`;
+    } catch (err) {
+      area.innerHTML = `
+        <p style="color:#ef4444;text-align:center;margin-bottom:1rem;">לא ניתן לטעון את הטקסט כעת.</p>
+        <div style="text-align:center;">
+          <a href="${sefariaUrl}" target="_blank"
+            style="background:${color};color:#fff;padding:0.6rem 1.5rem;border-radius:999px;text-decoration:none;font-weight:700;font-size:0.9rem;">
+            📖 פתח ${parsha.he} ב-Sefaria
+          </a>
+        </div>`;
+    }
+  };
+
+  buildPage(activeYearIdx);
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) closeBenIshHaiModal();
+  });
+  document.body.appendChild(modal);
+  lockBodyScroll();
+  pushModalState("ben-ish-hai-modal");
+}
+
+function closeBenIshHaiModal() {
+  const el = document.getElementById("ben-ish-hai-modal");
+  if (el) el.remove();
+  unlockBodyScroll();
+  if (_activeModals[_activeModals.length - 1] === "ben-ish-hai-modal") {
     _activeModals.pop();
     history.back();
   }

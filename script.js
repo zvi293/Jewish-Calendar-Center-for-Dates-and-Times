@@ -14798,6 +14798,25 @@ openTehillimPage = function () {
   window._tehillimLoadedChapters = new Set();
   window._tehillimCurrentChapter = 1;
 
+  // Bookmarks
+  const TH_BM_KEY = "tehillim_bookmarks_v1";
+  function thLoadBMs() { try { return JSON.parse(localStorage.getItem(TH_BM_KEY)||"[]"); } catch(e) { return []; } }
+  function thSaveBMs(b) { try { localStorage.setItem(TH_BM_KEY, JSON.stringify(b)); } catch(e) {} }
+  function thAddBM(ch) { const b=thLoadBMs(); if(!b.includes(ch)){b.push(ch);thSaveBMs(b);} }
+  function thRemoveBM(ch) { thSaveBMs(thLoadBMs().filter(x=>x!==ch)); }
+  function thIsBM(ch) { return thLoadBMs().includes(ch); }
+  window._thToggleBM = (ch) => {
+    if (thIsBM(ch)) { thRemoveBM(ch); } else { thAddBM(ch); }
+    const btn = document.getElementById("th-bm-btn-"+ch);
+    if (btn) {
+      const active = thIsBM(ch);
+      btn.textContent = active ? "🔖 מסומן" : "🔖 סמן";
+      btn.style.border = active ? "1.5px solid #f59e0b" : "1.5px solid #d1d5db";
+      btn.style.color = active ? "#92400e" : "#64748b";
+      btn.style.background = active ? "#fffbeb" : "transparent";
+    }
+  };
+
   async function loadPsalmChapter(chapter, area, prepend) {
     if (
       chapter < 1 ||
@@ -14827,7 +14846,9 @@ openTehillimPage = function () {
             `<p style="margin:0.3rem 0;color:#000000;"><strong style="color:#1d4ed8;font-size:0.75rem;">(${index + 1})</strong> ${verse}</p>`,
         )
         .join("");
-      chapterDiv.innerHTML = `<h4 style="color:#1e40af;font-size:1.1rem;font-weight:900;margin-bottom:0.75rem;text-align:center;">תהילים פרק ${toHebrewPsalmNumber(chapter)}</h4>${verses || "<p>לא נמצא טקסט.</p>"}`;
+      const bmActive = thIsBM(chapter);
+      const bmBtn = `<div style="text-align:center;margin-bottom:0.75rem;"><button id="th-bm-btn-${chapter}" onclick="window._thToggleBM(${chapter})" style="font-size:0.78rem;font-weight:700;padding:0.3rem 0.85rem;border-radius:999px;cursor:pointer;border:${bmActive?"1.5px solid #f59e0b":"1.5px solid #d1d5db"};color:${bmActive?"#92400e":"#64748b"};background:${bmActive?"#fffbeb":"transparent"};">${bmActive?"🔖 מסומן":"🔖 סמן"}</button></div>`;
+      chapterDiv.innerHTML = `<h4 style="color:#1e40af;font-size:1.1rem;font-weight:900;margin-bottom:0.5rem;text-align:center;">תהילים פרק ${toHebrewPsalmNumber(chapter)}</h4>${bmBtn}${verses || "<p>לא נמצא טקסט.</p>"}`;
     } catch (error) {
       chapterDiv.innerHTML = `<h4 style="color:#1e40af;font-size:1.1rem;font-weight:900;margin-bottom:0.75rem;text-align:center;">תהילים פרק ${toHebrewPsalmNumber(chapter)}</h4><p style="color:#ef4444;">לא הצלחתי לטעון פרק זה.</p>`;
     }

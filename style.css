@@ -361,8 +361,11 @@
       /* ── Font size scaling ── */
       html.fs-1 { font-size: 108% !important; }
       html.fs-2 { font-size: 116% !important; }
+      html.fs-3 { font-size: 130% !important; }
+      html.fs-4 { font-size: 150% !important; }
       /* Prevent card overflow on larger font */
-      html.fs-1 .zman-card, html.fs-2 .zman-card { overflow: hidden; }
+      html.fs-1 .zman-card, html.fs-2 .zman-card,
+      html.fs-3 .zman-card, html.fs-4 .zman-card { overflow: hidden; }
 
       /* ── Prayer Grid ── */
       .prayer-btn {

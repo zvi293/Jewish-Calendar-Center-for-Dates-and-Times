@@ -679,7 +679,7 @@ let CURRENT_THEME = ["light", "blue"].includes(
 let CURRENT_LANG = localStorage.getItem("moadim_lang") || "he";
 let CURRENT_NUSACH = localStorage.getItem("moadim_nusach") || "mizrahi";
 const DAY_NOTES_STORAGE_KEY = "moadim_day_notes";
-const FS_LABELS = ["רגיל", "גדול", "גדול מאוד"];
+const FS_LABELS = ["רגיל", "גדול", "גדול מאוד", "ענק", "ענק מאוד"];
 
 const daysOfWeek = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"];
 const hebDaysLetters = [
@@ -4010,27 +4010,72 @@ async function handleCitySearch(e) {
   }, 400);
 }
 
-function useGPS() {
-  if ("geolocation" in navigator) {
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        GPS_COORDS = {
-          lat: pos.coords.latitude,
-          lon: pos.coords.longitude,
-        };
-        localStorage.setItem("moadim_gps", JSON.stringify(GPS_COORDS));
-        GEO_LOCATION = "GPS";
-        localStorage.setItem("moadim_city", "GPS");
-        localStorage.setItem("moadim_city_name", "מיקום נוכחי (GPS)");
-        document.getElementById("current-city-name").textContent =
-          "מיקום נוכחי (GPS)";
-        document.getElementById("city-search-results").classList.add("hidden");
-      },
-      (err) => {
-        alert("לא הצלחנו לאתר מיקום, נחזור להגדרה הקודמת.");
-      },
+async function _gpsReverseGeocode(lat, lon) {
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&accept-language=he&zoom=14`,
+      { headers: { "Accept": "application/json" } },
     );
+    if (!res.ok) return null;
+    const data = await res.json();
+    const a = data.address || {};
+    const cityName =
+      a.city ||
+      a.town ||
+      a.village ||
+      a.suburb ||
+      a.municipality ||
+      a.county ||
+      a.state ||
+      null;
+    return cityName;
+  } catch (e) {
+    return null;
   }
+}
+
+function useGPS() {
+  if (!("geolocation" in navigator)) {
+    alert("הדפדפן שלך לא תומך באיתור מיקום.");
+    return;
+  }
+  const cityNameEl = document.getElementById("current-city-name");
+  const prevName = cityNameEl ? cityNameEl.textContent : "";
+  if (cityNameEl) cityNameEl.textContent = "מאתר מיקום...";
+  navigator.geolocation.getCurrentPosition(
+    async (pos) => {
+      GPS_COORDS = {
+        lat: pos.coords.latitude,
+        lon: pos.coords.longitude,
+      };
+      localStorage.setItem("moadim_gps", JSON.stringify(GPS_COORDS));
+      GEO_LOCATION = "GPS";
+      localStorage.setItem("moadim_city", "GPS");
+      // הצג שם זמני בזמן שמתבצע reverse geocoding
+      if (cityNameEl) cityNameEl.textContent = "מיקום נוכחי (GPS)";
+      localStorage.setItem("moadim_city_name", "מיקום נוכחי (GPS)");
+      const sr = document.getElementById("city-search-results");
+      if (sr) sr.classList.add("hidden");
+      // נסה למצוא שם עיר אמיתי
+      const cityName = await _gpsReverseGeocode(GPS_COORDS.lat, GPS_COORDS.lon);
+      if (cityName) {
+        const displayName = cityName + " (GPS)";
+        if (cityNameEl) cityNameEl.textContent = displayName;
+        localStorage.setItem("moadim_city_name", displayName);
+      }
+      // רענן את הנתונים לפי המיקום החדש
+      try { fetchLiveCalendarData(); } catch (e) {}
+    },
+    (err) => {
+      if (cityNameEl) cityNameEl.textContent = prevName || "פתח תקווה";
+      let msg = "לא הצלחנו לאתר מיקום, נחזור להגדרה הקודמת.";
+      if (err && err.code === 1) {
+        msg = "הגישה למיקום נדחתה. ניתן לאפשר גישה בהגדרות הדפדפן.";
+      }
+      alert(msg);
+    },
+    { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 },
+  );
 }
 
 function toggleSettings() {
@@ -4087,7 +4132,7 @@ function shouldShowHolidayTimes(eventItem) {
   return !isCholHamoed && !isLightHoliday;
 }
 
-async function saveSettings() {
+async function saveSettings(closeAfter) {
   ZMANIM_METHOD = document.getElementById("settings-method").value;
   localStorage.setItem("moadim_method", ZMANIM_METHOD);
 
@@ -4106,14 +4151,16 @@ async function saveSettings() {
   }
 
   fetchLiveCalendarData();
-  toggleSettings();
+  if (closeAfter !== false) toggleSettings();
 }
 
 // ── Font size ─────────────────────────────────────────────
 function applyFontSize(level) {
-  document.documentElement.classList.remove("fs-1", "fs-2");
+  document.documentElement.classList.remove("fs-1", "fs-2", "fs-3", "fs-4");
   if (level === 1) document.documentElement.classList.add("fs-1");
   if (level === 2) document.documentElement.classList.add("fs-2");
+  if (level === 3) document.documentElement.classList.add("fs-3");
+  if (level === 4) document.documentElement.classList.add("fs-4");
 }
 function previewFontSize(val) {
   applyFontSize(parseInt(val));
@@ -15237,6 +15284,85 @@ function ensureNusachChosen(callback) {
   }
 }
 
+// --- Language Selection Popup (similar to Nusach popup) ---
+const LANG_LABELS = {
+  he: { native: "עברית", flag: "🇮🇱" },
+  en: { native: "English", flag: "🇺🇸" },
+  fr: { native: "Français", flag: "🇫🇷" },
+};
+async function setLanguage(lang) {
+  if (!LANG_LABELS[lang] || lang === CURRENT_LANG) return;
+  CURRENT_LANG = lang;
+  localStorage.setItem("moadim_lang", CURRENT_LANG);
+  refreshLiveLanguageUI();
+  render(
+    document.querySelector(".chip.active")?.id?.replace("btn-", "") || "all",
+    document.getElementById("mainSearch").value,
+  );
+  buildMonthCalendar();
+  await fetchLiveCalendarData();
+}
+window.showLanguageSelectionPopup = function () {
+  let existing = document.getElementById("language-selection-modal");
+  if (existing) existing.remove();
+  const overlay = document.createElement("div");
+  overlay.id = "language-selection-modal";
+  overlay.style.cssText =
+    "position:fixed;inset:0;z-index:250;background:rgba(0,0,0,0.55);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:1rem;";
+  const langOptions = Object.entries(LANG_LABELS)
+    .map(
+      ([k, v]) =>
+        `<button onclick="window._selectLanguageFromPopup('${k}')" style="width:100%;padding:0.85rem 1rem;border-radius:0.9rem;border:2px solid ${k === CURRENT_LANG ? "#2563eb" : "rgba(0,0,0,0.1)"};background:${k === CURRENT_LANG ? "rgba(37,99,235,0.08)" : "rgba(0,0,0,0.02)"};color:#1a1a1a;font-size:1.05rem;font-weight:800;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;justify-content:center;gap:0.5rem;"><span style="font-size:1.2rem;">${v.flag}</span><span>${v.native}</span></button>`,
+    )
+    .join("");
+  overlay.innerHTML = `
+          <div style="background:#faf9f6;border-radius:1.5rem;padding:1.8rem 1.5rem;width:100%;max-width:380px;box-shadow:0 25px 60px rgba(0,0,0,0.25);text-align:center;direction:rtl;">
+            <div style="font-size:2rem;margin-bottom:0.5rem;">🌐</div>
+            <h3 style="color:#1a1a1a;font-size:1.25rem;font-weight:900;margin:0 0 0.4rem;">בחירת שפה</h3>
+            <p style="color:#64748b;font-size:0.85rem;margin:0 0 1.2rem;line-height:1.5;">בחר את שפת התצוגה. ניתן לשנות בכל עת.</p>
+            <div style="display:flex;flex-direction:column;gap:0.5rem;">${langOptions}</div>
+            <button onclick="document.getElementById('language-selection-modal').remove()" style="margin-top:1rem;background:rgba(0,0,0,0.05);border:none;border-radius:0.75rem;padding:0.55rem 1.4rem;color:#64748b;font-size:0.85rem;font-weight:700;cursor:pointer;">ביטול</button>
+          </div>`;
+  overlay.addEventListener("click", (event) => {
+    if (event.target === overlay) overlay.remove();
+  });
+  window._selectLanguageFromPopup = async (lang) => {
+    overlay.remove();
+    await setLanguage(lang);
+  };
+  document.body.appendChild(overlay);
+};
+
+// --- Contact Modal ---
+window.showContactModal = function () {
+  let existing = document.getElementById("contact-modal");
+  if (existing) existing.remove();
+  const overlay = document.createElement("div");
+  overlay.id = "contact-modal";
+  overlay.style.cssText =
+    "position:fixed;inset:0;z-index:260;background:rgba(0,0,0,0.55);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:1rem;";
+  overlay.innerHTML = `
+          <div style="background:#faf9f6;border-radius:1.5rem;padding:1.8rem 1.5rem;width:100%;max-width:400px;box-shadow:0 25px 60px rgba(0,0,0,0.3);text-align:center;direction:rtl;position:relative;">
+            <button onclick="document.getElementById('contact-modal').remove()" style="position:absolute;top:0.85rem;left:0.85rem;background:rgba(0,0,0,0.06);border:none;color:#64748b;width:34px;height:34px;border-radius:50%;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;" aria-label="סגור">✕</button>
+            <div style="font-size:2.2rem;margin-bottom:0.6rem;">✉️</div>
+            <h3 style="color:#1a1a1a;font-size:1.3rem;font-weight:900;margin:0 0 0.6rem;">יצירת קשר</h3>
+            <p style="color:#475569;font-size:0.92rem;line-height:1.65;margin:0 0 1.2rem;">
+              רוצים להוסיף משהו באתר?<br>
+              ראיתם משהו חסר או רוצים לפנות אלינו?<br>
+              <span style="color:#64748b;font-size:0.85rem;">לחצו על כתובת המייל ושלחו לנו הודעה — נשמח לשמוע ממכם.</span>
+            </p>
+            <a href="mailto:nzweb295@gmail.com" style="display:inline-flex;align-items:center;justify-content:center;gap:0.5rem;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;text-decoration:none;font-weight:800;padding:0.85rem 1.5rem;border-radius:1rem;font-size:1rem;box-shadow:0 8px 20px rgba(99,102,241,0.3);transition:transform 0.15s;direction:ltr;" onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform='scale(1)'">
+              <span style="font-size:1.1rem;">📧</span>
+              <span>nzweb295@gmail.com</span>
+            </a>
+            <p style="color:#94a3b8;font-size:0.72rem;margin:1rem 0 0;">לחיצה על הכתובת תפתח את אפליקציית המייל שלכם</p>
+          </div>`;
+  overlay.addEventListener("click", (event) => {
+    if (event.target === overlay) overlay.remove();
+  });
+  document.body.appendChild(overlay);
+};
+
 openPrayer = async function (key, heLabel, enLabel) {
   const doOpen = async () => {
     const entry = PRAYER_DB[key] || { title: heLabel || enLabel || key };
@@ -16329,6 +16455,16 @@ document.addEventListener("keydown", (e) => {
 
   function getHebInfo(offset) {
     var d = new Date();
+    // אחרי צאת הכוכבים – נחשב כיום הבא (לפי הזמן בו האתר משתמש לסיום שבת)
+    try {
+      var _tz = window.TZEIT_TIME;
+      if (_tz instanceof Date && !isNaN(_tz.getTime())) {
+        var _now = new Date();
+        if (_now >= _tz && _now.toDateString() === _tz.toDateString()) {
+          d.setDate(d.getDate() + 1);
+        }
+      }
+    } catch (e) {}
     d.setDate(d.getDate() + offset);
     var fmtM = new Intl.DateTimeFormat("he-IL-u-ca-hebrew", { month: "long" });
     var fmtD = new Intl.DateTimeFormat("he-IL-u-ca-hebrew", { day: "numeric" });
@@ -18860,14 +18996,78 @@ function openSefarimNosafimPage() {
     return Array.from({ length: count }, function(_, i) { return { he: labelFn(i+1), ref: refFn(i+1) }; });
   }
 
-  // ── Fetch from Sefaria ──
+  // ── Fetch from Sefaria (עם cache ב-localStorage) ──
+  var _SN_CACHE_PREFIX = "sn-cache-v1-";
+  function _snCacheGet(ref) {
+    try {
+      var raw = localStorage.getItem(_SN_CACHE_PREFIX + ref);
+      if (!raw) return null;
+      return JSON.parse(raw);
+    } catch (e) { return null; }
+  }
+  function _snCacheSet(ref, data) {
+    try {
+      localStorage.setItem(_SN_CACHE_PREFIX + ref, JSON.stringify(data));
+    } catch (e) {
+      // Quota exceeded – נסה לפנות מקום ע"י מחיקת cache ישן
+      try {
+        for (var i = localStorage.length - 1; i >= 0 && i >= localStorage.length - 50; i--) {
+          var k = localStorage.key(i);
+          if (k && k.indexOf(_SN_CACHE_PREFIX) === 0) localStorage.removeItem(k);
+        }
+        localStorage.setItem(_SN_CACHE_PREFIX + ref, JSON.stringify(data));
+      } catch (e2) { /* skip caching */ }
+    }
+  }
   async function fetchSec(ref, signal) {
+    var cached = _snCacheGet(ref);
+    if (cached) return cached;
     try {
       var opts = signal ? { signal: signal } : {};
       var r = await fetch("https://www.sefaria.org/api/texts/" + encodeURIComponent(ref) + "?pad=0&lang=he&context=0", opts);
       var d = await r.json();
-      return d.he || [];
+      var he = d.he || [];
+      if (he && (Array.isArray(he) ? he.length : true)) _snCacheSet(ref, he);
+      return he;
     } catch(e) { return []; }
+  }
+
+  // ── חיפוש חכם – נירמול טקסט וחיפוש מילים ──
+  function _snNormalize(s) {
+    if (!s) return "";
+    return String(s)
+      .replace(/[֑-ֽֿ-ׇ]/g, "") // הסרת ניקוד וטעמים
+      .replace(/<[^>]*>/g, " ") // הסרת תגים
+      .replace(/[ \s]+/g, " ")
+      .toLowerCase()
+      .trim();
+  }
+  function _snTokenize(q) {
+    return _snNormalize(q).split(/\s+/).filter(function(w){ return w.length > 0; });
+  }
+  // דרישה: כל המילים בשאילתה חייבות להופיע בטקסט (בכל סדר)
+  function _snSmartMatch(haystackNorm, words) {
+    for (var i = 0; i < words.length; i++) {
+      if (haystackNorm.indexOf(words[i]) < 0) return false;
+    }
+    return true;
+  }
+  // יצירת קטע עם הדגשה של המילה הראשונה הנמצאת
+  function _snSmartSnip(rawText, words) {
+    var norm = _snNormalize(rawText);
+    var i = -1, hitWord = "";
+    for (var k = 0; k < words.length; k++) {
+      var p = norm.indexOf(words[k]);
+      if (p >= 0 && (i < 0 || p < i)) { i = p; hitWord = words[k]; }
+    }
+    if (i < 0) return rawText.slice(0, 80) + "...";
+    // מצא את המקום המתאים בטקסט המקורי (לא מנורמל). פשטות: השתמש בטקסט המנורמל לתצוגה.
+    var s = Math.max(0, i - 40), e = Math.min(norm.length, i + hitWord.length + 60);
+    var esc = hitWord.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return (s > 0 ? "…" : "") +
+      norm.slice(s, e).replace(new RegExp(esc, "gi"),
+        "<mark style=\"background:#fef08a;border-radius:2px;\">$&</mark>") +
+      (e < norm.length ? "…" : "");
   }
 
   // ── Book Definitions ──
@@ -19600,18 +19800,21 @@ function openSefarimNosafimPage() {
     if (st) st.textContent = "מחפש...";
     if (re) re.innerHTML = "";
     var total = 0;
+    var words = _snTokenize(q);
+    if (words.length === 0) return;
     var booksToSearch = _searchBid === "all" ? BOOKS : BOOKS.filter(function(b){ return b.id === _searchBid; });
     for (var bi = 0; bi < booksToSearch.length; bi++) {
       if (sig.aborted) break;
       var book = booksToSearch[bi];
       if (book.type === "hardcoded") {
         var txt = (book.intro + " " + book.content).replace(/<[^>]*>/g, "");
-        if (txt.includes(q)) {
+        var txtNorm = _snNormalize(txt);
+        if (_snSmartMatch(txtNorm, words)) {
           total++;
           if (re) {
             var btn = document.createElement("button");
             btn.style.cssText = "display:block;width:100%;text-align:right;padding:0.75rem 1rem;border:none;border-bottom:1px solid rgba(0,0,0,0.07);cursor:pointer;background:none;direction:rtl;";
-            btn.innerHTML = "<span style=\"color:"+book.color+";font-size:0.75rem;font-weight:900;\">"+book.he+"</span><p style=\"margin:0.2rem 0 0;font-size:0.83rem;color:#374151;line-height:1.5;\">"+snip(txt,q)+"</p>";
+            btn.innerHTML = "<span style=\"color:"+book.color+";font-size:0.75rem;font-weight:900;\">"+book.he+"</span><p style=\"margin:0.2rem 0 0;font-size:0.83rem;color:#374151;line-height:1.5;\">"+_snSmartSnip(txt,words)+"</p>";
             (function(bk){ btn.onclick = function(){ window._snCloseSearch(); _bk=bk; _sec=0; openHardcoded(bk); }; })(book);
             re.appendChild(btn);
           }
@@ -19629,13 +19832,14 @@ function openSefarimNosafimPage() {
           var he = await fetchSec(sections[p].ref, sig);
           if (sig.aborted) break;
           var secText = flatText(he).replace(/<[^>]*>/g, "");
-          if (secText.includes(q)) {
+          var secNorm = _snNormalize(secText);
+          if (_snSmartMatch(secNorm, words)) {
             total++;
             if (re) {
               var rbtn = document.createElement("button");
               rbtn.style.cssText = "display:block;width:100%;text-align:right;padding:0.75rem 1rem;border:none;border-bottom:1px solid rgba(0,0,0,0.07);cursor:pointer;background:none;direction:rtl;transition:background 0.1s;";
               rbtn.innerHTML = "<span style=\"color:"+book.color+";font-size:0.75rem;font-weight:900;\">"+book.he+(sb?" — "+sb.he:"")+" — "+sections[p].he+"</span>"+
-                "<p style=\"margin:0.2rem 0 0;font-size:0.83rem;color:#374151;line-height:1.5;\">"+snip(secText,q)+"</p>";
+                "<p style=\"margin:0.2rem 0 0;font-size:0.83rem;color:#374151;line-height:1.5;\">"+_snSmartSnip(secText,words)+"</p>";
               rbtn.onmouseenter = function(){ this.style.background="#f1f5f9"; };
               rbtn.onmouseleave = function(){ this.style.background="none"; };
               (function(cbk, csb, cp){ rbtn.onclick = function(){ window._snCloseSearch(); _bk=cbk; _sbk=csb; _sec=cp; window._snOpenSection(cp); }; })(book,sb,p);
@@ -19739,6 +19943,20 @@ function openSefarimNosafimPage() {
   pushModalState("sn-modal");
   buildBooksView();
   buildBMPanel();
+}
+
+// פותח חיפוש חכם גלובלי - פותח את ספריית הספרים ומיד את חלון החיפוש
+function openGlobalSmartSearch() {
+  // פתח את מודאל הספרים אם הוא עדיין לא פתוח
+  if (!document.getElementById("sn-modal")) {
+    openSefarimNosafimPage();
+  }
+  // המתן ל-DOM להתעדכן ופתח את החיפוש
+  setTimeout(function () {
+    if (typeof window._snOpenSearch === "function") {
+      window._snOpenSearch();
+    }
+  }, 50);
 }
 
 function closeSefarimNosafimModal() {

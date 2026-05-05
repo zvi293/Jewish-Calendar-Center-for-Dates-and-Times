@@ -260,6 +260,26 @@
     >
       <div class="pointer-events-auto flex gap-2">
         <button
+          onclick="openGlobalSmartSearch()"
+          class="nav-action-btn bg-white/10 backdrop-blur-md border border-white/20 text-white p-2.5 rounded-full hover:bg-white/20 transition-all shadow-lg"
+          title="חיפוש חכם בכל הספרים"
+          aria-label="חיפוש חכם"
+        >
+          <svg
+            class="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M21 21l-4.35-4.35M17 10a7 7 0 11-14 0 7 7 0 0114 0z"
+            ></path>
+          </svg>
+        </button>
+        <button
           onclick="toggleSettings()"
           class="nav-action-btn bg-white/10 backdrop-blur-md border border-white/20 text-white p-2.5 rounded-full hover:bg-white/20 transition-all shadow-lg"
           title="הגדרות אישיות"
@@ -1476,27 +1496,8 @@
         </h2>
         <div class="space-y-6">
           <div>
-            <label
-              class="block text-sm font-bold text-slate-500 dark:text-slate-400 mb-2"
-              data-i18n-key="settings_city_label"
-              >מיקום לחישוב זמנים ושבת</label
-            >
-            <div class="relative">
-              <input
-                type="text"
-                id="settings-city-search"
-                data-i18n-key="settings_city_placeholder"
-                placeholder="הקלד שם עיר (באנגלית או עברית)..."
-                class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                oninput="handleCitySearch(event)"
-              />
-              <ul
-                id="city-search-results"
-                class="absolute z-50 w-full mt-1 max-h-48 overflow-y-auto bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl hidden scrollbar-hide"
-              ></ul>
-            </div>
             <div
-              class="mt-2 flex justify-between items-center text-sm text-slate-500"
+              class="flex justify-between items-center text-sm text-slate-500"
             >
               <span
                 >עיר נוכחית:
@@ -1514,6 +1515,10 @@
             >
               📍 השתמש במיקום שלי (GPS)
             </button>
+            <ul
+              id="city-search-results"
+              class="hidden"
+            ></ul>
           </div>
 
           <div>
@@ -1525,6 +1530,7 @@
             >
             <select
               id="settings-method"
+              onchange="saveSettings(false)"
               class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
               aria-label="בחר שיטת חישוב"
             >
@@ -1542,6 +1548,7 @@
             >
             <select
               id="settings-nusach"
+              onchange="saveSettings(false)"
               class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
               aria-label="בחר נוסח"
             >
@@ -1559,7 +1566,7 @@
             >
             <button
               type="button"
-              onclick="cycleLanguage()"
+              onclick="showLanguageSelectionPopup()"
               class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 transition-all flex items-center justify-between gap-3"
             >
               <span
@@ -1588,16 +1595,30 @@
                 type="range"
                 id="settings-font-size"
                 min="0"
-                max="2"
+                max="4"
                 step="1"
                 value="0"
                 class="flex-1 accent-blue-500"
                 oninput="previewFontSize(this.value)"
+                onchange="saveSettings(false)"
                 aria-label="גודל כיתוב"
               />
               <span class="text-lg text-slate-500 font-bold">א</span>
             </div>
             <p class="text-xs text-slate-400 mt-1 text-center" id="font-size-label">רגיל</p>
+          </div>
+
+          <!-- יצירת קשר -->
+          <div>
+            <button
+              type="button"
+              onclick="showContactModal()"
+              class="w-full bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white font-bold py-3 rounded-xl transition-all shadow-md flex items-center justify-center gap-2"
+              aria-label="יצירת קשר"
+            >
+              <span style="font-size:1.1rem;">✉️</span>
+              <span>יצירת קשר</span>
+            </button>
           </div>
 
           <div class="pt-4 border-t border-slate-100 dark:border-slate-700">

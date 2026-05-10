@@ -270,6 +270,19 @@
             notifyButton: { enable: false },
           });
           window.OneSignalReady = true;
+          // Sync localStorage preference to actual OneSignal subscription state
+          // (handles the case where the user accepted via OneSignal's own Slide
+          // Prompt — we never wrote `true` to localStorage in that flow).
+          try {
+            var subscribed =
+              OneSignal.User &&
+              OneSignal.User.PushSubscription &&
+              !!OneSignal.User.PushSubscription.optedIn;
+            localStorage.setItem(
+              "moadim_notifications_enabled",
+              subscribed ? "true" : "false"
+            );
+          } catch (e) {}
           // Sync UI with current subscription state once SDK is ready
           if (typeof window.updateNotifStatusUI === "function") {
             window.updateNotifStatusUI();
@@ -281,6 +294,13 @@
             typeof OneSignal.User.PushSubscription.addEventListener === "function"
           ) {
             OneSignal.User.PushSubscription.addEventListener("change", function () {
+              try {
+                var nowSubscribed = !!OneSignal.User.PushSubscription.optedIn;
+                localStorage.setItem(
+                  "moadim_notifications_enabled",
+                  nowSubscribed ? "true" : "false"
+                );
+              } catch (e) {}
               if (typeof window.updateNotifStatusUI === "function") {
                 window.updateNotifStatusUI();
               }

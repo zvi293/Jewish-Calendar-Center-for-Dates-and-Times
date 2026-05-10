@@ -14573,9 +14573,9 @@ function createFontSizeBar(targetSelector) {
   bar.style.cssText =
     "position:sticky;bottom:0;left:0;right:0;display:flex;align-items:center;justify-content:center;gap:0.75rem;padding:0.6rem 1rem;background:rgba(250,249,246,0.95);backdrop-filter:blur(8px);border-top:1px solid rgba(0,0,0,0.08);z-index:10;flex-shrink:0;";
   bar.innerHTML = `
-          <button onclick="changePrayerFontSize(-10, '${targetSelector}')" style="width:36px;height:36px;border-radius:50%;border:1px solid rgba(0,0,0,0.15);background:rgba(0,0,0,0.04);color:#334155;font-size:1.2rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;" aria-label="הקטן כתב">−</button>
-          <span class="font-size-label" style="font-size:0.78rem;font-weight:700;color:#64748b;min-width:3rem;text-align:center;">${_prayerFontSize}%</span>
-          <button onclick="changePrayerFontSize(10, '${targetSelector}')" style="width:36px;height:36px;border-radius:50%;border:1px solid rgba(0,0,0,0.15);background:rgba(0,0,0,0.04);color:#334155;font-size:1.2rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;" aria-label="הגדל כתב">+</button>
+          <button onclick="changePrayerFontSize(-10, '${targetSelector}')" style="width:38px;height:38px;border-radius:50%;border:1.5px solid rgba(99,102,241,0.3);background:linear-gradient(135deg,#eef2ff 0%,#e0e7ff 100%);color:#4338ca;font-size:1.25rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(99,102,241,0.15);transition:transform 0.15s ease,box-shadow 0.15s ease;" onmouseover="this.style.transform='scale(1.08)';this.style.boxShadow='0 4px 10px rgba(99,102,241,0.25)';" onmouseout="this.style.transform='';this.style.boxShadow='0 2px 6px rgba(99,102,241,0.15)';" aria-label="הקטן כתב">−</button>
+          <span class="font-size-label" style="font-size:0.8rem;font-weight:800;color:#4338ca;min-width:3.3rem;text-align:center;background:rgba(238,242,255,0.85);padding:5px 12px;border-radius:999px;border:1px solid rgba(99,102,241,0.2);">${_prayerFontSize}%</span>
+          <button onclick="changePrayerFontSize(10, '${targetSelector}')" style="width:38px;height:38px;border-radius:50%;border:1.5px solid rgba(99,102,241,0.3);background:linear-gradient(135deg,#eef2ff 0%,#e0e7ff 100%);color:#4338ca;font-size:1.25rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(99,102,241,0.15);transition:transform 0.15s ease,box-shadow 0.15s ease;" onmouseover="this.style.transform='scale(1.08)';this.style.boxShadow='0 4px 10px rgba(99,102,241,0.25)';" onmouseout="this.style.transform='';this.style.boxShadow='0 2px 6px rgba(99,102,241,0.15)';" aria-label="הגדל כתב">+</button>
         `;
   return bar;
 }
@@ -15226,9 +15226,9 @@ function openBenIshHaiPage() {
         '<div id="bih-parsha-sections"></div>'+
       '</div>'+
       '<div style="display:flex;align-items:center;justify-content:center;gap:0.75rem;padding:0.5rem 1rem;border-top:1px solid rgba(0,0,0,0.08);background:#faf9f6;flex-shrink:0;">'+
-        '<button onclick="window._bihFontDec()" style="background:rgba(0,0,0,0.06);border:none;color:#1e293b;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:1.2rem;font-weight:700;line-height:1;">−</button>'+
-        '<span id="bih-font-label" style="color:#64748b;font-size:0.8rem;min-width:3rem;text-align:center;">100%</span>'+
-        '<button onclick="window._bihFontInc()" style="background:rgba(0,0,0,0.06);border:none;color:#1e293b;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:1.2rem;font-weight:700;line-height:1;">+</button>'+
+        '<button onclick="window._bihFontDec()" style="width:38px;height:38px;border-radius:50%;border:1.5px solid rgba(99,102,241,0.3);background:linear-gradient(135deg,#eef2ff 0%,#e0e7ff 100%);color:#4338ca;font-size:1.25rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(99,102,241,0.15);transition:transform 0.15s ease;line-height:1;" onmouseover="this.style.transform=\'scale(1.08)\'" onmouseout="this.style.transform=\'\'">−</button>'+
+        '<span id="bih-font-label" style="font-size:0.8rem;font-weight:800;color:#4338ca;min-width:3.3rem;text-align:center;background:rgba(238,242,255,0.85);padding:5px 12px;border-radius:999px;border:1px solid rgba(99,102,241,0.2);">100%</span>'+
+        '<button onclick="window._bihFontInc()" style="width:38px;height:38px;border-radius:50%;border:1.5px solid rgba(99,102,241,0.3);background:linear-gradient(135deg,#eef2ff 0%,#e0e7ff 100%);color:#4338ca;font-size:1.25rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(99,102,241,0.15);transition:transform 0.15s ease;line-height:1;" onmouseover="this.style.transform=\'scale(1.08)\'" onmouseout="this.style.transform=\'\'">+</button>'+
       '</div>'+
     '</div>'+
 
@@ -15674,11 +15674,8 @@ openPrayer = async function (key, heLabel, enLabel) {
       const meta = document.getElementById("prayer-modal-meta");
       const body = document.getElementById("prayer-modal-body");
       if (meta) {
-        if (isPopup) {
-          meta.innerHTML = `נוסח: <strong>${content.nusachLabel}</strong> · מקור: <strong>${content.sourceLabel}</strong>${content.sourceUrl ? ` · <a href="${content.sourceUrl}" target="_blank" style="color:#1d4ed8;">פתיחת המקור</a>` : ""}`;
-        } else {
-          meta.innerHTML = `נוסח: <strong>${content.nusachLabel}</strong> · מקור: <strong>${content.sourceLabel}</strong>${content.sourceUrl ? ` · <a href="${content.sourceUrl}" target="_blank" style="color:#3b82f6;">פתיחת המקור</a>` : ""}`;
-        }
+        // נוסח בלבד; קרדיט המקור הועבר לסיום הטקסט
+        meta.innerHTML = `נוסח: <strong>${content.nusachLabel}</strong>`;
       }
       if (body) {
         if (isPopup) {
@@ -15819,7 +15816,6 @@ openTehillimPage = function () {
                 .join("")}
             </div>
             <div style="padding:0 1.25rem 1.25rem;overflow-y:auto;flex:1;background:#faf9f6;">
-              <div style="color:#94a3b8;font-size:0.74rem;margin:0 0 0.75rem;">מקור התהילים: <strong style="color:#1e40af;">Sefaria.org</strong></div>
               <p style="color:#64748b;font-size:0.76rem;margin:0 0 0.9rem;">לחיצה על פרק תפתח את הטקסט המלא של אותו פרק.</p>
               <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:0.55rem;">
                 ${plan.chapters.map((chapter) => `<button onclick="window._tehillimOpenPsalm(${chapter})" style="background:rgba(0,0,0,0.03);border:1px solid rgba(0,0,0,0.1);border-radius:0.9rem;padding:0.7rem 0.6rem;font-size:0.82rem;font-weight:800;color:#000000;cursor:pointer;">פרק ${toHebrewPsalmNumber(chapter)}</button>`).join("")}
@@ -15833,9 +15829,9 @@ openTehillimPage = function () {
               </div>
               <div id="psalm-text-area" class="holy-text-style" style="padding:1.25rem;overflow-y:auto;flex:1;text-align:center;direction:rtl;"></div>
               <div id="tehillim-font-bar" class="flex items-center justify-center gap-3 py-2 px-4 flex-shrink-0" style="background:rgba(250,249,246,0.95);border-top:1px solid rgba(0,0,0,0.08);">
-                <button onclick="changePrayerFontSize(-10, '#psalm-text-area')" style="width:34px;height:34px;border-radius:50%;border:1px solid rgba(0,0,0,0.15);background:rgba(0,0,0,0.04);color:#334155;font-size:1.1rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;" aria-label="הקטן כתב">−</button>
-                <span class="font-size-label" style="font-size:0.78rem;font-weight:700;color:#64748b;min-width:3rem;text-align:center;">${_prayerFontSize}%</span>
-                <button onclick="changePrayerFontSize(10, '#psalm-text-area')" style="width:34px;height:34px;border-radius:50%;border:1px solid rgba(0,0,0,0.15);background:rgba(0,0,0,0.04);color:#334155;font-size:1.1rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;" aria-label="הגדל כתב">+</button>
+                <button onclick="changePrayerFontSize(-10, '#psalm-text-area')" style="width:38px;height:38px;border-radius:50%;border:1.5px solid rgba(99,102,241,0.3);background:linear-gradient(135deg,#eef2ff 0%,#e0e7ff 100%);color:#4338ca;font-size:1.25rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(99,102,241,0.15);transition:transform 0.15s ease,box-shadow 0.15s ease;" onmouseover="this.style.transform='scale(1.08)';this.style.boxShadow='0 4px 10px rgba(99,102,241,0.25)';" onmouseout="this.style.transform='';this.style.boxShadow='0 2px 6px rgba(99,102,241,0.15)';" aria-label="הקטן כתב">−</button>
+                <span class="font-size-label" style="font-size:0.8rem;font-weight:800;color:#4338ca;min-width:3.3rem;text-align:center;background:rgba(238,242,255,0.85);padding:5px 12px;border-radius:999px;border:1px solid rgba(99,102,241,0.2);">${_prayerFontSize}%</span>
+                <button onclick="changePrayerFontSize(10, '#psalm-text-area')" style="width:38px;height:38px;border-radius:50%;border:1.5px solid rgba(99,102,241,0.3);background:linear-gradient(135deg,#eef2ff 0%,#e0e7ff 100%);color:#4338ca;font-size:1.25rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(99,102,241,0.15);transition:transform 0.15s ease,box-shadow 0.15s ease;" onmouseover="this.style.transform='scale(1.08)';this.style.boxShadow='0 4px 10px rgba(99,102,241,0.25)';" onmouseout="this.style.transform='';this.style.boxShadow='0 2px 6px rgba(99,102,241,0.15)';" aria-label="הגדל כתב">+</button>
               </div>
               <div style="border-top:1px solid rgba(0,0,0,0.08);padding:0.7rem 1.25rem;color:#94a3b8;font-size:0.74rem;line-height:1.6;flex-shrink:0;background:#faf9f6;">מקור הטקסט: <strong style="color:#1e40af;">Sefaria.org</strong> · ספר תהילים</div>
             </div>
@@ -19285,7 +19281,7 @@ function openSefarimNosafimPage() {
       var txt = Array.isArray(v) ? v.join("<br>") : String(v || "");
       if (!txt.trim()) return "";
       return "<p style=\"margin:0 0 1.4rem;line-height:2.3;\">" +
-        "<span style=\"color:" + color + ";font-size:0.73em;font-weight:700;margin-left:0.35rem;\">[" + (i + 1) + "]</span>" +
+        "<span style=\"color:" + color + ";font-size:0.73em;font-weight:700;margin-left:0.35rem;\">[" + toHN(i + 1) + "]</span>" +
         txt + "</p>";
     }).filter(Boolean).join("");
   }
@@ -20235,9 +20231,9 @@ function openSefarimNosafimPage() {
       "</div>",
       "<div id=\"sn-reader-content\" style=\"overflow-y:auto;flex:1;text-align:center;direction:rtl;line-height:2;font-size:100%;\"></div>",
       "<div style=\"display:flex;align-items:center;justify-content:center;gap:0.75rem;padding:0.5rem 1rem;border-top:1px solid rgba(0,0,0,0.08);background:#faf9f6;flex-shrink:0;\">",
-        "<button onclick=\"window._snFontDec();\" style=\"background:rgba(0,0,0,0.06);border:none;color:#1e293b;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:1.2rem;font-weight:700;line-height:1;\">−</button>",
-        "<span id=\"sn-fs-label\" style=\"color:#64748b;font-size:0.8rem;min-width:3rem;text-align:center;\">100%</span>",
-        "<button onclick=\"window._snFontInc();\" style=\"background:rgba(0,0,0,0.06);border:none;color:#1e293b;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:1.2rem;font-weight:700;line-height:1;\">+</button>",
+        "<button onclick=\"window._snFontDec();\" style=\"width:38px;height:38px;border-radius:50%;border:1.5px solid rgba(99,102,241,0.3);background:linear-gradient(135deg,#eef2ff 0%,#e0e7ff 100%);color:#4338ca;font-size:1.25rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(99,102,241,0.15);transition:transform 0.15s ease;line-height:1;\" onmouseover=\"this.style.transform='scale(1.08)'\" onmouseout=\"this.style.transform=''\">−</button>",
+        "<span id=\"sn-fs-label\" style=\"font-size:0.8rem;font-weight:800;color:#4338ca;min-width:3.3rem;text-align:center;background:rgba(238,242,255,0.85);padding:5px 12px;border-radius:999px;border:1px solid rgba(99,102,241,0.2);\">100%</span>",
+        "<button onclick=\"window._snFontInc();\" style=\"width:38px;height:38px;border-radius:50%;border:1.5px solid rgba(99,102,241,0.3);background:linear-gradient(135deg,#eef2ff 0%,#e0e7ff 100%);color:#4338ca;font-size:1.25rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(99,102,241,0.15);transition:transform 0.15s ease;line-height:1;\" onmouseover=\"this.style.transform='scale(1.08)'\" onmouseout=\"this.style.transform=''\">+</button>",
       "</div>",
     "</div>",
     // VIEW 5: Search
@@ -20267,7 +20263,6 @@ function openSefarimNosafimPage() {
 
 // פותח חיפוש חכם גלובלי - פותח את ספריית הספרים ומיד את חלון החיפוש
 function openGlobalSmartSearch() {
-  // פתח את מודאל הספרים אם הוא עדיין לא פתוח
   if (!document.getElementById("sn-modal")) {
     openSefarimNosafimPage();
   }
@@ -20289,4 +20284,3 @@ function closeSefarimNosafimModal() {
   }
   if (steps > 0) history.go(-steps);
 }
-

@@ -15193,6 +15193,31 @@ function openBenIshHaiPage() {
   }
 
   // ── Build grid ──
+  // צבעי חומשים — לפי קבוצות פרשיות
+  const CHUMASH_COLORS = {
+    "בראשית": "#3b82f6", "שמות": "#f59e0b", "ויקרא": "#ec4899",
+    "במדבר": "#10b981", "דברים": "#8b5cf6"
+  };
+  // מפת פרשה→חומש
+  const PARSHA_TO_CHUMASH = (function(){
+    var map = {};
+    var bereshit = ["בראשית","נח","לך לך","וירא","חיי שרה","תולדות","ויצא","וישלח","וישב","חנוכה","מקץ","ויגש","ויחי"];
+    var shemot = ["שמות","וארא","בא","בשלח","יתרו","משפטים","תרומה","תצוה","כי תשא","ויקהל","פקודי","ויקהל-פקודי"];
+    var vayikra = ["ויקרא","צו","שמיני","תזריע","מצורע","תזריע-מצורע","אחרי מות","קדושים","אחרי-קדושים","אחרי מות-קדושים","אמור","בהר","בחקותי","בחוקותי","בהר-בחקותי","בהר-בחוקותי"];
+    var bamidbar = ["במדבר","נשא","בהעלותך","שלח","קרח","חקת","חוקת","חקת-בלק","בלק","פינחס","מטות","מסעי","מטות-מסעי"];
+    var devarim = ["דברים","ואתחנן","עקב","ראה","שופטים","כי תצא","כי תבוא","נצבים","וילך","נצבים-וילך","האזינו","וזאת הברכה"];
+    bereshit.forEach(function(p){ map[p]="בראשית"; });
+    shemot.forEach(function(p){ map[p]="שמות"; });
+    vayikra.forEach(function(p){ map[p]="ויקרא"; });
+    bamidbar.forEach(function(p){ map[p]="במדבר"; });
+    devarim.forEach(function(p){ map[p]="דברים"; });
+    return map;
+  })();
+  function _bihChumashColor(parshaHe) {
+    var ch = PARSHA_TO_CHUMASH[parshaHe];
+    return ch ? CHUMASH_COLORS[ch] : "#94a3b8";
+  }
+
   function buildGridContent() {
     const color = getColor();
     const parshiyot = getParshiyot();
@@ -15213,9 +15238,10 @@ function openBenIshHaiPage() {
 
     const gridEl = document.getElementById("bih-grid-content");
     if (gridEl) {
-      gridEl.innerHTML = parshiyot.map((p,i)=>
-        '<button onclick="window._bihOpenParsha('+i+')" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:0.75rem;padding:0.5rem 0.25rem;font-size:0.78rem;font-weight:700;color:#e2e8f0;cursor:pointer;transition:all 0.15s;text-align:center;" onmouseover="this.style.background=\''+color+'33\';this.style.borderColor=\''+color+'66\';" onmouseout="this.style.background=\'rgba(255,255,255,0.05)\';this.style.borderColor=\'rgba(255,255,255,0.1)\';">'+p.he+'</button>'
-      ).join("");
+      gridEl.innerHTML = parshiyot.map((p,i)=> {
+        var c = _bihChumashColor(p.he);
+        return '<button onclick="window._bihOpenParsha('+i+')" style="background:'+c+'22;border:1.5px solid '+c+'66;border-radius:0.75rem;padding:0.5rem 0.25rem;font-size:0.78rem;font-weight:700;color:#f1f5f9;cursor:pointer;transition:all 0.15s;text-align:center;" onmouseover="this.style.background=\''+c+'55\';this.style.borderColor=\''+c+'\';" onmouseout="this.style.background=\''+c+'22\';this.style.borderColor=\''+c+'66\';">'+p.he+'</button>';
+      }).join("");
     }
 
     buildBMPanel();
@@ -19818,6 +19844,25 @@ function openSefarimNosafimPage() {
           secs(30,function(i){return "פרק "+toHN(i);},function(i){return "Shemirat HaLashon, Book II."+i;})
         }
       ]},
+    { id:"hilchot-shmirat-halashon", he:"הלכות שמירת הלשון", subtitle:"החפץ חיים — רבי ישראל מאיר הכהן",
+      cat:"halakha", color:"#0891b2", icon:"📜",
+      credit:"הטקסט מ-Sefaria.org — נחלת הכלל",
+      creditUrl:"https://www.sefaria.org/Chofetz_Chaim",
+      type:"multi",
+      subBooks:[
+        {id:"intro", he:"הקדמה ולאוין", sections:[
+          {he:"הקדמה", ref:"Chofetz Chaim, Introduction"},
+          {he:"לאוין", ref:"Chofetz Chaim, Negative Commandments"},
+          {he:"עשין",  ref:"Chofetz Chaim, Positive Commandments"},
+          {he:"ארורים",ref:"Chofetz Chaim, Curses"}
+        ]},
+        {id:"lh", he:"הלכות לשון הרע", sections:
+          secs(10,function(i){return "כלל "+toHN(i);},function(i){return "Chofetz Chaim, Laws of Lashon Hara."+i;})
+        },
+        {id:"r", he:"הלכות רכילות", sections:
+          secs(9,function(i){return "כלל "+toHN(i);},function(i){return "Chofetz Chaim, Laws of Rechilut."+i;})
+        }
+      ]},
     { id:"chovot-halevavot", he:"חובת הלבבות", subtitle:"רבי בחיי אבן פקודה",
       cat:"musar", color:"#7c3aed", icon:"💎",
       credit:"הטקסט מ-Sefaria.org — נחלת הכלל",
@@ -19912,6 +19957,102 @@ function openSefarimNosafimPage() {
         {id:"p1",he:"חלק ראשון",sections:secs(286,function(i){return "תורה "+toHN(i);},function(i){return "Likutei Moharan."+i;})},
         {id:"p2",he:"חלק שני",  sections:secs(125,function(i){return "תורה "+toHN(i);},function(i){return "Likutei Moharan, Tinyana."+i;})}
       ]},
+    { id:"kedushat-levi", he:"קדושת לוי", subtitle:"רבי לוי יצחק מברדיצ'ב",
+      cat:"emunah", color:"#a855f7", icon:"🕊️",
+      credit:"הטקסט מ-Sefaria.org — נחלת הכלל",
+      creditUrl:"https://www.sefaria.org/Kedushat_Levi",
+      type:"flat",
+      sections:[
+        {he:"בראשית",   ref:"Kedushat Levi, Bereshit, Bereshit"},
+        {he:"נח",        ref:"Kedushat Levi, Bereshit, Noach"},
+        {he:"לך לך",    ref:"Kedushat Levi, Bereshit, Lech Lecha"},
+        {he:"וירא",     ref:"Kedushat Levi, Bereshit, Vayera"},
+        {he:"חיי שרה",  ref:"Kedushat Levi, Bereshit, Chayei Sara"},
+        {he:"תולדות",   ref:"Kedushat Levi, Bereshit, Toldot"},
+        {he:"ויצא",     ref:"Kedushat Levi, Bereshit, Vayetzei"},
+        {he:"וישלח",    ref:"Kedushat Levi, Bereshit, Vayishlach"},
+        {he:"וישב",     ref:"Kedushat Levi, Bereshit, Vayeshev"},
+        {he:"מקץ",      ref:"Kedushat Levi, Bereshit, Miketz"},
+        {he:"ויגש",     ref:"Kedushat Levi, Bereshit, Vayigash"},
+        {he:"ויחי",     ref:"Kedushat Levi, Bereshit, Vayechi"},
+        {he:"שמות",     ref:"Kedushat Levi, Shemot, Shemot"},
+        {he:"וארא",     ref:"Kedushat Levi, Shemot, Vaera"},
+        {he:"בא",       ref:"Kedushat Levi, Shemot, Bo"},
+        {he:"בשלח",     ref:"Kedushat Levi, Shemot, Beshalach"},
+        {he:"יתרו",     ref:"Kedushat Levi, Shemot, Yitro"},
+        {he:"משפטים",   ref:"Kedushat Levi, Shemot, Mishpatim"},
+        {he:"תרומה",    ref:"Kedushat Levi, Shemot, Terumah"},
+        {he:"תצוה",     ref:"Kedushat Levi, Shemot, Tetzaveh"},
+        {he:"כי תשא",   ref:"Kedushat Levi, Shemot, Ki Tisa"},
+        {he:"ויקהל",    ref:"Kedushat Levi, Shemot, Vayakhel"},
+        {he:"פקודי",    ref:"Kedushat Levi, Shemot, Pekudei"},
+        {he:"ויקרא",    ref:"Kedushat Levi, Vayikra, Vayikra"},
+        {he:"צו",       ref:"Kedushat Levi, Vayikra, Tzav"},
+        {he:"שמיני",    ref:"Kedushat Levi, Vayikra, Shemini"},
+        {he:"תזריע",    ref:"Kedushat Levi, Vayikra, Tazria"},
+        {he:"מצורע",    ref:"Kedushat Levi, Vayikra, Metzora"},
+        {he:"אחרי מות", ref:"Kedushat Levi, Vayikra, Acharei Mot"},
+        {he:"קדושים",   ref:"Kedushat Levi, Vayikra, Kedoshim"},
+        {he:"אמור",     ref:"Kedushat Levi, Vayikra, Emor"},
+        {he:"בהר",      ref:"Kedushat Levi, Vayikra, Behar"},
+        {he:"בחוקותי",  ref:"Kedushat Levi, Vayikra, Bechukotai"},
+        {he:"במדבר",    ref:"Kedushat Levi, Bamidbar, Bamidbar"},
+        {he:"נשא",      ref:"Kedushat Levi, Bamidbar, Naso"},
+        {he:"בהעלותך",  ref:"Kedushat Levi, Bamidbar, Beha'alotcha"},
+        {he:"שלח",      ref:"Kedushat Levi, Bamidbar, Shelach"},
+        {he:"קרח",      ref:"Kedushat Levi, Bamidbar, Korach"},
+        {he:"חוקת",     ref:"Kedushat Levi, Bamidbar, Chukat"},
+        {he:"בלק",      ref:"Kedushat Levi, Bamidbar, Balak"},
+        {he:"פינחס",    ref:"Kedushat Levi, Bamidbar, Pinchas"},
+        {he:"מטות",     ref:"Kedushat Levi, Bamidbar, Matot"},
+        {he:"מסעי",     ref:"Kedushat Levi, Bamidbar, Masei"},
+        {he:"דברים",    ref:"Kedushat Levi, Devarim, Devarim"},
+        {he:"ואתחנן",   ref:"Kedushat Levi, Devarim, Vaetchanan"},
+        {he:"עקב",      ref:"Kedushat Levi, Devarim, Eikev"},
+        {he:"ראה",      ref:"Kedushat Levi, Devarim, Re'eh"},
+        {he:"שופטים",   ref:"Kedushat Levi, Devarim, Shoftim"},
+        {he:"כי תצא",   ref:"Kedushat Levi, Devarim, Ki Teitzei"},
+        {he:"כי תבוא",  ref:"Kedushat Levi, Devarim, Ki Tavo"},
+        {he:"נצבים",    ref:"Kedushat Levi, Devarim, Nitzavim"},
+        {he:"וילך",     ref:"Kedushat Levi, Devarim, Vayeilech"},
+        {he:"האזינו",   ref:"Kedushat Levi, Devarim, Ha'Azinu"},
+        {he:"וזאת הברכה",ref:"Kedushat Levi, Devarim, V'Zot HaBerachah"}
+      ]},
+    { id:"likutei-halachot", he:"ליקוטי הלכות", subtitle:"רבי נתן מברסלב — תלמיד רבי נחמן",
+      cat:"halakha", color:"#0d9488", icon:"📖",
+      credit:"הטקסט מ-Sefaria.org — נחלת הכלל",
+      creditUrl:"https://www.sefaria.org/Likutei_Halakhot",
+      type:"multi",
+      subBooks:[
+        {id:"oc",he:"אורח חיים", sections:secs(160,function(i){return "סימן "+toHN(i);},function(i){return "Likutei Halakhot, Orach Chaim."+i;})},
+        {id:"yd",he:"יורה דעה",  sections:secs(120,function(i){return "סימן "+toHN(i);},function(i){return "Likutei Halakhot, Yoreh Deah."+i;})},
+        {id:"eh",he:"אבן העזר",  sections:secs(50,function(i){return "סימן "+toHN(i);},function(i){return "Likutei Halakhot, Even HaEzer."+i;})},
+        {id:"cm",he:"חושן משפט", sections:secs(60,function(i){return "סימן "+toHN(i);},function(i){return "Likutei Halakhot, Choshen Mishpat."+i;})}
+      ]},
+    { id:"pele-yoetz", he:"פלא יועץ", subtitle:"רבי אליעזר פאפו",
+      cat:"musar", color:"#dc2626", icon:"📚",
+      credit:"הטקסט מ-Sefaria.org — נחלת הכלל",
+      creditUrl:"https://www.sefaria.org/Pele_Yoetz",
+      type:"flat",
+      sections:secs(331,function(i){return "ערך "+toHN(i);},function(i){return "Pele Yoetz."+i;})},
+    { id:"hafrashat-challah", he:"הפרשת חלה", subtitle:"סדר ההפרשה והברכה",
+      cat:"tefilot", color:"#d97706", icon:"🍞",
+      credit:"מאגר פנימי — נחלת הכלל", creditUrl:"",
+      type:"hardcoded",
+      intro:"מצוות הפרשת חלה היא מצווה מן התורה. כשלשים בצק ממיני דגן בכמות החייבת בחלה — מפרישים חלק ממנו ומברכים. בארץ ישראל יש להפריש מעל ק\"ו דרהם (כ-1.7 ק\"ג קמח). אם אין שיעור מספיק לברכה — מפרישים בלא ברכה.",
+      content:"<div style=\"text-align:right;direction:rtl;line-height:2.2;\"><div style=\"margin-bottom:1.5rem;padding:1rem;background:#fef3c7;border-radius:0.75rem;\"><strong>השיעור החייב בחלה בברכה:</strong> מ-1.660 ק\"ג קמח ומעלה (לפי דעת רבים).<br><strong>השיעור החייב בחלה בלא ברכה:</strong> מ-1.250 ק\"ג עד 1.660 ק\"ג.</div><div style=\"font-size:1.1em;font-weight:700;margin:1rem 0;color:#92400e;\">סדר ההפרשה:</div><p>1. מפרישים חתיכה קטנה מן הבצק לפני אפייה (אם אופים) — די בכזית.</p><p>2. אם הבצק כבר נאפה — אפשר להפריש מן הלחם.</p><div style=\"font-size:1.1em;font-weight:700;margin:1.2rem 0 0.5rem;color:#92400e;\">הברכה:</div><p style=\"font-size:1.15em;background:#fffbeb;padding:0.85rem;border-radius:0.5rem;\">בָּרוּךְ אַתָּה יְהֹוָה אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, אֲשֶׁר קִדְּשָׁנוּ בְּמִצְוֹתָיו וְצִוָּנוּ לְהַפְרִישׁ חַלָּה (תְּרוּמָה).</p><div style=\"font-size:1.1em;font-weight:700;margin:1.2rem 0 0.5rem;color:#92400e;\">לאחר הברכה אומרים:</div><p>הֲרֵי זוֹ חַלָּה.</p><div style=\"font-size:1.1em;font-weight:700;margin:1.2rem 0 0.5rem;color:#92400e;\">תפילה לאחר ההפרשה (נהוג):</div><p style=\"line-height:2;\">יְהִי רָצוֹן מִלְּפָנֶיךָ יְהֹוָה אֱלֹהֵינוּ וֵאלֹהֵי אֲבוֹתֵינוּ, שֶׁבִּזְכוּת מִצְוַת חַלָּה תְּעוֹרֵר הָרַחֲמִים וְתָסִיר מִמֶּנּוּ כָּל גְּזֵרוֹת קָשׁוֹת. שָׁפַע הַבְּרָכָה תֵּן בְּמַעֲשֵׂה יָדֵינוּ וּבְכָל אֲשֶׁר אֲנַחְנוּ פּוֹנִים, וְזַכֵּנוּ לְקַיֵּם כָּל מִצְוֹתֶיךָ בְּשִׂמְחָה וּבְטוּב לֵבָב. אָמֵן.</p><div style=\"margin-top:1.5rem;padding:0.85rem;background:#fef3c7;border-radius:0.5rem;font-size:0.92em;\"><strong>שריפת החלה:</strong> נהוג לשרוף את החלה שהופרשה (היא קודש ואסור באכילה), בתנור או בכל אש.</div></div>"},
+    { id:"seudat-amanim", he:"סעודת אמנים", subtitle:"סדר הברכות והקדישים",
+      cat:"tefilot", color:"#7c3aed", icon:"🍷",
+      credit:"מאגר פנימי — נחלת הכלל", creditUrl:"",
+      type:"hardcoded",
+      intro:"\"סעודת אמנים\" היא מנהג ותיק לכנס עשרה אנשים לסעודה ולברך 90 פעם 'אמן' ('אמן' בגימטריה 91). זוהי סגולה גדולה לשפע, רפואה והצלחה. הסעודה נערכת לפי סדר ברכות מסודר — כשעולה מקובל הברכות מברך והשאר עונים אמן.",
+      content:"<div style=\"text-align:right;direction:rtl;line-height:2.2;\"><div style=\"margin-bottom:1.2rem;padding:1rem;background:#ede9fe;border-radius:0.75rem;color:#4c1d95;\"><strong>סדר הברכות (90 אמנים):</strong> כל אחד מהמברכים מברך ברכה אחת והנוכחים עונים \"אמן\" בכוונה. סוגי הברכות:</div><div style=\"font-size:1.08em;font-weight:700;margin:1rem 0 0.5rem;color:#5b21b6;\">1. בורא פרי הגפן</div><p style=\"background:#faf5ff;padding:0.7rem;border-radius:0.5rem;\">בָּרוּךְ אַתָּה יְהֹוָה אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, בּוֹרֵא פְּרִי הַגָּפֶן.</p><div style=\"font-size:1.08em;font-weight:700;margin:1rem 0 0.5rem;color:#5b21b6;\">2. בורא מיני מזונות</div><p style=\"background:#faf5ff;padding:0.7rem;border-radius:0.5rem;\">בָּרוּךְ אַתָּה יְהֹוָה אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, בּוֹרֵא מִינֵי מְזוֹנוֹת.</p><div style=\"font-size:1.08em;font-weight:700;margin:1rem 0 0.5rem;color:#5b21b6;\">3. המוציא לחם מן הארץ</div><p style=\"background:#faf5ff;padding:0.7rem;border-radius:0.5rem;\">בָּרוּךְ אַתָּה יְהֹוָה אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, הַמּוֹצִיא לֶחֶם מִן הָאָרֶץ.</p><div style=\"font-size:1.08em;font-weight:700;margin:1rem 0 0.5rem;color:#5b21b6;\">4. בורא פרי העץ</div><p style=\"background:#faf5ff;padding:0.7rem;border-radius:0.5rem;\">בָּרוּךְ אַתָּה יְהֹוָה אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, בּוֹרֵא פְּרִי הָעֵץ.</p><div style=\"font-size:1.08em;font-weight:700;margin:1rem 0 0.5rem;color:#5b21b6;\">5. בורא פרי האדמה</div><p style=\"background:#faf5ff;padding:0.7rem;border-radius:0.5rem;\">בָּרוּךְ אַתָּה יְהֹוָה אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, בּוֹרֵא פְּרִי הָאֲדָמָה.</p><div style=\"font-size:1.08em;font-weight:700;margin:1rem 0 0.5rem;color:#5b21b6;\">6. שהכל נהיה בדברו</div><p style=\"background:#faf5ff;padding:0.7rem;border-radius:0.5rem;\">בָּרוּךְ אַתָּה יְהֹוָה אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, שֶׁהַכֹּל נִהְיֶה בִּדְבָרוֹ.</p><div style=\"font-size:1.08em;font-weight:700;margin:1rem 0 0.5rem;color:#5b21b6;\">7. בורא מיני בשמים</div><p style=\"background:#faf5ff;padding:0.7rem;border-radius:0.5rem;\">בָּרוּךְ אַתָּה יְהֹוָה אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, בּוֹרֵא מִינֵי בְשָׂמִים.</p><div style=\"font-size:1.08em;font-weight:700;margin:1rem 0 0.5rem;color:#5b21b6;\">8. ברכה אחרונה — בורא נפשות</div><p style=\"background:#faf5ff;padding:0.7rem;border-radius:0.5rem;\">בָּרוּךְ אַתָּה יְהֹוָה אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, בּוֹרֵא נְפָשׁוֹת רַבּוֹת וְחֶסְרוֹנָן, עַל כֹּל מַה שֶּׁבָּרָאתָ לְהַחֲיוֹת בָּהֶם נֶפֶשׁ כָּל חָי. בָּרוּךְ חֵי הָעוֹלָמִים.</p><div style=\"font-size:1.08em;font-weight:700;margin:1rem 0 0.5rem;color:#5b21b6;\">9. ברכת מעין שלוש</div><p style=\"background:#faf5ff;padding:0.7rem;border-radius:0.5rem;\">בָּרוּךְ אַתָּה יְהֹוָה אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, עַל הַמִּחְיָה וְעַל הַכַּלְכָּלָה...</p><div style=\"font-size:1.08em;font-weight:700;margin:1rem 0 0.5rem;color:#5b21b6;\">10. ברכת המזון</div><p style=\"background:#faf5ff;padding:0.7rem;border-radius:0.5rem;\">לאחר אכילת לחם — מברכים ברכת המזון בכוונה גדולה והקהל עונה אמן.</p><div style=\"margin-top:1.5rem;padding:1rem;background:#f3e8ff;border-radius:0.5rem;color:#5b21b6;\"><strong>הערה:</strong> במהלך הסעודה ממשיכים לברך ברכות נוספות (הגומל, ברכת התורה, ברכות הראיה, וכו') עד הגעה ל-90 אמנים. הנוסח המדויק נמסר בכל קהילה לפי מסורתה — עדות המזרח, ספרד ואשכנז שונים מעט בפרטים. הנוסח לעיל הוא הנוסח האחיד הנפוץ והמתאים לכל הקהילות.</div></div>"},
+    { id:"sefer-haaggadah", he:"ספר האגדה", subtitle:"ח\"נ ביאליק וי\"ח רבניצקי",
+      cat:"emunah", color:"#0284c7", icon:"📕",
+      credit:"מאגר פנימי — קישור למקור החיצוני", creditUrl:"https://benyehuda.org/read/9722",
+      type:"hardcoded",
+      intro:"\"סֵפֶר הָאַגָּדָה\" הוא לקט מקיף של אגדות חז\"ל — מהמשנה, התלמודים, המדרשים והזוהר — שנערך וסודר על ידי חיים נחמן ביאליק ויהושע חנא רבניצקי (1908-1911). הספר אסף לראשונה את כל אגדות חז\"ל לפי נושאים: בריאת העולם, האבות, יציאת מצרים, מתן תורה, חורבן הבית, גלגולי תורה והלכה, חכמת חיים, אדם וחבירו, ועוד.",
+      content:"<div style=\"text-align:right;direction:rtl;line-height:2.2;\"><div style=\"margin-bottom:1.5rem;padding:1.25rem;background:#dbeafe;border-radius:0.85rem;color:#1e3a8a;\"><h3 style=\"margin:0 0 0.6rem;font-size:1.15em;font-weight:900;\">📖 על הספר</h3><p>\"ספר האגדה\" הוא מן הקובצים החשובים ביותר של ספרות חז\"ל. הוא מסודר לפי נושאים גדולים — לא לפי סדר התנ\"ך או הש\"ס — ומאפשר עיון מקיף בעולמם הרוחני של החכמים.</p></div><h3 style=\"color:#0c4a6e;font-size:1.1em;font-weight:900;margin:1rem 0 0.6rem;\">🌐 לימוד הספר המלא</h3><p>הספר במלואו נמצא באתר <strong>פרויקט בן-יהודה</strong> (חינמי, ללא תשלום):</p><p style=\"text-align:center;margin:1.2rem 0;\"><a href=\"https://benyehuda.org/read/9722\" target=\"_blank\" rel=\"noopener noreferrer\" style=\"display:inline-block;background:linear-gradient(135deg,#0ea5e9,#0284c7);color:#fff;text-decoration:none;font-weight:800;padding:0.85rem 1.8rem;border-radius:0.85rem;font-size:1rem;box-shadow:0 6px 16px rgba(2,132,199,0.3);\">📖 פתיחת ספר האגדה — פרויקט בן-יהודה</a></p><h3 style=\"color:#0c4a6e;font-size:1.1em;font-weight:900;margin:1.5rem 0 0.6rem;\">📜 מבנה הספר</h3><p>הספר מורכב משני חלקים עיקריים:</p><ul style=\"margin:0.6rem 1.5rem 1.2rem;line-height:1.8;\"><li><strong>חלק ראשון:</strong> אגדות היסטוריות — מבריאת העולם ועד חורבן הבית השני וחתימת המשנה.</li><li><strong>חלק שני:</strong> אגדות תורניות ומוסריות — סדר התורה, החכמה, יראת שמים, אדם וחבירו, חיי האדם, ועוד.</li></ul><h3 style=\"color:#0c4a6e;font-size:1.1em;font-weight:900;margin:1.5rem 0 0.6rem;\">💡 דוגמה לאגדה</h3><blockquote style=\"margin:0.6rem 0;padding:1rem 1.25rem;background:#eff6ff;border-right:4px solid #0284c7;border-radius:0.5rem;font-style:italic;\"><p>אמרו רבותינו: שלוש דברים אדם רואה בהם את עצמו: בכוסו, בכיסו ובכעסו. ויש אומרים: אף בשחקו.</p><footer style=\"margin-top:0.5rem;font-size:0.85em;color:#1e40af;font-style:normal;\">— עירובין סה, ע\"ב</footer></blockquote><div style=\"margin-top:1.5rem;padding:0.85rem 1rem;background:#f0f9ff;border-radius:0.5rem;font-size:0.85em;color:#0c4a6e;\">📚 הספר במלואו — מאות סיפורים ואמרות חז\"ל — זמין בקריאה חופשית בקישור שלמעלה.</div></div>"},
     { id:"bereishit-taman", he:"בראשית תמן", subtitle:'תיקון מ"ח — האר"י הקדוש',
       cat:"tefilot", color:"#b45309", icon:"🕯️",
       credit:"מתוך תיקוני הזוהר הקדוש — נחלת הכלל", creditUrl:"",
@@ -20526,17 +20667,14 @@ function openSefarimNosafimPage() {
       { he: "שנה ראשונה", en: "Halachot 1st Year", yIdx: 0, mode: "y0" },
       { he: "שנה שניה", en: "Halachot 2nd Year", yIdx: 1, mode: "y1" }
     ];
-    // נשתמש בפרשיות מהמודאל אם נטענו
     var parshiyot1 = ["Bereshit","Noach","Lech Lecha","Vayera","Chayei Sara","Toldot","Vayetzei","Vayishlach","Vayeshev","Miketz","Vayigash","Vayechi","Shemot","Vaera","Bo","Beshalach","Yitro","Mishpatim","Terumah","Tetzaveh","Ki Tisa","Vayakhel","Pekudei","Vayikra","Tzav","Shmini","Tazria Metzora","Achrei Mot Kedoshim","Emor","Behar Bechukotai","Bamidbar","Nasso","Beha'alotcha","Sh'lach","Korach","Chukat","Balak","Pinchas","Matot Masei","Devarim","Vaetchanan","Eikev","Re'eh","Shoftim","Ki Teitzei","Ki Tavo","Nitzavim","Vayeilech","Ha'Azinu"];
     var parshiyotHe1 = ["בראשית","נח","לך לך","וירא","חיי שרה","תולדות","ויצא","וישלח","וישב","מקץ","ויגש","ויחי","שמות","וארא","בא","בשלח","יתרו","משפטים","תרומה","תצוה","כי תשא","ויקהל","פקודי","ויקרא","צו","שמיני","תזריע-מצורע","אחרי-קדושים","אמור","בהר-בחקותי","במדבר","נשא","בהעלותך","שלח","קרח","חקת","בלק","פינחס","מטות-מסעי","דברים","ואתחנן","עקב","ראה","שופטים","כי תצא","כי תבוא","נצבים","וילך","האזינו"];
     var BIH_COLOR = "#22c55e";
-    // עבור על כל 3 המצבים והפרשיות
     for (var ymi = 0; ymi < BIH_YEARS.length; ymi++) {
       if (sig.aborted) break;
       var ym = BIH_YEARS[ymi];
       var parshList, parshListHe;
       if (ym.en === null) {
-        // drashot — יש 54 דרשות
         parshList = ym.parshiyot.map(function(p){return p.dr;});
         parshListHe = ym.parshiyot.map(function(p){return p.he;});
       } else {
@@ -20571,7 +20709,6 @@ function openSefarimNosafimPage() {
               bbtn.onmouseleave = function(){ this.style.background="none"; };
               (function(yearMode, parshaIdx, qwords){
                 bbtn.onclick = function(){
-                  // ניקוי החיפוש ידנית כדי למנוע race condition
                   if (_sAb) { _sAb.abort(); _sAb = null; }
                   clearTimeout(_sDeb);
                   var ovs2 = document.getElementById("sn-search-view");
@@ -20580,13 +20717,11 @@ function openSefarimNosafimPage() {
                     _activeModals.pop();
                     try { history.replaceState({modal:"sn-modal"}, ""); } catch(e){}
                   }
-                  // העבר את מילות החיפוש להדגשה בבן איש חי
                   window._bihPendingHighlight = qwords;
                   setTimeout(function() {
                     if (typeof window.openBenIshHaiPage === "function") window.openBenIshHaiPage();
                     setTimeout(function(){
                       try {
-                        // נסה לעבור למצב הנכון ולפרשה הנכונה
                         if (yearMode === "drashot" && typeof window._bihSetMode === "function") window._bihSetMode("drashot");
                         else if (yearMode === "y0" && typeof window._bihSetMode === "function") window._bihSetMode("y0");
                         else if (yearMode === "y1" && typeof window._bihSetMode === "function") window._bihSetMode("y1");
@@ -20614,7 +20749,6 @@ function openSefarimNosafimPage() {
   modal.id = "sn-modal";
   modal.style.cssText = "position:fixed;inset:0;z-index:200;background:rgba(2,6,23,0.95);backdrop-filter:blur(8px);overflow:hidden;";
   modal.innerHTML = [
-    // VIEW 1: Books
     "<div id=\"sn-books-view\" style=\"position:absolute;inset:0;display:flex;flex-direction:column;overflow:hidden;\">",
       "<div style=\"display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;\">",
         "<div><h2 style=\"color:#f1f5f9;font-size:1.3rem;font-weight:900;margin:0;\">ספרים נוספים</h2>",
@@ -20628,7 +20762,6 @@ function openSefarimNosafimPage() {
       "<div id=\"sn-bm-panel\" style=\"display:none;background:rgba(245,158,11,0.1);border-bottom:1px solid rgba(245,158,11,0.25);padding:0.75rem 1.25rem;flex-shrink:0;max-height:40vh;overflow-y:auto;direction:rtl;\"></div>",
       "<div style=\"overflow-y:auto;flex:1;padding:1rem 1.25rem 1.5rem;\"><div id=\"sn-books-grid\"></div></div>",
     "</div>",
-    // VIEW 2: Sub-books
     "<div id=\"sn-subbook-view\" style=\"display:none;position:absolute;inset:0;flex-direction:column;overflow:hidden;\">",
       "<div style=\"display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;\">",
         "<button onclick=\"history.back();\" style=\"background:rgba(255,255,255,0.08);border:none;color:#e2e8f0;padding:0.4rem 0.8rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;flex-shrink:0;\">← חזרה</button>",
@@ -20640,7 +20773,6 @@ function openSefarimNosafimPage() {
         "<div id=\"sn-subbook-grid\" style=\"display:grid;grid-template-columns:repeat(2,1fr);gap:1rem;max-width:380px;width:100%;\"></div>",
       "</div>",
     "</div>",
-    // VIEW 3: Sections
     "<div id=\"sn-sections-view\" style=\"display:none;position:absolute;inset:0;flex-direction:column;overflow:hidden;\">",
       "<div style=\"display:flex;align-items:center;justify-content:space-between;padding:0.75rem 1rem;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;gap:0.5rem;\">",
         "<button onclick=\"history.back();\" style=\"background:rgba(255,255,255,0.08);border:none;color:#e2e8f0;padding:0.4rem 0.75rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;flex-shrink:0;\">← חזרה</button>",
@@ -20656,7 +20788,6 @@ function openSefarimNosafimPage() {
       "</div>",
       "<div style=\"overflow-y:auto;flex:1;padding:0.75rem 1rem 1rem;\"><div id=\"sn-sections-grid\" style=\"display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:0.4rem;\"></div><div style=\"height:1.5rem;\"></div></div>",
     "</div>",
-    // VIEW 4: Reader
     "<div id=\"sn-reader-view\" style=\"display:none;position:absolute;inset:0;background:#faf9f6;flex-direction:column;overflow:hidden;\">",
       "<div style=\"display:flex;align-items:center;justify-content:space-between;padding:0.7rem 1rem;border-bottom:1px solid rgba(0,0,0,0.09);background:#faf9f6;flex-shrink:0;gap:0.5rem;\">",
         "<button onclick=\"history.back();\" style=\"background:rgba(0,0,0,0.06);border:none;color:#1e293b;padding:0.4rem 0.75rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;white-space:nowrap;flex-shrink:0;\">← חזרה</button>",
@@ -20677,7 +20808,6 @@ function openSefarimNosafimPage() {
         "<button class=\"auto-scroll-speed-btn\" onclick=\"window._cycleAutoScrollSpeed(this)\" style=\"font-size:0.78rem;font-weight:800;color:#047857;min-width:2.4rem;text-align:center;background:rgba(209,250,229,0.85);padding:5px 10px;border-radius:999px;border:1px solid rgba(16,185,129,0.3);cursor:pointer;\" aria-label=\"מהירות גלילה\">1x</button>",
       "</div>",
     "</div>",
-    // VIEW 5: Search
     "<div id=\"sn-search-view\" style=\"display:none;position:absolute;inset:0;background:#faf9f6;flex-direction:column;overflow:hidden;\">",
       "<div style=\"display:flex;align-items:center;justify-content:space-between;padding:0.7rem 1rem;border-bottom:1px solid rgba(0,0,0,0.09);background:#faf9f6;flex-shrink:0;gap:0.5rem;\">",
         "<button onclick=\"window._snCloseSearch();\" style=\"background:rgba(0,0,0,0.06);border:none;color:#1e293b;padding:0.4rem 0.75rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;flex-shrink:0;\">← חזרה</button>",
@@ -20691,7 +20821,6 @@ function openSefarimNosafimPage() {
       "<p id=\"sn-search-status\" style=\"color:#64748b;font-size:0.78rem;padding:0.3rem 1rem;margin:0;flex-shrink:0;min-height:1.5rem;\"></p>",
       "<div id=\"sn-search-results\" style=\"overflow-y:auto;flex:1;direction:rtl;\"></div>",
     "</div>",
-    // Book-specific bookmarks floating panel (overlay on subbook/sections/reader views)
     "<div id=\"sn-book-bm-panel\" style=\"display:none;position:absolute;top:60px;right:12px;left:12px;z-index:50;background:rgba(254,243,199,0.98);border:1.5px solid rgba(245,158,11,0.5);border-radius:0.85rem;padding:0.75rem 1rem;max-height:55vh;overflow-y:auto;direction:rtl;box-shadow:0 8px 24px rgba(0,0,0,0.25);\"></div>"
   ].join("");
 
@@ -20702,13 +20831,10 @@ function openSefarimNosafimPage() {
   buildBMPanel();
 }
 
-// פותח חיפוש חכם גלובלי - פותח את ספריית הספרים ומיד את חלון החיפוש
 function openGlobalSmartSearch() {
-  // פתח את מודאל הספרים אם הוא עדיין לא פתוח
   if (!document.getElementById("sn-modal")) {
     openSefarimNosafimPage();
   }
-  // המתן ל-DOM להתעדכן ופתח את החיפוש
   setTimeout(function () {
     if (typeof window._snOpenSearch === "function") {
       window._snOpenSearch();

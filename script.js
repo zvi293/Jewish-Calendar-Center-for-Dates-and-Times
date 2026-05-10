@@ -5854,23 +5854,69 @@ function updateMotzeiShabbatBtn() {
   if (_MOTZEI_DEMO_MODE) {
     show = true;
   } else {
-    const now = Date.now();
-    const tzeitMs = window.TZEIT_TIME ? window.TZEIT_TIME.getTime() : null;
-    const alotIso = window._lastZData && window._lastZData.times && window._lastZData.times.alotHaShachar;
-    const alotMs = alotIso ? new Date(alotIso).getTime() : null;
+    const nowDate = new Date();
+    const now = nowDate.getTime();
+    const dow = nowDate.getDay();
 
-    if (tzeitMs && now >= tzeitMs) {
-      const dow = new Date().getDay();
-      const wasShabbat = dow === 0;
-      const todayIso = new Date().toISOString().slice(0, 10);
-      const wasYomTov = (window.ALL_EVENTS || []).some(
-        (e) => e.type === "major" && e.date === todayIso
-      );
-      if (wasShabbat || wasYomTov) {
-        if (!alotMs || now < alotMs) {
-          show = true;
-        }
+    // Local-date YYYY-MM-DD helper (avoids UTC off-by-one near midnight)
+    const _isoLocal = (d) => {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${y}-${m}-${day}`;
+    };
+
+    const todayIso = _isoLocal(nowDate);
+    const _yest = new Date(nowDate); _yest.setDate(_yest.getDate() - 1);
+    const yesterdayIso = _isoLocal(_yest);
+    const _tom  = new Date(nowDate); _tom.setDate(_tom.getDate() + 1);
+    const tomorrowIso  = _isoLocal(_tom);
+
+    const events = window.ALL_EVENTS || [];
+    const isMajor = (iso) =>
+      events.some((e) => e.type === "major" && e.date === iso);
+
+    const tzeitTodayMs = window.TZEIT_TIME ? window.TZEIT_TIME.getTime() : null;
+    const tzeitDateMatchesToday =
+      window.TZEIT_TIME && _isoLocal(window.TZEIT_TIME) === todayIso;
+
+    const alotTodayIso  = window._lastZData &&
+                          window._lastZData.times &&
+                          window._lastZData.times.alotHaShachar;
+    const alotTodayMs   = alotTodayIso ? new Date(alotTodayIso).getTime() : null;
+    const alotTodayDateMatches =
+      alotTodayIso && _isoLocal(new Date(alotTodayIso)) === todayIso;
+
+    const alotTomorrowIso = window._lastZData &&
+                            window._lastZData._nextDay &&
+                            window._lastZData._nextDay.times &&
+                            window._lastZData._nextDay.times.alotHaShachar;
+    const alotTomorrowMs  = alotTomorrowIso ? new Date(alotTomorrowIso).getTime() : null;
+
+    // CASE A: TODAY itself is Shabbat or the LAST day of a Yom Tov chain.
+    // After today's tzeit and before tomorrow's alot → show button.
+    const todayIsShabbat   = dow === 6;
+    const todayIsMajor     = isMajor(todayIso);
+    const tomorrowIsMajor  = isMajor(tomorrowIso);
+    const todayIsLastChag  = todayIsMajor && !tomorrowIsMajor;
+
+    if ((todayIsShabbat || todayIsLastChag) &&
+        tzeitDateMatchesToday && tzeitTodayMs && now >= tzeitTodayMs) {
+      // If we have tomorrow's alot, use it; otherwise keep showing until midnight-next-day
+      if (!alotTomorrowMs || now < alotTomorrowMs) {
+        show = true;
       }
+    }
+
+    // CASE B: YESTERDAY was Shabbat or the last day of a Yom Tov chain,
+    // and we are still before today's alot hashachar.
+    const yestWasShabbat  = dow === 0;
+    const yestWasMajor    = isMajor(yesterdayIso);
+    const yestWasLastChag = yestWasMajor && !todayIsMajor;
+
+    if ((yestWasShabbat || yestWasLastChag) &&
+        alotTodayDateMatches && alotTodayMs && now < alotTodayMs) {
+      show = true;
     }
   }
 
@@ -5888,28 +5934,79 @@ function updateMotzeiShabbatBtn() {
 function _getMotzeiOccasion() {
   if (_MOTZEI_DEMO_MODE) return { type: "shabbat", name: "שבת" };
 
-  const dow = new Date().getDay();
-  if (dow === 0 || dow === 6) {
-    const tzeitMs = window.TZEIT_TIME ? window.TZEIT_TIME.getTime() : null;
-    if (dow === 6 && tzeitMs && Date.now() >= tzeitMs) return { type: "shabbat", name: "שבת" };
-    if (dow === 0) return { type: "shabbat", name: "שבת" };
+  const nowDate = new Date();
+  const now = nowDate.getTime();
+  const dow = nowDate.getDay();
+
+  const _isoLocal = (d) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  };
+
+  const todayIso = _isoLocal(nowDate);
+  const _yest = new Date(nowDate); _yest.setDate(_yest.getDate() - 1);
+  const yesterdayIso = _isoLocal(_yest);
+
+  const events = window.ALL_EVENTS || [];
+  const getMajor = (iso) => events.find((e) => e.type === "major" && e.date === iso);
+
+  // Are we in the post-tzeit window of TODAY, or pre-alot window (yesterday ended)?
+  const tzeitTodayMs = window.TZEIT_TIME ? window.TZEIT_TIME.getTime() : null;
+  const tzeitDateMatchesToday =
+    window.TZEIT_TIME && _isoLocal(window.TZEIT_TIME) === todayIso;
+  const afterTodayTzeit =
+    tzeitDateMatchesToday && tzeitTodayMs && now >= tzeitTodayMs;
+
+  const alotTodayIso =
+    window._lastZData && window._lastZData.times && window._lastZData.times.alotHaShachar;
+  const alotTodayMs = alotTodayIso ? new Date(alotTodayIso).getTime() : null;
+  const alotTodayDateMatches =
+    alotTodayIso && _isoLocal(new Date(alotTodayIso)) === todayIso;
+  const beforeTodayAlot =
+    alotTodayDateMatches && alotTodayMs && now < alotTodayMs;
+
+  // Identify which day "just ended" (and therefore which day's identity matters)
+  let endedIso, endedDow;
+  if (afterTodayTzeit) {
+    endedIso = todayIso;
+    endedDow = dow;
+  } else if (beforeTodayAlot) {
+    endedIso = yesterdayIso;
+    endedDow = (dow + 6) % 7;  // previous day's dow
+  } else {
+    // Fallback (called outside the motzei window). Keep legacy behaviour.
+    endedIso = todayIso;
+    endedDow = dow;
   }
 
-  const todayIso = new Date().toISOString().slice(0, 10);
-  const todayEvent = (window.ALL_EVENTS || []).find(
-    (e) => e.type === "major" && e.date === todayIso
-  );
-  if (todayEvent) {
-    const n = (todayEvent.name || "") + (todayEvent.heb || "");
-    if (/כיפור|Kippur/i.test(n))                        return { type: "yomkippur", name: "יום הכיפורים" };
-    if (/ראש השנה|Rosh|Hashana/i.test(n))               return { type: "yomtov",    name: "ראש השנה" };
-    if (/סוכות|Sukkot/i.test(n))                        return { type: "yomtov",    name: "סוכות" };
-    if (/שמיני עצרת|שמחת תורה|Shmini|Simchat/i.test(n)) return { type: "yomtov",    name: "שמיני עצרת / שמחת תורה" };
-    if (/פסח|Passover|Pesach/i.test(n))                 return { type: "yomtov",    name: "פסח" };
-    if (/שבועות|Shavuot/i.test(n))                      return { type: "yomtov",    name: "שבועות" };
-    return { type: "yomtov", name: todayEvent.name || "יום טוב" };
+  const wasShabbat = endedDow === 6;
+  const endedEvent = getMajor(endedIso);
+
+  let chagInfo = null;
+  if (endedEvent) {
+    const n = (endedEvent.name || "") + " " + (endedEvent.heb || "");
+    if (/כיפור|Kippur/i.test(n))                            chagInfo = { type: "yomkippur", name: "יום הכיפורים" };
+    else if (/ראש השנה|Rosh|Hashana/i.test(n))              chagInfo = { type: "yomtov",    name: "ראש השנה" };
+    else if (/סוכות|Sukkot/i.test(n))                       chagInfo = { type: "yomtov",    name: "סוכות" };
+    else if (/שמיני עצרת|שמחת תורה|Shmini|Simchat/i.test(n))chagInfo = { type: "yomtov",    name: "שמיני עצרת / שמחת תורה" };
+    else if (/פסח|Passover|Pesach/i.test(n))                chagInfo = { type: "yomtov",    name: "פסח" };
+    else if (/שבועות|Shavuot/i.test(n))                     chagInfo = { type: "yomtov",    name: "שבועות" };
+    else                                                    chagInfo = { type: "yomtov",    name: endedEvent.name || "יום טוב" };
   }
 
+  // Combinations: Shabbat + Yom Tov / Yom Kippur fall together
+  if (wasShabbat && chagInfo) {
+    if (chagInfo.type === "yomkippur") {
+      return { type: "shabbat_yomkippur", name: "שבת ויום הכיפורים", chagName: "יום הכיפורים" };
+    }
+    return { type: "shabbat_yomtov", name: `שבת ו${chagInfo.name}`, chagName: chagInfo.name };
+  }
+  if (wasShabbat) return { type: "shabbat", name: "שבת" };
+  if (chagInfo)   return chagInfo;
+
+  // Fallback to shabbat (legacy behaviour)
   return { type: "shabbat", name: "שבת" };
 }
 
@@ -5920,8 +6017,15 @@ function openMotzeiShabbatModal(activeTab) {
 
   const tab = activeTab || "havdalah";
   const occasion  = _getMotzeiOccasion();
-  const isShabbat   = occasion.type === "shabbat";
+  // Shabbat-combined types (Shabbat+YomTov / Shabbat+YomKippur) use the
+  // full motzei-shabbat nusach (with besamim and fire), since shabbat
+  // overrides the yom-tov/yom-kippur limitations on those brachot.
+  const isShabbat   = occasion.type === "shabbat"
+                   || occasion.type === "shabbat_yomtov"
+                   || occasion.type === "shabbat_yomkippur";
   const isYomKippur = occasion.type === "yomkippur";
+  const isShabbatYomTov     = occasion.type === "shabbat_yomtov";
+  const isShabbatYomKippur  = occasion.type === "shabbat_yomkippur";
   const nusach = (typeof CURRENT_NUSACH !== "undefined" ? CURRENT_NUSACH : null) ||
                  localStorage.getItem("nusach") || "mizrahi";
   const isMizrahi = nusach === "mizrahi";
@@ -5957,11 +6061,15 @@ function openMotzeiShabbatModal(activeTab) {
   }
 
   // ── הבדלה — nusach-aware, occasion-aware ──────────────────────────────────
-  const titleLine = isShabbat
-    ? "סדר הבדלה — מוצאי שבת קודש"
-    : isYomKippur
-      ? "סדר הבדלה — מוצאי יום הכיפורים"
-      : `סדר הבדלה — מוצאי ${occasion.name}`;
+  const titleLine = isShabbatYomKippur
+    ? "סדר הבדלה — מוצאי שבת ויום הכיפורים"
+    : isShabbatYomTov
+      ? `סדר הבדלה — מוצאי שבת ו${occasion.chagName || "יום טוב"}`
+      : occasion.type === "shabbat"
+        ? "סדר הבדלה — מוצאי שבת קודש"
+        : isYomKippur
+          ? "סדר הבדלה — מוצאי יום הכיפורים"
+          : `סדר הבדלה — מוצאי ${occasion.name}`;
 
   const nusachLabel = (typeof NUSACH_LABELS !== "undefined" && NUSACH_LABELS[nusach])
     ? NUSACH_LABELS[nusach] : nusach;
@@ -5973,6 +6081,16 @@ function openMotzeiShabbatModal(activeTab) {
   );
 
   let havdalahText = "";
+
+  // Small note for compound occasions (shabbat + chag together)
+  if (isShabbatYomTov || isShabbatYomKippur) {
+    havdalahText +=
+      `<span style="font-size:0.72rem;color:rgba(251,191,36,0.85);">⚠️ ${
+        isShabbatYomKippur
+          ? "מוצאי שבת ויום הכיפורים: מברכים על הבשמים ועל הנר כרגיל במוצאי שבת — שבת מחייבת."
+          : `מוצאי שבת ו${occasion.chagName || "יום טוב"}: הנוסח כמוצאי שבת רגיל, כולל בשמים ונר — שבת מחייבת.`
+      }</span><br><br>`;
+  }
 
   if (isMizrahi) {
     // ══ נוסח עדות המזרח ══
@@ -15892,6 +16010,13 @@ window.showDashboard = function () {
     startShabbatCountdown();
     if (CURRENT_OMER_DAY > 0) updateOmerRing(CURRENT_OMER_DAY);
     updateMotzeiShabbatBtn();
+    // Ensure the Motzei Shabbat/Chag button appears immediately at tzeit
+    // and disappears at alot, even if the page is left open.
+    if (!window._motzeiShabbatBtnInterval) {
+      window._motzeiShabbatBtnInterval = setInterval(() => {
+        try { updateMotzeiShabbatBtn(); } catch (e) {}
+      }, 60000);
+    }
   }, 600);
 };
 

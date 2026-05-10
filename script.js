@@ -5175,6 +5175,9 @@ function toggleNotificationsMaster() {
       }
     }
     updateNotifStatusUI();
+    if (typeof showToast === "function") {
+      showToast("ההתראות בוטלו", "info", 2500);
+    }
     return;
   }
 
@@ -5214,6 +5217,9 @@ function requestNotificationPermission() {
           setNotifMasterPreference(subscribed);
           updateNotifStatusUI();
           if (subscribed && Notification.permission === "granted") {
+            if (typeof showToast === "function") {
+              showToast("ההתראות הופעלו בהצלחה!", "success", 3000);
+            }
             try {
               new Notification(SITE_NAME, {
                 body: "התראות זמנים הופעלו בהצלחה!",
@@ -5237,6 +5243,9 @@ function requestNotificationPermission() {
       setNotifMasterPreference(permission === "granted");
       updateNotifStatusUI();
       if (permission === "granted") {
+        if (typeof showToast === "function") {
+          showToast("ההתראות הופעלו בהצלחה!", "success", 3000);
+        }
         try {
           new Notification(SITE_NAME, {
             body: "התראות זמנים הופעלו בהצלחה!",

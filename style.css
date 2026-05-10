@@ -690,3 +690,24 @@
         85%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
         100% { opacity: 0; transform: translate(-50%, -50%) scale(0.92); }
       }
+
+      /* ── Mobile scroll-snap בין פרקים/פרשיות/מזמורים ── */
+      @media (max-width: 768px) {
+        #sn-reader-content,
+        #bih-content-area,
+        #psalm-text-area,
+        #shir-scroll-area,
+        .holy-text-style {
+          scroll-snap-type: y proximity;
+          scroll-padding-top: 0.5rem;
+        }
+        #sn-reader-content > div,
+        #bih-content-area h2,
+        #bih-content-area h3,
+        #psalm-text-area h4,
+        .prayer-richtext h2,
+        .prayer-richtext h3 {
+          scroll-snap-align: start;
+          scroll-snap-stop: normal;
+        }
+      }

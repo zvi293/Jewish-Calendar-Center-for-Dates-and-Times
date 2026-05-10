@@ -14567,7 +14567,124 @@ let _prayerFontSize = parseInt(
   10,
 );
 
-function createFontSizeBar(targetSelector) {
+// ── Auto-scroll global helpers ─────────────────────────────────────
+// מהירויות בפיקסלים לשנייה — איטיות מספיק לקריאה נינוחה
+window._AUTO_SCROLL_SPEEDS = { 1: 14, 2: 32, 3: 58 };
+window._autoScrollState = { raf: null, target: null, speed: 1, btnRef: null, lastT: 0, acc: 0 };
+window._toggleAutoScroll = function(targetSelector, btn) {
+  var st = window._autoScrollState;
+  if (st.raf) {
+    cancelAnimationFrame(st.raf);
+    st.raf = null;
+    if (st.btnRef) { st.btnRef.innerHTML = '▶'; st.btnRef.setAttribute('aria-label','התחל גלילה אוטומטית'); }
+    st.btnRef = null;
+    return;
+  }
+  // אם זהו selector, מצא את האלמנט. אם זה כבר אלמנט, השתמש בו ישירות.
+  var startEl = (typeof targetSelector === 'string') ? document.querySelector(targetSelector) : targetSelector;
+  if (!startEl) return;
+  // מצא את האב הקרוב שהוא באמת ניתן לגלילה (overflow-y auto/scroll + scrollHeight > clientHeight)
+  function _isScrollable(node) {
+    if (!node || node.nodeType !== 1) return false;
+    if (node.scrollHeight <= node.clientHeight + 1) return false;
+    var cs = window.getComputedStyle(node);
+    var oy = cs.overflowY;
+    return oy === 'auto' || oy === 'scroll' || oy === 'overlay';
+  }
+  var el = startEl;
+  if (!_isScrollable(el)) {
+    var p = el.parentElement;
+    while (p && p !== document.body) {
+      if (_isScrollable(p)) { el = p; break; }
+      p = p.parentElement;
+    }
+  }
+  // אם עדיין לא מצאנו אלמנט גלילתי תקין, ננסה לגלול את המקורי בכל מקרה
+  if (!el) el = startEl;
+  st.target = el; st.btnRef = btn; st.lastT = 0; st.acc = 0;
+  if (btn) { btn.innerHTML = '⏸'; btn.setAttribute('aria-label','עצור גלילה אוטומטית'); }
+  var step = function(t) {
+    var s = window._autoScrollState;
+    if (!s.raf || !s.target) return;
+    if (!s.lastT) s.lastT = t;
+    var dt = (t - s.lastT) / 1000; // שניות
+    s.lastT = t;
+    var pxPerSec = window._AUTO_SCROLL_SPEEDS[s.speed] || 14;
+    s.acc += pxPerSec * dt;
+    if (s.acc >= 1) {
+      var delta = Math.floor(s.acc);
+      s.target.scrollTop += delta;
+      s.acc -= delta;
+    }
+    if (s.target.scrollTop + s.target.clientHeight >= s.target.scrollHeight - 1) {
+      cancelAnimationFrame(s.raf); s.raf = null;
+      if (s.btnRef) { s.btnRef.innerHTML = '▶'; s.btnRef.setAttribute('aria-label','התחל גלילה אוטומטית'); }
+      s.btnRef = null; return;
+    }
+    s.raf = requestAnimationFrame(step);
+  };
+  st.raf = requestAnimationFrame(step);
+};
+window._cycleAutoScrollSpeed = function(btn) {
+  var st = window._autoScrollState;
+  st.speed = st.speed >= 3 ? 1 : st.speed + 1;
+  window._syncAutoScrollSpeedDisplays();
+};
+// מסנכרן תצוגת כל כפתורי המהירות בעמוד עם המצב הגלובלי
+window._syncAutoScrollSpeedDisplays = function() {
+  try {
+    var st = window._autoScrollState;
+    document.querySelectorAll('.auto-scroll-speed-btn').forEach(function(el) {
+      el.textContent = st.speed + 'x';
+    });
+  } catch(e) {}
+};
+
+// ── פופ-אפ ניווט פרקים גנרי ─────────────────────────────────────
+window._openChapterNavPopup = function(opts) {
+  // opts: { title:string, subtitle?:string, items: [{label, onClick, isActive?}], color?:string }
+  var prev = document.getElementById('chapter-nav-popup');
+  if (prev) prev.remove();
+  var color = opts.color || '#6366f1';
+  var overlay = document.createElement('div');
+  overlay.id = 'chapter-nav-popup';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:10050;background:rgba(2,6,23,0.65);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:1rem;';
+  overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+  var card = document.createElement('div');
+  card.style.cssText = 'background:#ffffff;border-radius:1.25rem;box-shadow:0 25px 60px rgba(0,0,0,0.5);width:100%;max-width:560px;max-height:85vh;display:flex;flex-direction:column;overflow:hidden;direction:rtl;';
+  var headerHtml = '<div style="display:flex;align-items:center;justify-content:space-between;padding:0.9rem 1.1rem;border-bottom:1px solid rgba(0,0,0,0.08);flex-shrink:0;background:linear-gradient(135deg,' + color + '12,' + color + '04);">'+
+    '<div style="min-width:0;flex:1;">'+
+      '<h3 style="color:#0f172a;font-size:1.05rem;font-weight:900;margin:0;">'+ (opts.title || 'פרקים') +'</h3>'+
+      (opts.subtitle ? '<p style="color:#64748b;font-size:0.78rem;margin:0.15rem 0 0;">'+ opts.subtitle +'</p>' : '')+
+    '</div>'+
+    '<button onclick="document.getElementById(\'chapter-nav-popup\').remove();" style="background:rgba(0,0,0,0.06);border:none;color:#475569;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:1.05rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-right:0.5rem;" aria-label="סגור">✕</button>'+
+  '</div>';
+  var grid = document.createElement('div');
+  grid.style.cssText = 'overflow-y:auto;padding:0.85rem;flex:1;';
+  var inner = document.createElement('div');
+  inner.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:0.5rem;';
+  (opts.items || []).forEach(function(it, idx) {
+    var btn = document.createElement('button');
+    var active = !!it.isActive;
+    btn.style.cssText = 'background:' + (active ? color : 'rgba(0,0,0,0.04)') + ';color:' + (active ? '#fff' : '#1e293b') + ';border:1.5px solid ' + (active ? color : 'rgba(0,0,0,0.08)') + ';border-radius:0.85rem;padding:0.7rem 0.55rem;font-size:0.82rem;font-weight:800;cursor:pointer;text-align:center;line-height:1.25;transition:transform 0.12s ease, background 0.12s ease;direction:rtl;';
+    btn.onmouseenter = function() { if (!active) btn.style.background = color + '18'; };
+    btn.onmouseleave = function() { if (!active) btn.style.background = 'rgba(0,0,0,0.04)'; };
+    btn.textContent = it.label;
+    btn.addEventListener('click', function() {
+      overlay.remove();
+      try { if (typeof it.onClick === 'function') it.onClick(idx); } catch(e){}
+    });
+    inner.appendChild(btn);
+  });
+  grid.appendChild(inner);
+  card.innerHTML = headerHtml;
+  card.appendChild(grid);
+  overlay.appendChild(card);
+  document.body.appendChild(overlay);
+};
+
+function createFontSizeBar(targetSelector, scrollTargetSelector) {
+  const scrollTarget = scrollTargetSelector || targetSelector;
   const bar = document.createElement("div");
   bar.className = "font-size-bar";
   bar.style.cssText =
@@ -14576,7 +14693,11 @@ function createFontSizeBar(targetSelector) {
           <button onclick="changePrayerFontSize(-10, '${targetSelector}')" style="width:38px;height:38px;border-radius:50%;border:1.5px solid rgba(99,102,241,0.3);background:linear-gradient(135deg,#eef2ff 0%,#e0e7ff 100%);color:#4338ca;font-size:1.25rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(99,102,241,0.15);transition:transform 0.15s ease,box-shadow 0.15s ease;" onmouseover="this.style.transform='scale(1.08)';this.style.boxShadow='0 4px 10px rgba(99,102,241,0.25)';" onmouseout="this.style.transform='';this.style.boxShadow='0 2px 6px rgba(99,102,241,0.15)';" aria-label="הקטן כתב">−</button>
           <span class="font-size-label" style="font-size:0.8rem;font-weight:800;color:#4338ca;min-width:3.3rem;text-align:center;background:rgba(238,242,255,0.85);padding:5px 12px;border-radius:999px;border:1px solid rgba(99,102,241,0.2);">${_prayerFontSize}%</span>
           <button onclick="changePrayerFontSize(10, '${targetSelector}')" style="width:38px;height:38px;border-radius:50%;border:1.5px solid rgba(99,102,241,0.3);background:linear-gradient(135deg,#eef2ff 0%,#e0e7ff 100%);color:#4338ca;font-size:1.25rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(99,102,241,0.15);transition:transform 0.15s ease,box-shadow 0.15s ease;" onmouseover="this.style.transform='scale(1.08)';this.style.boxShadow='0 4px 10px rgba(99,102,241,0.25)';" onmouseout="this.style.transform='';this.style.boxShadow='0 2px 6px rgba(99,102,241,0.15)';" aria-label="הגדל כתב">+</button>
+          <button onclick="window._toggleAutoScroll('${scrollTarget}', this)" style="width:38px;height:38px;border-radius:50%;border:1.5px solid rgba(16,185,129,0.35);background:linear-gradient(135deg,#ecfdf5 0%,#d1fae5 100%);color:#047857;font-size:0.95rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(16,185,129,0.18);transition:transform 0.15s ease;" onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform=''" aria-label="התחל גלילה אוטומטית">▶</button>
+          <button class="auto-scroll-speed-btn" onclick="window._cycleAutoScrollSpeed(this)" style="font-size:0.78rem;font-weight:800;color:#047857;min-width:2.4rem;text-align:center;background:rgba(209,250,229,0.85);padding:5px 10px;border-radius:999px;border:1px solid rgba(16,185,129,0.3);cursor:pointer;" aria-label="מהירות גלילה">1x</button>
         `;
+  // סנכרון תצוגת מהירות אחרי הוספה ל-DOM
+  setTimeout(function(){ if (window._syncAutoScrollSpeedDisplays) window._syncAutoScrollSpeedDisplays(); }, 0);
   return bar;
 }
 
@@ -14598,6 +14719,8 @@ function applyPrayerFontSize(targetSelector) {
   targets.forEach((el) => {
     el.style.fontSize = (_prayerFontSize / 100) * BASE_PX + "px";
   });
+  // סנכרון תצוגת מהירות גלילה אוטומטית בכל סרגלי הכפתורים שגלויים
+  if (window._syncAutoScrollSpeedDisplays) window._syncAutoScrollSpeedDisplays();
 }
 
 function closePrayerModal() {
@@ -15185,6 +15308,7 @@ function openBenIshHaiPage() {
     if (area) area.style.fontSize = _bihFontSize+"%";
     const lbl = document.getElementById("bih-font-label");
     if (lbl) lbl.textContent = _bihFontSize+"%";
+    if (window._syncAutoScrollSpeedDisplays) window._syncAutoScrollSpeedDisplays();
   }
 
   // ── Modal HTML ──
@@ -15220,6 +15344,7 @@ function openBenIshHaiPage() {
       '<div style="display:flex;align-items:center;justify-content:space-between;padding:0.7rem 1rem;border-bottom:1px solid rgba(0,0,0,0.09);background:#faf9f6;flex-shrink:0;gap:0.5rem;">'+
         '<button onclick="window._bihCloseReading()" style="background:rgba(0,0,0,0.06);border:none;color:#1e293b;padding:0.4rem 0.75rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;white-space:nowrap;flex-shrink:0;">← חזרה</button>'+
         '<h3 id="bih-reading-title" style="color:#1e293b;font-size:0.95rem;font-weight:900;margin:0;text-align:center;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></h3>'+
+        '<button onclick="window._bihGoToChapters()" style="background:rgba(0,0,0,0.06);border:none;color:#1e293b;padding:0.4rem 0.55rem;border-radius:999px;cursor:pointer;font-size:0.82rem;flex-shrink:0;margin-left:0.35rem;" title="כל הפרשיות">📑</button>'+
         '<button onclick="window._bihOpenSearch()" style="background:rgba(0,0,0,0.06);border:none;color:#1e293b;padding:0.4rem 0.75rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;white-space:nowrap;flex-shrink:0;">🔍 חיפוש</button>'+
       '</div>'+
       '<div id="bih-content-area" style="overflow-y:auto;flex:1;padding:0.5rem 1.5rem 1rem;font-family:\'David Libre\',\'Frank Ruhl Libre\',serif;font-size:100%;line-height:2;color:#1e293b;text-align:center;direction:rtl;">'+
@@ -15229,6 +15354,8 @@ function openBenIshHaiPage() {
         '<button onclick="window._bihFontDec()" style="width:38px;height:38px;border-radius:50%;border:1.5px solid rgba(99,102,241,0.3);background:linear-gradient(135deg,#eef2ff 0%,#e0e7ff 100%);color:#4338ca;font-size:1.25rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(99,102,241,0.15);transition:transform 0.15s ease;line-height:1;" onmouseover="this.style.transform=\'scale(1.08)\'" onmouseout="this.style.transform=\'\'">−</button>'+
         '<span id="bih-font-label" style="font-size:0.8rem;font-weight:800;color:#4338ca;min-width:3.3rem;text-align:center;background:rgba(238,242,255,0.85);padding:5px 12px;border-radius:999px;border:1px solid rgba(99,102,241,0.2);">100%</span>'+
         '<button onclick="window._bihFontInc()" style="width:38px;height:38px;border-radius:50%;border:1.5px solid rgba(99,102,241,0.3);background:linear-gradient(135deg,#eef2ff 0%,#e0e7ff 100%);color:#4338ca;font-size:1.25rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(99,102,241,0.15);transition:transform 0.15s ease;line-height:1;" onmouseover="this.style.transform=\'scale(1.08)\'" onmouseout="this.style.transform=\'\'">+</button>'+
+        '<button onclick="window._toggleAutoScroll(\'#bih-content-area\', this)" style="width:38px;height:38px;border-radius:50%;border:1.5px solid rgba(16,185,129,0.35);background:linear-gradient(135deg,#ecfdf5 0%,#d1fae5 100%);color:#047857;font-size:0.95rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(16,185,129,0.18);transition:transform 0.15s ease;" onmouseover="this.style.transform=\'scale(1.08)\'" onmouseout="this.style.transform=\'\'" aria-label="התחל גלילה אוטומטית">▶</button>'+
+        '<button class="auto-scroll-speed-btn" onclick="window._cycleAutoScrollSpeed(this)" style="font-size:0.78rem;font-weight:800;color:#047857;min-width:2.4rem;text-align:center;background:rgba(209,250,229,0.85);padding:5px 10px;border-radius:999px;border:1px solid rgba(16,185,129,0.3);cursor:pointer;" aria-label="מהירות גלילה">1x</button>'+
       '</div>'+
     '</div>'+
 
@@ -15323,6 +15450,26 @@ function openBenIshHaiPage() {
 
   window._bihFontInc = () => { _bihFontSize = Math.min(200,_bihFontSize+10); applyFontSize(); };
   window._bihFontDec = () => { _bihFontSize = Math.max(60,_bihFontSize-10); applyFontSize(); };
+
+  // ── ניווט פרשיות בתוך בן איש חי ──
+  window._bihGoToChapters = () => {
+    const parshiyot = getParshiyot();
+    if (!parshiyot || !parshiyot.length) return;
+    const activeIdx = _loadedRange ? _loadedRange.start : -1;
+    const color = getColor();
+    const modeLabel = _bihMode==="drashot" ? "דרשות" : _bihMode==="y1" ? "שנה שניה" : "שנה ראשונה";
+    const items = parshiyot.map((pr, i) => ({
+      label: pr.he,
+      isActive: (i === activeIdx),
+      onClick: function() { window._bihOpenParsha(i, 0); }
+    }));
+    window._openChapterNavPopup({
+      title: "מעבר לפרשה",
+      subtitle: "בן איש חי · " + modeLabel + " · " + parshiyot.length + " פרשיות",
+      color: color,
+      items: items
+    });
+  };
 
   window._bihOpenSearch = () => {
     const ov = document.getElementById("bih-search-overlay");
@@ -15476,7 +15623,8 @@ function renderPrayerModalShell(title, isPopup) {
   document.body.appendChild(modal);
   // Add font size bar to full-screen modals
   if (!isPopup) {
-    modal.appendChild(createFontSizeBar(".holy-text-style"));
+    // הגדלה/הקטנה: על .holy-text-style. גלילה אוטומטית: על #prayer-modal-body (המיכל הגלילתי)
+    modal.appendChild(createFontSizeBar(".holy-text-style", "#prayer-modal-body"));
     applyPrayerFontSize(".holy-text-style");
   }
   return modal;
@@ -15825,13 +15973,15 @@ openTehillimPage = function () {
               <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border-bottom:1px solid rgba(0,0,0,0.08);background:#faf9f6;">
                 <button onclick="window._tehillimClosePsalm()" style="background:rgba(0,0,0,0.06);border:none;color:#64748b;padding:0.4rem 0.8rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;">← חזרה</button>
                 <h3 id="psalm-title" style="color:#000000;font-size:1rem;font-weight:900;margin:0;">תהילים</h3>
-                <div style="width:60px;"></div>
+                <button onclick="window._tehillimGoToChapters()" style="background:rgba(0,0,0,0.06);border:none;color:#1e293b;padding:0.4rem 0.55rem;border-radius:999px;cursor:pointer;font-size:0.82rem;flex-shrink:0;" title="כל הפרקים">📑</button>
               </div>
               <div id="psalm-text-area" class="holy-text-style" style="padding:1.25rem;overflow-y:auto;flex:1;text-align:center;direction:rtl;"></div>
               <div id="tehillim-font-bar" class="flex items-center justify-center gap-3 py-2 px-4 flex-shrink-0" style="background:rgba(250,249,246,0.95);border-top:1px solid rgba(0,0,0,0.08);">
                 <button onclick="changePrayerFontSize(-10, '#psalm-text-area')" style="width:38px;height:38px;border-radius:50%;border:1.5px solid rgba(99,102,241,0.3);background:linear-gradient(135deg,#eef2ff 0%,#e0e7ff 100%);color:#4338ca;font-size:1.25rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(99,102,241,0.15);transition:transform 0.15s ease,box-shadow 0.15s ease;" onmouseover="this.style.transform='scale(1.08)';this.style.boxShadow='0 4px 10px rgba(99,102,241,0.25)';" onmouseout="this.style.transform='';this.style.boxShadow='0 2px 6px rgba(99,102,241,0.15)';" aria-label="הקטן כתב">−</button>
                 <span class="font-size-label" style="font-size:0.8rem;font-weight:800;color:#4338ca;min-width:3.3rem;text-align:center;background:rgba(238,242,255,0.85);padding:5px 12px;border-radius:999px;border:1px solid rgba(99,102,241,0.2);">${_prayerFontSize}%</span>
                 <button onclick="changePrayerFontSize(10, '#psalm-text-area')" style="width:38px;height:38px;border-radius:50%;border:1.5px solid rgba(99,102,241,0.3);background:linear-gradient(135deg,#eef2ff 0%,#e0e7ff 100%);color:#4338ca;font-size:1.25rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(99,102,241,0.15);transition:transform 0.15s ease,box-shadow 0.15s ease;" onmouseover="this.style.transform='scale(1.08)';this.style.boxShadow='0 4px 10px rgba(99,102,241,0.25)';" onmouseout="this.style.transform='';this.style.boxShadow='0 2px 6px rgba(99,102,241,0.15)';" aria-label="הגדל כתב">+</button>
+                <button onclick="window._toggleAutoScroll('#psalm-text-area', this)" style="width:38px;height:38px;border-radius:50%;border:1.5px solid rgba(16,185,129,0.35);background:linear-gradient(135deg,#ecfdf5 0%,#d1fae5 100%);color:#047857;font-size:0.95rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(16,185,129,0.18);transition:transform 0.15s ease;" onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform=''" aria-label="התחל גלילה אוטומטית">▶</button>
+                <button class="auto-scroll-speed-btn" onclick="window._cycleAutoScrollSpeed(this)" style="font-size:0.78rem;font-weight:800;color:#047857;min-width:2.4rem;text-align:center;background:rgba(209,250,229,0.85);padding:5px 10px;border-radius:999px;border:1px solid rgba(16,185,129,0.3);cursor:pointer;" aria-label="מהירות גלילה">1x</button>
               </div>
               <div style="border-top:1px solid rgba(0,0,0,0.08);padding:0.7rem 1.25rem;color:#94a3b8;font-size:0.74rem;line-height:1.6;flex-shrink:0;background:#faf9f6;">מקור הטקסט: <strong style="color:#1e40af;">Sefaria.org</strong> · ספר תהילים</div>
             </div>
@@ -15839,6 +15989,26 @@ openTehillimPage = function () {
   };
 
   window._tehillimSwitchDay = (index) => { renderDay(index); window._thBuildBMPanel(); };
+
+  // ── ניווט פרקים בתוך תהילים — פופ-אפ עם כל ק"נ פרקים ──
+  window._tehillimGoToChapters = function() {
+    var items = [];
+    for (var n = 1; n <= 150; n++) {
+      (function(num) {
+        items.push({
+          label: "פרק " + toHebrewPsalmNumber(num),
+          isActive: (window._tehillimCurrentChapter === num),
+          onClick: function() { window._tehillimOpenPsalm(num); }
+        });
+      })(n);
+    }
+    window._openChapterNavPopup({
+      title: "מעבר לפרק תהילים",
+      subtitle: "150 פרקים",
+      color: "#1d4ed8",
+      items: items
+    });
+  };
   window._tehillimLoadedChapters = new Set();
   window._tehillimCurrentChapter = 1;
   window._tehillimPsalmInHistory = false;
@@ -19717,6 +19887,7 @@ function openSefarimNosafimPage() {
     if (c) c.style.fontSize = _fs + "%";
     var l = document.getElementById("sn-fs-label");
     if (l) l.textContent = _fs + "%";
+    if (window._syncAutoScrollSpeedDisplays) window._syncAutoScrollSpeedDisplays();
   }
   window._snFontInc = function() { _fs = Math.min(200, _fs+10); localStorage.setItem("sn-fs", _fs); applyFS(); };
   window._snFontDec = function() { _fs = Math.max(60,  _fs-10); localStorage.setItem("sn-fs", _fs); applyFS(); };
@@ -19891,6 +20062,29 @@ function openSefarimNosafimPage() {
     if (book.type === "hardcoded") { _sec = 0; openHardcoded(book); }
     else if (book.type === "multi") { buildSubBookView(book); showView("sn-subbook-view"); pushModalState("sn-subbook-view"); }
     else { buildSectionsGrid(); showView("sn-sections-view"); pushModalState("sn-sections-view"); }
+  };
+
+  // ── ניווט מהיר לפרקים מתוך תוך-הקורא — פופ-אפ עם רשימת סעיפים ──
+  window._snGoToChapters = function() {
+    if (!_bk) return;
+    if (_bk.type === "hardcoded") return; // אין סעיפים
+    var sections = _sbk ? _sbk.sections : _bk.sections;
+    if (!sections || !sections.length) return;
+    var activeIdx = (typeof _sec === "number") ? _sec : -1;
+    var subTitle = (_sbk ? (_bk.he + " — " + _sbk.he) : _bk.he) + " · " + sections.length + " סעיפים";
+    var items = sections.map(function(sec, i) {
+      return {
+        label: sec.he,
+        isActive: (i === activeIdx),
+        onClick: function() { _sec = i; window._snOpenSection(i); }
+      };
+    });
+    window._openChapterNavPopup({
+      title: "מעבר לפרק",
+      subtitle: subTitle,
+      color: _bk.color || "#6366f1",
+      items: items
+    });
   };
 
   // ── Sub-book view ──
@@ -20084,8 +20278,24 @@ function openSefarimNosafimPage() {
       var preselect = _bk ? _bk.id : "all";
       _searchBid = preselect;
       sel.innerHTML = "<option value=\"all\">כל הספרים</option>" +
-        BOOKS.map(function(b){ return "<option value=\""+b.id+"\""+( b.id===preselect?" selected":"")+">"+b.he+"</option>"; }).join("");
-      sel.onchange = function() { _searchBid = sel.value; window._snSearchRun(); };
+        BOOKS.map(function(b){ return "<option value=\""+b.id+"\""+( b.id===preselect?" selected":"")+">"+b.he+"</option>"; }).join("") +
+        "<option value=\"__bih__\">בן איש חי (חיפוש נפרד)</option>";
+      sel.onchange = function() {
+        // אם המשתמש בחר בן איש חי - נסגור את החיפוש כאן ונפתח את החיפוש המקורי של בן איש חי
+        if (sel.value === "__bih__") {
+          sel.value = "all"; _searchBid = "all";
+          window._snCloseSearch();
+          setTimeout(function() {
+            if (typeof window.openBenIshHaiPage === "function") { window.openBenIshHaiPage(); }
+            setTimeout(function(){
+              if (typeof window._bihOpenSearch === "function") { window._bihOpenSearch(); }
+            }, 80);
+          }, 50);
+          return;
+        }
+        _searchBid = sel.value;
+        window._snSearchRun();
+      };
     }
     setTimeout(function(){ var inp = document.getElementById("sn-search-input"); if(inp) inp.focus(); }, 80);
     pushModalState("sn-search-view");
@@ -20224,6 +20434,7 @@ function openSefarimNosafimPage() {
         "<button onclick=\"history.back();\" style=\"background:rgba(0,0,0,0.06);border:none;color:#1e293b;padding:0.4rem 0.75rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;white-space:nowrap;flex-shrink:0;\">← חזרה</button>",
         "<h3 id=\"sn-reader-title\" style=\"color:#1e293b;font-size:0.9rem;font-weight:900;margin:0;text-align:center;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:rtl;\"></h3>",
         "<div style=\"display:flex;gap:0.35rem;flex-shrink:0;\">",
+          "<button onclick=\"window._snGoToChapters();\" style=\"background:rgba(0,0,0,0.06);border:none;color:#1e293b;padding:0.4rem 0.55rem;border-radius:999px;cursor:pointer;font-size:0.82rem;\" title=\"כל הפרקים\">📑</button>",
           "<button id=\"sn-reader-bm-btn\" onclick=\"window._snToggleBookmark();\" style=\"background:rgba(0,0,0,0.06);border:none;color:#1e293b;padding:0.4rem 0.55rem;border-radius:999px;cursor:pointer;font-size:0.82rem;\" title=\"סימנייה\">🔖</button>",
           "<button onclick=\"window._snToggleBookBMPanel();\" style=\"background:rgba(0,0,0,0.06);border:none;color:#1e293b;padding:0.4rem 0.55rem;border-radius:999px;cursor:pointer;font-size:0.82rem;\" title=\"סימניות הספר\">📌</button>",
           "<button onclick=\"window._snOpenSearch();\" style=\"background:rgba(0,0,0,0.06);border:none;color:#1e293b;padding:0.4rem 0.55rem;border-radius:999px;cursor:pointer;font-size:0.82rem;\">🔍</button>",
@@ -20234,6 +20445,8 @@ function openSefarimNosafimPage() {
         "<button onclick=\"window._snFontDec();\" style=\"width:38px;height:38px;border-radius:50%;border:1.5px solid rgba(99,102,241,0.3);background:linear-gradient(135deg,#eef2ff 0%,#e0e7ff 100%);color:#4338ca;font-size:1.25rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(99,102,241,0.15);transition:transform 0.15s ease;line-height:1;\" onmouseover=\"this.style.transform='scale(1.08)'\" onmouseout=\"this.style.transform=''\">−</button>",
         "<span id=\"sn-fs-label\" style=\"font-size:0.8rem;font-weight:800;color:#4338ca;min-width:3.3rem;text-align:center;background:rgba(238,242,255,0.85);padding:5px 12px;border-radius:999px;border:1px solid rgba(99,102,241,0.2);\">100%</span>",
         "<button onclick=\"window._snFontInc();\" style=\"width:38px;height:38px;border-radius:50%;border:1.5px solid rgba(99,102,241,0.3);background:linear-gradient(135deg,#eef2ff 0%,#e0e7ff 100%);color:#4338ca;font-size:1.25rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(99,102,241,0.15);transition:transform 0.15s ease;line-height:1;\" onmouseover=\"this.style.transform='scale(1.08)'\" onmouseout=\"this.style.transform=''\">+</button>",
+        "<button onclick=\"window._toggleAutoScroll('#sn-reader-content', this)\" style=\"width:38px;height:38px;border-radius:50%;border:1.5px solid rgba(16,185,129,0.35);background:linear-gradient(135deg,#ecfdf5 0%,#d1fae5 100%);color:#047857;font-size:0.95rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(16,185,129,0.18);transition:transform 0.15s ease;\" onmouseover=\"this.style.transform='scale(1.08)'\" onmouseout=\"this.style.transform=''\" aria-label=\"התחל גלילה אוטומטית\">▶</button>",
+        "<button class=\"auto-scroll-speed-btn\" onclick=\"window._cycleAutoScrollSpeed(this)\" style=\"font-size:0.78rem;font-weight:800;color:#047857;min-width:2.4rem;text-align:center;background:rgba(209,250,229,0.85);padding:5px 10px;border-radius:999px;border:1px solid rgba(16,185,129,0.3);cursor:pointer;\" aria-label=\"מהירות גלילה\">1x</button>",
       "</div>",
     "</div>",
     // VIEW 5: Search
@@ -20263,6 +20476,7 @@ function openSefarimNosafimPage() {
 
 // פותח חיפוש חכם גלובלי - פותח את ספריית הספרים ומיד את חלון החיפוש
 function openGlobalSmartSearch() {
+  // פתח את מודאל הספרים אם הוא עדיין לא פתוח
   if (!document.getElementById("sn-modal")) {
     openSefarimNosafimPage();
   }

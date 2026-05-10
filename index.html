@@ -273,14 +273,20 @@
           // Sync localStorage preference to actual OneSignal subscription state
           // (handles the case where the user accepted via OneSignal's own Slide
           // Prompt — we never wrote `true` to localStorage in that flow).
+          // Require BOTH optedIn AND browser permission granted, otherwise the
+          // toggle would show "on" after the user resets Chrome permissions
+          // while OneSignal still has cached optedIn=true.
           try {
             var subscribed =
               OneSignal.User &&
               OneSignal.User.PushSubscription &&
               !!OneSignal.User.PushSubscription.optedIn;
+            var permOk =
+              "Notification" in window &&
+              Notification.permission === "granted";
             localStorage.setItem(
               "moadim_notifications_enabled",
-              subscribed ? "true" : "false"
+              subscribed && permOk ? "true" : "false"
             );
           } catch (e) {}
           // Sync UI with current subscription state once SDK is ready
@@ -296,9 +302,12 @@
             OneSignal.User.PushSubscription.addEventListener("change", function () {
               try {
                 var nowSubscribed = !!OneSignal.User.PushSubscription.optedIn;
+                var nowPermOk =
+                  "Notification" in window &&
+                  Notification.permission === "granted";
                 localStorage.setItem(
                   "moadim_notifications_enabled",
-                  nowSubscribed ? "true" : "false"
+                  nowSubscribed && nowPermOk ? "true" : "false"
                 );
               } catch (e) {}
               if (typeof window.updateNotifStatusUI === "function") {

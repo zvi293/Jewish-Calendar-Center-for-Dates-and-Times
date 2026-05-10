@@ -5152,15 +5152,17 @@ function isOneSignalSubscribed() {
 }
 
 function isNotifMasterActive() {
-  // OneSignal is the source of truth when ready; fall back to legacy check otherwise.
+  // Hard requirement: browser must actually have permission granted.
+  // Without this, OneSignal can show optedIn=true (cached state) even
+  // after the user reset Chrome's notification permission — leaving the
+  // toggle visually "on" while no notifications can actually arrive.
+  const permGranted =
+    "Notification" in window && Notification.permission === "granted";
+  if (!permGranted) return false;
   if (isOneSignalReady()) {
     return getNotifMasterPreference() && isOneSignalSubscribed();
   }
-  return (
-    getNotifMasterPreference() &&
-    "Notification" in window &&
-    Notification.permission === "granted"
-  );
+  return getNotifMasterPreference();
 }
 
 function toggleNotificationsMaster() {

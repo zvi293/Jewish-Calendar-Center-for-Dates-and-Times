@@ -7675,6 +7675,7 @@ function buildAlHamichyaPayload() {
 
   function p(t) { return "<p>" + t + "</p>"; }
   function sup(html) { return '<div class="prayer-supplement">' + html + "</div>"; }
+  function supBig(html) { return '<div class="prayer-supplement" style="font-size:0.78em;">' + html + "</div>"; }
   function lbl(t) { return '<span style="color:#6b7280;font-size:0.82em;font-style:italic;margin-left:0.2em;margin-right:0.2em;">' + t + '</span>'; }
 
   const parts = [];
@@ -7683,7 +7684,7 @@ function buildAlHamichyaPayload() {
   parts.push(p("בָּרוּךְ אַתָּה יְהֹוָה, אֱלֹהֵֽינוּ מֶֽלֶךְ הָעוֹלָם"));
 
   // ── ברירת פתיחה לפי הסוג ──
-  parts.push(sup(
+  parts.push(supBig(
     p(lbl("אם אכל מזונות יאמר") + "עַל הַמִּחְיָה וְעַל הַכַּלְכָּלָה") +
     p(lbl("אם שתה יין יאמר") + "(וְ)עַל הַגֶּֽפֶן וְעַל פְּרִי הַגֶּֽפֶן") +
     p(lbl("אם אכל פרות משבעת המינים יאמר") + "(וְ)עַל הָעֵץ וְעַל פְּרִי הָעֵץ")
@@ -7712,13 +7713,13 @@ function buildAlHamichyaPayload() {
 
   // ── פרטי החתימה לפי סוג ──
   if (isAshkenaz) {
-    parts.push(sup(
+    parts.push(supBig(
       p(lbl("מזונות") + "וְעַל הַמִּחְיָה " + lbl("של א\"י") + "וְעַל מִחְיָתוֹ") +
       p(lbl("יין") + "וְעַל פְּרִי הַגֶּֽפֶן " + lbl("של א\"י") + "וְעַל פְּרִי גַפְנוֹ") +
       p(lbl("פירות") + "וְעַל הַפֵּרוֹת " + lbl("של א\"י") + "וְעַל פֵּרוֹתָיו")
     ));
   } else {
-    parts.push(sup(
+    parts.push(supBig(
       p(lbl("מזונות") + "וְעַל הַמִּחְיָה וְעַל הַכַּלְכָּלָה " + lbl("של א\"י") + "וְעַל מִחְיָתָהּ וְעַל כַּלְכָּלָתָהּ") +
       p(lbl("יין") + "וְעַל פְּרִי הַגֶּֽפֶן " + lbl("של א\"י") + "וְעַל פְּרִי גַפְנָהּ") +
       p(lbl("פירות") + "וְעַל הַפֵּרוֹת " + lbl("של א\"י") + "וְעַל פֵּרוֹתֶֽיהָ")
@@ -7729,13 +7730,13 @@ function buildAlHamichyaPayload() {
   parts.push(p("בָּרוּךְ אַתָּה יְהֹוָה, עַל הָאָֽרֶץ וְעַל"));
 
   if (isAshkenaz) {
-    parts.push(sup(
+    parts.push(supBig(
       p(lbl("מזונות") + "הַמִּחְיָה: " + lbl("של א\"י") + "מִחְיָתוֹ:") +
       p(lbl("יין") + "פְּרִי הַגֶּֽפֶן: " + lbl("של א\"י") + "פְּרִי גַפְנוֹ:") +
       p(lbl("פירות") + "הַפֵּרוֹת: " + lbl("של א\"י") + "פֵּרוֹתָיו:")
     ));
   } else {
-    parts.push(sup(
+    parts.push(supBig(
       p(lbl("מזונות") + "הַמִּחְיָה וְעַל הַכַּלְכָּלָה: " + lbl("של א\"י") + "מִחְיָתָהּ וְעַל כַּלְכָּלָתָהּ:") +
       p(lbl("יין") + "פְּרִי הַגֶּֽפֶן: " + lbl("של א\"י") + "פְּרִי גַפְנָהּ:") +
       p(lbl("פירות") + "הַפֵּרוֹת: " + lbl("של א\"י") + "פֵּרוֹתֶֽיהָ:")

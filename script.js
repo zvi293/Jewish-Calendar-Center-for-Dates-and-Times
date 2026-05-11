@@ -14785,9 +14785,8 @@ window.openDonationModal = function() {
     '<div style="font-size:2.6rem;margin-bottom:0.5rem;">💛</div>'+
     '<h3 style="color:#fde68a;font-size:1.35rem;font-weight:900;margin:0 0 0.7rem;">תרומה לאתר</h3>'+
     '<p style="color:#e2e8f0;font-size:0.9rem;line-height:1.75;margin:0 0 1rem;">האתר הזה הוא <strong>חינמי לחלוטין</strong>, ללא פרסומות, ונבנה באהבה כדי לתת לכל יהודי כלי נגיש ללוח השנה העברי, זמני היום, תפילות, תהילים ועוד.</p>'+
-    '<p style="color:#cbd5e1;font-size:0.85rem;line-height:1.7;margin:0 0 1.25rem;">תרומה שלך — בכל סכום — מסייעת לתחזוקה השוטפת, לפיתוח תכנים נוספים ולהמשך התפעול ללא תשלום למשתמשים. כל שקל מתקבל בהכרת תודה עצומה.</p>'+
+    '<p style="color:#cbd5e1;font-size:0.85rem;line-height:1.7;margin:0 0 1.25rem;">תרומה שלך — בכל סכום — מסייעת לתחזוקה השוטפת, לפיתוח תכנים נוספים ולהמשך התפעול של האתר.</p>'+
     '<a href="https://www.paypal.com/donate/?hosted_button_id=88H6AJG95Y3PQ" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;justify-content:center;gap:0.5rem;background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#1a1a1a;text-decoration:none;font-weight:800;padding:0.85rem 1.8rem;border-radius:1rem;font-size:1rem;box-shadow:0 8px 20px rgba(251,191,36,0.35);transition:transform 0.15s;" onmouseover="this.style.transform=\'scale(1.04)\'" onmouseout="this.style.transform=\'scale(1)\'">'+
-      '<span style="font-size:1.1rem;">💛</span>'+
       '<span>תרומה לאתר ❤️</span>'+
     '</a>'+
     '<p style="color:#94a3b8;font-size:0.72rem;margin:0.85rem 0 0;">הקישור פותח את דף התרומה — מאובטח ופרטי</p>'+
@@ -16028,12 +16027,11 @@ window.showContactModal = function () {
             </div>
             <p style="color:#94a3b8;font-size:0.72rem;margin:1rem 0 1rem;">לחיצה על הכתובת תפתח את אפליקציית המייל שלכם</p>
             <a href="https://www.paypal.com/donate/?hosted_button_id=88H6AJG95Y3PQ" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;justify-content:center;gap:0.5rem;background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#1a1a1a;text-decoration:none;font-weight:800;padding:0.85rem 1.8rem;border-radius:1rem;font-size:1rem;box-shadow:0 8px 20px rgba(251,191,36,0.35);transition:transform 0.15s;" onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform='scale(1)'">
-              <span style="font-size:1.1rem;">💛</span>
               <span>תרומה לאתר ❤️</span>
             </a>
             <div style="text-align:center;margin:1rem auto 0;max-width:480px;">
               <p style="color:#1e293b;font-size:0.9rem;line-height:1.75;margin:0 0 0.85rem;">האתר הזה הוא <strong style="color:#0f172a;">חינמי לחלוטין</strong>, ללא פרסומות, ונבנה באהבה כדי לתת לכל יהודי כלי נגיש ללוח השנה העברי, זמני היום, תפילות, תהילים ועוד.</p>
-              <p style="color:#334155;font-size:0.85rem;line-height:1.7;margin:0 0 0.85rem;">תרומה שלך — בכל סכום — מסייעת לתחזוקה השוטפת, לפיתוח תכנים נוספים ולהמשך התפעול ללא תשלום למשתמשים. כל שקל מתקבל בהכרת תודה עצומה.</p>
+              <p style="color:#334155;font-size:0.85rem;line-height:1.7;margin:0 0 0.85rem;">תרומה שלך — בכל סכום — מסייעת לתחזוקה השוטפת, לפיתוח תכנים נוספים ולהמשך התפעול של האתר.</p>
               <p style="color:#64748b;font-size:0.72rem;margin:0;">לחיצה על הכפתור תפתח את דף התרומה — מאובטח ופרטי</p>
             </div>
           </div>`;
@@ -21002,6 +21000,78 @@ function openSefarimNosafimPage() {
     }
   }
 
+  // ── Be'er Hetev toggle (for Shulchan Arukh — any sub-book) ──
+  var SN_BH_KEY = "sn-show-bh";
+  var _snBHCache = {};  // sa-ref → null | "loading" | string[]
+  function _snGetBH() { return localStorage.getItem(SN_BH_KEY) === "true"; }
+  function _snSetBH(v) { localStorage.setItem(SN_BH_KEY, v ? "true" : "false"); }
+  function _snBHSupported() { return _bk && _bk.id === "shulchan-aruch"; }
+  // Update BH toggle visibility based on current book
+  window._snUpdateBHToggleVisibility = function() {
+    var btn = document.getElementById("sn-bh-toggle");
+    if (!btn) return;
+    btn.style.display = _snBHSupported() ? "flex" : "none";
+    if (_snBHSupported()) {
+      var on = _snGetBH();
+      btn.style.background = on ? "rgba(217,119,6,0.18)" : "rgba(217,119,6,0.06)";
+      btn.style.border = on ? "1.5px solid rgba(217,119,6,0.6)" : "1.5px solid rgba(217,119,6,0.25)";
+      btn.title = on ? "כבה באר היטב" : "הצג באר היטב";
+    }
+  };
+  // Toggle BH on/off
+  window._snToggleBH = function() {
+    if (!_snBHSupported()) return;
+    _snSetBH(!_snGetBH());
+    window._snUpdateBHToggleVisibility();
+    // Re-render all loaded chapters with/without BH
+    var area = document.getElementById("sn-reader-area");
+    if (area) {
+      var loaded = Array.from(_snLoadedIdx || new Set()).sort(function(a,b){return a-b;});
+      _snLoadedIdx = new Set();
+      area.innerHTML = "";
+      (async function() {
+        for (var i = 0; i < loaded.length; i++) {
+          await _snLoadChapter(loaded[i], area, false);
+        }
+      })();
+    }
+  };
+  // Fetch Be'er Hetev for a Shulchan Arukh siman
+  async function _snFetchBH(saRef) {
+    if (_snBHCache[saRef] !== undefined) return _snBHCache[saRef];
+    _snBHCache[saRef] = "loading";
+    try {
+      // SA ref: "Shulchan_Arukh,_Orach_Chayim.1" → BH ref: "Ba'er Hetev on Shulchan Arukh, Orach Chayim 1"
+      // Map SA sub-book to BH ref part
+      var bhMap = {
+        "Orach_Chayim": "Orach Chayim",
+        "Yoreh_Deah": "Yoreh Deah",
+        "Even_HaEzer": "Even HaEzer",
+        "Choshen_Mishpat": "Choshen Mishpat"
+      };
+      var match = saRef.match(/Shulchan_Arukh,_(Orach_Chayim|Yoreh_Deah|Even_HaEzer|Choshen_Mishpat)\.(\d+)/);
+      if (!match) { _snBHCache[saRef] = null; return null; }
+      var subBook = bhMap[match[1]];
+      var sim = match[2];
+      var bhRef = "Ba'er Hetev on Shulchan Arukh, " + subBook + " " + sim;
+      var res = await fetch("https://www.sefaria.org/api/texts/" + encodeURIComponent(bhRef) + "?lang=he&context=0", { signal: AbortSignal.timeout(8000) });
+      var data = await res.json();
+      if (data && data.error) { _snBHCache[saRef] = null; return null; }
+      var he = data && data.he;
+      var flat = [];
+      function pushAll2(v) {
+        if (typeof v === "string" && v.trim()) flat.push(v);
+        else if (Array.isArray(v)) v.forEach(pushAll2);
+      }
+      pushAll2(he);
+      _snBHCache[saRef] = flat.length ? flat : null;
+      return _snBHCache[saRef];
+    } catch(e) {
+      _snBHCache[saRef] = null;
+      return null;
+    }
+  }
+
   // ── Bookmark panel ──
   function buildBMPanel() {
     var panel = document.getElementById("sn-bm-panel");
@@ -21312,23 +21382,41 @@ function openSefarimNosafimPage() {
     else area.appendChild(chapterDiv);
     var he = await fetchSec(sec.ref);
     var mainHtml = heading + renderParagraphs(he, _bk.color);
-    // Append Mishnah Berurah if toggle is on and applicable
-    if (_snMBSupported() && _snGetMB()) {
-      chapterDiv.innerHTML = mainHtml + "<div style=\"margin-top:1rem;padding-top:0.85rem;border-top:1px dashed rgba(124,58,237,0.35);color:#7c3aed;font-size:0.78rem;font-style:italic;text-align:center;\">📖 טוען משנה ברורה...</div>";
+    var commentariesHtml = "";
+    var needMB = _snMBSupported() && _snGetMB();
+    var needBH = _snBHSupported() && _snGetBH();
+    // Show loading placeholders if needed
+    if (needMB || needBH) {
+      var loadingHtml = "";
+      if (needMB) loadingHtml += "<div style=\"margin-top:1rem;padding-top:0.85rem;border-top:1px dashed rgba(124,58,237,0.35);color:#7c3aed;font-size:0.78rem;font-style:italic;text-align:center;\">📖 טוען משנה ברורה...</div>";
+      if (needBH) loadingHtml += "<div style=\"margin-top:1rem;padding-top:0.85rem;border-top:1px dashed rgba(217,119,6,0.35);color:#d97706;font-size:0.78rem;font-style:italic;text-align:center;\">📜 טוען באר היטב...</div>";
+      chapterDiv.innerHTML = mainHtml + loadingHtml;
+    }
+    // Fetch Mishnah Berurah if needed
+    if (needMB) {
       var mb = await _snFetchMB(sec.ref);
-      var mbBlock = "";
       if (mb && mb.length) {
-        mbBlock = "<div style=\"margin-top:1.2rem;padding:0.85rem 1rem;border-radius:0.6rem;background:rgba(124,58,237,0.05);border:1px solid rgba(124,58,237,0.18);text-align:right;direction:rtl;\">"+
+        commentariesHtml += "<div style=\"margin-top:1.2rem;padding:0.85rem 1rem;border-radius:0.6rem;background:rgba(124,58,237,0.05);border:1px solid rgba(124,58,237,0.18);text-align:right;direction:rtl;\">"+
           "<div style=\"font-size:0.8rem;color:#7c3aed;font-weight:900;margin-bottom:0.55rem;text-align:center;\">📖 משנה ברורה</div>"+
-          mb.map(function(t,i){ return "<p style=\"margin:0 0 0.7rem;line-height:1.95;color:#4c1d95;font-size:0.92em;\"><span style=\"color:#7c3aed;font-weight:700;margin-left:0.35rem;\">(" + (i+1) + ")</span>" + t + "</p>"; }).join("")+
+          mb.map(function(t,i){ return "<p style=\"margin:0 0 0.7rem;line-height:1.95;color:#4c1d95;font-size:0.92em;\"><span style=\"color:#7c3aed;font-weight:700;margin-left:0.35rem;\">(" + toHN(i+1) + ")</span>" + t + "</p>"; }).join("")+
           "</div>";
       } else {
-        mbBlock = "<div style=\"margin-top:0.8rem;padding:0.45rem 0.7rem;border-radius:0.4rem;background:rgba(124,58,237,0.04);border:1px dashed rgba(124,58,237,0.25);color:#7c3aed;font-size:0.72rem;font-style:italic;text-align:center;\">📖 אין משנה ברורה על סימן זה</div>";
+        commentariesHtml += "<div style=\"margin-top:0.8rem;padding:0.45rem 0.7rem;border-radius:0.4rem;background:rgba(124,58,237,0.04);border:1px dashed rgba(124,58,237,0.25);color:#7c3aed;font-size:0.72rem;font-style:italic;text-align:center;\">📖 אין משנה ברורה על סימן זה</div>";
       }
-      chapterDiv.innerHTML = mainHtml + mbBlock;
-    } else {
-      chapterDiv.innerHTML = mainHtml;
     }
+    // Fetch Be'er Hetev if needed
+    if (needBH) {
+      var bh = await _snFetchBH(sec.ref);
+      if (bh && bh.length) {
+        commentariesHtml += "<div style=\"margin-top:1.2rem;padding:0.85rem 1rem;border-radius:0.6rem;background:rgba(217,119,6,0.05);border:1px solid rgba(217,119,6,0.22);text-align:right;direction:rtl;\">"+
+          "<div style=\"font-size:0.8rem;color:#d97706;font-weight:900;margin-bottom:0.55rem;text-align:center;\">📜 באר היטב</div>"+
+          bh.map(function(t,i){ return "<p style=\"margin:0 0 0.7rem;line-height:1.95;color:#7c2d12;font-size:0.92em;\"><span style=\"color:#d97706;font-weight:700;margin-left:0.35rem;\">(" + toHN(i+1) + ")</span>" + t + "</p>"; }).join("")+
+          "</div>";
+      } else {
+        commentariesHtml += "<div style=\"margin-top:0.8rem;padding:0.45rem 0.7rem;border-radius:0.4rem;background:rgba(217,119,6,0.04);border:1px dashed rgba(217,119,6,0.3);color:#d97706;font-size:0.72rem;font-style:italic;text-align:center;\">📜 אין באר היטב על סימן זה</div>";
+      }
+    }
+    chapterDiv.innerHTML = mainHtml + commentariesHtml;
   }
 
   // ── הדגשה וגלילה למיקום מדויק של תוצאת חיפוש ──
@@ -21400,6 +21488,7 @@ function openSefarimNosafimPage() {
     title.textContent = (_sbk ? _sbk.he + " — " : "") + sec.he;
     applyFS(); updateBMBtn();
     if (window._snUpdateMBToggleVisibility) window._snUpdateMBToggleVisibility();
+    if (window._snUpdateBHToggleVisibility) window._snUpdateBHToggleVisibility();
     content.onscroll = null;
     content.innerHTML = "<div style=\"text-align:center;padding:3rem 1rem;\"><div style=\"width:36px;height:36px;border:3px solid " + _bk.color + ";border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 1rem;\"></div><p style=\"color:#94a3b8;\">טוען...</p></div>";
     showView("sn-reader-view");
@@ -21750,6 +21839,7 @@ function openSefarimNosafimPage() {
       "<div style=\"display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;\">",
         "<button onclick=\"history.back();\" style=\"background:rgba(255,255,255,0.08);border:none;color:#e2e8f0;padding:0.4rem 0.8rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;flex-shrink:0;\">← חזרה</button>",
         "<h2 id=\"sn-subbook-title\" style=\"color:#f1f5f9;font-size:1.1rem;font-weight:900;margin:0;flex:1;text-align:center;\"></h2>",
+        "<button onclick=\"window._snOpenSearch();\" style=\"background:rgba(255,255,255,0.08);border:none;color:#e2e8f0;padding:0.4rem 0.8rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;flex-shrink:0;margin-left:0.4rem;\" title=\"חיפוש\">🔍 חיפוש</button>",
         "<button onclick=\"window._snToggleBookBMPanel();\" style=\"background:rgba(255,255,255,0.08);border:none;color:#e2e8f0;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:0.95rem;flex-shrink:0;margin-left:0.4rem;\" title=\"סימניות הספר\">📌</button>",
         "<button onclick=\"closeSefarimNosafimModal();\" style=\"background:rgba(255,255,255,0.08);border:none;color:#94a3b8;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.1rem;flex-shrink:0;\">✕</button>",
       "</div>",
@@ -21791,6 +21881,7 @@ function openSefarimNosafimPage() {
         "<button onclick=\"window._toggleAutoScroll('#sn-reader-content', this)\" style=\"width:38px;height:38px;border-radius:50%;border:1.5px solid rgba(16,185,129,0.35);background:linear-gradient(135deg,#ecfdf5 0%,#d1fae5 100%);color:#047857;font-size:0.95rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(16,185,129,0.18);transition:transform 0.15s ease;\" onmouseover=\"this.style.transform='scale(1.08)'\" onmouseout=\"this.style.transform=''\" aria-label=\"התחל גלילה אוטומטית\">▶</button>",
         "<button class=\"auto-scroll-speed-btn\" onclick=\"window._cycleAutoScrollSpeed(this)\" style=\"font-size:0.78rem;font-weight:800;color:#047857;min-width:2.4rem;text-align:center;background:rgba(209,250,229,0.85);padding:5px 10px;border-radius:999px;border:1px solid rgba(16,185,129,0.3);cursor:pointer;\" aria-label=\"מהירות גלילה\">1x</button>",
         "<button id=\"sn-mb-toggle\" onclick=\"window._snToggleMB();\" style=\"display:none;width:38px;height:38px;border-radius:50%;border:1.5px solid rgba(124,58,237,0.25);background:rgba(124,58,237,0.06);color:#7c3aed;font-size:0.95rem;font-weight:900;cursor:pointer;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(124,58,237,0.15);transition:all 0.15s ease;\" onmouseover=\"this.style.transform='scale(1.08)'\" onmouseout=\"this.style.transform=''\" title=\"משנה ברורה\">📖</button>",
+        "<button id=\"sn-bh-toggle\" onclick=\"window._snToggleBH();\" style=\"display:none;width:38px;height:38px;border-radius:50%;border:1.5px solid rgba(217,119,6,0.25);background:rgba(217,119,6,0.06);color:#d97706;font-size:0.95rem;font-weight:900;cursor:pointer;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(217,119,6,0.15);transition:all 0.15s ease;\" onmouseover=\"this.style.transform='scale(1.08)'\" onmouseout=\"this.style.transform=''\" title=\"באר היטב\">📜</button>",
       "</div>",
     "</div>",
     "<div id=\"sn-search-view\" style=\"display:none;position:absolute;inset:0;background:#faf9f6;flex-direction:column;overflow:hidden;\">",

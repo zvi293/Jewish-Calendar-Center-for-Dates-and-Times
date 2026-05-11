@@ -15856,11 +15856,110 @@ function closeBenIshHaiModal() {
 }
 
 
-function renderPrayerModalShell(title, isPopup) {
+// ── תפריט ניווט לסעיפי תפילה (שחרית/מנחה/ערבית) ──
+window.openPrayerNavPopup = function () {
+  var body = document.getElementById("prayer-modal-body");
+  if (!body) return;
+  // קונטיינר הגלילה במצב מסך-מלא הוא תמיד #prayer-modal-body (overflow-y:auto)
+  function _findScrollContainer() {
+    var el = document.getElementById("prayer-modal-body");
+    if (!el) return null;
+    var oy = getComputedStyle(el).overflowY;
+    if (oy === "auto" || oy === "scroll") return el;
+    // fallback: לחפש אב גולל
+    var p = el.parentElement;
+    while (p) {
+      var pOy = getComputedStyle(p).overflowY;
+      if (pOy === "auto" || pOy === "scroll") return p;
+      p = p.parentElement;
+    }
+    return el;
+  }
+  function _stripNikud(s) {
+    return (s || "").replace(/[֑-ׇ]/g, "").trim();
+  }
+  var headers = body.querySelectorAll("big > b, big b");
+  if (!headers || headers.length === 0) return;
+  var items = [];
+  var seen = new Set();
+  for (var i = 0; i < headers.length; i++) {
+    var bEl = headers[i];
+    var pEl = bEl.closest("p") || bEl.parentElement;
+    if (!pEl) continue;
+    if (!pEl.id) pEl.id = "prayer-section-" + i;
+    var raw = (bEl.textContent || "").trim();
+    if (!raw) continue;
+    var clean = _stripNikud(raw);
+    // סנן "תפילת שחרית" (כותרת-על, לא סעיף תפילה)
+    if (clean === "תפילת שחרית") continue;
+    // נרמול תוויות עמידה לתצוגה אחידה: "תפילת עמידה"
+    var displayLabel = raw;
+    if (clean.indexOf("עמידה") !== -1) {
+      displayLabel = "תפילת עמידה";
+    }
+    var dedupKey = displayLabel + "|" + pEl.id;
+    if (seen.has(dedupKey)) continue;
+    seen.add(dedupKey);
+    items.push({ label: displayLabel, targetId: pEl.id });
+  }
+  if (items.length === 0) return;
+  window._openChapterNavPopup({
+    title: "תפריט תפילה",
+    subtitle: "דילוג לסעיף בתפילה",
+    color: "#2563eb",
+    items: items.map(function (it) {
+      return {
+        label: it.label,
+        onClick: function () {
+          // חישוב offsetTop מצטבר עד לקונטיינר הגלילה
+          function _absOffsetTop(child, ancestor) {
+            var top = 0;
+            var node = child;
+            while (node && node !== ancestor && node !== document.body) {
+              top += node.offsetTop || 0;
+              node = node.offsetParent;
+            }
+            return top;
+          }
+          function _doScroll() {
+            var el = document.getElementById(it.targetId);
+            if (!el) return;
+            var container = _findScrollContainer();
+            if (!container) {
+              if (el.scrollIntoView) el.scrollIntoView({ behavior: "smooth", block: "start" });
+              return;
+            }
+            try {
+              var targetTop = _absOffsetTop(el, container) - 12;
+              if (targetTop < 0) targetTop = 0;
+              container.scrollTo({ top: targetTop, behavior: "smooth" });
+            } catch (e) {
+              if (el.scrollIntoView) el.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
+          }
+          // דחיית הגלילה לאחר שהפופ-אפ יוסר וה-layout יתייצב
+          if (window.requestAnimationFrame) {
+            requestAnimationFrame(function () {
+              requestAnimationFrame(_doScroll);
+            });
+          } else {
+            setTimeout(_doScroll, 16);
+          }
+        },
+      };
+    }),
+  });
+};
+
+function renderPrayerModalShell(title, isPopup, prayerKey) {
   let existing = document.getElementById("prayer-modal");
   if (existing) existing.remove();
   const modal = document.createElement("div");
   modal.id = "prayer-modal";
+  const _showPrayerNavBtn = (prayerKey === "shacharit" || prayerKey === "mincha" || prayerKey === "maariv");
+  const _prayerNavBtnHtml = _showPrayerNavBtn
+    ? `<button onclick="openPrayerNavPopup()" title="תפריט תפילה" aria-label="תפריט תפילה" style="background:rgba(0,0,0,0.06);border:none;color:#64748b;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.15rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;">☰</button>`
+    : "";
   if (isPopup) {
     modal.style.cssText =
       "position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);display:flex;align-items:flex-start;justify-content:center;padding:1rem;overflow-y:auto;";
@@ -15868,7 +15967,10 @@ function renderPrayerModalShell(title, isPopup) {
             <div class="modal-inner" style="background:#faf9f6;border:1px solid rgba(0,0,0,0.1);border-radius:2rem;padding:1.5rem;width:100%;max-width:760px;max-height:min(88vh,980px);margin:auto;box-shadow:0 25px 60px rgba(0,0,0,0.2);text-align:center;direction:rtl;display:flex;flex-direction:column;overflow:hidden;">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
                 <h3 class="modal-title" style="color:#000000;font-size:1.4rem;font-weight:900;margin:0;">${title}</h3>
-                <button class="modal-close" onclick="closePrayerModal()" style="background:rgba(0,0,0,0.06);border:none;color:#64748b;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.2rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✕</button>
+                <div style="display:flex;align-items:center;gap:0.5rem;flex-shrink:0;">
+                  ${_prayerNavBtnHtml}
+                  <button class="modal-close" onclick="closePrayerModal()" style="background:rgba(0,0,0,0.06);border:none;color:#64748b;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.2rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✕</button>
+                </div>
               </div>
               <div id="prayer-modal-meta" style="color:#64748b;font-size:0.75rem;margin-bottom:1rem;">טוען נוסח מלא…</div>
               <div id="prayer-modal-body" class="prayer-modal-body-mobile" style="background:rgba(0,0,0,0.02);border-radius:1rem;min-height:240px;flex:1;overflow:hidden;display:flex;flex-direction:column;">
@@ -15887,7 +15989,10 @@ function renderPrayerModalShell(title, isPopup) {
                 <h2 style="color:#1a1a1a;font-size:1.3rem;font-weight:900;margin:0;">${title}</h2>
                 <div id="prayer-modal-meta" style="color:#64748b;font-size:0.75rem;margin-top:0.15rem;">טוען נוסח מלא…</div>
               </div>
-              <button onclick="closePrayerModal()" style="background:rgba(0,0,0,0.06);border:none;color:#64748b;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.1rem;flex-shrink:0;">✕</button>
+              <div style="display:flex;align-items:center;gap:0.5rem;flex-shrink:0;">
+                ${_prayerNavBtnHtml}
+                <button onclick="closePrayerModal()" style="background:rgba(0,0,0,0.06);border:none;color:#64748b;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.1rem;flex-shrink:0;">✕</button>
+              </div>
             </div>
             <div id="prayer-modal-body" class="prayer-modal-body-mobile" style="flex:1;overflow-y:auto;background:#faf9f6;text-align:center;direction:rtl;">
               <div style="text-align:center;padding:2rem;color:#94a3b8;">טוען טקסט מלא ממקור זמין…</div>
@@ -16092,7 +16197,7 @@ openPrayer = async function (key, heLabel, enLabel) {
   const doOpen = async () => {
     const entry = PRAYER_DB[key] || { title: heLabel || enLabel || key };
     const isPopup = false;
-    renderPrayerModalShell(entry.title || heLabel || enLabel || key, isPopup);
+    renderPrayerModalShell(entry.title || heLabel || enLabel || key, isPopup, key);
     lockBodyScroll();
     pushModalState("prayer-modal");
     try {

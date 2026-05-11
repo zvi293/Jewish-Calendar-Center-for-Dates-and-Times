@@ -692,27 +692,39 @@
       }
 
       /* ── Mobile scroll-snap בין פרקים/פרשיות/מזמורים ── */
-      @media (max-width: 768px) {
-        #sn-reader-content,
-        #bih-content-area,
-        #psalm-text-area,
-        #shir-scroll-area,
-        #sefaria-modal-content,
-        .holy-text-style {
-          scroll-snap-type: y proximity;
-          scroll-padding-top: 0.5rem;
-        }
-        #sn-reader-content > div,
-        #bih-content-area h2,
-        #bih-content-area h3,
-        #psalm-text-area h4,
-        #psalm-text-area > div[id^="psalm-chapter-"],
-        #shir-scroll-area .shir-chapter,
-        .prayer-richtext h2,
-        .prayer-richtext h3,
-        .prayer-richtext hr.prayer-divider,
-        .prayer-richtext > p > big > b {
-          scroll-snap-align: start;
-          scroll-snap-stop: normal;
-        }
+      /* ── Scroll-snap for fast scroll: stops at every section/chapter/parsha ── */
+      #sn-reader-content,
+      #bih-content-area,
+      #psalm-text-area,
+      #shir-scroll-area,
+      #sefaria-modal-content,
+      #chok-israel-modal-content,
+      #prayer-modal .modal-body,
+      .holy-text-style {
+        scroll-snap-type: y proximity;
+        scroll-padding-top: 0.5rem;
+      }
+      /* Sefarim Nosafim reader — each chapter div */
+      #sn-reader-content > div,
+      /* Ben Ish Hai — section headings */
+      #bih-content-area h2,
+      #bih-content-area h3,
+      /* Tehillim — each chapter (both heading + chapter wrapper) */
+      #psalm-text-area h4,
+      #psalm-text-area > div[id^="psalm-chapter-"],
+      /* Shir HaShirim — each chapter wrapper */
+      #shir-scroll-area .shir-chapter,
+      /* Prayer modal (Shacharit, Mincha, Maariv, Tikkun HaKlali, etc.) — section headers from **markdown bold** */
+      #prayer-modal .modal-body strong,
+      /* Prayer-richtext rendering — section titles + dividers */
+      .prayer-richtext h2,
+      .prayer-richtext h3,
+      .prayer-richtext hr.prayer-divider,
+      .prayer-richtext > p > big > b,
+      /* Chok LeIsrael — each source block */
+      #chok-israel-modal-content > div,
+      /* Sefaria modal — each paragraph */
+      #sefaria-modal-content > p {
+        scroll-snap-align: start;
+        scroll-snap-stop: always;
       }

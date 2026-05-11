@@ -691,8 +691,8 @@
         100% { opacity: 0; transform: translate(-50%, -50%) scale(0.92); }
       }
 
-      /* ── Mobile scroll-snap בין פרקים/פרשיות/מזמורים ── */
       /* ── Scroll-snap for fast scroll: stops at every section/chapter/parsha ── */
+      /* Scroll containers — wherever scrollable content lives */
       #sn-reader-content,
       #bih-content-area,
       #psalm-text-area,
@@ -700,10 +700,13 @@
       #sefaria-modal-content,
       #chok-israel-modal-content,
       #prayer-modal .modal-body,
-      .holy-text-style {
+      #prayer-modal-body,
+      #prayer-modal-body .holy-text-style {
         scroll-snap-type: y proximity;
         scroll-padding-top: 0.5rem;
+        -webkit-overflow-scrolling: touch;
       }
+      /* Snap points — target meaningful section breaks */
       /* Sefarim Nosafim reader — each chapter div */
       #sn-reader-content > div,
       /* Ben Ish Hai — section headings */
@@ -714,13 +717,13 @@
       #psalm-text-area > div[id^="psalm-chapter-"],
       /* Shir HaShirim — each chapter wrapper */
       #shir-scroll-area .shir-chapter,
-      /* Prayer modal (Shacharit, Mincha, Maariv, Tikkun HaKlali, etc.) — section headers from **markdown bold** */
+      /* Prayer modal — simple (markdown bold) section headers */
       #prayer-modal .modal-body strong,
-      /* Prayer-richtext rendering — section titles + dividers */
+      /* Prayer-richtext rendering (Shacharit/Mincha/Maariv/Birchot Hashachar/etc.) */
       .prayer-richtext h2,
       .prayer-richtext h3,
       .prayer-richtext hr.prayer-divider,
-      .prayer-richtext > p > big > b,
+      .prayer-richtext > p:has(> big > b),
       /* Chok LeIsrael — each source block */
       #chok-israel-modal-content > div,
       /* Sefaria modal — each paragraph */

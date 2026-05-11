@@ -448,6 +448,13 @@
       @media (min-width: 768px) {
         #scroll-top-btn { display: none !important; }
       }
+      /* Al-HaMichya (ברכת מעין שלוש) — keep the "של א״י ועל מחיתה ועל כלכלתה" line on a single line, mobile only */
+      @media (max-width: 767px) {
+        .al-hamichya-shel-ai-line {
+          white-space: nowrap;
+          font-size: 0.85em;
+        }
+      }
 
       /* ── Hero stat cards pulse on load ── */
       @keyframes fadeSlideUp {

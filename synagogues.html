@@ -125,6 +125,16 @@
         border-radius: 50%;
         animation: spin 0.9s linear infinite;
       }
+      .spinner-small {
+        width: 12px;
+        height: 12px;
+        border: 2px solid rgba(94, 234, 212, 0.20);
+        border-top-color: #5eead4;
+        border-radius: 50%;
+        animation: spin 0.9s linear infinite;
+        display: inline-block;
+        flex-shrink: 0;
+      }
       @keyframes spin {
         to { transform: rotate(360deg); }
       }
@@ -841,69 +851,146 @@
         window.open(url, "_blank", "noopener");
       }
 
-      // ── Main fetch & render flow ──────────────────────
+      // ── Small UI helpers for streaming/instant-cache mode ──
+      // A live "מעדכן…" indicator at the top of the results list, with a tiny spinner.
+      function showRefreshHint(text) {
+        const out = document.getElementById("results");
+        if (!out) return;
+        const ex = out.querySelector(".refresh-hint");
+        if (ex) ex.remove();
+        if (!text) return;
+        const hint = document.createElement("div");
+        hint.className = "refresh-hint flex items-center justify-center gap-2 mb-2 py-1.5 text-cyan-200/90 text-xs";
+        const sp = document.createElement("div");
+        sp.className = "spinner-small";
+        sp.setAttribute("aria-hidden", "true");
+        const label = document.createElement("span");
+        label.textContent = text;
+        hint.appendChild(sp);
+        hint.appendChild(label);
+        out.insertBefore(hint, out.firstChild);
+      }
+      // A persistent amber notice shown when all servers fail but we have stale cache.
+      function showStaleNotice(text) {
+        const out = document.getElementById("results");
+        if (!out) return;
+        const ex = out.querySelector(".stale-notice");
+        if (ex) ex.remove();
+        if (!text) return;
+        const n = document.createElement("div");
+        n.className = "stale-notice text-amber-300/90 text-xs mb-2 px-1 text-center";
+        n.textContent = text;
+        out.insertBefore(n, out.firstChild);
+      }
+
+      // ── Main fetch & render flow (streaming + instant cache) ──
+      // Behaviour:
+      //  1. INSTANT CACHE: If we have a recent successful result in localStorage,
+      //     render it immediately so the user sees data in ~0ms.
+      //  2. STREAMING: Fire all queries in parallel; as each one resolves, merge
+      //     and re-render. This shows the first batch of fresh results as soon
+      //     as they are available, without waiting for every query to finish.
+      //  3. RACE-SAFE: fetchGen prevents stale fetches from overwriting fresh ones.
+      //  4. CACHE-ON-FAILURE: If all queries fail and we displayed cache, keep
+      //     showing cache + an amber stale notice. Otherwise show a clear error.
       async function fetchAndRender() {
         if (userLat == null || userLon == null) return;
         const myGen = ++fetchGen;
-        const tab = currentTab; // snapshot — must use this, not currentTab
+        const tab = currentTab; // snapshot for use throughout this run
 
-        const statusMsg = tab === "shul"
-          ? "מחפש בתי כנסת ברדיוס " + currentRadiusKm + " ק\"מ…"
-          : "מחפש מקוואות ברדיוס " + currentRadiusKm + " ק\"מ…\nהחיפוש עשוי להימשך עד 30 שניות.";
-        setStatus(statusMsg);
+        // 1. INSTANT CACHE
+        const cachedResults = loadCachedResults(tab, currentRadiusKm, userLat, userLon);
+        let hasCacheShown = false;
+        if (cachedResults && cachedResults.length > 0) {
+          if (myGen !== fetchGen) return;
+          lastResults = cachedResults;
+          renderResults(cachedResults, tab);
+          showRefreshHint("מעדכן נתונים…");
+          hasCacheShown = true;
+        } else {
+          const statusMsg = tab === "shul"
+            ? "מחפש בתי כנסת ברדיוס " + currentRadiusKm + " ק\"מ…"
+            : "מחפש מקוואות ברדיוס " + currentRadiusKm + " ק\"מ…\nהחיפוש עשוי להימשך עד 30 שניות.";
+          setStatus(statusMsg);
+        }
 
+        // 2. STREAMING
         const queries = buildQueries(tab, userLat, userLon, currentRadiusKm);
+        const seenIds = new Set();
+        const allElements = [];
+        let succeededCount = 0;
+        let pendingCount = queries.length;
+        let lastError = null;
 
-        // Run all queries in parallel — fail-soft: even if some fail (504/timeout),
-        // we still render results from the ones that succeeded.
-        const settled = await Promise.allSettled(queries.map(q => overpassFetch(q)));
-        if (myGen !== fetchGen) return; // superseded by a newer fetch
-
-        const elements = [];
-        let anySucceeded = false;
-        for (const r of settled) {
-          if (r.status === "fulfilled" && r.value && Array.isArray(r.value.elements)) {
-            elements.push(...r.value.elements);
-            anySucceeded = true;
-          }
-        }
-
-        if (!anySucceeded) {
-          // All queries failed — try to fall back to cached results from a
-          // previous successful fetch (same tab, same radius, similar location).
-          const cachedResults = loadCachedResults(tab, currentRadiusKm, userLat, userLon);
-          if (cachedResults && cachedResults.length > 0) {
+        const handleOne = async (q) => {
+          try {
+            const data = await overpassFetch(q);
             if (myGen !== fetchGen) return;
-            lastResults = cachedResults;
-            renderResults(cachedResults, tab);
-            // Show a small notice that these are cached
-            const note = document.createElement("div");
-            note.className = "text-amber-300/90 text-xs mb-2 px-1 text-center";
-            note.textContent = "⚠ השרתים עמוסים כרגע. מציג תוצאות מהחיפוש הקודם.";
-            const out = document.getElementById("results");
-            if (out.firstChild) out.insertBefore(note, out.firstChild); else out.appendChild(note);
-            return;
+            succeededCount++;
+            pendingCount--;
+            // Merge new elements, dedup by type+id
+            const newElems = (data && Array.isArray(data.elements)) ? data.elements : [];
+            for (const el of newElems) {
+              const key = (el.type || "") + ":" + (el.id || "");
+              if (!seenIds.has(key)) {
+                seenIds.add(key);
+                allElements.push(el);
+              }
+            }
+            // Re-render whenever we have items (replaces cache/previous batch)
+            if (allElements.length > 0) {
+              const items = parseElements(allElements, userLat, userLon, tab);
+              const filtered = items.filter(it => it.distanceKm <= currentRadiusKm + 0.05);
+              if (myGen !== fetchGen) return;
+              lastResults = filtered;
+              renderResults(filtered, tab);
+              if (pendingCount > 0) {
+                showRefreshHint("מחפש עוד תוצאות…");
+              }
+            }
+          } catch (err) {
+            lastError = err;
+            pendingCount--;
           }
-          // No cache — show the helpful error
-          const firstErr = settled.find(r => r.status === "rejected");
-          const errMsg = firstErr && firstErr.reason && firstErr.reason.message
-                       ? firstErr.reason.message : "כל השרתים לא הגיבו בזמן";
-          setError(
-            "שגיאה בטעינת נתונים מ-OpenStreetMap.\n"
-            + "השרתים עמוסים כרגע. נסה רדיוס קטן יותר, או נסה שוב בעוד דקה.\n\n"
-            + "(" + errMsg + ")"
-          );
-          return;
-        }
+        };
 
-        const items = parseElements(elements, userLat, userLon, tab);
-        // Filter to requested radius (Overpass may include slightly outside on ways)
-        const filtered = items.filter(it => it.distanceKm <= currentRadiusKm + 0.05);
+        // Promise.all is safe here because handleOne never throws (try/catch inside).
+        await Promise.all(queries.map(handleOne));
         if (myGen !== fetchGen) return;
-        lastResults = filtered;
-        // Save successful results for offline/fallback use
-        saveCachedResults(tab, currentRadiusKm, userLat, userLon, filtered);
-        renderResults(filtered, tab);
+
+        // 3. POST-PROCESSING
+        showRefreshHint(null); // remove the live "updating" indicator
+
+        if (succeededCount > 0) {
+          // At least one query succeeded.
+          if (allElements.length > 0) {
+            // Fresh results shown via streaming — persist them for next visit.
+            saveCachedResults(tab, currentRadiusKm, userLat, userLon, lastResults);
+          } else {
+            // Queries OK but genuinely empty (e.g., too-small radius).
+            lastResults = [];
+            saveCachedResults(tab, currentRadiusKm, userLat, userLon, []);
+            setStatus(
+              (tab === "shul" ? "לא נמצאו בתי כנסת" : "לא נמצאו מקוואות")
+                + " ברדיוס " + currentRadiusKm + " ק\"מ.\nנסה להרחיב את רדיוס החיפוש.",
+              false
+            );
+          }
+        } else {
+          // All queries failed.
+          if (hasCacheShown) {
+            // Keep the cache displayed, add a "stale" amber notice.
+            showStaleNotice("⚠ השרתים עמוסים. מציג תוצאות מהחיפוש הקודם.");
+          } else {
+            // Nothing to show — display a helpful error.
+            const errMsg = lastError && lastError.message ? lastError.message : "כל השרתים לא הגיבו בזמן";
+            setError(
+              "שגיאה בטעינת נתונים מ-OpenStreetMap.\n"
+              + "השרתים עמוסים כרגע. נסה רדיוס קטן יותר, או נסה שוב בעוד דקה.\n\n"
+              + "(" + errMsg + ")"
+            );
+          }
+        }
       }
 
       // ── Results cache (used as fallback when all servers are down) ──

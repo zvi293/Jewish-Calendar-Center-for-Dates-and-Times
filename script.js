@@ -19862,7 +19862,10 @@ document.addEventListener("keydown", (e) => {
 // ── ספרים נוספים (Sefarim Nosafim) ──
 // ══════════════════════════════════════════════════════════════════════════════
 
-function openSefarimNosafimPage() {
+function openSefarimNosafimPage(_pageMode) {
+
+  // ── Page mode (sefarim | tefilot) — קובע איזה תת-מאגר וכותרת מוצגים ──
+  _pageMode = (_pageMode === "tefilot") ? "tefilot" : "sefarim";
 
   // ── Hebrew numeral helper ──
   function toHN(n) {
@@ -20053,11 +20056,18 @@ function openSefarimNosafimPage() {
 
   // ── Book Definitions ──
   var CATS = [
-    { id: "halakha", he: "הלכה",   color: "#1d4ed8" },
-    { id: "musar",   he: "מוסר",   color: "#15803d" },
-    { id: "emunah",  he: "אמונה / חסידות",  color: "#6d28d9" },
-    { id: "tefilot", he: "תפילות", color: "#b45309" }
+    { id: "halakha", he: "הלכה",   color: "#1d4ed8", mode: "sefarim" },
+    { id: "musar",   he: "מוסר",   color: "#15803d", mode: "sefarim" },
+    { id: "emunah",  he: "אמונה / חסידות",  color: "#6d28d9", mode: "sefarim" },
+    { id: "tefilot", he: "תפילות", color: "#b45309", mode: "tefilot" }
   ];
+
+  // ── Mode-filtered helpers — קובעים אילו קטגוריות וספרים שייכים למצב הנוכחי ──
+  var _MODE_CATS = CATS.filter(function(c){ return c.mode === _pageMode; });
+  var _MODE_CAT_IDS = _MODE_CATS.map(function(c){ return c.id; });
+  function _modeBooks() {
+    return BOOKS.filter(function(b){ return _MODE_CAT_IDS.indexOf(b.cat) >= 0; });
+  }
 
   var BOOKS = [
     { id:"shulchan-aruch", he:"שולחן ערוך", subtitle:"רבי יוסף קארו",
@@ -21130,6 +21140,12 @@ function openSefarimNosafimPage() {
         var c = this._coreText || "";
         return (this._baseTpl || "").replace("[[NUSACH]]", nh).replace("[[CORE]]", c);
       }
+    },
+    { id:"kiddush-levana", he:"ברכת לבנה", subtitle:"קידוש לבנה — סדר ברכת הלבנה",
+      cat:"tefilot", color:"#6366f1", icon:"🌕",
+      credit:"מאגר פנימי — נחלת הכלל", creditUrl:"",
+      type:"external",
+      _externalAction: function() { openPrayer('kiddush-levana','ברכת לבנה','Kiddush Levana'); }
     }
   ];
 
@@ -21286,6 +21302,8 @@ function openSefarimNosafimPage() {
     Object.keys(all).forEach(function(bid) {
       var book = BOOKS.find(function(b){ return b.id === bid; });
       if (!book) return;
+      // הגבלת תצוגה לסימניות של ספרים בקטגוריות המצב הנוכחי (sefarim / tefilot)
+      if (_MODE_CAT_IDS.indexOf(book.cat) < 0) return;
       (all[bid]||[]).forEach(function(bm){ entries.push({book:book,bm:bm}); });
     });
     entries.sort(function(a,b){ return b.bm.ts - a.bm.ts; });
@@ -21419,7 +21437,7 @@ function openSefarimNosafimPage() {
   function buildBooksView() {
     var grid = document.getElementById("sn-books-grid");
     if (!grid) return;
-    grid.innerHTML = CATS.map(function(cat) {
+    grid.innerHTML = _MODE_CATS.map(function(cat) {
       var books = BOOKS.filter(function(b){ return b.cat === cat.id; });
       return "<div style=\"margin-bottom:1.25rem;\">"+
         "<div style=\"display:flex;align-items:center;gap:0.4rem;margin-bottom:0.65rem;\">"+
@@ -21444,6 +21462,11 @@ function openSefarimNosafimPage() {
   window._snOpenBook = function(bid) {
     var book = BOOKS.find(function(b){ return b.id === bid; });
     if (!book) return;
+    // Books of type "external" — מפעילים פעולה חיצונית (פותחים תפילה קיימת וכו') ולא נכנסים לקורא הפנימי
+    if (book.type === "external" && typeof book._externalAction === "function") {
+      book._externalAction();
+      return;
+    }
     _bk = book; _sbk = null; _sec = null;
     if (book.type === "hardcoded") { _sec = 0; openHardcoded(book); }
     else if (book.type === "multi") { buildSubBookView(book); showView("sn-subbook-view"); pushModalState("sn-subbook-view"); }
@@ -21810,8 +21833,8 @@ function openSefarimNosafimPage() {
       var preselect = _bk ? _bk.id : "all";
       _searchBid = preselect;
       sel.innerHTML = "<option value=\"all\">כל הספרים</option>" +
-        BOOKS.map(function(b){ return "<option value=\""+b.id+"\""+( b.id===preselect?" selected":"")+">"+b.he+"</option>"; }).join("") +
-        "<option value=\"__bih__\">בן איש חי</option>";
+        _modeBooks().map(function(b){ return "<option value=\""+b.id+"\""+( b.id===preselect?" selected":"")+">"+b.he+"</option>"; }).join("") +
+        (_pageMode === "sefarim" ? "<option value=\"__bih__\">בן איש חי</option>" : "");
       sel.onchange = function() {
         _searchBid = sel.value;
         window._snSearchRun();
@@ -21848,7 +21871,7 @@ function openSefarimNosafimPage() {
     var total = 0;
     var words = _snTokenize(q);
     if (words.length === 0) return;
-    var booksToSearch = _searchBid === "all" ? BOOKS : BOOKS.filter(function(b){ return b.id === _searchBid; });
+    var booksToSearch = _searchBid === "all" ? _modeBooks() : BOOKS.filter(function(b){ return b.id === _searchBid; });
     for (var bi = 0; bi < booksToSearch.length; bi++) {
       if (sig.aborted) break;
       var book = booksToSearch[bi];
@@ -22030,8 +22053,8 @@ function openSefarimNosafimPage() {
   modal.innerHTML = [
     "<div id=\"sn-books-view\" style=\"position:absolute;inset:0;display:flex;flex-direction:column;overflow:hidden;\">",
       "<div style=\"display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;\">",
-        "<div><h2 style=\"color:#f1f5f9;font-size:1.3rem;font-weight:900;margin:0;\">ספרים נוספים</h2>",
-        "<p style=\"color:#6366f1;font-size:0.78rem;font-weight:700;margin:0.15rem 0 0;\">ספריית קודש</p></div>",
+        "<div><h2 style=\"color:#f1f5f9;font-size:1.3rem;font-weight:900;margin:0;\">"+(_pageMode === "tefilot" ? "תפילות נוספות" : "ספרים נוספים")+"</h2>",
+        "<p style=\"color:#6366f1;font-size:0.78rem;font-weight:700;margin:0.15rem 0 0;\">"+(_pageMode === "tefilot" ? "תפילות מיוחדות" : "ספריית קודש")+"</p></div>",
         "<div style=\"display:flex;gap:0.5rem;align-items:center;\">",
           "<button onclick=\"window._snOpenSearch();\" style=\"background:rgba(255,255,255,0.08);border:none;color:#e2e8f0;padding:0.4rem 0.8rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;\">🔍 חיפוש</button>",
           "<button onclick=\"window._snToggleBMPanel();\" style=\"background:rgba(255,255,255,0.08);border:none;color:#e2e8f0;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1rem;flex-shrink:0;\" title=\"סימניות\">📌</button>",
@@ -22093,7 +22116,7 @@ function openSefarimNosafimPage() {
     "<div id=\"sn-search-view\" style=\"display:none;position:absolute;inset:0;background:#faf9f6;flex-direction:column;overflow:hidden;\">",
       "<div style=\"display:flex;align-items:center;justify-content:space-between;padding:0.7rem 1rem;border-bottom:1px solid rgba(0,0,0,0.09);background:#faf9f6;flex-shrink:0;gap:0.5rem;\">",
         "<button onclick=\"window._snCloseSearch();\" style=\"background:rgba(0,0,0,0.06);border:none;color:#1e293b;padding:0.4rem 0.75rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;flex-shrink:0;\">← חזרה</button>",
-        "<h3 style=\"color:#1e293b;font-size:0.95rem;font-weight:900;margin:0;text-align:center;flex:1;\">חיפוש בספרים</h3>",
+        "<h3 style=\"color:#1e293b;font-size:0.95rem;font-weight:900;margin:0;text-align:center;flex:1;\">"+(_pageMode === "tefilot" ? "חיפוש בתפילות" : "חיפוש בספרים")+"</h3>",
         "<div style=\"width:60px;flex-shrink:0;\"></div>",
       "</div>",
       "<div style=\"padding:0.6rem 1rem;border-bottom:1px solid rgba(0,0,0,0.07);flex-shrink:0;display:flex;flex-direction:column;gap:0.5rem;\">",
@@ -22112,6 +22135,11 @@ function openSefarimNosafimPage() {
   pushModalState("sn-modal");
   buildBooksView();
   buildBMPanel();
+}
+
+// פותח את עמוד "תפילות נוספות" — wrapper דקיק על openSefarimNosafimPage במצב tefilot
+function openTefilotNosafotPage() {
+  openSefarimNosafimPage("tefilot");
 }
 
 // פותח חיפוש חכם גלובלי - פותח את ספריית הספרים ומיד את חלון החיפוש

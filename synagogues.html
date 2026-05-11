@@ -20,7 +20,9 @@
     <link rel="manifest" href="site.webmanifest" />
 
     <link rel="preconnect" href="https://overpass-api.de" crossorigin />
+    <link rel="preconnect" href="https://z.overpass-api.de" crossorigin />
     <link rel="preconnect" href="https://overpass.kumi.systems" crossorigin />
+    <link rel="preconnect" href="https://nominatim.openstreetmap.org" crossorigin />
     <link rel="preconnect" href="https://cdn.tailwindcss.com" crossorigin />
 
     <script src="https://cdn.tailwindcss.com"></script>
@@ -329,11 +331,18 @@
       const LS_RADIUS_KEY = "shulMikve_lastRadius";
       const LS_TAB_KEY = "shulMikve_lastTab";
 
-      // Overpass API endpoints — try in order if one fails
+      // Overpass API endpoints — raced in parallel via Promise.any so the
+      // fastest valid response wins. Endpoint reliability (tested empirically
+      // from Israel):
+      //  - overpass-api.de:   main server, fast when not overloaded
+      //  - z.overpass-api.de: official alternate, very reliable
+      //  - kumi.systems:      EU mirror, slower but solid
+      // Excluded: overpass.osm.ch (returns stale empty data), private.coffee
+      // (no response from IL), openstreetmap.ru (geo-blocked from IL).
       const OVERPASS_ENDPOINTS = [
         "https://overpass-api.de/api/interpreter",
-        "https://overpass.kumi.systems/api/interpreter",
-        "https://overpass.openstreetmap.ru/api/interpreter"
+        "https://z.overpass-api.de/api/interpreter",
+        "https://overpass.kumi.systems/api/interpreter"
       ];
 
       let currentTab = "shul";   // 'shul' | 'mikvah'
@@ -341,6 +350,9 @@
       let userLat = null;
       let userLon = null;
       let lastResults = [];
+      // Race-condition guard: every fetchAndRender call increments this.
+      // Async callbacks check that their captured gen still matches before mutating DOM.
+      let fetchGen = 0;
 
       // ── Init from localStorage ────────────────────────
       try {
@@ -480,11 +492,46 @@
           return obj;
         } catch(e) { return null; }
       }
-      function saveLocationCache(lat, lon) {
+      function saveLocationCache(lat, lon, address) {
         try {
-          localStorage.setItem(LS_LOC_KEY, JSON.stringify({ lat, lon, ts: Date.now() }));
+          const payload = { lat, lon, ts: Date.now() };
+          if (address && typeof address === "string") payload.address = address;
+          localStorage.setItem(LS_LOC_KEY, JSON.stringify(payload));
           localStorage.setItem(LS_PERMISSION_KEY, "1");
         } catch(e) {}
+      }
+
+      // ── Reverse geocoding (Nominatim) ────────────────
+      // Returns a string like "רחוב הקונגרס 9, פתח תקווה" or just the city name
+      // when street info isn't available. Returns null on failure.
+      async function reverseGeocode(lat, lon) {
+        try {
+          const url = "https://nominatim.openstreetmap.org/reverse"
+                    + "?lat=" + encodeURIComponent(lat)
+                    + "&lon=" + encodeURIComponent(lon)
+                    + "&format=json&accept-language=he&addressdetails=1&zoom=18";
+          const res = await fetch(url, { headers: { "Accept": "application/json" } });
+          if (!res.ok) return null;
+          const data = await res.json();
+          if (!data || !data.address) return null;
+          const a = data.address;
+          const street = a.road || a.pedestrian || a.footway || a.path || "";
+          const number = a.house_number || "";
+          const city = a.city || a.town || a.village || a.municipality
+                     || a.suburb || a.neighbourhood || a.county || "";
+          const streetPart = street ? (number ? (street + " " + number) : street) : "";
+          if (streetPart && city) return streetPart + ", " + city;
+          if (city) return city;
+          if (streetPart) return streetPart;
+          if (data.display_name) {
+            // Trim long display_name to first 2-3 segments
+            const parts = data.display_name.split(",").map(s => s.trim()).filter(Boolean);
+            return parts.slice(0, 2).join(", ");
+          }
+          return null;
+        } catch (e) {
+          return null;
+        }
       }
 
       function requestGeolocation() {
@@ -513,17 +560,44 @@
           setStatus("מאתר מיקום…");
           const { lat, lon } = await requestGeolocation();
           userLat = lat; userLon = lon;
-          saveLocationCache(lat, lon);
-          updateLocationLabel(lat, lon);
+          // Save coords immediately so app works even if reverse geocoding fails
+          saveLocationCache(lat, lon, null);
+          updateLocationLabel(lat, lon, null);
+          // Kick off reverse geocoding + Overpass fetch in parallel
+          const rgPromise = reverseGeocode(lat, lon).then(addr => {
+            if (addr) {
+              updateLocationLabel(lat, lon, addr);
+              saveLocationCache(lat, lon, addr);
+            }
+          }).catch(() => {});
           await fetchAndRender();
+          // Make sure reverse-geocoding finishes (it may still be in flight)
+          await rgPromise;
         } catch (e) {
           setError(e.message || "שגיאה באיתור המיקום.");
         }
       }
 
-      function updateLocationLabel(lat, lon) {
+      function updateLocationLabel(lat, lon, address) {
         const el = document.getElementById("location-status");
-        el.textContent = "המיקום שלך: " + lat.toFixed(4) + ", " + lon.toFixed(4);
+        const coords = lat.toFixed(4) + ", " + lon.toFixed(4);
+        if (address) {
+          el.innerHTML = '<span class="text-slate-300/90">המיקום שלך:</span> '
+                       + '<span class="font-bold text-white/95">' + escapeHtml(address) + '</span>'
+                       + ' <span class="text-slate-400/70 text-xs">(' + coords + ')</span>';
+        } else {
+          el.textContent = "המיקום שלך: " + coords;
+        }
+      }
+
+      // Tiny HTML-escape helper for safe insertion of address into innerHTML
+      function escapeHtml(s) {
+        return String(s)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
       }
 
       // ── Distance calc (haversine) ─────────────────────
@@ -545,74 +619,141 @@
         return Math.round(km) + " ק\"מ";
       }
 
-      // ── Build Overpass query ──────────────────────────
-      function buildQuery(type, lat, lon, radiusKm) {
+      // ── Build Overpass queries ────────────────────────
+      // Returns an array of queries to run in parallel (Promise.allSettled).
+      // Notes:
+      //  - `nwr` = node+way+relation shortcut.
+      //  - `out center;` returns id + tags + lat/lon for nodes + center for ways.
+      //  - Synagogues use direct tags (fast, ~5s).
+      //  - Mikvahs in Israel OSM are NOT consistently tagged with amenity=mikveh.
+      //    Most are identified by their NAME containing מקווה/מקוה/Mikve. The
+      //    name regex is slower (~15-25s) but it is the only reliable way to
+      //    find them. We keep tag-based queries too for the few that are tagged.
+      function buildQueries(type, lat, lon, radiusKm) {
         const r = Math.round(radiusKm * 1000);
         if (type === "shul") {
-          return `
-            [out:json][timeout:25];
+          return [
+            `
+            [out:json][timeout:30];
             (
-              node["amenity"="place_of_worship"]["religion"="jewish"](around:${r},${lat},${lon});
-              way["amenity"="place_of_worship"]["religion"="jewish"](around:${r},${lat},${lon});
-              relation["amenity"="place_of_worship"]["religion"="jewish"](around:${r},${lat},${lon});
-              node["building"="synagogue"](around:${r},${lat},${lon});
-              way["building"="synagogue"](around:${r},${lat},${lon});
+              nwr["amenity"="place_of_worship"]["religion"="jewish"](around:${r},${lat},${lon});
+              nwr["building"="synagogue"](around:${r},${lat},${lon});
             );
-            out center tags;
-          `;
+            out center;
+            `
+          ];
         } else {
-          // Mikvah — multiple tagging conventions exist in OSM
-          return `
+          return [
+            // Query A: tag-prefiltered name regex (Hebrew). The KEY insight:
+            // `["name"~...]` without any tag prefilter scans every named object
+            // in the radius (streets, shops, etc.) and times out (504). By
+            // prefixing with `["amenity"]`/`["building"]`/`["landuse"]` we cut
+            // the candidate set down hugely while still catching ~all mikvahs.
+            `
             [out:json][timeout:25];
             (
-              node["amenity"="mikvah"](around:${r},${lat},${lon});
-              way["amenity"="mikvah"](around:${r},${lat},${lon});
-              node["building"="mikvah"](around:${r},${lat},${lon});
-              way["building"="mikvah"](around:${r},${lat},${lon});
-              node["amenity"="ritual_bath"](around:${r},${lat},${lon});
-              way["amenity"="ritual_bath"](around:${r},${lat},${lon});
-              node[~"^name(:.*)?$"~"מקווה|מקוה|מקואות|מקוואות|Mikve|Mikvah|Mikveh",i](around:${r},${lat},${lon});
-              way[~"^name(:.*)?$"~"מקווה|מקוה|מקואות|מקוואות|Mikve|Mikvah|Mikveh",i](around:${r},${lat},${lon});
+              nwr["amenity"]["name"~"מקווה|מקוואות|מקוה"](around:${r},${lat},${lon});
+              nwr["amenity"]["name:he"~"מקווה|מקוואות|מקוה"](around:${r},${lat},${lon});
+              nwr["building"]["name"~"מקווה|מקוואות|מקוה"](around:${r},${lat},${lon});
+              nwr["building"]["name:he"~"מקווה|מקוואות|מקוה"](around:${r},${lat},${lon});
+              nwr["landuse"]["name"~"מקווה|מקוואות|מקוה"](around:${r},${lat},${lon});
+              nwr["landuse"]["name:he"~"מקווה|מקוואות|מקוה"](around:${r},${lat},${lon});
             );
-            out center tags;
-          `;
+            out center;
+            `,
+            // Query B: explicit amenity/building tags + English-language names
+            // (also tag-prefiltered). Catches the few properly-tagged ones and
+            // English mikvahs.
+            `
+            [out:json][timeout:25];
+            (
+              nwr["amenity"="mikveh"](around:${r},${lat},${lon});
+              nwr["amenity"="mikvah"](around:${r},${lat},${lon});
+              nwr["amenity"="ritual_bath"](around:${r},${lat},${lon});
+              nwr["amenity"="public_bath"]["religion"="jewish"](around:${r},${lat},${lon});
+              nwr["building"="mikveh"](around:${r},${lat},${lon});
+              nwr["building"="mikvah"](around:${r},${lat},${lon});
+              nwr["leisure"="mikveh"](around:${r},${lat},${lon});
+              nwr["amenity"]["name"~"Mikve|Mikvah|Mikveh|Mikvaot",i](around:${r},${lat},${lon});
+              nwr["building"]["name"~"Mikve|Mikvah|Mikveh|Mikvaot",i](around:${r},${lat},${lon});
+            );
+            out center;
+            `
+          ];
         }
       }
 
-      // ── Overpass fetch with fallback endpoints ────────
+      // ── Overpass fetch with parallel endpoint race ────
+      // We fire the query at ALL endpoints simultaneously and resolve with
+      // whichever one returns valid JSON first. This is the most robust
+      // approach against 504/overload from individual servers — if one mirror
+      // is slow or down, the others can still deliver a fast response.
+      // Each endpoint has a 35s client-side AbortController timeout.
       async function overpassFetch(query) {
-        let lastErr = null;
-        for (const endpoint of OVERPASS_ENDPOINTS) {
-          try {
-            const res = await fetch(endpoint, {
+        const fetchOne = (endpoint) => {
+          return new Promise((resolve, reject) => {
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 35000);
+            fetch(endpoint, {
               method: "POST",
               headers: { "Content-Type": "application/x-www-form-urlencoded" },
-              body: "data=" + encodeURIComponent(query)
+              body: "data=" + encodeURIComponent(query),
+              signal: controller.signal
+            }).then(res => {
+              clearTimeout(timer);
+              if (!res.ok) {
+                reject(new Error("HTTP " + res.status + " from " + endpoint));
+                return;
+              }
+              return res.text().then(text => {
+                if (!text || text.trim()[0] !== "{") {
+                  reject(new Error("Non-JSON response from " + endpoint));
+                  return;
+                }
+                try {
+                  resolve(JSON.parse(text));
+                } catch (e) {
+                  reject(new Error("Parse error from " + endpoint));
+                }
+              });
+            }).catch(e => {
+              clearTimeout(timer);
+              reject(new Error((e && e.message ? e.message : "fetch failed") + " (" + endpoint + ")"));
             });
-            if (!res.ok) {
-              lastErr = new Error("Overpass " + res.status);
-              continue;
-            }
-            const data = await res.json();
-            return data;
-          } catch (e) {
-            lastErr = e;
-            continue;
-          }
+          });
+        };
+
+        const promises = OVERPASS_ENDPOINTS.map(fetchOne);
+        try {
+          // Promise.any returns the first FULFILLED promise (ignores rejections
+          // until all fail). Native in modern browsers (2021+).
+          return await Promise.any(promises);
+        } catch (aggregateErr) {
+          // All endpoints failed — collect error messages for diagnostics
+          const errs = (aggregateErr && aggregateErr.errors)
+            ? aggregateErr.errors.map(e => e.message || String(e))
+            : ["all endpoints failed"];
+          throw new Error(errs.join(" | "));
         }
-        throw lastErr || new Error("כל שרתי OpenStreetMap לא זמינים כרגע.");
       }
 
       // ── Parse Overpass elements ───────────────────────
-      function parseElements(elements, userLat, userLon) {
+      // `tab` argument is captured at fetch start so we use the correct
+      // default name even if the user switched tabs while we were loading.
+      function parseElements(elements, userLat, userLon, tab) {
         const seen = new Set();
         const list = [];
+        const t = tab || currentTab;
+        const defaultName = (t === "shul") ? "בית כנסת" : "מקווה";
         for (const el of elements) {
           let lat = el.lat, lon = el.lon;
           if (lat == null && el.center) { lat = el.center.lat; lon = el.center.lon; }
           if (lat == null || lon == null) continue;
           const tags = el.tags || {};
-          const name = tags["name:he"] || tags["name"] || tags["name:en"] || tags["alt_name"] || tags["short_name"] || "מקום ללא שם";
+          const name = tags["name:he"] || tags["name"] || tags["name:en"]
+                    || tags["alt_name"] || tags["alt_name:he"] || tags["short_name"]
+                    || tags["loc_name"] || tags["official_name"] || tags["operator"]
+                    || tags["description"] || defaultName;
           // Build a simple address line
           const addrParts = [];
           if (tags["addr:street"]) {
@@ -634,12 +775,13 @@
       }
 
       // ── Render results ────────────────────────────────
-      function renderResults(items) {
+      function renderResults(items, tab) {
+        const t = tab || currentTab;
         const out = document.getElementById("results");
         out.innerHTML = "";
         if (!items || items.length === 0) {
           setStatus(
-            (currentTab === "shul" ? "לא נמצאו בתי כנסת" : "לא נמצאו מקוואות")
+            (t === "shul" ? "לא נמצאו בתי כנסת" : "לא נמצאו מקוואות")
               + " ברדיוס " + currentRadiusKm + " ק\"מ.\nנסה להרחיב את רדיוס החיפוש.",
             false
           );
@@ -649,7 +791,7 @@
 
         const header = document.createElement("div");
         header.className = "text-slate-300/80 text-sm mb-2 px-1";
-        header.textContent = "נמצאו " + items.length + (currentTab === "shul" ? " בתי כנסת" : " מקוואות") +
+        header.textContent = "נמצאו " + items.length + (t === "shul" ? " בתי כנסת" : " מקוואות") +
                              " ברדיוס " + currentRadiusKm + " ק\"מ";
         out.appendChild(header);
 
@@ -692,9 +834,7 @@
           card.appendChild(right);
           out.appendChild(card);
         });
-      }
-
-      // ── Open in Waze ──────────────────────────────────
+      }// ── Open in Waze ──────────────────────────────────
       function openInWaze(lat, lon) {
         const url = "https://waze.com/ul?ll=" + encodeURIComponent(lat + "," + lon) + "&navigate=yes";
         // Open in new tab so the user's session here is preserved
@@ -704,21 +844,93 @@
       // ── Main fetch & render flow ──────────────────────
       async function fetchAndRender() {
         if (userLat == null || userLon == null) return;
-        setStatus(
-          (currentTab === "shul" ? "מחפש בתי כנסת ברדיוס " : "מחפש מקוואות ברדיוס ")
-          + currentRadiusKm + " ק\"מ…"
-        );
-        try {
-          const q = buildQuery(currentTab, userLat, userLon, currentRadiusKm);
-          const data = await overpassFetch(q);
-          const items = parseElements(data.elements || [], userLat, userLon);
-          // Filter to the requested radius (overpass uses meters; result may include slightly larger area for ways)
-          const filtered = items.filter(it => it.distanceKm <= currentRadiusKm + 0.05);
-          lastResults = filtered;
-          renderResults(filtered);
-        } catch (e) {
-          setError("שגיאה בטעינת נתונים מ-OpenStreetMap.\n" + (e.message || ""));
+        const myGen = ++fetchGen;
+        const tab = currentTab; // snapshot — must use this, not currentTab
+
+        const statusMsg = tab === "shul"
+          ? "מחפש בתי כנסת ברדיוס " + currentRadiusKm + " ק\"מ…"
+          : "מחפש מקוואות ברדיוס " + currentRadiusKm + " ק\"מ…\nהחיפוש עשוי להימשך עד 30 שניות.";
+        setStatus(statusMsg);
+
+        const queries = buildQueries(tab, userLat, userLon, currentRadiusKm);
+
+        // Run all queries in parallel — fail-soft: even if some fail (504/timeout),
+        // we still render results from the ones that succeeded.
+        const settled = await Promise.allSettled(queries.map(q => overpassFetch(q)));
+        if (myGen !== fetchGen) return; // superseded by a newer fetch
+
+        const elements = [];
+        let anySucceeded = false;
+        for (const r of settled) {
+          if (r.status === "fulfilled" && r.value && Array.isArray(r.value.elements)) {
+            elements.push(...r.value.elements);
+            anySucceeded = true;
+          }
         }
+
+        if (!anySucceeded) {
+          // All queries failed — try to fall back to cached results from a
+          // previous successful fetch (same tab, same radius, similar location).
+          const cachedResults = loadCachedResults(tab, currentRadiusKm, userLat, userLon);
+          if (cachedResults && cachedResults.length > 0) {
+            if (myGen !== fetchGen) return;
+            lastResults = cachedResults;
+            renderResults(cachedResults, tab);
+            // Show a small notice that these are cached
+            const note = document.createElement("div");
+            note.className = "text-amber-300/90 text-xs mb-2 px-1 text-center";
+            note.textContent = "⚠ השרתים עמוסים כרגע. מציג תוצאות מהחיפוש הקודם.";
+            const out = document.getElementById("results");
+            if (out.firstChild) out.insertBefore(note, out.firstChild); else out.appendChild(note);
+            return;
+          }
+          // No cache — show the helpful error
+          const firstErr = settled.find(r => r.status === "rejected");
+          const errMsg = firstErr && firstErr.reason && firstErr.reason.message
+                       ? firstErr.reason.message : "כל השרתים לא הגיבו בזמן";
+          setError(
+            "שגיאה בטעינת נתונים מ-OpenStreetMap.\n"
+            + "השרתים עמוסים כרגע. נסה רדיוס קטן יותר, או נסה שוב בעוד דקה.\n\n"
+            + "(" + errMsg + ")"
+          );
+          return;
+        }
+
+        const items = parseElements(elements, userLat, userLon, tab);
+        // Filter to requested radius (Overpass may include slightly outside on ways)
+        const filtered = items.filter(it => it.distanceKm <= currentRadiusKm + 0.05);
+        if (myGen !== fetchGen) return;
+        lastResults = filtered;
+        // Save successful results for offline/fallback use
+        saveCachedResults(tab, currentRadiusKm, userLat, userLon, filtered);
+        renderResults(filtered, tab);
+      }
+
+      // ── Results cache (used as fallback when all servers are down) ──
+      function _cacheKey(tab, radius, lat, lon) {
+        // Round coords to ~1km precision so nearby fetches share a cache slot
+        return "shulMikveCache_" + tab + "_r" + radius + "_" + lat.toFixed(2) + "_" + lon.toFixed(2);
+      }
+      function loadCachedResults(tab, radius, lat, lon) {
+        try {
+          const raw = localStorage.getItem(_cacheKey(tab, radius, lat, lon));
+          if (!raw) return null;
+          const obj = JSON.parse(raw);
+          if (!obj || !Array.isArray(obj.items)) return null;
+          // Stale-but-OK: cache valid for 30 days for offline fallback
+          if (!obj.ts || (Date.now() - obj.ts) > 1000 * 60 * 60 * 24 * 30) return null;
+          // Recompute distances from user's CURRENT location
+          return obj.items.map(it => ({
+            name: it.name, address: it.address, lat: it.lat, lon: it.lon,
+            distanceKm: haversineKm(lat, lon, it.lat, it.lon)
+          })).sort((a, b) => a.distanceKm - b.distanceKm);
+        } catch (e) { return null; }
+      }
+      function saveCachedResults(tab, radius, lat, lon, items) {
+        try {
+          const slim = items.map(it => ({ name: it.name, address: it.address, lat: it.lat, lon: it.lon }));
+          localStorage.setItem(_cacheKey(tab, radius, lat, lon), JSON.stringify({ ts: Date.now(), items: slim }));
+        } catch (e) { /* quota or serialization issue — ignore */ }
       }
 
       // ── Startup flow ──────────────────────────────────
@@ -728,7 +940,16 @@
         if (cached) {
           userLat = cached.lat;
           userLon = cached.lon;
-          updateLocationLabel(cached.lat, cached.lon);
+          updateLocationLabel(cached.lat, cached.lon, cached.address || null);
+          // If we don't have an address yet, fetch it in the background
+          if (!cached.address) {
+            reverseGeocode(cached.lat, cached.lon).then(addr => {
+              if (addr) {
+                updateLocationLabel(cached.lat, cached.lon, addr);
+                saveLocationCache(cached.lat, cached.lon, addr);
+              }
+            }).catch(() => {});
+          }
           await fetchAndRender();
           return;
         }

@@ -475,7 +475,7 @@ function setupModalBackdropClose() {
   });
   bindModalBackdropClose("omer-modal", closeOmerModal);
   bindModalBackdropClose("sefaria-modal", closeSefariaModal);
-  bindModalBackdropClose("compass-modal", closeCompass);
+  bindModalBackdropClose("compass-modal", function(){ window._closePopupViaBack("compass-modal"); });
   bindModalBackdropClose("calendar-modal", closeCalendar);
   bindModalBackdropClose("chok-israel-modal", closeChokLeIsraelModal);
 }
@@ -4266,6 +4266,7 @@ function openCompass() {
   m.classList.remove("hidden");
   setTimeout(() => m.classList.remove("opacity-0"), 10);
   startCompass();
+  pushModalState("compass-modal");
 }
 
 function closeCompass() {
@@ -15790,16 +15791,17 @@ window.showLanguageSelectionPopup = function () {
             <h3 style="color:#1a1a1a;font-size:1.25rem;font-weight:900;margin:0 0 0.4rem;">בחירת שפה</h3>
             <p style="color:#64748b;font-size:0.85rem;margin:0 0 1.2rem;line-height:1.5;">בחר את שפת התצוגה. ניתן לשנות בכל עת.</p>
             <div style="display:flex;flex-direction:column;gap:0.5rem;">${langOptions}</div>
-            <button onclick="document.getElementById('language-selection-modal').remove()" style="margin-top:1rem;background:rgba(0,0,0,0.05);border:none;border-radius:0.75rem;padding:0.55rem 1.4rem;color:#64748b;font-size:0.85rem;font-weight:700;cursor:pointer;">ביטול</button>
+            <button onclick="window._closePopupViaBack('language-selection-modal')" style="margin-top:1rem;background:rgba(0,0,0,0.05);border:none;border-radius:0.75rem;padding:0.55rem 1.4rem;color:#64748b;font-size:0.85rem;font-weight:700;cursor:pointer;">ביטול</button>
           </div>`;
   overlay.addEventListener("click", (event) => {
-    if (event.target === overlay) overlay.remove();
+    if (event.target === overlay) window._closePopupViaBack("language-selection-modal");
   });
   window._selectLanguageFromPopup = async (lang) => {
-    overlay.remove();
+    window._closePopupViaBack("language-selection-modal");
     await setLanguage(lang);
   };
   document.body.appendChild(overlay);
+  pushModalState("language-selection-modal");
 };
 
 // --- Contact Modal ---
@@ -16053,13 +16055,18 @@ openTehillimPage = function () {
               <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:0.55rem;">
                 ${plan.chapters.map((chapter) => `<button onclick="window._tehillimOpenPsalm(${chapter})" style="background:rgba(0,0,0,0.03);border:1px solid rgba(0,0,0,0.1);border-radius:0.9rem;padding:0.7rem 0.6rem;font-size:0.82rem;font-weight:800;color:#000000;cursor:pointer;">פרק ${toHebrewPsalmNumber(chapter)}</button>`).join("")}
               </div>
+              <div style="margin-top:1.5rem;padding-top:0.85rem;border-top:1px solid rgba(0,0,0,0.08);color:#94a3b8;font-size:0.74rem;line-height:1.6;text-align:center;">מקור הטקסט: <strong style="color:#1e40af;">Sefaria.org</strong> · ספר תהילים</div>
             </div>
             <div id="psalm-content-pane" style="display:none;position:absolute;inset:0;background:#faf9f6;z-index:10;flex-direction:column;overflow:hidden;">
               <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border-bottom:1px solid rgba(0,0,0,0.08);background:#faf9f6;">
                 <button onclick="window._tehillimClosePsalm()" style="background:rgba(0,0,0,0.06);border:none;color:#64748b;padding:0.4rem 0.8rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;">← חזרה</button>
                 <h3 id="psalm-title" style="color:#000000;font-size:1rem;font-weight:900;margin:0;">תהילים</h3>
-                <button onclick="window._tehillimGoToChapters()" style="background:rgba(0,0,0,0.06);border:none;color:#1e293b;padding:0.4rem 0.55rem;border-radius:999px;cursor:pointer;font-size:0.82rem;flex-shrink:0;" title="כל הפרקים">📑</button>
+                <div style="display:flex;align-items:center;gap:0.4rem;">
+                  <button onclick="window._thTogglePsalmBMPanel()" id="th-psalm-bm-toggle-btn" style="background:rgba(0,0,0,0.06);border:none;color:#64748b;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1rem;" title="סמניות">📌</button>
+                  <button onclick="window._tehillimGoToChapters()" style="background:rgba(0,0,0,0.06);border:none;color:#1e293b;padding:0.4rem 0.55rem;border-radius:999px;cursor:pointer;font-size:0.82rem;flex-shrink:0;" title="כל הפרקים">📑</button>
+                </div>
               </div>
+              <div id="th-psalm-bm-panel" style="display:none;background:#fffbeb;border-bottom:1px solid #fde68a;padding:0.75rem 1.25rem;flex-shrink:0;max-height:40vh;overflow-y:auto;"></div>
               <div id="psalm-text-area" class="holy-text-style" style="padding:1.25rem;overflow-y:auto;flex:1;text-align:center;direction:rtl;"></div>
               <div id="tehillim-font-bar" class="flex items-center justify-center gap-3 py-2 px-4 flex-shrink-0" style="background:rgba(250,249,246,0.95);border-top:1px solid rgba(0,0,0,0.08);">
                 <button onclick="changePrayerFontSize(-10, '#psalm-text-area')" style="width:38px;height:38px;border-radius:50%;border:1.5px solid rgba(99,102,241,0.3);background:linear-gradient(135deg,#eef2ff 0%,#e0e7ff 100%);color:#4338ca;font-size:1.25rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(99,102,241,0.15);transition:transform 0.15s ease,box-shadow 0.15s ease;" onmouseover="this.style.transform='scale(1.08)';this.style.boxShadow='0 4px 10px rgba(99,102,241,0.25)';" onmouseout="this.style.transform='';this.style.boxShadow='0 2px 6px rgba(99,102,241,0.15)';" aria-label="הקטן כתב">−</button>
@@ -16068,7 +16075,6 @@ openTehillimPage = function () {
                 <button onclick="window._toggleAutoScroll('#psalm-text-area', this)" style="width:38px;height:38px;border-radius:50%;border:1.5px solid rgba(16,185,129,0.35);background:linear-gradient(135deg,#ecfdf5 0%,#d1fae5 100%);color:#047857;font-size:0.95rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(16,185,129,0.18);transition:transform 0.15s ease;" onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform=''" aria-label="התחל גלילה אוטומטית">▶</button>
                 <button class="auto-scroll-speed-btn" onclick="window._cycleAutoScrollSpeed(this)" style="font-size:0.78rem;font-weight:800;color:#047857;min-width:2.4rem;text-align:center;background:rgba(209,250,229,0.85);padding:5px 10px;border-radius:999px;border:1px solid rgba(16,185,129,0.3);cursor:pointer;" aria-label="מהירות גלילה">1x</button>
               </div>
-              <div style="border-top:1px solid rgba(0,0,0,0.08);padding:0.7rem 1.25rem;color:#94a3b8;font-size:0.74rem;line-height:1.6;flex-shrink:0;background:#faf9f6;">מקור הטקסט: <strong style="color:#1e40af;">Sefaria.org</strong> · ספר תהילים</div>
             </div>
           `;
   };
@@ -16116,6 +16122,7 @@ openTehillimPage = function () {
       btn.style.background = active ? "#fffbeb" : "transparent";
     }
     window._thBuildBMPanel();
+    if (window._thBuildPsalmBMPanel) window._thBuildPsalmBMPanel();
   };
 
   window._thBuildBMPanel = () => {
@@ -16143,6 +16150,37 @@ openTehillimPage = function () {
     if (!panel) return;
     if (panel.style.display === "none") {
       window._thBuildBMPanel();
+      panel.style.display = "block";
+    } else {
+      panel.style.display = "none";
+    }
+  };
+
+  window._thBuildPsalmBMPanel = () => {
+    const panel = document.getElementById("th-psalm-bm-panel");
+    if (!panel) return;
+    const bms = thLoadBMs().slice().sort((a,b)=>a-b);
+    if (!bms.length) {
+      panel.innerHTML = '<p style="color:#92400e;font-size:0.78rem;margin:0;text-align:center;">אין סמניות שמורות</p>';
+      return;
+    }
+    panel.innerHTML =
+      '<p style="color:#92400e;font-size:0.78rem;font-weight:900;margin:0 0 0.5rem;">📌 פרקים מסומנים:</p>'+
+      '<div style="display:flex;flex-wrap:wrap;gap:0.4rem;">'+
+      bms.map(ch =>
+        '<div style="display:flex;align-items:center;gap:0.25rem;">'+
+          '<button onclick="window._tehillimOpenPsalm('+ch+')" style="background:#fff;border:1.5px solid #f59e0b;border-radius:999px;padding:0.25rem 0.7rem;font-size:0.78rem;font-weight:800;color:#92400e;cursor:pointer;">פרק '+toHebrewPsalmNumber(ch)+'</button>'+
+          '<button onclick="window._thToggleBM('+ch+')" style="background:none;border:none;color:#94a3b8;font-size:0.8rem;cursor:pointer;" title="הסר">✕</button>'+
+        '</div>'
+      ).join("")+
+      '</div>';
+  };
+
+  window._thTogglePsalmBMPanel = () => {
+    const panel = document.getElementById("th-psalm-bm-panel");
+    if (!panel) return;
+    if (panel.style.display === "none") {
+      window._thBuildPsalmBMPanel();
       panel.style.display = "block";
     } else {
       panel.style.display = "none";
@@ -17233,6 +17271,7 @@ document.addEventListener("keydown", (e) => {
       "</div>";
 
     document.body.appendChild(modal);
+    pushModalState("hilulot-modal");
 
     function navTo(newOffset) {
       _dayOffset = newOffset;
@@ -17525,6 +17564,7 @@ document.addEventListener("keydown", (e) => {
       "</div>";
 
     document.body.appendChild(modal);
+    pushModalState("hilulot-cal-modal");
     renderCalendarBody(_calRefDate);
 
     window._hilCalToday = function () {
@@ -19409,6 +19449,7 @@ document.addEventListener("keydown", (e) => {
       });
     }
     document.body.appendChild(modal);
+    pushModalState("moad-torah-modal");
     modal.setAttribute("tabindex", "-1");
     modal.focus();
     render(idx);

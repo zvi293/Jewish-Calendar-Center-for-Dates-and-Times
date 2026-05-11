@@ -697,6 +697,7 @@
         #bih-content-area,
         #psalm-text-area,
         #shir-scroll-area,
+        #sefaria-modal-content,
         .holy-text-style {
           scroll-snap-type: y proximity;
           scroll-padding-top: 0.5rem;
@@ -705,8 +706,12 @@
         #bih-content-area h2,
         #bih-content-area h3,
         #psalm-text-area h4,
+        #psalm-text-area > div[id^="psalm-chapter-"],
+        #shir-scroll-area .shir-chapter,
         .prayer-richtext h2,
-        .prayer-richtext h3 {
+        .prayer-richtext h3,
+        .prayer-richtext hr.prayer-divider,
+        .prayer-richtext > p > big > b {
           scroll-snap-align: start;
           scroll-snap-stop: normal;
         }

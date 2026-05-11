@@ -15045,7 +15045,7 @@ function openShirHashirimPage() {
           : '';
 
         html += `
-          <div style="margin-bottom:2rem;">
+          <div class="shir-chapter" style="margin-bottom:2rem;">
             <div style="display:inline-block;padding:0.3rem 1.4rem;background:${COLOR}18;border:1.5px solid ${COLOR}44;border-radius:999px;margin-bottom:1.2rem;">
               <span style="color:${COLOR};font-size:1rem;font-weight:900;">פֶּרֶק ${HEB_NUMS[idx]}</span>
             </div>
@@ -19535,7 +19535,7 @@ document.addEventListener("keydown", (e) => {
   }
 
   // ── Generic popup: items[], displayName, prefixLabel ──
-  function openTorahPopup(items, displayName, prefixLabel) {
+  function openTorahPopup(items, displayName, prefixLabel, opts) {
     var idx = 0;
     var old = document.getElementById("moad-torah-modal");
     if (old) old.remove();
@@ -19588,6 +19588,13 @@ document.addEventListener("keydown", (e) => {
         '<p style="font-size:0.95rem;line-height:1.85;color:#cbd5e1;direction:rtl;text-align:right;margin:0 0 1.5rem;">' +
         t.text +
         "</p>" +
+        (opts && opts.parshaCTA
+          ? '<div style="text-align:center;margin:0 0 1.25rem;">' +
+            '<button id="moad-parsha-cta" style="background:linear-gradient(135deg,#7c3aed 0%,#a855f7 100%);border:none;color:#fff;font-weight:800;padding:0.7rem 1.4rem;border-radius:0.9rem;cursor:pointer;font-size:0.92rem;box-shadow:0 6px 20px rgba(124,58,237,0.45),inset 0 1px 0 rgba(255,255,255,0.2);transition:transform 0.15s ease;" onmouseover="this.style.transform=\'scale(1.04)\'" onmouseout="this.style.transform=\'\'">📖 לקריאת ' +
+            (opts.parshaCTALabel || displayName) +
+            "</button>" +
+            "</div>"
+          : "") +
         (items.length > 1
           ? '<div style="display:flex;align-items:center;justify-content:space-between;direction:ltr;margin-bottom:1rem;">' +
             '<button id="moad-prev" style="background:rgba(139,92,246,0.2);border:1px solid rgba(139,92,246,0.4);color:#c4b5fd;border-radius:0.75rem;padding:0.45rem 1rem;cursor:pointer;font-size:1.1rem;opacity:' +
@@ -19618,6 +19625,13 @@ document.addEventListener("keydown", (e) => {
       modal.querySelector("#moad-close").addEventListener("click", function () {
         modal.remove();
       });
+      var _ctaBtn = modal.querySelector("#moad-parsha-cta");
+      if (_ctaBtn && opts && opts.parshaCTAHandler) {
+        _ctaBtn.addEventListener("click", function() {
+          modal.remove();
+          opts.parshaCTAHandler();
+        });
+      }
       if (items.length > 1) {
         var prev = modal.querySelector("#moad-prev"),
           next = modal.querySelector("#moad-next");
@@ -19718,7 +19732,17 @@ document.addEventListener("keydown", (e) => {
           icon: "📖",
         },
       ];
-    openTorahPopup(items, "פרשת " + displayName, "דבר תורה ל");
+    var _parshaHeName = displayName;
+    var _parshaEnRef = window.SHABBAT_PARASHA_ETITLE || ("Parashat " + displayName);
+    openTorahPopup(items, "פרשת " + displayName, "דבר תורה ל", {
+      parshaCTA: true,
+      parshaCTALabel: "פרשת " + _parshaHeName,
+      parshaCTAHandler: function() {
+        if (typeof openShnayimMikraModal === "function") {
+          openShnayimMikraModal("פרשת " + _parshaHeName, _parshaEnRef);
+        }
+      }
+    });
   };
 })();
 
@@ -20124,22 +20148,6 @@ function openSefarimNosafimPage() {
       creditUrl:"https://www.sefaria.org/Mesillat_Yesharim",
       type:"flat",
       sections:secs(26,function(i){return "פרק "+toHN(i);},function(i){return "Mesillat_Yesharim."+i;})},
-    { id:"shmirat-halashon", he:"שמירת הלשון", subtitle:"החפץ חיים — רבי ישראל מאיר הכהן",
-      cat:"halakha", color:"#0f766e", icon:"💬",
-      credit:"הטקסט מ-Sefaria.org — נחלת הכלל",
-      creditUrl:"https://www.sefaria.org/Shemirat_HaLashon",
-      type:"multi",
-      subBooks:[
-        {id:"b1", he:"חלק ראשון", sections:
-          [{he:"הקדמה", ref:"Shemirat HaLashon, Book I, Introduction"}].concat(
-          secs(17,function(i){return "שער הזכירה "+toHN(i);},function(i){return "Shemirat HaLashon, Book I, The Gate of Remembering."+i;})).concat(
-          secs(17,function(i){return "שער התבונה "+toHN(i);},function(i){return "Shemirat HaLashon, Book I, The Gate of Discerning."+i;})).concat(
-          secs(10,function(i){return "שער התורה "+toHN(i);},function(i){return "Shemirat HaLashon, Book I, The Gate of Torah."+i;}))
-        },
-        {id:"b2", he:"חלק שני", sections:
-          secs(30,function(i){return "פרק "+toHN(i);},function(i){return "Shemirat HaLashon, Book II."+i;})
-        }
-      ]},
     { id:"hilchot-shmirat-halashon", he:"הלכות שמירת הלשון", subtitle:"החפץ חיים — רבי ישראל מאיר הכהן",
       cat:"halakha", color:"#0891b2", icon:"📜",
       credit:"הטקסט מ-Sefaria.org — נחלת הכלל",
@@ -20157,6 +20165,15 @@ function openSefarimNosafimPage() {
         },
         {id:"r", he:"הלכות רכילות", sections:
           secs(9,function(i){return "כלל "+toHN(i);},function(i){return "Chafetz Chaim, Part Two, The Prohibition Against Rechilut, Principle "+i;})
+        },
+        {id:"drashot1", he:"דרשות שמירת הלשון — חלק א", sections:
+          [{he:"הקדמה", ref:"Shemirat HaLashon, Book I, Introduction"}].concat(
+          secs(17,function(i){return "שער הזכירה "+toHN(i);},function(i){return "Shemirat HaLashon, Book I, The Gate of Remembering."+i;})).concat(
+          secs(17,function(i){return "שער התבונה "+toHN(i);},function(i){return "Shemirat HaLashon, Book I, The Gate of Discerning."+i;})).concat(
+          secs(10,function(i){return "שער התורה "+toHN(i);},function(i){return "Shemirat HaLashon, Book I, The Gate of Torah."+i;}))
+        },
+        {id:"drashot2", he:"דרשות שמירת הלשון — חלק ב", sections:
+          secs(30,function(i){return "פרק "+toHN(i);},function(i){return "Shemirat HaLashon, Book II."+i;})
         }
       ]},
     { id:"chovot-halevavot", he:"חובת הלבבות", subtitle:"רבי בחיי אבן פקודה",
@@ -20374,7 +20391,399 @@ function openSefarimNosafimPage() {
       credit:"הטקסט מ-Sefaria.org — נחלת הכלל",
       creditUrl:"https://www.sefaria.org/Pele_Yoetz",
       type:"flat",
-      sections:secs(331,function(i){return "ערך "+toHN(i);},function(i){return "Pele Yoetz."+i;})},
+      sections:[
+        {he:"אהבה להקדוש ברוך הוא", ref:"Pele Yoetz 1"},
+        {he:"אהבת עצמו", ref:"Pele Yoetz 2"},
+        {he:"אהבת הבנים והבנות", ref:"Pele Yoetz 3"},
+        {he:"אהבת איש ואשה", ref:"Pele Yoetz 4"},
+        {he:"אהבת לומדי התורה ויראי השם וחושבי שמו", ref:"Pele Yoetz 5"},
+        {he:"אהבת רעים", ref:"Pele Yoetz 6"},
+        {he:"אבלות", ref:"Pele Yoetz 7"},
+        {he:"אמונה", ref:"Pele Yoetz 8"},
+        {he:"אכילה ושתיה", ref:"Pele Yoetz 9"},
+        {he:"אמת", ref:"Pele Yoetz 10"},
+        {he:"אבירות לב", ref:"Pele Yoetz 11"},
+        {he:"ארץ ישראל", ref:"Pele Yoetz 12"},
+        {he:"אמן", ref:"Pele Yoetz 13"},
+        {he:"אחים", ref:"Pele Yoetz 14"},
+        {he:"אחדות", ref:"Pele Yoetz 15"},
+        {he:"אפיקורוס", ref:"Pele Yoetz 16"},
+        {he:"אומנות", ref:"Pele Yoetz 17"},
+        {he:"אסופה", ref:"Pele Yoetz 18"},
+        {he:"אורחים", ref:"Pele Yoetz 19"},
+        {he:"אונאה", ref:"Pele Yoetz 20"},
+        {he:"אונס", ref:"Pele Yoetz 21"},
+        {he:"ברכות", ref:"Pele Yoetz 22"},
+        {he:"בית הכנסת", ref:"Pele Yoetz 23"},
+        {he:"בית המדרש", ref:"Pele Yoetz 24"},
+        {he:"בזיון", ref:"Pele Yoetz 25"},
+        {he:"בן", ref:"Pele Yoetz 26"},
+        {he:"בת", ref:"Pele Yoetz 27"},
+        {he:"בטלה", ref:"Pele Yoetz 28"},
+        {he:"בכיה", ref:"Pele Yoetz 29"},
+        {he:"בנין", ref:"Pele Yoetz 30"},
+        {he:"בורח", ref:"Pele Yoetz 31"},
+        {he:"בוחר", ref:"Pele Yoetz 32"},
+        {he:"בחור", ref:"Pele Yoetz 33"},
+        {he:"בשר", ref:"Pele Yoetz 34"},
+        {he:"בשורה", ref:"Pele Yoetz 35"},
+        {he:"בעלי חיים", ref:"Pele Yoetz 36"},
+        {he:"בכורים", ref:"Pele Yoetz 37"},
+        {he:"ברורים", ref:"Pele Yoetz 38"},
+        {he:"בר לבב", ref:"Pele Yoetz 39"},
+        {he:"ברור", ref:"Pele Yoetz 40"},
+        {he:"בדיקה", ref:"Pele Yoetz 41"},
+        {he:"גאולה", ref:"Pele Yoetz 42"},
+        {he:"גאוה", ref:"Pele Yoetz 43"},
+        {he:"גזל", ref:"Pele Yoetz 44"},
+        {he:"גניבה", ref:"Pele Yoetz 45"},
+        {he:"גבורה", ref:"Pele Yoetz 46"},
+        {he:"גלות", ref:"Pele Yoetz 47"},
+        {he:"גלגול", ref:"Pele Yoetz 48"},
+        {he:"גר", ref:"Pele Yoetz 49"},
+        {he:"גדול", ref:"Pele Yoetz 50"},
+        {he:"גדר", ref:"Pele Yoetz 51"},
+        {he:"גוי", ref:"Pele Yoetz 52"},
+        {he:"גילה", ref:"Pele Yoetz 53"},
+        {he:"גוף", ref:"Pele Yoetz 54"},
+        {he:"גלוח", ref:"Pele Yoetz 55"},
+        {he:"גירסא", ref:"Pele Yoetz 56"},
+        {he:"גערה", ref:"Pele Yoetz 57"},
+        {he:"דבקות", ref:"Pele Yoetz 58"},
+        {he:"דרך", ref:"Pele Yoetz 59"},
+        {he:"דרך ארץ", ref:"Pele Yoetz 60"},
+        {he:"דעת", ref:"Pele Yoetz 61"},
+        {he:"דבור", ref:"Pele Yoetz 62"},
+        {he:"דרושים", ref:"Pele Yoetz 63"},
+        {he:"דובב שפתי ישנים", ref:"Pele Yoetz 64"},
+        {he:"דבר", ref:"Pele Yoetz 65"},
+        {he:"דחיה", ref:"Pele Yoetz 66"},
+        {he:"דינים", ref:"Pele Yoetz 67"},
+        {he:"דפוס", ref:"Pele Yoetz 68"},
+        {he:"דירה", ref:"Pele Yoetz 69"},
+        {he:"דאגה", ref:"Pele Yoetz 70"},
+        {he:"דברי חכמים", ref:"Pele Yoetz 71"},
+        {he:"דרשן", ref:"Pele Yoetz 72"},
+        {he:"הילול", ref:"Pele Yoetz 73"},
+        {he:"הלבנה", ref:"Pele Yoetz 74"},
+        {he:"הליכה", ref:"Pele Yoetz 75"},
+        {he:"הקפדה", ref:"Pele Yoetz 76"},
+        {he:"התבודדות", ref:"Pele Yoetz 77"},
+        {he:"הכנה", ref:"Pele Yoetz 78"},
+        {he:"הבטחה", ref:"Pele Yoetz 79"},
+        {he:"הודאה", ref:"Pele Yoetz 80"},
+        {he:"הידור", ref:"Pele Yoetz 81"},
+        {he:"השכמה", ref:"Pele Yoetz 82"},
+        {he:"הצלה", ref:"Pele Yoetz 83"},
+        {he:"הסכמה", ref:"Pele Yoetz 84"},
+        {he:"השתדלות", ref:"Pele Yoetz 85"},
+        {he:"הנאה", ref:"Pele Yoetz 86"},
+        {he:"הנהגה", ref:"Pele Yoetz 87"},
+        {he:"הגדה", ref:"Pele Yoetz 88"},
+        {he:"התעוררות", ref:"Pele Yoetz 89"},
+        {he:"הוראה", ref:"Pele Yoetz 90"},
+        {he:"הדלקה", ref:"Pele Yoetz 91"},
+        {he:"הן צדק", ref:"Pele Yoetz 92"},
+        {he:"הסח דעת", ref:"Pele Yoetz 93"},
+        {he:"הכאה", ref:"Pele Yoetz 94"},
+        {he:"הלבשה", ref:"Pele Yoetz 95"},
+        {he:"הלואה", ref:"Pele Yoetz 96"},
+        {he:"הלכה", ref:"Pele Yoetz 97"},
+        {he:"הרשאה", ref:"Pele Yoetz 98"},
+        {he:"השואה", ref:"Pele Yoetz 99"},
+        {he:"ותרנות", ref:"Pele Yoetz 100"},
+        {he:"ודוי", ref:"Pele Yoetz 101"},
+        {he:"ויהי נועם", ref:"Pele Yoetz 102"},
+        {he:"ועד", ref:"Pele Yoetz 103"},
+        {he:"זכירה", ref:"Pele Yoetz 104"},
+        {he:"זנות", ref:"Pele Yoetz 105"},
+        {he:"זהירות", ref:"Pele Yoetz 106"},
+        {he:"זריזות", ref:"Pele Yoetz 107"},
+        {he:"זכיה", ref:"Pele Yoetz 108"},
+        {he:"זווג", ref:"Pele Yoetz 109"},
+        {he:"זוהר", ref:"Pele Yoetz 110"},
+        {he:"זודא", ref:"Pele Yoetz 111"},
+        {he:"זולל וסובא", ref:"Pele Yoetz 112"},
+        {he:"זריעה", ref:"Pele Yoetz 113"},
+        {he:"זלזול", ref:"Pele Yoetz 114"},
+        {he:"זמירות", ref:"Pele Yoetz 115"},
+        {he:"זקן", ref:"Pele Yoetz 116"},
+        {he:"זכרונות", ref:"Pele Yoetz 117"},
+        {he:"חשק וחבה", ref:"Pele Yoetz 118"},
+        {he:"חנופה", ref:"Pele Yoetz 119"},
+        {he:"חידוש", ref:"Pele Yoetz 120"},
+        {he:"חלוש", ref:"Pele Yoetz 121"},
+        {he:"חלום", ref:"Pele Yoetz 122"},
+        {he:"חמדה", ref:"Pele Yoetz 123"},
+        {he:"חיזוק", ref:"Pele Yoetz 124"},
+        {he:"חינוך", ref:"Pele Yoetz 125"},
+        {he:"חברה", ref:"Pele Yoetz 126"},
+        {he:"חברותא", ref:"Pele Yoetz 127"},
+        {he:"חיים", ref:"Pele Yoetz 128"},
+        {he:"חוזק", ref:"Pele Yoetz 129"},
+        {he:"חוכמה", ref:"Pele Yoetz 130"},
+        {he:"חילול השם", ref:"Pele Yoetz 131"},
+        {he:"חולה", ref:"Pele Yoetz 132"},
+        {he:"חסד", ref:"Pele Yoetz 133"},
+        {he:"חשדא", ref:"Pele Yoetz 134"},
+        {he:"חסידות", ref:"Pele Yoetz 135"},
+        {he:"חמיו וחמותו", ref:"Pele Yoetz 136"},
+        {he:"חמץ", ref:"Pele Yoetz 137"},
+        {he:"חשבון", ref:"Pele Yoetz 138"},
+        {he:"חשיבות", ref:"Pele Yoetz 139"},
+        {he:"חשוד", ref:"Pele Yoetz 140"},
+        {he:"חתן", ref:"Pele Yoetz 141"},
+        {he:"חוב", ref:"Pele Yoetz 142"},
+        {he:"חוסר", ref:"Pele Yoetz 143"},
+        {he:"חרטה", ref:"Pele Yoetz 144"},
+        {he:"חול המועד", ref:"Pele Yoetz 145"},
+        {he:"חורבן בית המקדש", ref:"Pele Yoetz 146"},
+        {he:"חן", ref:"Pele Yoetz 147"},
+        {he:"חרש", ref:"Pele Yoetz 148"},
+        {he:"טומאה", ref:"Pele Yoetz 149"},
+        {he:"טעם", ref:"Pele Yoetz 150"},
+        {he:"טרדא", ref:"Pele Yoetz 151"},
+        {he:"טבע", ref:"Pele Yoetz 152"},
+        {he:"טרף", ref:"Pele Yoetz 153"},
+        {he:"טורח", ref:"Pele Yoetz 154"},
+        {he:"טענות", ref:"Pele Yoetz 155"},
+        {he:"טעות", ref:"Pele Yoetz 156"},
+        {he:"טיול", ref:"Pele Yoetz 157"},
+        {he:"טהרה", ref:"Pele Yoetz 158"},
+        {he:"יראה", ref:"Pele Yoetz 159"},
+        {he:"ידיעה", ref:"Pele Yoetz 160"},
+        {he:"יצר", ref:"Pele Yoetz 161"},
+        {he:"יתרון", ref:"Pele Yoetz 162"},
+        {he:"ירידה", ref:"Pele Yoetz 163"},
+        {he:"יאוש", ref:"Pele Yoetz 164"},
+        {he:"יגיעה", ref:"Pele Yoetz 165"},
+        {he:"יין", ref:"Pele Yoetz 166"},
+        {he:"ילדות", ref:"Pele Yoetz 167"},
+        {he:"ימין", ref:"Pele Yoetz 168"},
+        {he:"יונקי שדים", ref:"Pele Yoetz 169"},
+        {he:"יסוד", ref:"Pele Yoetz 170"},
+        {he:"יועץ", ref:"Pele Yoetz 171"},
+        {he:"יופי", ref:"Pele Yoetz 172"},
+        {he:"ישיבה", ref:"Pele Yoetz 173"},
+        {he:"יוהרא", ref:"Pele Yoetz 174"},
+        {he:"ישרות", ref:"Pele Yoetz 175"},
+        {he:"יסורין", ref:"Pele Yoetz 176"},
+        {he:"ימים טובים", ref:"Pele Yoetz 177"},
+        {he:"ישוב הדעת", ref:"Pele Yoetz 178"},
+        {he:"כבוד אב ואם", ref:"Pele Yoetz 179"},
+        {he:"כבוד חכמים", ref:"Pele Yoetz 180"},
+        {he:"כבוד הבריות", ref:"Pele Yoetz 181"},
+        {he:"כעס", ref:"Pele Yoetz 182"},
+        {he:"כוונה", ref:"Pele Yoetz 183"},
+        {he:"כבוד", ref:"Pele Yoetz 184"},
+        {he:"כיפור", ref:"Pele Yoetz 185"},
+        {he:"כופה", ref:"Pele Yoetz 186"},
+        {he:"כהן", ref:"Pele Yoetz 187"},
+        {he:"כפוי טובה", ref:"Pele Yoetz 188"},
+        {he:"כוויה", ref:"Pele Yoetz 189"},
+        {he:"כלב", ref:"Pele Yoetz 190"},
+        {he:"כניעה", ref:"Pele Yoetz 191"},
+        {he:"כסף", ref:"Pele Yoetz 192"},
+        {he:"כינוי", ref:"Pele Yoetz 193"},
+        {he:"כלה בבית אביה", ref:"Pele Yoetz 194"},
+        {he:"כתיבה", ref:"Pele Yoetz 195"},
+        {he:"כיליות", ref:"Pele Yoetz 196"},
+        {he:"כללות א", ref:"Pele Yoetz 197"},
+        {he:"כללות ב", ref:"Pele Yoetz 198"},
+        {he:"לימוד", ref:"Pele Yoetz 199"},
+        {he:"לב", ref:"Pele Yoetz 200"},
+        {he:"לשון הרע", ref:"Pele Yoetz 201"},
+        {he:"ליצנות", ref:"Pele Yoetz 202"},
+        {he:"לשמה", ref:"Pele Yoetz 203"},
+        {he:"לווה", ref:"Pele Yoetz 204"},
+        {he:"לעז", ref:"Pele Yoetz 205"},
+        {he:"לויה", ref:"Pele Yoetz 206"},
+        {he:"לבישה", ref:"Pele Yoetz 207"},
+        {he:"מלכות", ref:"Pele Yoetz 208"},
+        {he:"מורא", ref:"Pele Yoetz 209"},
+        {he:"מנוחה", ref:"Pele Yoetz 210"},
+        {he:"מצוות", ref:"Pele Yoetz 211"},
+        {he:"מזכה", ref:"Pele Yoetz 212"},
+        {he:"מותרות", ref:"Pele Yoetz 213"},
+        {he:"מהירות מיתון", ref:"Pele Yoetz 214"},
+        {he:"מעשר", ref:"Pele Yoetz 215"},
+        {he:"מוסר", ref:"Pele Yoetz 216"},
+        {he:"מחשבה", ref:"Pele Yoetz 217"},
+        {he:"משא ומתן", ref:"Pele Yoetz 218"},
+        {he:"מנהג", ref:"Pele Yoetz 219"},
+        {he:"מידות", ref:"Pele Yoetz 220"},
+        {he:"מחלוקת", ref:"Pele Yoetz 221"},
+        {he:"מובחר", ref:"Pele Yoetz 222"},
+        {he:"משפט ודין", ref:"Pele Yoetz 223"},
+        {he:"מתן", ref:"Pele Yoetz 224"},
+        {he:"ממשלה", ref:"Pele Yoetz 225"},
+        {he:"מילה", ref:"Pele Yoetz 226"},
+        {he:"מכירה", ref:"Pele Yoetz 227"},
+        {he:"ממון", ref:"Pele Yoetz 228"},
+        {he:"ממונה", ref:"Pele Yoetz 229"},
+        {he:"מונה", ref:"Pele Yoetz 230"},
+        {he:"מנחה", ref:"Pele Yoetz 231"},
+        {he:"מניעה", ref:"Pele Yoetz 232"},
+        {he:"מסירה", ref:"Pele Yoetz 233"},
+        {he:"מרירות", ref:"Pele Yoetz 234"},
+        {he:"מתיקות", ref:"Pele Yoetz 235"},
+        {he:"מלמדי תינוקות", ref:"Pele Yoetz 236"},
+        {he:"מיתה", ref:"Pele Yoetz 237"},
+        {he:"נחמה", ref:"Pele Yoetz 238"},
+        {he:"נדיבות", ref:"Pele Yoetz 239"},
+        {he:"נקימה ונטירה", ref:"Pele Yoetz 240"},
+        {he:"נטילת ידים", ref:"Pele Yoetz 241"},
+        {he:"נבלות הפה", ref:"Pele Yoetz 242"},
+        {he:"נקיות", ref:"Pele Yoetz 243"},
+        {he:"נאמנות", ref:"Pele Yoetz 244"},
+        {he:"נדה", ref:"Pele Yoetz 245"},
+        {he:"נדרים", ref:"Pele Yoetz 246"},
+        {he:"נס", ref:"Pele Yoetz 247"},
+        {he:"נסיון", ref:"Pele Yoetz 248"},
+        {he:"נסך", ref:"Pele Yoetz 249"},
+        {he:"נפש", ref:"Pele Yoetz 250"},
+        {he:"ניצוח", ref:"Pele Yoetz 251"},
+        {he:"נשים", ref:"Pele Yoetz 252"},
+        {he:"נפילת אפים", ref:"Pele Yoetz 253"},
+        {he:"נפלאות", ref:"Pele Yoetz 254"},
+        {he:"נר שבת ונר חנוכה", ref:"Pele Yoetz 255"},
+        {he:"סבלנות", ref:"Pele Yoetz 256"},
+        {he:"סוכה", ref:"Pele Yoetz 257"},
+        {he:"סייג", ref:"Pele Yoetz 258"},
+        {he:"סוד", ref:"Pele Yoetz 259"},
+        {he:"ספר", ref:"Pele Yoetz 260"},
+        {he:"סנגוריא", ref:"Pele Yoetz 261"},
+        {he:"סליחות", ref:"Pele Yoetz 262"},
+        {he:"סעודה", ref:"Pele Yoetz 263"},
+        {he:"ספינה", ref:"Pele Yoetz 264"},
+        {he:"ספק", ref:"Pele Yoetz 265"},
+        {he:"סרבנות", ref:"Pele Yoetz 266"},
+        {he:"סתר", ref:"Pele Yoetz 267"},
+        {he:"סגולה", ref:"Pele Yoetz 268"},
+        {he:"סיפוק", ref:"Pele Yoetz 269"},
+        {he:"עבודת השם", ref:"Pele Yoetz 270"},
+        {he:"ענוה", ref:"Pele Yoetz 271"},
+        {he:"עשירות", ref:"Pele Yoetz 272"},
+        {he:"עונה", ref:"Pele Yoetz 273"},
+        {he:"עיון", ref:"Pele Yoetz 274"},
+        {he:"עניה", ref:"Pele Yoetz 275"},
+        {he:"עצלות", ref:"Pele Yoetz 276"},
+        {he:"עצבות", ref:"Pele Yoetz 277"},
+        {he:"עזות", ref:"Pele Yoetz 278"},
+        {he:"עמל", ref:"Pele Yoetz 279"},
+        {he:"עבירה", ref:"Pele Yoetz 280"},
+        {he:"עזר", ref:"Pele Yoetz 281"},
+        {he:"עונג", ref:"Pele Yoetz 282"},
+        {he:"עונש", ref:"Pele Yoetz 283"},
+        {he:"עצה", ref:"Pele Yoetz 284"},
+        {he:"ערב", ref:"Pele Yoetz 285"},
+        {he:"ערך", ref:"Pele Yoetz 286"},
+        {he:"עניות", ref:"Pele Yoetz 287"},
+        {he:"עין הרע", ref:"Pele Yoetz 288"},
+        {he:"עריות", ref:"Pele Yoetz 289"},
+        {he:"עדות", ref:"Pele Yoetz 290"},
+        {he:"עצרת", ref:"Pele Yoetz 291"},
+        {he:"פרישות", ref:"Pele Yoetz 292"},
+        {he:"פריה ורביה", ref:"Pele Yoetz 293"},
+        {he:"פורים", ref:"Pele Yoetz 294"},
+        {he:"פסח", ref:"Pele Yoetz 295"},
+        {he:"פרנסה", ref:"Pele Yoetz 296"},
+        {he:"פחד", ref:"Pele Yoetz 297"},
+        {he:"פרשיות", ref:"Pele Yoetz 298"},
+        {he:"פדות", ref:"Pele Yoetz 299"},
+        {he:"פה", ref:"Pele Yoetz 300"},
+        {he:"צדקה", ref:"Pele Yoetz 301"},
+        {he:"צעקה", ref:"Pele Yoetz 302"},
+        {he:"צוואה", ref:"Pele Yoetz 303"},
+        {he:"צניעות", ref:"Pele Yoetz 304"},
+        {he:"ציצית", ref:"Pele Yoetz 305"},
+        {he:"צער", ref:"Pele Yoetz 306"},
+        {he:"צרה", ref:"Pele Yoetz 307"},
+        {he:"ציור", ref:"Pele Yoetz 308"},
+        {he:"צפוי", ref:"Pele Yoetz 309"},
+        {he:"ציבור", ref:"Pele Yoetz 310"},
+        {he:"קדושה", ref:"Pele Yoetz 311"},
+        {he:"קימה", ref:"Pele Yoetz 312"},
+        {he:"קריאה", ref:"Pele Yoetz 313"},
+        {he:"קינאה", ref:"Pele Yoetz 314"},
+        {he:"קללה", ref:"Pele Yoetz 315"},
+        {he:"קבלה", ref:"Pele Yoetz 316"},
+        {he:"קביעות", ref:"Pele Yoetz 317"},
+        {he:"קביעות צדקה", ref:"Pele Yoetz 318"},
+        {he:"קרובים", ref:"Pele Yoetz 319"},
+        {he:"קנס", ref:"Pele Yoetz 320"},
+        {he:"קבורה", ref:"Pele Yoetz 321"},
+        {he:"קורבנות", ref:"Pele Yoetz 322"},
+        {he:"קריאת שמע", ref:"Pele Yoetz 323"},
+        {he:"קול", ref:"Pele Yoetz 324"},
+        {he:"קרי", ref:"Pele Yoetz 325"},
+        {he:"רחמנות", ref:"Pele Yoetz 326"},
+        {he:"ראיה", ref:"Pele Yoetz 327"},
+        {he:"רדיפה", ref:"Pele Yoetz 328"},
+        {he:"ריצה", ref:"Pele Yoetz 329"},
+        {he:"ריבית", ref:"Pele Yoetz 330"},
+        {he:"ראש השנה", ref:"Pele Yoetz 331"},
+        {he:"רבים", ref:"Pele Yoetz 332"},
+        {he:"רגילות", ref:"Pele Yoetz 333"},
+        {he:"רינה", ref:"Pele Yoetz 334"},
+        {he:"רפואה", ref:"Pele Yoetz 335"},
+        {he:"רופא", ref:"Pele Yoetz 336"},
+        {he:"רחיצה", ref:"Pele Yoetz 337"},
+        {he:"רבו", ref:"Pele Yoetz 338"},
+        {he:"רצון", ref:"Pele Yoetz 339"},
+        {he:"רועה", ref:"Pele Yoetz 340"},
+        {he:"שלום", ref:"Pele Yoetz 341"},
+        {he:"שנאה", ref:"Pele Yoetz 342"},
+        {he:"שבת", ref:"Pele Yoetz 343"},
+        {he:"שינה", ref:"Pele Yoetz 344"},
+        {he:"שיחה", ref:"Pele Yoetz 345"},
+        {he:"שקר", ref:"Pele Yoetz 346"},
+        {he:"שתיה", ref:"Pele Yoetz 347"},
+        {he:"שפלות", ref:"Pele Yoetz 348"},
+        {he:"שתיקה", ref:"Pele Yoetz 349"},
+        {he:"שמחה", ref:"Pele Yoetz 350"},
+        {he:"שבועה", ref:"Pele Yoetz 351"},
+        {he:"שם שמים", ref:"Pele Yoetz 352"},
+        {he:"שקידה", ref:"Pele Yoetz 353"},
+        {he:"שכן", ref:"Pele Yoetz 354"},
+        {he:"שיר", ref:"Pele Yoetz 355"},
+        {he:"שליח צבור", ref:"Pele Yoetz 356"},
+        {he:"שמירה", ref:"Pele Yoetz 357"},
+        {he:"שחוק", ref:"Pele Yoetz 358"},
+        {he:"שמיעה", ref:"Pele Yoetz 359"},
+        {he:"שק", ref:"Pele Yoetz 360"},
+        {he:"שבח", ref:"Pele Yoetz 361"},
+        {he:"שוגג", ref:"Pele Yoetz 362"},
+        {he:"שופטים ושוטרים", ref:"Pele Yoetz 363"},
+        {he:"שוחט", ref:"Pele Yoetz 364"},
+        {he:"שמש", ref:"Pele Yoetz 365"},
+        {he:"שכר שכיר", ref:"Pele Yoetz 366"},
+        {he:"שכר מצוה", ref:"Pele Yoetz 367"},
+        {he:"שכל", ref:"Pele Yoetz 368"},
+        {he:"שם טוב", ref:"Pele Yoetz 369"},
+        {he:"שיעור", ref:"Pele Yoetz 370"},
+        {he:"שש", ref:"Pele Yoetz 371"},
+        {he:"ששה", ref:"Pele Yoetz 372"},
+        {he:"שררה", ref:"Pele Yoetz 373"},
+        {he:"שואל", ref:"Pele Yoetz 374"},
+        {he:"שואל כענין", ref:"Pele Yoetz 375"},
+        {he:"תפילין", ref:"Pele Yoetz 376"},
+        {he:"תורה", ref:"Pele Yoetz 377"},
+        {he:"תמימות", ref:"Pele Yoetz 378"},
+        {he:"תלמידים", ref:"Pele Yoetz 379"},
+        {he:"תענית", ref:"Pele Yoetz 380"},
+        {he:"תשובה", ref:"Pele Yoetz 381"},
+        {he:"תוכחה", ref:"Pele Yoetz 382"},
+        {he:"תיקון", ref:"Pele Yoetz 383"},
+        {he:"תחבולות", ref:"Pele Yoetz 384"},
+        {he:"תלמידי חכמים", ref:"Pele Yoetz 385"},
+        {he:"תהלים", ref:"Pele Yoetz 386"},
+        {he:"תולדות", ref:"Pele Yoetz 387"},
+        {he:"תוספת", ref:"Pele Yoetz 388"},
+        {he:"תוקע", ref:"Pele Yoetz 389"},
+        {he:"תשעה באב", ref:"Pele Yoetz 390"},
+        {he:"תשועה", ref:"Pele Yoetz 391"}
+      ]},
     { id:"hafrashat-challah", he:"הפרשת חלה", subtitle:"סדר ההפרשה והברכה",
       cat:"tefilot", color:"#d97706", icon:"🍞",
       credit:"מאגר פנימי — נחלת הכלל", creditUrl:"",
@@ -20530,6 +20939,68 @@ function openSefarimNosafimPage() {
   }
   window._snFontInc = function() { _fs = Math.min(200, _fs+10); localStorage.setItem("sn-fs", _fs); applyFS(); };
   window._snFontDec = function() { _fs = Math.max(60,  _fs-10); localStorage.setItem("sn-fs", _fs); applyFS(); };
+
+  // ── Mishnah Berurah toggle (for Shulchan Arukh — Orach Chaim only) ──
+  var SN_MB_KEY = "sn-show-mb";
+  var _snMBCache = {};  // sa-ref → null | "loading" | string[]
+  function _snGetMB() { return localStorage.getItem(SN_MB_KEY) === "true"; }
+  function _snSetMB(v) { localStorage.setItem(SN_MB_KEY, v ? "true" : "false"); }
+  function _snMBSupported() { return _bk && _bk.id === "shulchan-aruch" && _sbk && _sbk.id === "oc"; }
+  // Update MB toggle visibility based on current book/sub-book
+  window._snUpdateMBToggleVisibility = function() {
+    var btn = document.getElementById("sn-mb-toggle");
+    if (!btn) return;
+    btn.style.display = _snMBSupported() ? "flex" : "none";
+    if (_snMBSupported()) {
+      var on = _snGetMB();
+      btn.style.background = on ? "rgba(124,58,237,0.18)" : "rgba(124,58,237,0.06)";
+      btn.style.border = on ? "1.5px solid rgba(124,58,237,0.6)" : "1.5px solid rgba(124,58,237,0.25)";
+      btn.title = on ? "כבה משנה ברורה" : "הצג משנה ברורה";
+    }
+  };
+  // Toggle MB on/off
+  window._snToggleMB = function() {
+    if (!_snMBSupported()) return;
+    _snSetMB(!_snGetMB());
+    window._snUpdateMBToggleVisibility();
+    // Re-render all loaded chapters with/without MB
+    var area = document.getElementById("sn-reader-area");
+    if (area) {
+      var loaded = Array.from(_snLoadedIdx || new Set()).sort(function(a,b){return a-b;});
+      _snLoadedIdx = new Set();
+      area.innerHTML = "";
+      (async function() {
+        for (var i = 0; i < loaded.length; i++) {
+          await _snLoadChapter(loaded[i], area, false);
+        }
+      })();
+    }
+  };
+  // Fetch Mishnah Berurah for a Shulchan Arukh siman
+  async function _snFetchMB(saRef) {
+    if (_snMBCache[saRef] !== undefined) return _snMBCache[saRef];
+    _snMBCache[saRef] = "loading";
+    try {
+      // SA ref: "Shulchan_Arukh,_Orach_Chayim.1" → MB ref: "Mishnah_Berurah.1"
+      var match = saRef.match(/Shulchan_Arukh,_Orach_Chayim\.(\d+)/);
+      if (!match) { _snMBCache[saRef] = null; return null; }
+      var sim = match[1];
+      var res = await fetch("https://www.sefaria.org/api/texts/" + encodeURIComponent("Mishnah Berurah " + sim) + "?lang=he&context=0", { signal: AbortSignal.timeout(8000) });
+      var data = await res.json();
+      var he = data && data.he;
+      var flat = [];
+      function pushAll(v) {
+        if (typeof v === "string" && v.trim()) flat.push(v);
+        else if (Array.isArray(v)) v.forEach(pushAll);
+      }
+      pushAll(he);
+      _snMBCache[saRef] = flat.length ? flat : null;
+      return _snMBCache[saRef];
+    } catch(e) {
+      _snMBCache[saRef] = null;
+      return null;
+    }
+  }
 
   // ── Bookmark panel ──
   function buildBMPanel() {
@@ -20759,6 +21230,20 @@ function openSefarimNosafimPage() {
     if (fi) fi.value = "";
     renderSectionsChunk(sections);
   }
+  // Kedushat Levi parsha → chumash color mapping (same palette as Ben Ish Hai)
+  var _KL_CHUMASH_COLORS = {
+    "בראשית": "#3b82f6", "שמות": "#f59e0b", "ויקרא": "#ec4899",
+    "במדבר": "#10b981", "דברים": "#8b5cf6"
+  };
+  function _klChumashFromRef(ref) {
+    if (!ref) return null;
+    if (ref.indexOf("Genesis") >= 0) return "בראשית";
+    if (ref.indexOf("Exodus") >= 0) return "שמות";
+    if (ref.indexOf("Leviticus") >= 0) return "ויקרא";
+    if (ref.indexOf("Numbers") >= 0) return "במדבר";
+    if (ref.indexOf("Deuteronomy") >= 0) return "דברים";
+    return null;
+  }
   function renderSectionsChunk(sections) {
     var g = document.getElementById("sn-sections-grid");
     if (!g || !_bk) return;
@@ -20766,14 +21251,34 @@ function openSefarimNosafimPage() {
       g.innerHTML = "<p style=\"color:#94a3b8;text-align:center;padding:2rem;grid-column:1/-1;\">לא נמצאו תוצאות</p>"; return;
     }
     var allSecs = _sbk ? _sbk.sections : _bk.sections;
+    var _isKedushatLevi = _bk && _bk.id === "kedushat-levi";
     g.innerHTML = sections.map(function(sec) {
       var idx = allSecs.findIndex(function(s){ return s.ref === sec.ref; });
       var _hl = sec.highlight === true;
-      var _bg = _hl ? "rgba(251,191,36,0.18)" : "rgba(255,255,255,0.06)";
-      var _bgH = _hl ? "rgba(251,191,36,0.32)" : "rgba(255,255,255,0.15)";
-      var _bd = _hl ? "1px solid rgba(251,191,36,0.6)" : "1px solid rgba(255,255,255,0.1)";
-      var _col = _hl ? "#fde68a" : "#e2e8f0";
-      var _fw = _hl ? "900" : "600";
+      var _bg, _bgH, _bd, _col, _fw;
+      if (_isKedushatLevi && !_hl) {
+        var chumash = _klChumashFromRef(sec.ref);
+        var c = chumash ? _KL_CHUMASH_COLORS[chumash] : null;
+        if (c) {
+          _bg = c + "22";
+          _bgH = c + "55";
+          _bd = "1.5px solid " + c + "66";
+          _col = "#f1f5f9";
+          _fw = "700";
+        } else {
+          _bg = "rgba(255,255,255,0.06)";
+          _bgH = "rgba(255,255,255,0.15)";
+          _bd = "1px solid rgba(255,255,255,0.1)";
+          _col = "#e2e8f0";
+          _fw = "600";
+        }
+      } else {
+        _bg = _hl ? "rgba(251,191,36,0.18)" : "rgba(255,255,255,0.06)";
+        _bgH = _hl ? "rgba(251,191,36,0.32)" : "rgba(255,255,255,0.15)";
+        _bd = _hl ? "1px solid rgba(251,191,36,0.6)" : "1px solid rgba(255,255,255,0.1)";
+        _col = _hl ? "#fde68a" : "#e2e8f0";
+        _fw = _hl ? "900" : "600";
+      }
       return "<button onclick=\"window._snOpenSection(" + (idx >= 0 ? idx : 0) + ");\" "+
         "style=\"background:"+_bg+";border:"+_bd+";border-radius:0.6rem;padding:0.45rem 0.25rem;cursor:pointer;font-size:0.74rem;color:"+_col+";transition:background 0.15s;font-weight:"+_fw+";text-align:center;\" "+
         "onmouseenter=\"this.style.background=\'"+_bgH+"\';\" onmouseleave=\"this.style.background=\'"+_bg+"\';\" >"+
@@ -20806,7 +21311,24 @@ function openSefarimNosafimPage() {
     if (prepend && area.firstChild) area.insertBefore(chapterDiv, area.firstChild);
     else area.appendChild(chapterDiv);
     var he = await fetchSec(sec.ref);
-    chapterDiv.innerHTML = heading + renderParagraphs(he, _bk.color);
+    var mainHtml = heading + renderParagraphs(he, _bk.color);
+    // Append Mishnah Berurah if toggle is on and applicable
+    if (_snMBSupported() && _snGetMB()) {
+      chapterDiv.innerHTML = mainHtml + "<div style=\"margin-top:1rem;padding-top:0.85rem;border-top:1px dashed rgba(124,58,237,0.35);color:#7c3aed;font-size:0.78rem;font-style:italic;text-align:center;\">📖 טוען משנה ברורה...</div>";
+      var mb = await _snFetchMB(sec.ref);
+      var mbBlock = "";
+      if (mb && mb.length) {
+        mbBlock = "<div style=\"margin-top:1.2rem;padding:0.85rem 1rem;border-radius:0.6rem;background:rgba(124,58,237,0.05);border:1px solid rgba(124,58,237,0.18);text-align:right;direction:rtl;\">"+
+          "<div style=\"font-size:0.8rem;color:#7c3aed;font-weight:900;margin-bottom:0.55rem;text-align:center;\">📖 משנה ברורה</div>"+
+          mb.map(function(t,i){ return "<p style=\"margin:0 0 0.7rem;line-height:1.95;color:#4c1d95;font-size:0.92em;\"><span style=\"color:#7c3aed;font-weight:700;margin-left:0.35rem;\">(" + (i+1) + ")</span>" + t + "</p>"; }).join("")+
+          "</div>";
+      } else {
+        mbBlock = "<div style=\"margin-top:0.8rem;padding:0.45rem 0.7rem;border-radius:0.4rem;background:rgba(124,58,237,0.04);border:1px dashed rgba(124,58,237,0.25);color:#7c3aed;font-size:0.72rem;font-style:italic;text-align:center;\">📖 אין משנה ברורה על סימן זה</div>";
+      }
+      chapterDiv.innerHTML = mainHtml + mbBlock;
+    } else {
+      chapterDiv.innerHTML = mainHtml;
+    }
   }
 
   // ── הדגשה וגלילה למיקום מדויק של תוצאת חיפוש ──
@@ -20877,6 +21399,7 @@ function openSefarimNosafimPage() {
     if (!content || !title) return;
     title.textContent = (_sbk ? _sbk.he + " — " : "") + sec.he;
     applyFS(); updateBMBtn();
+    if (window._snUpdateMBToggleVisibility) window._snUpdateMBToggleVisibility();
     content.onscroll = null;
     content.innerHTML = "<div style=\"text-align:center;padding:3rem 1rem;\"><div style=\"width:36px;height:36px;border:3px solid " + _bk.color + ";border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 1rem;\"></div><p style=\"color:#94a3b8;\">טוען...</p></div>";
     showView("sn-reader-view");
@@ -21267,6 +21790,7 @@ function openSefarimNosafimPage() {
         "<button onclick=\"window._snFontInc();\" style=\"width:38px;height:38px;border-radius:50%;border:1.5px solid rgba(99,102,241,0.3);background:linear-gradient(135deg,#eef2ff 0%,#e0e7ff 100%);color:#4338ca;font-size:1.25rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(99,102,241,0.15);transition:transform 0.15s ease;line-height:1;\" onmouseover=\"this.style.transform='scale(1.08)'\" onmouseout=\"this.style.transform=''\">+</button>",
         "<button onclick=\"window._toggleAutoScroll('#sn-reader-content', this)\" style=\"width:38px;height:38px;border-radius:50%;border:1.5px solid rgba(16,185,129,0.35);background:linear-gradient(135deg,#ecfdf5 0%,#d1fae5 100%);color:#047857;font-size:0.95rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(16,185,129,0.18);transition:transform 0.15s ease;\" onmouseover=\"this.style.transform='scale(1.08)'\" onmouseout=\"this.style.transform=''\" aria-label=\"התחל גלילה אוטומטית\">▶</button>",
         "<button class=\"auto-scroll-speed-btn\" onclick=\"window._cycleAutoScrollSpeed(this)\" style=\"font-size:0.78rem;font-weight:800;color:#047857;min-width:2.4rem;text-align:center;background:rgba(209,250,229,0.85);padding:5px 10px;border-radius:999px;border:1px solid rgba(16,185,129,0.3);cursor:pointer;\" aria-label=\"מהירות גלילה\">1x</button>",
+        "<button id=\"sn-mb-toggle\" onclick=\"window._snToggleMB();\" style=\"display:none;width:38px;height:38px;border-radius:50%;border:1.5px solid rgba(124,58,237,0.25);background:rgba(124,58,237,0.06);color:#7c3aed;font-size:0.95rem;font-weight:900;cursor:pointer;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(124,58,237,0.15);transition:all 0.15s ease;\" onmouseover=\"this.style.transform='scale(1.08)'\" onmouseout=\"this.style.transform=''\" title=\"משנה ברורה\">📖</button>",
       "</div>",
     "</div>",
     "<div id=\"sn-search-view\" style=\"display:none;position:absolute;inset:0;background:#faf9f6;flex-direction:column;overflow:hidden;\">",

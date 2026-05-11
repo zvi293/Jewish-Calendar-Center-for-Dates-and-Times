@@ -1557,6 +1557,10 @@ function getChokBartenura() { return localStorage.getItem(CHOK_BARTENURA_KEY) ==
 
 function toggleChokRashi() {
   localStorage.setItem(CHOK_RASHI_KEY, getChokRashi() ? 'false' : 'true');
+  // Clear any failed/empty cached entries so retries can happen
+  Object.keys(_chokRashiCache).forEach(k => {
+    if (_chokRashiCache[k] === null) delete _chokRashiCache[k];
+  });
   renderChokContent();
   fetchChokCommentaries();
 }
@@ -1928,14 +1932,40 @@ async function fetchChokCommentaries() {
             .then(data => {
               if (data && data.he) {
                 const raw = data.he;
-                // Parse as per-verse array (each element = one verse's Rashi)
-                const versesArr = Array.isArray(raw) ? raw : [raw];
-                const verses = versesArr.map(v => {
-                  if (!v) return [];
-                  if (typeof v === 'string') return v.trim() ? [v] : [];
-                  // nested arrays (array of comments per verse)
-                  return [].concat(...[v].flat(3)).filter(t => typeof t === 'string' && t.trim());
-                });
+                let verses = [];
+                // Handle three shapes: string, 1D array (per-verse), 2D array (cross-chapter)
+                if (typeof raw === 'string') {
+                  verses = raw.trim() ? [[raw]] : [];
+                } else if (Array.isArray(raw)) {
+                  // Check if nested 2D (cross-chapter): some top item contains arrays
+                  const isCrossChapter = raw.some(item =>
+                    Array.isArray(item) && item.some(sub => Array.isArray(sub))
+                  );
+                  if (isCrossChapter) {
+                    // Flatten chapter dimension; each chapter -> verses -> comments
+                    for (const chapter of raw) {
+                      if (Array.isArray(chapter)) {
+                        for (const verse of chapter) {
+                          if (typeof verse === 'string') {
+                            verses.push(verse.trim() ? [verse] : []);
+                          } else if (Array.isArray(verse)) {
+                            verses.push(verse.filter(s => typeof s === 'string' && s.trim()));
+                          } else {
+                            verses.push([]);
+                          }
+                        }
+                      }
+                    }
+                  } else {
+                    // Standard per-verse: raw[i] = string or array of strings
+                    verses = raw.map(v => {
+                      if (!v) return [];
+                      if (typeof v === 'string') return v.trim() ? [v] : [];
+                      if (Array.isArray(v)) return v.filter(s => typeof s === 'string' && s.trim());
+                      return [];
+                    });
+                  }
+                }
                 const hasAny = verses.some(v => v.length > 0);
                 // Extract start verse from ref e.g. "Leviticus 25:11-15" → 11
                 const verseMatch = ref.match(/:(\d+)/);

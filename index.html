@@ -1278,33 +1278,6 @@
           <button onclick="window._toggleAutoScroll('#sefaria-modal-content', this)" style="width:38px;height:38px;border-radius:50%;border:1.5px solid rgba(16,185,129,0.35);background:linear-gradient(135deg,#ecfdf5 0%,#d1fae5 100%);color:#047857;font-size:0.95rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(16,185,129,0.18);transition:transform 0.15s ease;" onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform=''" aria-label="התחל גלילה אוטומטית">▶</button>
           <button class="auto-scroll-speed-btn" onclick="window._cycleAutoScrollSpeed(this)" style="font-size:0.78rem;font-weight:800;color:#047857;min-width:2.4rem;text-align:center;background:rgba(209,250,229,0.85);padding:5px 10px;border-radius:999px;border:1px solid rgba(16,185,129,0.3);cursor:pointer;" aria-label="מהירות גלילה">1x</button>
         </div>
-        <div
-          class="p-3 md:p-4 border-t flex-shrink-0"
-          style="border-color:rgba(0,0,0,0.08);background:#faf9f6;"
-        >
-          <a
-            id="sefaria-credit-link"
-            href="https://www.sefaria.org.il/"
-            target="_blank"
-            rel="noopener"
-            class="text-sm font-bold text-blue-500 hover:text-blue-600 transition-colors flex justify-center items-center gap-2"
-          >
-            <svg
-              class="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
-              ></path>
-            </svg>
-            הטקסט באדיבות Sefaria.org (ברישיון פתוח)
-          </a>
-        </div>
     </div>
 
     <div
@@ -1343,25 +1316,10 @@
         <button onclick="changePrayerFontSize(-10, '#chok-israel-modal-content')" style="width:38px;height:38px;border-radius:50%;border:1.5px solid rgba(99,102,241,0.3);background:linear-gradient(135deg,#eef2ff 0%,#e0e7ff 100%);color:#4338ca;font-size:1.25rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(99,102,241,0.15);transition:transform 0.15s ease;" onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform=''" aria-label="הקטן כתב">−</button>
         <span class="font-size-label" style="font-size:0.8rem;font-weight:800;color:#4338ca;min-width:3.3rem;text-align:center;background:rgba(238,242,255,0.85);padding:5px 12px;border-radius:999px;border:1px solid rgba(99,102,241,0.2);">100%</span>
         <button onclick="changePrayerFontSize(10, '#chok-israel-modal-content')" style="width:38px;height:38px;border-radius:50%;border:1.5px solid rgba(99,102,241,0.3);background:linear-gradient(135deg,#eef2ff 0%,#e0e7ff 100%);color:#4338ca;font-size:1.25rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(99,102,241,0.15);transition:transform 0.15s ease;" onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform=''" aria-label="הגדל כתב">+</button>
-        <button onclick="window._toggleAutoScroll('#chok-israel-modal-content', this)" style="width:38px;height:38px;border-radius:50%;border:1.5px solid rgba(16,185,129,0.35);background:linear-gradient(135deg,#ecfdf5 0%,#d1fae5 100%);color:#047857;font-size:0.95rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(16,185,129,0.18);transition:transform 0.15s ease;" onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform=''" aria-label="התחל גלילה אוטומטית">▶</button>
-        <button class="auto-scroll-speed-btn" onclick="window._cycleAutoScrollSpeed(this)" style="font-size:0.78rem;font-weight:800;color:#047857;min-width:2.4rem;text-align:center;background:rgba(209,250,229,0.85);padding:5px 10px;border-radius:999px;border:1px solid rgba(16,185,129,0.3);cursor:pointer;" aria-label="מהירות גלילה">1x</button>
-      </div>
-      <div
-        class="p-3 md:p-4 border-t flex-shrink-0"
-        style="border-color:rgba(0,0,0,0.08);background:#faf9f6;"
-      >
-        <a
-          id="chok-israel-credit-link"
-          href="https://www.sefaria.org/collections/%D7%97%D7%A7-%D7%9C%D7%99%D7%A9%D7%A8%D7%90%D7%9C"
-          target="_blank"
-          rel="noopener"
-          class="text-sm font-bold text-blue-500 hover:text-blue-600 transition-colors flex justify-center items-center gap-2"
-        >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
-          </svg>
-          הטקסט באדיבות Sefaria.org (ברישיון פתוח)
-        </a>
+        <div style="display:inline-flex;align-items:center;gap:0.6rem;flex-shrink:0;">
+          <button onclick="window._toggleAutoScroll('#chok-israel-modal-content', this)" style="width:38px;height:38px;border-radius:50%;border:1.5px solid rgba(16,185,129,0.35);background:linear-gradient(135deg,#ecfdf5 0%,#d1fae5 100%);color:#047857;font-size:0.95rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(16,185,129,0.18);transition:transform 0.15s ease;" onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform=''" aria-label="התחל גלילה אוטומטית">▶</button>
+          <button class="auto-scroll-speed-btn" onclick="window._cycleAutoScrollSpeed(this)" style="font-size:0.78rem;font-weight:800;color:#047857;min-width:2.4rem;text-align:center;background:rgba(209,250,229,0.85);padding:5px 10px;border-radius:999px;border:1px solid rgba(16,185,129,0.3);cursor:pointer;" aria-label="מהירות גלילה">1x</button>
+        </div>
       </div>
     </div>
 

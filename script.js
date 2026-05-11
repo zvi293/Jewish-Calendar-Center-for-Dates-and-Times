@@ -1868,9 +1868,15 @@ function renderChokContent() {
               html += verseTexts.map(t => `<p style="line-height:1.85;margin:0 0 0.25rem 0;color:#4c1d95;font-size:0.92em;">${t}</p>`).join('');
             });
             html += `</div>`;
+          } else {
+            // Fetched but no commentary on these verses
+            html += `<div style="margin-top:0.6rem;padding:0.45rem 0.7rem;border-radius:0.4rem;background:rgba(124,58,237,0.04);border:1px dashed rgba(124,58,237,0.25);color:#7c3aed;font-size:0.72rem;font-style:italic;text-align:center;">📝 אין פירוש רש״י על פסוקים אלה</div>`;
           }
         } else if (rashiVal === 'loading') {
           html += `<div style="margin-top:0.4rem;font-size:0.75rem;color:#7c3aed;font-style:italic;opacity:0.7;">טוען פירוש רש״י...</div>`;
+        } else if (rashiVal === null) {
+          // Fetch completed but returned no Rashi content
+          html += `<div style="margin-top:0.6rem;padding:0.45rem 0.7rem;border-radius:0.4rem;background:rgba(124,58,237,0.04);border:1px dashed rgba(124,58,237,0.25);color:#7c3aed;font-size:0.72rem;font-style:italic;text-align:center;">📝 אין פירוש רש״י על פסוקים אלה</div>`;
         }
       }
 

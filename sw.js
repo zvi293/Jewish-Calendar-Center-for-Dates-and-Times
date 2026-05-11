@@ -1,4 +1,4 @@
-const STATIC_CACHE = "moadim-static-v4";
+const STATIC_CACHE = "moadim-static-v6";
 const STATIC_ASSETS = [
   "/",
   "/index.html",

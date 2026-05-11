@@ -94,6 +94,11 @@
         border-color: rgba(167, 139, 250, 0.60);
         box-shadow: 0 4px 24px rgba(99, 102, 241, 0.30);
       }
+      .tab-btn.active.tzaddik {
+        background: linear-gradient(135deg, rgba(251,191,36,0.35), rgba(245,158,11,0.35), rgba(217,119,6,0.35));
+        border-color: rgba(252, 211, 77, 0.60);
+        box-shadow: 0 4px 24px rgba(245, 158, 11, 0.30);
+      }
       .nav-btn {
         background: linear-gradient(135deg, #06b6d4, #0891b2);
         color: #fff;
@@ -208,6 +213,12 @@
         -webkit-text-fill-color: transparent;
         background-clip: text;
       }
+      .gradient-title.tzaddik {
+        background: linear-gradient(135deg, #fcd34d, #fbbf24, #f59e0b);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
       .btn-action {
         padding: 0.6rem 1.1rem;
         border-radius: 0.75rem;
@@ -271,7 +282,7 @@
       </div>
 
       <!-- ══════ Tabs ══════ -->
-      <div class="flex gap-2 justify-center mb-6">
+      <div class="flex gap-2 justify-center flex-wrap mb-6">
         <button id="tab-shul" class="tab-btn active" onclick="switchTab('shul')">
           <span aria-hidden="true">🕍</span>
           <span>בתי כנסת</span>
@@ -279,6 +290,10 @@
         <button id="tab-mikvah" class="tab-btn" onclick="switchTab('mikvah')">
           <span aria-hidden="true">💧</span>
           <span>מקוואות</span>
+        </button>
+        <button id="tab-tzaddik" class="tab-btn" onclick="switchTab('tzaddik')">
+          <span aria-hidden="true">🕯️</span>
+          <span>ציוני צדיקים</span>
         </button>
       </div>
 
@@ -366,13 +381,17 @@
 
       // ── Init from localStorage ────────────────────────
       try {
+        const savedTab = localStorage.getItem(LS_TAB_KEY);
+        if (savedTab === "shul" || savedTab === "mikvah" || savedTab === "tzaddik") {
+          currentTab = savedTab;
+        }
         const savedRadius = parseFloat(localStorage.getItem(LS_RADIUS_KEY));
         if (savedRadius && [1,3,5,10,20,50,100].includes(savedRadius)) {
           currentRadiusKm = savedRadius;
-        }
-        const savedTab = localStorage.getItem(LS_TAB_KEY);
-        if (savedTab === "shul" || savedTab === "mikvah") {
-          currentTab = savedTab;
+        } else if (currentTab === "tzaddik") {
+          // Tzaddikim are spread across Israel — default to a wider radius
+          // for first-time visitors of this tab.
+          currentRadiusKm = 20;
         }
       } catch (e) { /* ignore */ }
 
@@ -422,31 +441,40 @@
 
       // ── Tab switching ─────────────────────────────────
       function switchTab(tab) {
-        if (tab !== "shul" && tab !== "mikvah") return;
+        if (tab !== "shul" && tab !== "mikvah" && tab !== "tzaddik") return;
         if (tab === currentTab && lastResults.length > 0) return;
         currentTab = tab;
         try { localStorage.setItem(LS_TAB_KEY, tab); } catch(e) {}
 
         const tShul = document.getElementById("tab-shul");
         const tMikvah = document.getElementById("tab-mikvah");
-        tShul.classList.remove("active", "mikvah");
-        tMikvah.classList.remove("active", "mikvah");
+        const tTzaddik = document.getElementById("tab-tzaddik");
+        // Reset all tab states
+        for (const el of [tShul, tMikvah, tTzaddik]) {
+          if (el) el.classList.remove("active", "mikvah", "tzaddik");
+        }
         if (tab === "shul") {
           tShul.classList.add("active");
-        } else {
+        } else if (tab === "mikvah") {
           tMikvah.classList.add("active", "mikvah");
+        } else {
+          tTzaddik.classList.add("active", "tzaddik");
         }
 
         const title = document.getElementById("page-title");
         const subtitle = document.getElementById("page-subtitle");
+        title.classList.remove("mikvah", "tzaddik");
         if (tab === "shul") {
           title.textContent = "בתי כנסת באזורך";
-          title.classList.remove("mikvah");
           subtitle.textContent = "מצא את המקומות הקרובים אליך ונווט אליהם בלחיצה";
-        } else {
+        } else if (tab === "mikvah") {
           title.textContent = "מקוואות באזורך";
           title.classList.add("mikvah");
           subtitle.textContent = "מקוואות קרובות אליך, ממוינות לפי מרחק";
+        } else {
+          title.textContent = "ציוני צדיקים באזורך";
+          title.classList.add("tzaddik");
+          subtitle.textContent = "ציוני צדיקים בקרבת מקום, ממוינים לפי מרחק";
         }
 
         if (userLat != null && userLon != null) {
@@ -477,15 +505,23 @@
       (function applyInitialTab() {
         const tShul = document.getElementById("tab-shul");
         const tMikvah = document.getElementById("tab-mikvah");
-        tShul.classList.remove("active", "mikvah");
-        tMikvah.classList.remove("active", "mikvah");
+        const tTzaddik = document.getElementById("tab-tzaddik");
+        for (const el of [tShul, tMikvah, tTzaddik]) {
+          if (el) el.classList.remove("active", "mikvah", "tzaddik");
+        }
+        const title = document.getElementById("page-title");
+        const subtitle = document.getElementById("page-subtitle");
+        title.classList.remove("mikvah", "tzaddik");
         if (currentTab === "mikvah") {
           tMikvah.classList.add("active", "mikvah");
-          const title = document.getElementById("page-title");
-          const subtitle = document.getElementById("page-subtitle");
           title.textContent = "מקוואות באזורך";
           title.classList.add("mikvah");
           subtitle.textContent = "מקוואות קרובות אליך, ממוינות לפי מרחק";
+        } else if (currentTab === "tzaddik") {
+          tTzaddik.classList.add("active", "tzaddik");
+          title.textContent = "ציוני צדיקים באזורך";
+          title.classList.add("tzaddik");
+          subtitle.textContent = "ציוני צדיקים בקרבת מקום, ממוינים לפי מרחק";
         } else {
           tShul.classList.add("active");
         }
@@ -652,6 +688,31 @@
             out center;
             `
           ];
+        } else if (type === "tzaddik") {
+          // Tzaddikim (Jewish saints' graves). OSM tagging is varied:
+          //  - historic=tomb is the most common — but it includes non-Jewish
+          //    tombs too, so we filter client-side (parseElements).
+          //  - religion=jewish with various tags catches additional ones.
+          return [
+            `
+            [out:json][timeout:25];
+            (
+              nwr["historic"="tomb"](around:${r},${lat},${lon});
+              nwr["historic"="memorial"]["religion"="jewish"](around:${r},${lat},${lon});
+              nwr["amenity"="grave_yard"]["religion"="jewish"](around:${r},${lat},${lon});
+            );
+            out center;
+            `,
+            `
+            [out:json][timeout:25];
+            (
+              nwr["amenity"="place_of_worship"]["religion"="jewish"]["name"~"קבר|ציון|אוהל|מערת"](around:${r},${lat},${lon});
+              nwr["tourism"="attraction"]["religion"="jewish"](around:${r},${lat},${lon});
+              nwr["historic"]["name"~"קבר רבי|ציון הצדיק|אוהל הרבי"](around:${r},${lat},${lon});
+            );
+            out center;
+            `
+          ];
         } else {
           return [
             // Query A: tag-prefiltered name regex (Hebrew). The KEY insight:
@@ -750,11 +811,72 @@
       // ── Parse Overpass elements ───────────────────────
       // `tab` argument is captured at fetch start so we use the correct
       // default name even if the user switched tabs while we were loading.
+      // For tzaddik tab, we also apply a CLIENT-SIDE filter to keep only Jewish
+      // entries — OSM's historic=tomb tag includes non-Jewish tombs as well.
+      function isJewishTzaddikItem(tags, name) {
+        if (!name) return false;
+
+        // ── HARD EXCLUDES ──
+        // Sheikh detection (catches "שיח'", "שיח׳", "השיח'", "שיח עלי", etc.).
+        // We treat "שיח" as a sheikh marker whenever it is NOT followed by another
+        // Hebrew letter (which would mean it is part of a different Hebrew word
+        // like "שיחה" / "שיחות" — conversation).
+        if (/שיח(?![א-ת])/.test(name)) return false;
+        if (/شيخ|Sheikh|Sheik/i.test(name)) return false;
+        // Non-Hebrew scripts (Arabic, Coptic, Greek beyond basic)
+        if (/[؀-ۿ܀-ݏͰ-ϿⲀ-⳿]/.test(name)) return false;
+        // Generic cemetery sections / unnamed burial caves — NOT specific tzaddikim
+        if (/^\s*מערת קבורה\s*$/.test(name)) return false;
+        if (/^\s*בית\s+(עלמין|קברות)/.test(name)) return false;
+        if (/חלקת\s+(מעפילי|נופלים|חללי|חיילים|מחתרת|שואה)/.test(name)) return false;
+        // Known non-tzaddik historical/ancient tombs (Hellenistic/Second Temple
+        // archaeological sites that aren't visited as tzaddik graves).
+        if (/יאסון|ניקנור|בני\s+חזיר|חלקת\s+הר/.test(name)) return false;
+        // Non-Jewish historical figures
+        if (/Schindler|מעפילי\s+אגוז|מעפילי\s+סלבדור/.test(name)) return false;
+        // Explicit non-Jewish religion tag → drop
+        if (tags["religion"] && tags["religion"] !== "jewish") return false;
+
+        // ── EXPLICIT INCLUDES (strong signals) ──
+        // Rabbinic titles — these clearly indicate a tzaddik / religious figure.
+        // Note: JavaScript's \b uses ASCII \w only, so we can't use \b for Hebrew
+        // word boundaries. We use a lookahead asserting "non-Hebrew or end of string"
+        // as the right-side boundary instead.
+        if (/(^|\s)(רבי|הרב|רב|האדמו|האדמור|הצדיק|הבעש|הבעל\s+שם|מהר|מהרי|מהרל|מהרש|רבן|הגאון|הגרי|הגר|הרי|רשבי|הריצ)(?=\s|$|[^א-ת])/.test(name)) return true;
+        // Abbreviated rabbinic titles: "ר'" / "ר׳" / "ר " followed by a Hebrew name.
+        if (/(^|\s)ר['׳"]\s*[א-ת]/.test(name)) return true;
+        if (/(^|\s)ר\s+[א-ת]{2,}/.test(name)) return true;
+        if (/(^|\s)(האר["׳']?י|הרמב["׳']?ם|הרמב["׳']?ן|הרמ["׳']?א|הרשב["׳']?א|הריב["׳']?ש|הנודע\s+ביהודה)(?=\s|$|[^א-ת])/.test(name)) return true;
+        // Famous biblical / talmudic / chassidic tombs (explicit list)
+        if (/קבר\s+רחל|מערת\s+המכפלה|מערת\s+הנביאים|קבר\s+יוסף|קבר\s+דוד(\s|$)|קבר\s+שמואל|קבר\s+חולדה|קבר\s+בנימין|קבר\s+אבשלום|קבר\s+זכריה|קבר\s+חבקוק|קבר\s+עזרא|קבר\s+חוני|קבר\s+שמעון\s+הצדיק|קבר\s+יהושע|קבר\s+כלב|קבר\s+נחום|קבר\s+יונה|קבר\s+מלאכי|קבר\s+אסתר|קבר\s+מרדכי|קבר\s+יחזקאל|קבר\s+דניאל/.test(name)) return true;
+        // "ציון [tzaddik]" / "אוהל [tzaddik]" — religious markers
+        if (/ציון\s+(רבי|הרב|הצדיק|האדמו|הבעש|מהר|הרמב|הרשב|הריב|בעל)/.test(name)) return true;
+        if (/אוהל\s+(רבי|הרב|הצדיק|האדמו|הבעש|בעל)/.test(name)) return true;
+        // Specific famous tzaddikim by name (chassidic / mussar / etc.)
+        if (/(הבעל\s+שם\s+טוב|הבעש["׳']?ט|רבי\s+שמעון\s+בר\s+יוחאי|רבי\s+נחמן|רבי\s+מאיר\s+בעל\s+הנס|רבי\s+עקיבא|רבי\s+ישראל|רבי\s+יהודה|הרב\s+קוק|חיים\s+בן\s+עטר|מנדבורנה|חתם\s+סופר|חזון\s+איש|חפץ\s+חיים|ה?ב?אבא\s+סאלי|בעל\s+הסולם|אור\s+החיים)/.test(name)) return true;
+        // Famous tombs not always prefixed with "קבר"
+        if (/(^|\s)(קבר\s+ה?אימהות|ה?אימהות|ה?אבות|יד\s+אבשלום)(?=\s|$|[^א-ת])/.test(name)) return true;
+        // Bare biblical-figure names (Patriarchs, Matriarchs, key prophets/leaders).
+        // Must be a full standalone reference, not part of a longer phrase like "אברהם הירדני".
+        if (/^(אברהם\s+אבינו|יצחק\s+אבינו|יעקב\s+אבינו|שרה\s+אמנו|רבקה\s+אמנו|לאה\s+אמנו|רחל\s+אמנו|יהושע\s+בן\s+נון)$/.test(name.trim())) return true;
+        // English-language entries with explicit Jewish-religious markers.
+        // Matches "Rabbi X", "Rabbenu X", "Cave of Rabbi X", "Tomb of Rabbi X", "HaRav X".
+        if (/\b(Rabbi|Rabbenu|HaRav|Ha-Rav|the Tzadik|tzadik\b)/i.test(name)) {
+          // But still drop if it's a non-Jewish context that happens to contain "Rabbi"
+          if (!/Sheikh|Muslim|Christian|Mosque|Church/i.test(name)) return true;
+        }
+
+        // Default: reject. User explicitly wants only known tzaddikim, no random graves.
+        return false;
+      }
+
       function parseElements(elements, userLat, userLon, tab) {
         const seen = new Set();
         const list = [];
         const t = tab || currentTab;
-        const defaultName = (t === "shul") ? "בית כנסת" : "מקווה";
+        const defaultName = (t === "shul") ? "בית כנסת"
+                          : (t === "mikvah") ? "מקווה"
+                          : "ציון צדיק";
         for (const el of elements) {
           let lat = el.lat, lon = el.lon;
           if (lat == null && el.center) { lat = el.center.lat; lon = el.center.lon; }
@@ -764,6 +886,11 @@
                     || tags["alt_name"] || tags["alt_name:he"] || tags["short_name"]
                     || tags["loc_name"] || tags["official_name"] || tags["operator"]
                     || tags["description"] || defaultName;
+          // Tzaddik tab: filter to Jewish-only items, and skip unnamed
+          if (t === "tzaddik") {
+            if (name === defaultName) continue; // skip unnamed (user wanted named only)
+            if (!isJewishTzaddikItem(tags, name)) continue;
+          }
           // Build a simple address line
           const addrParts = [];
           if (tags["addr:street"]) {
@@ -789,10 +916,12 @@
         const t = tab || currentTab;
         const out = document.getElementById("results");
         out.innerHTML = "";
+        const noun = t === "shul" ? "בתי כנסת"
+                  : t === "mikvah" ? "מקוואות"
+                  : "ציוני צדיקים";
         if (!items || items.length === 0) {
           setStatus(
-            (t === "shul" ? "לא נמצאו בתי כנסת" : "לא נמצאו מקוואות")
-              + " ברדיוס " + currentRadiusKm + " ק\"מ.\nנסה להרחיב את רדיוס החיפוש.",
+            "לא נמצאו " + noun + " ברדיוס " + currentRadiusKm + " ק\"מ.\nנסה להרחיב את רדיוס החיפוש.",
             false
           );
           return;
@@ -801,7 +930,7 @@
 
         const header = document.createElement("div");
         header.className = "text-slate-300/80 text-sm mb-2 px-1";
-        header.textContent = "נמצאו " + items.length + (t === "shul" ? " בתי כנסת" : " מקוואות") +
+        header.textContent = "נמצאו " + items.length + " " + noun +
                              " ברדיוס " + currentRadiusKm + " ק\"מ";
         out.appendChild(header);
 
@@ -908,9 +1037,12 @@
           showRefreshHint("מעדכן נתונים…");
           hasCacheShown = true;
         } else {
+          const noun = tab === "shul" ? "בתי כנסת"
+                    : tab === "mikvah" ? "מקוואות"
+                    : "ציוני צדיקים";
           const statusMsg = tab === "shul"
-            ? "מחפש בתי כנסת ברדיוס " + currentRadiusKm + " ק\"מ…"
-            : "מחפש מקוואות ברדיוס " + currentRadiusKm + " ק\"מ…\nהחיפוש עשוי להימשך עד 30 שניות.";
+            ? "מחפש " + noun + " ברדיוס " + currentRadiusKm + " ק\"מ…"
+            : "מחפש " + noun + " ברדיוס " + currentRadiusKm + " ק\"מ…\nהחיפוש עשוי להימשך עד 30 שניות.";
           setStatus(statusMsg);
         }
 
@@ -970,9 +1102,11 @@
             // Queries OK but genuinely empty (e.g., too-small radius).
             lastResults = [];
             saveCachedResults(tab, currentRadiusKm, userLat, userLon, []);
+            const nNoun = tab === "shul" ? "בתי כנסת"
+                        : tab === "mikvah" ? "מקוואות"
+                        : "ציוני צדיקים";
             setStatus(
-              (tab === "shul" ? "לא נמצאו בתי כנסת" : "לא נמצאו מקוואות")
-                + " ברדיוס " + currentRadiusKm + " ק\"מ.\nנסה להרחיב את רדיוס החיפוש.",
+              "לא נמצאו " + nNoun + " ברדיוס " + currentRadiusKm + " ק\"מ.\nנסה להרחיב את רדיוס החיפוש.",
               false
             );
           }
@@ -982,7 +1116,15 @@
             // Keep the cache displayed, add a "stale" amber notice.
             showStaleNotice("⚠ השרתים עמוסים. מציג תוצאות מהחיפוש הקודם.");
           } else {
-            // Nothing to show — display a helpful error.
+            // Last-ditch: try ANY cache we have for this tab (any radius/location)
+            const anyCache = loadAnyCacheForTab(tab);
+            if (anyCache && anyCache.length > 0) {
+              lastResults = anyCache;
+              renderResults(anyCache, tab);
+              showStaleNotice("⚠ כל שרתי OpenStreetMap עמוסים כרגע. מציג את התוצאות האחרונות שנשמרו במכשיר.");
+              return;
+            }
+            // No cache at all — show a helpful error.
             const errMsg = lastError && lastError.message ? lastError.message : "כל השרתים לא הגיבו בזמן";
             setError(
               "שגיאה בטעינת נתונים מ-OpenStreetMap.\n"
@@ -1004,10 +1146,14 @@
           if (!raw) return null;
           const obj = JSON.parse(raw);
           if (!obj || !Array.isArray(obj.items)) return null;
-          // Stale-but-OK: cache valid for 30 days for offline fallback
           if (!obj.ts || (Date.now() - obj.ts) > 1000 * 60 * 60 * 24 * 30) return null;
-          // Recompute distances from user's CURRENT location
-          return obj.items.map(it => ({
+          let items = obj.items;
+          // Re-apply current filter for tzaddik tab — older cached data might
+          // contain entries that no longer pass the (now stricter) name filter.
+          if (tab === "tzaddik") {
+            items = items.filter(it => isJewishTzaddikItem({}, it.name));
+          }
+          return items.map(it => ({
             name: it.name, address: it.address, lat: it.lat, lon: it.lon,
             distanceKm: haversineKm(lat, lon, it.lat, it.lon)
           })).sort((a, b) => a.distanceKm - b.distanceKm);
@@ -1017,18 +1163,48 @@
         try {
           const slim = items.map(it => ({ name: it.name, address: it.address, lat: it.lat, lon: it.lon }));
           localStorage.setItem(_cacheKey(tab, radius, lat, lon), JSON.stringify({ ts: Date.now(), items: slim }));
-        } catch (e) { /* quota or serialization issue — ignore */ }
+        } catch (e) { /* ignore */ }
+      }
+      // Last-ditch fallback: find ANY cached entry for this tab (any radius,
+      // any location) when all Overpass servers are down. Returns the newest
+      // non-empty cache, sorted by distance from the user's CURRENT location.
+      function loadAnyCacheForTab(tab) {
+        try {
+          const prefix = "shulMikveCache_" + tab + "_";
+          let best = null;
+          for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i);
+            if (!k || !k.startsWith(prefix)) continue;
+            const raw = localStorage.getItem(k);
+            if (!raw) continue;
+            try {
+              const obj = JSON.parse(raw);
+              if (obj && Array.isArray(obj.items) && obj.items.length > 0) {
+                if (!best || (obj.ts || 0) > (best.ts || 0)) best = obj;
+              }
+            } catch (e) {}
+          }
+          if (!best) return null;
+          if (userLat == null || userLon == null) return null;
+          let items = best.items;
+          // Re-apply current filter for tzaddik tab (see loadCachedResults).
+          if (tab === "tzaddik") {
+            items = items.filter(it => isJewishTzaddikItem({}, it.name));
+          }
+          return items.map(it => ({
+            name: it.name, address: it.address, lat: it.lat, lon: it.lon,
+            distanceKm: haversineKm(userLat, userLon, it.lat, it.lon)
+          })).sort((a, b) => a.distanceKm - b.distanceKm);
+        } catch (e) { return null; }
       }
 
       // ── Startup flow ──────────────────────────────────
       async function startFlow(forceFresh = false) {
-        // Try cached location first (so the user doesn't get the prompt every time)
         const cached = !forceFresh ? loadCachedLocation() : null;
         if (cached) {
           userLat = cached.lat;
           userLon = cached.lon;
           updateLocationLabel(cached.lat, cached.lon, cached.address || null);
-          // If we don't have an address yet, fetch it in the background
           if (!cached.address) {
             reverseGeocode(cached.lat, cached.lon).then(addr => {
               if (addr) {
@@ -1040,11 +1216,8 @@
           await fetchAndRender();
           return;
         }
-        // Otherwise request fresh
         await refreshLocation();
       }
-
-      // Kick off
       window.addEventListener("load", () => {
         startFlow(false);
       });

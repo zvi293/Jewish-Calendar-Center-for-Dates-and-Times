@@ -444,6 +444,10 @@
       @media (max-width: 767px) {
         #fab-top { display: none !important; }
       }
+      /* Scroll-to-top (white): mobile only */
+      @media (min-width: 768px) {
+        #scroll-top-btn { display: none !important; }
+      }
 
       /* ── Hero stat cards pulse on load ── */
       @keyframes fadeSlideUp {

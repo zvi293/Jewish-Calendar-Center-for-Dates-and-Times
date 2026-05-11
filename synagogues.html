@@ -1,0 +1,745 @@
+<!doctype html>
+<html lang="he" dir="rtl" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <title>בתי כנסת ומקוואות באזור | הלוח היהודי</title>
+    <meta
+      name="description"
+      content="מצא בתי כנסת ומקוואות באזור שלך לפי מיקום, ראה מרחק ונווט בלחיצה."
+    />
+    <meta name="theme-color" content="#0f172a" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://jewishcalendar.netlify.app/synagogues.html" />
+
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+    <link rel="manifest" href="site.webmanifest" />
+
+    <link rel="preconnect" href="https://overpass-api.de" crossorigin />
+    <link rel="preconnect" href="https://overpass.kumi.systems" crossorigin />
+    <link rel="preconnect" href="https://cdn.tailwindcss.com" crossorigin />
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = { darkMode: "class", theme: { extend: {} } };
+    </script>
+
+    <link
+      href="https://fonts.googleapis.com/css2?family=Assistant:wght@200;400;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      :root {
+        --bg-grad-1: #0b1220;
+        --bg-grad-2: #0f172a;
+        --bg-grad-3: #1e293b;
+      }
+      html, body {
+        font-family: 'Assistant', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        background: radial-gradient(ellipse at top, #1e293b 0%, #0f172a 50%, #0b1220 100%);
+        color: #f1f5f9;
+        min-height: 100vh;
+      }
+      body {
+        background-attachment: fixed;
+      }
+      .card {
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        border: 1px solid rgba(255, 255, 255, 0.10);
+        border-radius: 1rem;
+        transition: all 0.25s ease;
+      }
+      .card:hover {
+        background: rgba(255, 255, 255, 0.08);
+        border-color: rgba(255, 255, 255, 0.18);
+        transform: translateY(-1px);
+      }
+      .tab-btn {
+        position: relative;
+        padding: 0.85rem 1.25rem;
+        border-radius: 1rem;
+        font-weight: 700;
+        font-size: 1rem;
+        transition: all 0.25s ease;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.05);
+        color: rgba(241, 245, 249, 0.80);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        cursor: pointer;
+      }
+      .tab-btn:hover {
+        background: rgba(255, 255, 255, 0.10);
+        color: #fff;
+      }
+      .tab-btn.active {
+        background: linear-gradient(135deg, rgba(16,185,129,0.35), rgba(20,184,166,0.35), rgba(34,211,238,0.35));
+        border-color: rgba(94, 234, 212, 0.60);
+        color: #fff;
+        box-shadow: 0 4px 24px rgba(20, 184, 166, 0.30);
+      }
+      .tab-btn.active.mikvah {
+        background: linear-gradient(135deg, rgba(59,130,246,0.35), rgba(99,102,241,0.35), rgba(139,92,246,0.35));
+        border-color: rgba(167, 139, 250, 0.60);
+        box-shadow: 0 4px 24px rgba(99, 102, 241, 0.30);
+      }
+      .nav-btn {
+        background: linear-gradient(135deg, #06b6d4, #0891b2);
+        color: #fff;
+        font-weight: 700;
+        padding: 0.55rem 1rem;
+        border-radius: 0.75rem;
+        font-size: 0.9rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        transition: all 0.2s ease;
+        border: none;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      .nav-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 16px rgba(6, 182, 212, 0.40);
+        filter: brightness(1.05);
+      }
+      .nav-btn:active {
+        transform: translateY(0);
+      }
+      .spinner {
+        width: 42px;
+        height: 42px;
+        border: 3px solid rgba(94, 234, 212, 0.20);
+        border-top-color: #5eead4;
+        border-radius: 50%;
+        animation: spin 0.9s linear infinite;
+      }
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+      .radius-chip {
+        padding: 0.4rem 0.85rem;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        color: rgba(241, 245, 249, 0.85);
+        font-weight: 600;
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+      .radius-chip:hover {
+        background: rgba(255, 255, 255, 0.12);
+      }
+      .radius-chip.active {
+        background: linear-gradient(135deg, rgba(16,185,129,0.40), rgba(20,184,166,0.40));
+        border-color: rgba(94, 234, 212, 0.60);
+        color: #fff;
+      }
+      .top-nav {
+        background: rgba(15, 23, 42, 0.75);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      }
+      .back-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.5rem 0.9rem;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 0.75rem;
+        color: #fff;
+        font-weight: 600;
+        font-size: 0.9rem;
+        transition: all 0.2s ease;
+        text-decoration: none;
+      }
+      .back-btn:hover {
+        background: rgba(255, 255, 255, 0.14);
+      }
+      .item-name {
+        font-weight: 700;
+        font-size: 1.05rem;
+        color: #f1f5f9;
+        line-height: 1.3;
+      }
+      .item-distance {
+        font-size: 0.85rem;
+        color: rgba(148, 163, 184, 1);
+        margin-top: 0.25rem;
+      }
+      .item-address {
+        font-size: 0.8rem;
+        color: rgba(148, 163, 184, 0.85);
+        margin-top: 0.15rem;
+      }
+      .gradient-title {
+        background: linear-gradient(135deg, #5eead4, #22d3ee, #93c5fd);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+      .gradient-title.mikvah {
+        background: linear-gradient(135deg, #93c5fd, #a78bfa, #c4b5fd);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+      .btn-action {
+        padding: 0.6rem 1.1rem;
+        border-radius: 0.75rem;
+        font-weight: 600;
+        font-size: 0.9rem;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        color: #f1f5f9;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+      .btn-action:hover {
+        background: rgba(255, 255, 255, 0.14);
+      }
+      .btn-action.primary {
+        background: linear-gradient(135deg, #10b981, #14b8a6);
+        border-color: transparent;
+        color: #fff;
+      }
+      .btn-action.primary:hover {
+        filter: brightness(1.08);
+        box-shadow: 0 4px 16px rgba(20, 184, 166, 0.40);
+      }
+      details summary {
+        cursor: pointer;
+        list-style: none;
+      }
+      details summary::-webkit-details-marker { display: none; }
+      .fade-in {
+        animation: fadeIn 0.4s ease forwards;
+      }
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(8px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+    </style>
+  </head>
+
+  <body class="min-h-screen pb-24">
+    <!-- ══════ Top Nav ══════ -->
+    <header class="top-nav sticky top-0 z-40 px-4 py-3 flex items-center justify-between">
+      <a href="index.html" class="back-btn" aria-label="חזרה לדף הראשי">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 18l6-6-6-6"></path>
+        </svg>
+        <span>חזרה</span>
+      </a>
+      <h1 class="text-base font-bold text-white/90">בתי כנסת ומקוואות באזור</h1>
+      <div class="w-[78px]"></div>
+    </header>
+
+    <main class="max-w-3xl mx-auto px-4 pt-6">
+      <!-- ══════ Title ══════ -->
+      <div class="text-center mb-6">
+        <h2 id="page-title" class="text-3xl md:text-4xl font-extrabold gradient-title mb-2">
+          בתי כנסת באזורך
+        </h2>
+        <p id="page-subtitle" class="text-slate-300/80 text-sm">
+          מצא את המקומות הקרובים אליך ונווט אליהם בלחיצה
+        </p>
+      </div>
+
+      <!-- ══════ Tabs ══════ -->
+      <div class="flex gap-2 justify-center mb-6">
+        <button id="tab-shul" class="tab-btn active" onclick="switchTab('shul')">
+          <span aria-hidden="true">🕍</span>
+          <span>בתי כנסת</span>
+        </button>
+        <button id="tab-mikvah" class="tab-btn" onclick="switchTab('mikvah')">
+          <span aria-hidden="true">💧</span>
+          <span>מקוואות</span>
+        </button>
+      </div>
+
+      <!-- ══════ Controls Card ══════ -->
+      <div class="card p-4 mb-5">
+        <!-- Location row -->
+        <div class="flex items-center justify-between flex-wrap gap-3 mb-4">
+          <div class="flex items-center gap-2 text-sm">
+            <svg class="w-4 h-4 text-emerald-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"></path>
+              <circle cx="12" cy="10" r="3"></circle>
+            </svg>
+            <span id="location-status" class="text-slate-300/90">בודק מיקום…</span>
+          </div>
+          <button id="btn-refresh-loc" class="btn-action" onclick="refreshLocation()" type="button">
+            עדכן מיקום
+          </button>
+        </div>
+
+        <!-- Radius row -->
+        <div>
+          <div class="text-xs text-slate-400 mb-2">רדיוס חיפוש:</div>
+          <div class="flex flex-wrap gap-2" id="radius-chips">
+            <button class="radius-chip" data-r="1" type="button">1 ק"מ</button>
+            <button class="radius-chip" data-r="3" type="button">3 ק"מ</button>
+            <button class="radius-chip" data-r="5" type="button">5 ק"מ</button>
+            <button class="radius-chip active" data-r="10" type="button">10 ק"מ</button>
+            <button class="radius-chip" data-r="20" type="button">20 ק"מ</button>
+            <button class="radius-chip" data-r="50" type="button">50 ק"מ</button>
+            <button class="radius-chip" data-r="100" type="button">100 ק"מ</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════ Status / Results ══════ -->
+      <div id="status-area" class="flex flex-col items-center justify-center py-12 text-center">
+        <div class="spinner mb-4"></div>
+        <div class="text-slate-300/90 text-sm" id="status-text">מאתר מיקום…</div>
+      </div>
+
+      <div id="results" class="space-y-3"></div>
+
+      <!-- ══════ Footer info ══════ -->
+      <div class="mt-10 text-center text-xs text-slate-500">
+        <p>הנתונים מבוססים על OpenStreetMap. אם פספסנו מקום או נתקלת בשגיאה — אפשר לעדכן אותו דרך
+          openstreetmap.org.</p>
+      </div>
+    </main>
+
+    <script>
+      // ══════════════════════════════════════════════════
+      //  SYNAGOGUES & MIKVAHS — Location-based finder
+      //  Data: OpenStreetMap (Overpass API)
+      //  Navigation: Waze
+      // ══════════════════════════════════════════════════
+
+      const LS_LOC_KEY = "shulMikve_lastLocation_v1";
+      const LS_LOC_TTL_MS = 1000 * 60 * 60 * 24 * 7; // 7 days
+      const LS_PERMISSION_KEY = "shulMikve_locPermissionGranted";
+      const LS_RADIUS_KEY = "shulMikve_lastRadius";
+      const LS_TAB_KEY = "shulMikve_lastTab";
+
+      // Overpass API endpoints — try in order if one fails
+      const OVERPASS_ENDPOINTS = [
+        "https://overpass-api.de/api/interpreter",
+        "https://overpass.kumi.systems/api/interpreter",
+        "https://overpass.openstreetmap.ru/api/interpreter"
+      ];
+
+      let currentTab = "shul";   // 'shul' | 'mikvah'
+      let currentRadiusKm = 10;
+      let userLat = null;
+      let userLon = null;
+      let lastResults = [];
+
+      // ── Init from localStorage ────────────────────────
+      try {
+        const savedRadius = parseFloat(localStorage.getItem(LS_RADIUS_KEY));
+        if (savedRadius && [1,3,5,10,20,50,100].includes(savedRadius)) {
+          currentRadiusKm = savedRadius;
+        }
+        const savedTab = localStorage.getItem(LS_TAB_KEY);
+        if (savedTab === "shul" || savedTab === "mikvah") {
+          currentTab = savedTab;
+        }
+      } catch (e) { /* ignore */ }
+
+      // ── UI helpers ────────────────────────────────────
+      function setStatus(text, showSpinner = true) {
+        const area = document.getElementById("status-area");
+        const txt = document.getElementById("status-text");
+        area.style.display = "flex";
+        area.innerHTML = "";
+        if (showSpinner) {
+          const sp = document.createElement("div");
+          sp.className = "spinner mb-4";
+          area.appendChild(sp);
+        }
+        const t = document.createElement("div");
+        t.className = "text-slate-300/90 text-sm whitespace-pre-line";
+        t.textContent = text;
+        area.appendChild(t);
+        document.getElementById("results").innerHTML = "";
+      }
+
+      function setError(text, withRetry = true) {
+        const area = document.getElementById("status-area");
+        area.style.display = "flex";
+        area.innerHTML = "";
+        const icon = document.createElement("div");
+        icon.innerHTML = '<svg class="w-10 h-10 text-amber-300 mb-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>';
+        area.appendChild(icon);
+        const t = document.createElement("div");
+        t.className = "text-slate-200 text-sm whitespace-pre-line mb-3";
+        t.textContent = text;
+        area.appendChild(t);
+        if (withRetry) {
+          const btn = document.createElement("button");
+          btn.className = "btn-action primary";
+          btn.textContent = "נסה שוב";
+          btn.type = "button";
+          btn.onclick = () => { startFlow(true); };
+          area.appendChild(btn);
+        }
+        document.getElementById("results").innerHTML = "";
+      }
+
+      function hideStatus() {
+        document.getElementById("status-area").style.display = "none";
+      }
+
+      // ── Tab switching ─────────────────────────────────
+      function switchTab(tab) {
+        if (tab !== "shul" && tab !== "mikvah") return;
+        if (tab === currentTab && lastResults.length > 0) return;
+        currentTab = tab;
+        try { localStorage.setItem(LS_TAB_KEY, tab); } catch(e) {}
+
+        const tShul = document.getElementById("tab-shul");
+        const tMikvah = document.getElementById("tab-mikvah");
+        tShul.classList.remove("active", "mikvah");
+        tMikvah.classList.remove("active", "mikvah");
+        if (tab === "shul") {
+          tShul.classList.add("active");
+        } else {
+          tMikvah.classList.add("active", "mikvah");
+        }
+
+        const title = document.getElementById("page-title");
+        const subtitle = document.getElementById("page-subtitle");
+        if (tab === "shul") {
+          title.textContent = "בתי כנסת באזורך";
+          title.classList.remove("mikvah");
+          subtitle.textContent = "מצא את המקומות הקרובים אליך ונווט אליהם בלחיצה";
+        } else {
+          title.textContent = "מקוואות באזורך";
+          title.classList.add("mikvah");
+          subtitle.textContent = "מקוואות קרובות אליך, ממוינות לפי מרחק";
+        }
+
+        if (userLat != null && userLon != null) {
+          fetchAndRender();
+        }
+      }
+
+      // ── Radius chips ──────────────────────────────────
+      document.querySelectorAll("#radius-chips .radius-chip").forEach(chip => {
+        chip.addEventListener("click", () => {
+          const r = parseFloat(chip.dataset.r);
+          if (!r || r === currentRadiusKm) return;
+          currentRadiusKm = r;
+          try { localStorage.setItem(LS_RADIUS_KEY, String(r)); } catch(e) {}
+          document.querySelectorAll("#radius-chips .radius-chip").forEach(c => c.classList.remove("active"));
+          chip.classList.add("active");
+          if (userLat != null && userLon != null) {
+            fetchAndRender();
+          }
+        });
+        if (parseFloat(chip.dataset.r) === currentRadiusKm) {
+          document.querySelectorAll("#radius-chips .radius-chip").forEach(c => c.classList.remove("active"));
+          chip.classList.add("active");
+        }
+      });
+
+      // Restore tab on load
+      (function applyInitialTab() {
+        const tShul = document.getElementById("tab-shul");
+        const tMikvah = document.getElementById("tab-mikvah");
+        tShul.classList.remove("active", "mikvah");
+        tMikvah.classList.remove("active", "mikvah");
+        if (currentTab === "mikvah") {
+          tMikvah.classList.add("active", "mikvah");
+          const title = document.getElementById("page-title");
+          const subtitle = document.getElementById("page-subtitle");
+          title.textContent = "מקוואות באזורך";
+          title.classList.add("mikvah");
+          subtitle.textContent = "מקוואות קרובות אליך, ממוינות לפי מרחק";
+        } else {
+          tShul.classList.add("active");
+        }
+      })();
+
+      // ── Location handling ─────────────────────────────
+      function loadCachedLocation() {
+        try {
+          const raw = localStorage.getItem(LS_LOC_KEY);
+          if (!raw) return null;
+          const obj = JSON.parse(raw);
+          if (!obj || typeof obj.lat !== "number" || typeof obj.lon !== "number") return null;
+          if (!obj.ts || (Date.now() - obj.ts) > LS_LOC_TTL_MS) return null;
+          return obj;
+        } catch(e) { return null; }
+      }
+      function saveLocationCache(lat, lon) {
+        try {
+          localStorage.setItem(LS_LOC_KEY, JSON.stringify({ lat, lon, ts: Date.now() }));
+          localStorage.setItem(LS_PERMISSION_KEY, "1");
+        } catch(e) {}
+      }
+
+      function requestGeolocation() {
+        return new Promise((resolve, reject) => {
+          if (!("geolocation" in navigator)) {
+            reject(new Error("הדפדפן לא תומך באיתור מיקום."));
+            return;
+          }
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude });
+            },
+            (err) => {
+              if (err.code === 1) reject(new Error("הגישה למיקום נחסמה.\nכדי להציג מקומות באזורך, אפשר גישה למיקום בדפדפן."));
+              else if (err.code === 2) reject(new Error("לא ניתן לאתר את המיקום שלך כרגע. נסה שוב."));
+              else if (err.code === 3) reject(new Error("פג זמן בקשת המיקום. נסה שוב."));
+              else reject(new Error("שגיאה באיתור המיקום."));
+            },
+            { enableHighAccuracy: true, timeout: 12000, maximumAge: 1000 * 60 * 10 }
+          );
+        });
+      }
+
+      async function refreshLocation() {
+        try {
+          setStatus("מאתר מיקום…");
+          const { lat, lon } = await requestGeolocation();
+          userLat = lat; userLon = lon;
+          saveLocationCache(lat, lon);
+          updateLocationLabel(lat, lon);
+          await fetchAndRender();
+        } catch (e) {
+          setError(e.message || "שגיאה באיתור המיקום.");
+        }
+      }
+
+      function updateLocationLabel(lat, lon) {
+        const el = document.getElementById("location-status");
+        el.textContent = "המיקום שלך: " + lat.toFixed(4) + ", " + lon.toFixed(4);
+      }
+
+      // ── Distance calc (haversine) ─────────────────────
+      function haversineKm(lat1, lon1, lat2, lon2) {
+        const R = 6371;
+        const toRad = (d) => d * Math.PI / 180;
+        const dLat = toRad(lat2 - lat1);
+        const dLon = toRad(lon2 - lon1);
+        const a = Math.sin(dLat/2)**2 +
+                  Math.cos(toRad(lat1))*Math.cos(toRad(lat2)) *
+                  Math.sin(dLon/2)**2;
+        return 2 * R * Math.asin(Math.sqrt(a));
+      }
+
+      function formatDistance(km) {
+        if (!isFinite(km)) return "—";
+        if (km < 1) return Math.round(km * 1000) + " מ'";
+        if (km < 10) return km.toFixed(1) + " ק\"מ";
+        return Math.round(km) + " ק\"מ";
+      }
+
+      // ── Build Overpass query ──────────────────────────
+      function buildQuery(type, lat, lon, radiusKm) {
+        const r = Math.round(radiusKm * 1000);
+        if (type === "shul") {
+          return `
+            [out:json][timeout:25];
+            (
+              node["amenity"="place_of_worship"]["religion"="jewish"](around:${r},${lat},${lon});
+              way["amenity"="place_of_worship"]["religion"="jewish"](around:${r},${lat},${lon});
+              relation["amenity"="place_of_worship"]["religion"="jewish"](around:${r},${lat},${lon});
+              node["building"="synagogue"](around:${r},${lat},${lon});
+              way["building"="synagogue"](around:${r},${lat},${lon});
+            );
+            out center tags;
+          `;
+        } else {
+          // Mikvah — multiple tagging conventions exist in OSM
+          return `
+            [out:json][timeout:25];
+            (
+              node["amenity"="mikvah"](around:${r},${lat},${lon});
+              way["amenity"="mikvah"](around:${r},${lat},${lon});
+              node["building"="mikvah"](around:${r},${lat},${lon});
+              way["building"="mikvah"](around:${r},${lat},${lon});
+              node["amenity"="ritual_bath"](around:${r},${lat},${lon});
+              way["amenity"="ritual_bath"](around:${r},${lat},${lon});
+              node[~"^name(:.*)?$"~"מקווה|מקוה|מקואות|מקוואות|Mikve|Mikvah|Mikveh",i](around:${r},${lat},${lon});
+              way[~"^name(:.*)?$"~"מקווה|מקוה|מקואות|מקוואות|Mikve|Mikvah|Mikveh",i](around:${r},${lat},${lon});
+            );
+            out center tags;
+          `;
+        }
+      }
+
+      // ── Overpass fetch with fallback endpoints ────────
+      async function overpassFetch(query) {
+        let lastErr = null;
+        for (const endpoint of OVERPASS_ENDPOINTS) {
+          try {
+            const res = await fetch(endpoint, {
+              method: "POST",
+              headers: { "Content-Type": "application/x-www-form-urlencoded" },
+              body: "data=" + encodeURIComponent(query)
+            });
+            if (!res.ok) {
+              lastErr = new Error("Overpass " + res.status);
+              continue;
+            }
+            const data = await res.json();
+            return data;
+          } catch (e) {
+            lastErr = e;
+            continue;
+          }
+        }
+        throw lastErr || new Error("כל שרתי OpenStreetMap לא זמינים כרגע.");
+      }
+
+      // ── Parse Overpass elements ───────────────────────
+      function parseElements(elements, userLat, userLon) {
+        const seen = new Set();
+        const list = [];
+        for (const el of elements) {
+          let lat = el.lat, lon = el.lon;
+          if (lat == null && el.center) { lat = el.center.lat; lon = el.center.lon; }
+          if (lat == null || lon == null) continue;
+          const tags = el.tags || {};
+          const name = tags["name:he"] || tags["name"] || tags["name:en"] || tags["alt_name"] || tags["short_name"] || "מקום ללא שם";
+          // Build a simple address line
+          const addrParts = [];
+          if (tags["addr:street"]) {
+            let s = tags["addr:street"];
+            if (tags["addr:housenumber"]) s += " " + tags["addr:housenumber"];
+            addrParts.push(s);
+          }
+          if (tags["addr:city"]) addrParts.push(tags["addr:city"]);
+          const address = addrParts.join(", ");
+
+          const key = name + "|" + lat.toFixed(5) + "|" + lon.toFixed(5);
+          if (seen.has(key)) continue;
+          seen.add(key);
+          const dist = haversineKm(userLat, userLon, lat, lon);
+          list.push({ name, address, lat, lon, distanceKm: dist });
+        }
+        list.sort((a, b) => a.distanceKm - b.distanceKm);
+        return list;
+      }
+
+      // ── Render results ────────────────────────────────
+      function renderResults(items) {
+        const out = document.getElementById("results");
+        out.innerHTML = "";
+        if (!items || items.length === 0) {
+          setStatus(
+            (currentTab === "shul" ? "לא נמצאו בתי כנסת" : "לא נמצאו מקוואות")
+              + " ברדיוס " + currentRadiusKm + " ק\"מ.\nנסה להרחיב את רדיוס החיפוש.",
+            false
+          );
+          return;
+        }
+        hideStatus();
+
+        const header = document.createElement("div");
+        header.className = "text-slate-300/80 text-sm mb-2 px-1";
+        header.textContent = "נמצאו " + items.length + (currentTab === "shul" ? " בתי כנסת" : " מקוואות") +
+                             " ברדיוס " + currentRadiusKm + " ק\"מ";
+        out.appendChild(header);
+
+        items.forEach((it, idx) => {
+          const card = document.createElement("div");
+          card.className = "card p-4 flex items-center justify-between gap-3 fade-in";
+          card.style.animationDelay = Math.min(idx * 35, 600) + "ms";
+
+          const left = document.createElement("div");
+          left.className = "flex-1 min-w-0";
+          const nameEl = document.createElement("div");
+          nameEl.className = "item-name";
+          nameEl.textContent = it.name;
+          left.appendChild(nameEl);
+          if (it.address) {
+            const ad = document.createElement("div");
+            ad.className = "item-address";
+            ad.textContent = it.address;
+            left.appendChild(ad);
+          }
+          const dist = document.createElement("div");
+          dist.className = "item-distance";
+          dist.textContent = "מרחק: " + formatDistance(it.distanceKm);
+          left.appendChild(dist);
+
+          const right = document.createElement("div");
+          right.className = "flex-shrink-0";
+          const navBtn = document.createElement("button");
+          navBtn.className = "nav-btn";
+          navBtn.type = "button";
+          navBtn.setAttribute("aria-label", "נווט אל " + it.name);
+          navBtn.innerHTML =
+            '<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' +
+            '<polygon points="3 11 22 2 13 21 11 13 3 11"></polygon>' +
+            '</svg><span>לניווט</span>';
+          navBtn.onclick = () => openInWaze(it.lat, it.lon);
+          right.appendChild(navBtn);
+
+          card.appendChild(left);
+          card.appendChild(right);
+          out.appendChild(card);
+        });
+      }
+
+      // ── Open in Waze ──────────────────────────────────
+      function openInWaze(lat, lon) {
+        const url = "https://waze.com/ul?ll=" + encodeURIComponent(lat + "," + lon) + "&navigate=yes";
+        // Open in new tab so the user's session here is preserved
+        window.open(url, "_blank", "noopener");
+      }
+
+      // ── Main fetch & render flow ──────────────────────
+      async function fetchAndRender() {
+        if (userLat == null || userLon == null) return;
+        setStatus(
+          (currentTab === "shul" ? "מחפש בתי כנסת ברדיוס " : "מחפש מקוואות ברדיוס ")
+          + currentRadiusKm + " ק\"מ…"
+        );
+        try {
+          const q = buildQuery(currentTab, userLat, userLon, currentRadiusKm);
+          const data = await overpassFetch(q);
+          const items = parseElements(data.elements || [], userLat, userLon);
+          // Filter to the requested radius (overpass uses meters; result may include slightly larger area for ways)
+          const filtered = items.filter(it => it.distanceKm <= currentRadiusKm + 0.05);
+          lastResults = filtered;
+          renderResults(filtered);
+        } catch (e) {
+          setError("שגיאה בטעינת נתונים מ-OpenStreetMap.\n" + (e.message || ""));
+        }
+      }
+
+      // ── Startup flow ──────────────────────────────────
+      async function startFlow(forceFresh = false) {
+        // Try cached location first (so the user doesn't get the prompt every time)
+        const cached = !forceFresh ? loadCachedLocation() : null;
+        if (cached) {
+          userLat = cached.lat;
+          userLon = cached.lon;
+          updateLocationLabel(cached.lat, cached.lon);
+          await fetchAndRender();
+          return;
+        }
+        // Otherwise request fresh
+        await refreshLocation();
+      }
+
+      // Kick off
+      window.addEventListener("load", () => {
+        startFlow(false);
+      });
+    </script>
+  </body>
+</html>

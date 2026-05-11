@@ -2823,12 +2823,17 @@ function showDashboard() {
   const dash = document.getElementById("dashboard-state");
   const banner = document.getElementById("halacha-banner");
   const btn = document.getElementById("btn-open-calendar");
+  const btnShulMikve = document.getElementById("btn-shul-mikve");
   const prayerWrap = document.getElementById("prayer-grid-wrap");
   dash.classList.remove("hidden");
   banner.classList.remove("hidden");
   banner.classList.add("flex");
   btn.classList.remove("hidden");
   btn.classList.add("flex");
+  if (btnShulMikve) {
+    btnShulMikve.classList.remove("hidden");
+    btnShulMikve.classList.add("flex");
+  }
   if (prayerWrap) {
     prayerWrap.classList.remove("hidden");
   }
@@ -2836,6 +2841,7 @@ function showDashboard() {
     dash.classList.remove("opacity-0");
     banner.classList.remove("opacity-0");
     btn.classList.remove("opacity-0");
+    if (btnShulMikve) btnShulMikve.classList.remove("opacity-0");
     if (prayerWrap) prayerWrap.classList.remove("opacity-0");
   }, 50);
 }

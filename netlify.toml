@@ -1,0 +1,10 @@
+# Netlify build pipeline.
+# On every deploy, Netlify recompiles tailwind.css from the current HTML/JS.
+# This means you can add new Tailwind classes anywhere and they "just work"
+# after a push — no manual build step needed.
+[build]
+  command = "npm run build"
+  publish = "."
+
+[build.environment]
+  NODE_VERSION = "20"

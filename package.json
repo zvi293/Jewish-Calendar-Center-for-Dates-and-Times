@@ -1,0 +1,12 @@
+{
+  "name": "jewish-calendar",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Build pipeline that compiles tailwind.css for the site.",
+  "scripts": {
+    "build": "tailwindcss -c tailwind.config.js -i tailwind.input.css -o tailwind.css --minify"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.19"
+  }
+}

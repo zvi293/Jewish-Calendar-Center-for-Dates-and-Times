@@ -5930,9 +5930,16 @@ function updateMotzeiShabbatBtn() {
     const isMajor = (iso) =>
       events.some((e) => e.type === "major" && e.date === iso);
 
-    const tzeitTodayMs = window.TZEIT_TIME ? window.TZEIT_TIME.getTime() : null;
+    // Read today's tzeit directly from zData (not window.TZEIT_TIME, which
+    // rolls over to tomorrow's tzeit via selectRelevantCandidate right after
+    // today's tzeit passes — that would break tzeitDateMatchesToday on motzei).
+    const tzeitTodayIso = window._lastZData &&
+                          window._lastZData.times &&
+                          window._lastZData.times.tzeit7083deg;
+    const tzeitTodayDate = tzeitTodayIso ? new Date(tzeitTodayIso) : null;
+    const tzeitTodayMs   = tzeitTodayDate ? tzeitTodayDate.getTime() : null;
     const tzeitDateMatchesToday =
-      window.TZEIT_TIME && _isoLocal(window.TZEIT_TIME) === todayIso;
+      tzeitTodayDate && _isoLocal(tzeitTodayDate) === todayIso;
 
     const alotTodayIso  = window._lastZData &&
                           window._lastZData.times &&

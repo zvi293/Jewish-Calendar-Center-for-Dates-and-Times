@@ -15152,7 +15152,7 @@ window.openDonationModal = function() {
   'use strict';
 
   // 3 מהירויות בפיקסלים לשנייה. הוקטנו מעט לקצב קריאה משוחרר יותר.
-  var SPEEDS = { 1: 17, 2: 40, 3: 75 };
+  var SPEEDS = { 1: 17, 2: 30, 3: 40 };
 
   var ICON_PLAY  = '▶';
   var ICON_PAUSE = '⏸';

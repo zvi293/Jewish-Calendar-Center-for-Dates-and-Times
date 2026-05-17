@@ -555,7 +555,7 @@ function lockBodyScroll() {
   _modalScrollLockCount++;
   if (_modalScrollLockCount === 1) {
     document.body.style.overflow = "hidden";
-    document.body.style.touchAction = "none";
+    document.body.style.touchAction = "pan-y";
     document.body.style.position = "fixed";
     document.body.style.width = "100%";
     document.body.style.top = `-${window.scrollY}px`;
@@ -1783,6 +1783,8 @@ function renderChokContent() {
   const sheet = _chokCurrentSheet;
   const contentEl = document.getElementById('chok-israel-modal-content');
   if (!sheet || !contentEl) return;
+  // שמר מיקום גלילה לפני re-render כדי לשחזר אותו בסוף (נפתר בעית "קפיצה לראש" כשרש"י/ברטנורא נטענים)
+  const _savedScrollTop = contentEl.scrollTop;
 
   const showRashi = getChokRashi();
   const showBartenura = getChokBartenura();
@@ -1906,6 +1908,11 @@ function renderChokContent() {
   contentEl.querySelectorAll('.chok-rashi-rest').forEach(el => el.style.setProperty('color', '#4c1d95', 'important'));
   contentEl.querySelectorAll('.chok-rashi-label').forEach(el => el.style.setProperty('color', '#7c3aed', 'important'));
   applyPrayerFontSize('#chok-israel-modal-content');
+  // שחזור מיקום הגלילה אחרי שה-DOM נבנה מחדש - כדי שלא לאפס את המשתמש ל-0
+  if (_savedScrollTop > 0) {
+    // דחוי לאחרי layout כדי ש-scrollHeight יהיה עדכמן לתוכן החדש
+    requestAnimationFrame(function(){ contentEl.scrollTop = _savedScrollTop; });
+  }
 }
 
 async function fetchChokCommentaries() {
@@ -15132,78 +15139,210 @@ window.openDonationModal = function() {
   pushModalState('donation-modal');
 };
 
-// ── Auto-scroll global helpers ─────────────────────────────────────
-// מהירויות בפיקסלים לשנייה — איטיות מספיק לקריאה נינוחה
-window._AUTO_SCROLL_SPEEDS = { 1: 14, 2: 32, 3: 58 };
-window._autoScrollState = { raf: null, target: null, speed: 1, btnRef: null, lastT: 0, acc: 0 };
-window._toggleAutoScroll = function(targetSelector, btn) {
-  var st = window._autoScrollState;
-  if (st.raf) {
-    cancelAnimationFrame(st.raf);
-    st.raf = null;
-    if (st.btnRef) { st.btnRef.innerHTML = '▶'; st.btnRef.setAttribute('aria-label','התחל גלילה אוטומטית'); }
-    st.btnRef = null;
-    return;
-  }
-  // אם זהו selector, מצא את האלמנט. אם זה כבר אלמנט, השתמש בו ישירות.
-  var startEl = (typeof targetSelector === 'string') ? document.querySelector(targetSelector) : targetSelector;
-  if (!startEl) return;
-  // מצא את האב הקרוב שהוא באמת ניתן לגלילה (overflow-y auto/scroll + scrollHeight > clientHeight)
-  function _isScrollable(node) {
-    if (!node || node.nodeType !== 1) return false;
-    if (node.scrollHeight <= node.clientHeight + 1) return false;
-    var cs = window.getComputedStyle(node);
-    var oy = cs.overflowY;
-    return oy === 'auto' || oy === 'scroll' || oy === 'overlay';
-  }
-  var el = startEl;
-  if (!_isScrollable(el)) {
-    var p = el.parentElement;
-    while (p && p !== document.body) {
-      if (_isScrollable(p)) { el = p; break; }
-      p = p.parentElement;
-    }
-  }
-  // אם עדיין לא מצאנו אלמנט גלילתי תקין, ננסה לגלול את המקורי בכל מקרה
-  if (!el) el = startEl;
-  st.target = el; st.btnRef = btn; st.lastT = 0; st.acc = 0;
-  if (btn) { btn.innerHTML = '⏸'; btn.setAttribute('aria-label','עצור גלילה אוטומטית'); }
-  var step = function(t) {
-    var s = window._autoScrollState;
-    if (!s.raf || !s.target) return;
-    if (!s.lastT) s.lastT = t;
-    var dt = (t - s.lastT) / 1000; // שניות
-    s.lastT = t;
-    var pxPerSec = window._AUTO_SCROLL_SPEEDS[s.speed] || 14;
-    s.acc += pxPerSec * dt;
-    if (s.acc >= 1) {
-      var delta = Math.floor(s.acc);
-      s.target.scrollTop += delta;
-      s.acc -= delta;
-    }
-    if (s.target.scrollTop + s.target.clientHeight >= s.target.scrollHeight - 1) {
-      cancelAnimationFrame(s.raf); s.raf = null;
-      if (s.btnRef) { s.btnRef.innerHTML = '▶'; s.btnRef.setAttribute('aria-label','התחל גלילה אוטומטית'); }
-      s.btnRef = null; return;
-    }
-    s.raf = requestAnimationFrame(step);
+// ── Auto-scroll: גלילה אוטומטית גלובלית (מימוש חדש ונקי) ──────────────
+// מנוע יחיד שמשמש את כל הכפתורים באתר: ברכות, תפילות, תהילים, ספרים,
+// תפילות נוספות, שניים מקרא ואחד תרגום, דף יומי, וכו'.
+// API ציבורי (שמירת שמות לתאימות אחורה עם כל כפתורי ה-HTML הקיימים):
+//   window._toggleAutoScroll(targetSelectorOrEl, btn)
+//   window._cycleAutoScrollSpeed(btn)
+//   window._syncAutoScrollSpeedDisplays()
+//   window._autoScrollState  (חשוף לדיבאג בלבד)
+//   window._AUTO_SCROLL_SPEEDS  (חשוף לדיבאג בלבד)
+(function(){
+  'use strict';
+
+  // 3 מהירויות בפיקסלים לשנייה. הוקטנו מעט לקצב קריאה משוחרר יותר.
+  var SPEEDS = { 1: 17, 2: 40, 3: 75 };
+
+  var ICON_PLAY  = '▶';
+  var ICON_PAUSE = '⏸';
+  var LABEL_PLAY  = 'התחל גלילה אוטומטית';
+  var LABEL_PAUSE = 'עצור גלילה אוטומטית';
+
+  // מצב גלובלי יחיד
+  var state = {
+    rafId: null,        // מזהה ה-requestAnimationFrame הפעיל (null = לא רץ)
+    target: null,       // האלמנט שגולל בפועל
+    btn: null,          // כפתור ה-▶/⏸ של הסשן הנוכחי
+    lastT: 0,           // חותמת זמן של הפריים הקודם
+    acc: 0,             // צבירה תת-פיקסלית למניעת קפיצות
+    speed: 1,           // מהירות נוכחית (1/2/3) — מאופסת לכל פתיחה חדשה
+    lastTargetKey: null // מזהה הסלקטור האחרון — לזיהוי "פתיחה חדשה"
   };
-  st.raf = requestAnimationFrame(step);
-};
-window._cycleAutoScrollSpeed = function(btn) {
-  var st = window._autoScrollState;
-  st.speed = st.speed >= 3 ? 1 : st.speed + 1;
-  window._syncAutoScrollSpeedDisplays();
-};
-// מסנכרן תצוגת כל כפתורי המהירות בעמוד עם המצב הגלובלי
-window._syncAutoScrollSpeedDisplays = function() {
-  try {
-    var st = window._autoScrollState;
-    document.querySelectorAll('.auto-scroll-speed-btn').forEach(function(el) {
-      el.textContent = st.speed + 'x';
-    });
-  } catch(e) {}
-};
+
+  function setPlayIcon(btn) {
+    if (!btn || !btn.setAttribute) return;
+    btn.innerHTML = ICON_PLAY;
+    btn.setAttribute('aria-label', LABEL_PLAY);
+  }
+  function setPauseIcon(btn) {
+    if (!btn || !btn.setAttribute) return;
+    btn.innerHTML = ICON_PAUSE;
+    btn.setAttribute('aria-label', LABEL_PAUSE);
+  }
+
+  function syncSpeedDisplays() {
+    try {
+      var btns = document.querySelectorAll('.auto-scroll-speed-btn');
+      for (var i = 0; i < btns.length; i++) {
+        btns[i].textContent = state.speed + 'x';
+      }
+    } catch(e) {}
+  }
+
+  // עצירה מלאה: ביטול האנימציה, החזרת אייקון הכפתור, וניקוי המצב
+  function stopAuto() {
+    if (state.rafId) {
+      try { cancelAnimationFrame(state.rafId); } catch(e) {}
+      state.rafId = null;
+    }
+    setPlayIcon(state.btn);
+    state.target = null;
+    state.btn = null;
+    state.lastT = 0;
+    state.acc = 0;
+  }
+
+  // מציאת אלמנט גלילתי אמיתי: מטפס במעלה ה-DOM ומחפש אב עם overflow גלילתי
+  // ובפועל גלילתי (scrollHeight > clientHeight). אם לא נמצא — מחזיר את ההתחלתי.
+  function resolveScrollable(start) {
+    if (!start || start.nodeType !== 1) return null;
+    var el = start;
+    while (el && el !== document.body && el !== document.documentElement) {
+      try {
+        var cs = window.getComputedStyle(el);
+        var oy = cs.overflowY;
+        var scrollable = (oy === 'auto' || oy === 'scroll' || oy === 'overlay');
+        if (scrollable && el.scrollHeight > el.clientHeight + 1) {
+          return el;
+        }
+      } catch(e) {}
+      el = el.parentElement;
+    }
+    // כברירת מחדל — נסה לחזור להתחלתי גם אם אין לו גלילה כרגע
+    return start;
+  }
+
+  // איתור אלמנט יעד מסלקטור: מעדיף את ההופעה האחרונה הנראית (המודאל הפעיל)
+  function findTargetBySelector(sel) {
+    if (!sel) return null;
+    var all;
+    try { all = document.querySelectorAll(sel); } catch(e) { return null; }
+    if (!all || all.length === 0) return null;
+    // עבור אחורה — המודאל שנפתח אחרון בדרך כלל אחרון ב-DOM
+    for (var i = all.length - 1; i >= 0; i--) {
+      var node = all[i];
+      // נראה לעין? (offsetParent קיים או יש לו גודל)
+      if (node.offsetParent !== null) return node;
+      var rects = node.getClientRects();
+      if (rects.length && rects[0].width > 0 && rects[0].height > 0) return node;
+    }
+    return all[all.length - 1];
+  }
+
+  // לולאת האנימציה
+  function step(t) {
+    if (!state.rafId) return; // נעצרנו בינתיים
+
+    // הגנה: אם המטרה הוסרה מה-DOM (למשל מודאל נסגר) — עצור בנקיון
+    if (!state.target || !document.body.contains(state.target)) {
+      stopAuto();
+      return;
+    }
+
+    if (!state.lastT) state.lastT = t;
+    var dt = (t - state.lastT) / 1000;
+    state.lastT = t;
+    // הגנה מקפיצות זמן (לשונית חזרה מ-background, freeze וכו')
+    if (dt < 0) dt = 0;
+    if (dt > 0.25) dt = 0.016;
+
+    var pxPerSec = SPEEDS[state.speed] || SPEEDS[1];
+    // עדכון שברי כל פריים (במקום לחכות לפיקסל שלם) — מונע רעידה במהירויות נמוכות.
+    // דפדפנים מודרניים תומכים ב-scrollTop שברי על מסכים בעלי DPI גבוה.
+    state.acc += pxPerSec * dt;
+    if (state.acc > 0) {
+      var prevTop = state.target.scrollTop;
+      var wanted = prevTop + state.acc;
+      try { state.target.scrollTop = wanted; } catch(e) {}
+      // זכור שארית: אם הדפדפן עיגל לפיקסל שלם, השארית עוברת לפריים הבא ולא נאבדת
+      var residual = wanted - state.target.scrollTop;
+      // הגנה מערכי קיצון (עיגול הפוך/קיצוני)
+      state.acc = (residual >= 0 && residual < 2) ? residual : 0;
+    }
+
+    // הגענו לסוף? עצור וחזור ל-▶
+    var tgt = state.target;
+    if (tgt.scrollTop + tgt.clientHeight >= tgt.scrollHeight - 1) {
+      stopAuto();
+      return;
+    }
+
+    state.rafId = requestAnimationFrame(step);
+  }
+
+  // ── API ציבורי ─────────────────────────────────────
+
+  window._toggleAutoScroll = function(targetOrSelector, btn) {
+    // אם רץ כבר:
+    //  - לחיצה על אותו כפתור = עצירה.
+    //  - לחיצה על כפתור אחר = העברת הגלילה ליעד החדש.
+    if (state.rafId) {
+      var sameBtn = (btn && btn === state.btn);
+      stopAuto();
+      if (sameBtn) return;
+      // אחרת — ניפול הלאה ונתחיל בחדש
+    }
+
+    // איתור אלמנט התחלה
+    var startEl = null;
+    var key = null;
+    if (typeof targetOrSelector === 'string') {
+      key = targetOrSelector;
+      startEl = findTargetBySelector(targetOrSelector);
+    } else if (targetOrSelector && targetOrSelector.nodeType === 1) {
+      startEl = targetOrSelector;
+      key = '__node__';
+    }
+
+    if (!startEl) {
+      setPlayIcon(btn);
+      return;
+    }
+
+    // איפוס מהירות בכל "פתיחה חדשה" (יעד שונה מהאחרון)
+    if (key !== state.lastTargetKey) {
+      state.speed = 1;
+      syncSpeedDisplays();
+    }
+    state.lastTargetKey = key;
+
+    // מצא את האלמנט הגלילתי בפועל (אב עם overflow מתאים)
+    var scrollEl = resolveScrollable(startEl);
+    if (!scrollEl) {
+      setPlayIcon(btn);
+      return;
+    }
+
+    state.target = scrollEl;
+    state.btn = btn || null;
+    state.lastT = 0;
+    state.acc = 0;
+    setPauseIcon(btn);
+    state.rafId = requestAnimationFrame(step);
+  };
+
+  window._cycleAutoScrollSpeed = function(/*btn*/) {
+    state.speed = state.speed >= 3 ? 1 : state.speed + 1;
+    syncSpeedDisplays();
+  };
+
+  window._syncAutoScrollSpeedDisplays = syncSpeedDisplays;
+
+  // חשיפה לתאימות אחורה / דיבאג
+  window._autoScrollState = state;
+  window._AUTO_SCROLL_SPEEDS = SPEEDS;
+})();
 
 // ── פופ-אפ ניווט פרקים גנרי ─────────────────────────────────────
 window._openChapterNavPopup = function(opts) {
@@ -15874,9 +16013,14 @@ function openBenIshHaiPage() {
             const texts = await fetchHalachot(yIdx, prevIdx);
             section = createHalachotSection(yIdx, prevIdx, texts);
           }
-          const prevH = sectionsDiv.scrollHeight;
+          // Anchor-based: מודד את ה-top של הפרשה הקודמת לפני ואחרי ה-prepend - מדוייק יותר מהפרשי גבהים
+          var _bihAnchor = sectionsDiv.firstChild;
+          var _bihAnchorTopBefore = _bihAnchor ? _bihAnchor.getBoundingClientRect().top : 0;
           sectionsDiv.insertBefore(section, sectionsDiv.firstChild);
-          contentArea.scrollTop += sectionsDiv.scrollHeight - prevH;
+          if (_bihAnchor) {
+            var _bihAnchorTopAfter = _bihAnchor.getBoundingClientRect().top;
+            contentArea.scrollTop += (_bihAnchorTopAfter - _bihAnchorTopBefore);
+          }
           _isLoadingPrev = false;
         }
       }
@@ -16895,7 +17039,18 @@ openTehillimPage = function () {
     const currentEl = document.getElementById(`psalm-chapter-${chapter}`);
     if (currentEl) currentEl.scrollIntoView({ block: "start" });
     // Infinite scroll: load more chapters on scroll
+    // שמירת state ל-throttle ו-guard (מניעת race conditions בגלילה מהירה/אוטומטית)
+    let _thScrollBusy = false;
+    let _thScrollLastT = 0;
     area.onscroll = async function () {
+      // Throttle: מתחסם את ה handler ל-50ms כדי לא להצימף את ה-CPU בגלילה בפיקסלים
+      const _now = performance.now();
+      if (_now - _thScrollLastT < 50) return;
+      _thScrollLastT = _now;
+      // Re-entry guard: אם עוד באמצע fetch/טעינה - לא להתחיל חדש
+      if (_thScrollBusy) return;
+      _thScrollBusy = true;
+      try {
       const scrollTop = area.scrollTop;
       const scrollHeight = area.scrollHeight;
       const clientHeight = area.clientHeight;
@@ -16908,10 +17063,14 @@ openTehillimPage = function () {
       if (scrollTop < 200) {
         const minLoaded = Math.min(...window._tehillimLoadedChapters);
         if (minLoaded > 1) {
-          const prevScrollHeight = area.scrollHeight;
+          // Anchor-based: שומרים את הפרק העליון הנוכחי כאנכור ומתקנים לפי ההזזה בפעל
+          const _thAnchor = area.querySelector('[id^="psalm-chapter-"]');
+          const _thAnchorTopBefore = _thAnchor ? _thAnchor.getBoundingClientRect().top : 0;
           await loadPsalmChapter(minLoaded - 1, area, true);
-          // Maintain scroll position after prepending
-          area.scrollTop += area.scrollHeight - prevScrollHeight;
+          if (_thAnchor) {
+            const _thAnchorTopAfter = _thAnchor.getBoundingClientRect().top;
+            area.scrollTop += (_thAnchorTopAfter - _thAnchorTopBefore);
+          }
         }
       }
       // Update title based on visible chapter
@@ -16925,6 +17084,9 @@ openTehillimPage = function () {
             title.textContent = `תהילים פרק ${toHebrewPsalmNumber(num)}`;
           break;
         }
+      }
+      } finally {
+        _thScrollBusy = false;
       }
     };
   };
@@ -22112,7 +22274,16 @@ function openSefarimNosafimPage(_pageMode) {
     }
 
     // Infinite scroll: load more on near-edges, update title/_sec on scroll
+    // שמירת state ל-throttle ו-guard
+    var _snScrollBusy = false;
+    var _snScrollLastT = 0;
     content.onscroll = async function() {
+      var _snNow = performance.now();
+      if (_snNow - _snScrollLastT < 50) return;
+      _snScrollLastT = _snNow;
+      if (_snScrollBusy) return;
+      _snScrollBusy = true;
+      try {
       var scrollTop = content.scrollTop;
       var scrollHeight = content.scrollHeight;
       var clientHeight = content.clientHeight;
@@ -22129,9 +22300,14 @@ function openSefarimNosafimPage(_pageMode) {
         if (loadedArr2.length) {
           var minLoaded = Math.min.apply(null, loadedArr2);
           if (minLoaded > 0) {
-            var prevH = content.scrollHeight;
+            // Anchor-based: מתקנים לפי ההזזה יחסית של פרק העוגן ולא לפי חישובי scrollHeight
+            var _snAnchor = area.querySelector('[data-sn-idx]');
+            var _snAnchorTopBefore = _snAnchor ? _snAnchor.getBoundingClientRect().top : 0;
             await _snLoadChapter(minLoaded - 1, area, true);
-            content.scrollTop += content.scrollHeight - prevH;
+            if (_snAnchor) {
+              var _snAnchorTopAfter = _snAnchor.getBoundingClientRect().top;
+              content.scrollTop += (_snAnchorTopAfter - _snAnchorTopBefore);
+            }
           }
         }
       }
@@ -22152,6 +22328,9 @@ function openSefarimNosafimPage(_pageMode) {
           }
           break;
         }
+      }
+      } finally {
+        _snScrollBusy = false;
       }
     };
   };

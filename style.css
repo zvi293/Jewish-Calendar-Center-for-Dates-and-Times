@@ -713,7 +713,7 @@
       #prayer-modal .modal-body,
       #prayer-modal-body,
       #prayer-modal-body .holy-text-style {
-        scroll-snap-type: y proximity;
+        scroll-snap-type: none; /* בוטל - הסנפ היה גורם להתקעות ולקפיצות בגלילה אוטומטית וידנית. שאר הסלקטורים נשארים לנוחות החזרה */
         scroll-padding-top: 0.5rem;
         -webkit-overflow-scrolling: touch;
       }
@@ -740,5 +740,5 @@
       /* Sefaria modal — each paragraph */
       #sefaria-modal-content > p {
         scroll-snap-align: start;
-        scroll-snap-stop: always;
+        scroll-snap-stop: normal; /* normal (לא always) - מאפשר לגלול חלוק ולוותר על snap points; מניע התקעות בגלילה */
       }

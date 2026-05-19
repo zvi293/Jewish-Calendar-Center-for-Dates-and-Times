@@ -448,11 +448,14 @@
       @media (min-width: 768px) {
         #scroll-top-btn { display: none !important; }
       }
-      /* Al-HaMichya (ברכת מעין שלוש) — keep the "של א״י ועל מחיתה ועל כלכלתה" line on a single line, mobile only */
+      /* Al-HaMichya (ברכת מעין שלוש) — on mobile, move "של א״י ועל מחיתה ועל כלכלתה" to its own line so it fits inside the supplement box */
       @media (max-width: 767px) {
         .al-hamichya-shel-ai-line {
-          white-space: nowrap;
           font-size: 0.85em;
+        }
+        .al-hamichya-shel-ai-line .al-hamichya-shel-ai-wrap {
+          display: block;
+          margin-top: 0.3em;
         }
       }
 

@@ -6168,7 +6168,7 @@ function openMotzeiShabbatModal(activeTab) {
         `קוּמִי אוֹרִי כִּי בָא אוֹרֵךְ, וּכְבוֹד יְהֹוָה עָלַיִךְ זָרָח. כִּי הִנֵּה הַחֹשֶׁךְ יְכַסֶּה אֶרֶץ וַעֲרָפֶל לְאֻמִּים, וְעָלַיִךְ יִזְרַח יְהֹוָה וּכְבוֹדוֹ עָלַיִךְ יֵרָאֶה.<br><br>` +
         `כּוֹס יְשׁוּעוֹת אֶשָּׂא, וּבְשֵׁם יְהֹוָה אֶקְרָא.<br>` +
         `אָנָּא יְהֹוָה הוֹשִׁיעָה נָּא. אָנָּא יְהֹוָה הַצְלִיחָה נָא.<br>` +
-        `הַצְלִיחֵנוּ, הַצְלִיחַ דְּרָכֵינוּ, הַצְלִיחַ לִמּוּדֵינוּ, וּשְׁלַח בְּרָכָה רְוָחָה וְהַצְלָחָה בְּכָל מַעֲשֵׂה יָדֵינוּ. לַיְּהוּדִים הָיְתָה אוֹרָה וְשִׂמְחָה וְשָׂשׂוֹן וִיקָר — כֵּן יִהְיֶה עִמָּנוּ.<br><br>` +
+        `הַצְלִיחֵֽנוּ, הַצְלִֽיחַ דְּרָכֵֽינוּ, הַצְלִֽיחַ לִמּוּדֵֽינוּ, וּשְׁלַח בְּרָכָה רְוָחָה וְהַצְלָחָה בְּכָל־מַעֲשֵׂה יָדֵֽינוּ, כְּדִכְתִיב יִשָּׂ֣א בְ֭רָכָה מֵאֵ֣ת יְהֹוָ֑ה וּ֝צְדָקָ֗ה מֵאֱלֹהֵ֥י יִשְׁעֽוֹ: לַיְּהוּדִ֕ים הָֽיְתָ֥ה אוֹרָ֖ה וְשִׂמְחָ֑ה וְשָׂשֹׂ֖ן וִיקָֽר׃ וּכְתִיב וַיְהִ֥י דָוִ֛ד לְכׇל־דְּרָכָ֖ו מַשְׂכִּ֑יל וַיהֹוָ֖ה עִמּֽוֹ׃ כֵּן יִהְיֶה עִמָּֽנוּ:<br><br>` +
         `סַבְרִי מָרָנָן וְרַבּוֹתַי — עוֹנִים: לְחַיִּים!<br><br>` +
         `בָּרוּךְ אַתָּה יְהֹוָה אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, בּוֹרֵא פְּרִי הַגָּפֶן.<br><br>` +
         `בָּרוּךְ אַתָּה יְהֹוָה אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, בּוֹרֵא עֲצֵי בְשָׂמִים.<br><span style="font-size:0.75rem;color:rgba(255,255,255,0.45);">(לחילופין: עִשְׂבֵּי בְשָׂמִים / מִינֵי בְשָׂמִים)</span><br><br>` +
@@ -7570,11 +7570,7 @@ function resolveSeasonalPrayerAdditions(key, context) {
       `<div class="seasonal-block"><strong>${context.isChanukah ? "חנוכה" : "פורים"}:</strong><div>מוסיפים "על הנסים" בהודאה. בחנוכה אומרים הלל שלם, ובפורים קוראים את המגילה במקומה.</div></div>`,
     );
   }
-  if (tefillahLike && context.isYomTov) {
-    blocks.push(
-      `<div class="seasonal-block"><strong>יום טוב:</strong><div>זהו יום טוב. משתמשים בנוסח יום טוב המתאים ליום ומוסיפים "יעלה ויבוא" וכן הלל/מוסף לפי המועד.</div></div>`,
-    );
-  }
+  // הוסר: כותרת "יום טוב" — האפליקציה אינה בשימוש ביום טוב
   if (tefillahLike && context.isAseretYemeiTeshuva) {
     blocks.push(
       `<div class="seasonal-block"><strong>ימים נוראים:</strong><div>מוסיפים בעמידה "זכרנו לחיים", "מי כמוך", "וכתוב לחיים" ו"בספר חיים" לפי מנהג הנוסח.</div></div>`,
@@ -7724,11 +7720,11 @@ function buildAlHamichyaPayload() {
   if (context.isRoshChodesh) {
     parts.push(sup(p(lbl("בראש חודש") + "<span style=\"color:#fbbf24;\">וְזָכְרֵֽנוּ לְטוֹבָה בְּיוֹם רֹאשׁ חֹֽדֶשׁ הַזֶּה.</span>")));
   }
-  if (context.isPesach) {
-    parts.push(sup(p(lbl("בפסח") + "<span style=\"color:#fbbf24;\">וְשַׂמְּחֵֽנוּ בְּיוֹם חַג הַמַּצּוֹת הַזֶּה.</span>")));
+  if (context.isPesach && context.isCholHamoed) {
+    parts.push(sup(p(lbl("בחוה\"מ פסח") + "<span style=\"color:#fbbf24;\">וְשַׂמְּחֵֽנוּ בְּיוֹם חַג הַמַּצּוֹת הַזֶּה.</span>")));
   }
-  if (context.isSukkot) {
-    parts.push(sup(p(lbl("בסוכות") + "<span style=\"color:#fbbf24;\">וְשַׂמְּחֵֽנוּ בְּיוֹם הַסֻּכּוֹת הַזֶּה.</span>")));
+  if (context.isSukkot && context.isCholHamoed) {
+    parts.push(sup(p(lbl("בחוה\"מ סוכות") + "<span style=\"color:#fbbf24;\">וְשַׂמְּחֵֽנוּ בְּיוֹם הַסֻּכּוֹת הַזֶּה.</span>")));
   }
 
   // ── חתימה ──
@@ -7866,10 +7862,7 @@ function buildBirkatHamazonPayload(context) {
 
   const needsYaaleh =
     context.isRoshChodesh ||
-    context.isPesach ||
-    context.isShavuot ||
-    context.isSukkot ||
-    context.isRoshHaShana;
+    context.isCholHamoed;
   let yaalehDayInsert = "";
   if (context.isRoshChodesh) yaalehDayInsert = "רֹאשׁ הַחֹֽדֶשׁ הַזֶּה";
   else if (context.isRoshHaShana)
@@ -8037,29 +8030,24 @@ function buildBirkatHamazonPayload(context) {
         ),
       );
     }
-    // הרחמן — ראש השנה
-    if (context.isRoshHaShana) {
+    // הרחמן — ראש השנה (יום טוב — האפליקציה אינה בשימוש בו)
+    if (context.isRoshHaShana && context.isCholHamoed) {
       parts.push(
         p(
           "הָרַחֲמָן הוּא יְחַדֵּשׁ עָלֵֽינוּ אֶת הַשָּׁנָה הַזֹּאת לְטוֹבָה וְלִבְרָכָה:",
         ),
       );
     }
-    // הרחמן — סוכות
-    if (context.isSukkot) {
+    // הרחמן — סוכות (רק בחול המועד; ביו"ט עצמו האפליקציה אינה בשימוש)
+    if (context.isSukkot && context.isCholHamoed) {
       parts.push(
         p(
           "הָרַחֲמָן הוּא יְזַכֵּֽנוּ לֵישֵׁב בְּסֻכַּת עוֹרוֹ שֶׁל לִוְיָתָן: הָרַחֲמָן הוּא יַשְׁפִּֽיעַ עָלֵֽינוּ שֶֽׁפַע קְדֻשָּׁה וְטָהֳרָה מִשִּׁבְעָה אוּשְׁפִּיזִין עִלָּאִין קַדִּישִׁין, זְכוּתָם תְּהֵא מָגֵן וְצִנָּה בַּעֲדֵֽינוּ: הָרַחֲמָן הוּא יָקִים לָֽנוּ אֶת סֻכַּת דָּוִד הַנּוֹפֶֽלֶת:",
         ),
       );
     }
-    // הרחמן — מועדים (יו"ט כלשהו)
-    if (
-      context.isPesach ||
-      context.isShavuot ||
-      context.isSukkot ||
-      context.isRoshHaShana
-    ) {
+    // הרחמן — מועדים (רק בחול המועד; ביו"ט עצמו האפליקציה אינה בשימוש)
+    if (context.isCholHamoed) {
       parts.push(
         p(
           "הָרַחֲמָן הוּא יַגִּיעֵֽנוּ לְמוֹעֲדִים אֲחֵרִים הַבָּאִים לִקְרָאתֵֽנוּ לְשָׁלוֹם:",
@@ -8332,25 +8320,20 @@ function buildBirkatHamazonPayload(context) {
         ),
       );
     }
-    // הרחמן — ראש השנה
-    if (context.isRoshHaShana) {
+    // הרחמן — ראש השנה (יום טוב — האפליקציה אינה בשימוש בו)
+    if (context.isRoshHaShana && context.isCholHamoed) {
       parts.push(
         p(
           "הָרַחֲמָן הוּא יְחַדֵּשׁ עָלֵֽינוּ אֶת הַשָּׁנָה הַזֹּאת לְטוֹבָה וְלִבְרָכָה:",
         ),
       );
     }
-    // הרחמן — יו"ט
-    if (
-      context.isPesach ||
-      context.isShavuot ||
-      context.isSukkot ||
-      context.isRoshHaShana
-    ) {
+    // הרחמן — יו"ט (רק בחול המועד; ביו"ט עצמו האפליקציה אינה בשימוש)
+    if (context.isCholHamoed) {
       parts.push(p("הָרַחֲמָן הוּא יַנְחִילֵֽנוּ יוֹם שֶׁכֻּלּוֹ טוֹב:"));
     }
-    // הרחמן — סוכות
-    if (context.isSukkot) {
+    // הרחמן — סוכות (רק בחול המועד; ביו"ט עצמו האפליקציה אינה בשימוש)
+    if (context.isSukkot && context.isCholHamoed) {
       parts.push(
         p("הָרַחֲמָן הוּא יָקִים לָֽנוּ אֶת סֻכַּת דָּוִד הַנּוֹפָֽלֶת:"),
       );
@@ -17742,6 +17725,13 @@ document.addEventListener("keydown", (e) => {
         icon: "🕯️",
       },
     ],
+    "תמוז-13": [
+      {
+        name: "הרב עוזי אזולאי משולם",
+        title: 'נפטר י"ג בתמוז',
+        icon: "🕯️",
+      },
+    ],
     "תמוז-14": [
       { name: "הפלאה", title: "רבי פינחס הורוביץ, בעל ספר הפלאה", icon: "🕯️" },
     ],
@@ -17844,6 +17834,101 @@ document.addEventListener("keydown", (e) => {
   var _dayOffset = 0;
   var _calRefDate = null;
 
+  function getSpecialDay(month, day) {
+    // Return a special-day label for the given Hebrew month name + day, or "" if none.
+    // Covers ראש חודש, ערבי חגים, ימי החגים, חול המועד, ימים מיוחדים, וצומות.
+    if (!month) return "";
+    var m = month;
+    // ראש חודש — 1 of every month (except תשרי which is ראש השנה)
+    if (day === 1 && m.indexOf("תשרי") === -1) return "ראש חודש";
+    // 30 of months that have 30 days is also ראש חודש (1st day)
+    if (day === 30) return "ראש חודש";
+    // ── ניסן / פסח ──
+    if (m.indexOf("ניסן") !== -1) {
+      if (day === 14) return "ערב פסח";
+      if (day === 15) return "פסח (א׳)";
+      if (day === 16) return "חוה\"מ פסח";
+      if (day === 17) return "חוה\"מ פסח";
+      if (day === 18) return "חוה\"מ פסח";
+      if (day === 19) return "חוה\"מ פסח";
+      if (day === 20) return "חוה\"מ פסח";
+      if (day === 21) return "שביעי של פסח";
+      if (day === 22) return "אסרו חג";
+    }
+    // ── אייר ──
+    if (m.indexOf("אייר") !== -1) {
+      if (day === 5) return "יום העצמאות";
+      if (day === 4) return "יום הזיכרון";
+      if (day === 14) return "פסח שני";
+      if (day === 18) return "ל\"ג בעומר";
+      if (day === 28) return "יום ירושלים";
+    }
+    // ── סיון / שבועות ──
+    if (m.indexOf("סיון") !== -1) {
+      if (day === 5) return "ערב שבועות";
+      if (day === 6) return "שבועות";
+      if (day === 7) return "אסרו חג שבועות";
+    }
+    // ── תמוז ──
+    if (m.indexOf("תמוז") !== -1) {
+      if (day === 17) return "צום שבעה עשר בתמוז";
+    }
+    // ── אב ──
+    if (m.indexOf("אב") !== -1 && m.indexOf("שבט") === -1) {
+      if (day === 8) return "ערב תשעה באב";
+      if (day === 9) return "תשעה באב";
+      if (day === 15) return "ט\"ו באב";
+    }
+    // ── אלול ──
+    if (m.indexOf("אלול") !== -1) {
+      if (day === 29) return "ערב ראש השנה";
+    }
+    // ── תשרי ──
+    if (m.indexOf("תשרי") !== -1) {
+      if (day === 1) return "ראש השנה (א׳)";
+      if (day === 2) return "ראש השנה (ב׳)";
+      if (day === 3) return "צום גדליה";
+      if (day === 9) return "ערב יום כיפור";
+      if (day === 10) return "יום הכיפורים";
+      if (day === 14) return "ערב סוכות";
+      if (day === 15) return "סוכות (א׳)";
+      if (day === 16) return "חוה\"מ סוכות";
+      if (day === 17) return "חוה\"מ סוכות";
+      if (day === 18) return "חוה\"מ סוכות";
+      if (day === 19) return "חוה\"מ סוכות";
+      if (day === 20) return "חוה\"מ סוכות";
+      if (day === 21) return "הושענה רבה";
+      if (day === 22) return "שמיני עצרת / שמחת תורה";
+    }
+    // ── כסלו / חנוכה ──
+    if (m.indexOf("כסלו") !== -1) {
+      if (day === 25) return "חנוכה — נר א׳";
+      if (day === 26) return "חנוכה — נר ב׳";
+      if (day === 27) return "חנוכה — נר ג׳";
+      if (day === 28) return "חנוכה — נר ד׳";
+      if (day === 29) return "חנוכה — נר ה׳";
+      if (day === 30) return "חנוכה — נר ו׳";
+    }
+    // ── טבת ──
+    if (m.indexOf("טבת") !== -1) {
+      if (day === 1) return "חנוכה — נר ז׳ (ר\"ח טבת)";
+      if (day === 2) return "חנוכה — נר ח׳";
+      if (day === 3) return "חנוכה — נר ח׳";
+      if (day === 10) return "צום עשרה בטבת";
+    }
+    // ── שבט ──
+    if (m.indexOf("שבט") !== -1) {
+      if (day === 15) return "ט\"ו בשבט";
+    }
+    // ── אדר / אדר ב (פורים) ──
+    if (m.indexOf("אדר") !== -1) {
+      if (day === 13) return "תענית אסתר";
+      if (day === 14) return "פורים";
+      if (day === 15) return "שושן פורים";
+    }
+    return "";
+  }
+
   function getHebInfo(offset) {
     var d = new Date();
     // אחרי צאת הכוכבים – נחשב כיום הבא
@@ -17892,6 +17977,7 @@ document.addEventListener("keydown", (e) => {
       key: month + "-" + dayNum,
       date: d,
       gregStr: gregStr,
+      specialDay: getSpecialDay(month, dayNum),
     };
   }
 
@@ -17963,7 +18049,9 @@ document.addEventListener("keydown", (e) => {
       titleEl.textContent =
         "הילולות – " + info.day + " " + info.month + " " + info.year;
     var gregEl = document.getElementById("hil-greg-date");
-    if (gregEl) gregEl.textContent = info.gregStr;
+    if (gregEl) {
+      gregEl.innerHTML = info.gregStr + (info.specialDay ? ' <span style="color:#fbbf24;font-weight:700;" dir="rtl">• ' + info.specialDay + '</span>' : '');
+    }
     if (bodyEl) bodyEl.innerHTML = buildHilulotList(tzaddikim, info.key);
     var prevBtn = document.getElementById("hil-prev");
     var nextBtn = document.getElementById("hil-next");
@@ -17977,7 +18065,7 @@ document.addEventListener("keydown", (e) => {
       else dateLabel.textContent = info.day + " " + info.month;
     }
     var todayBtn = document.getElementById("hil-today-btn");
-    if (todayBtn) todayBtn.style.display = offset !== 0 ? "block" : "none";
+    if (todayBtn) todayBtn.style.display = offset !== 0 ? "inline-block" : "none";
   }
 
   window.openHilulotModal = function (initOffset) {
@@ -18025,8 +18113,12 @@ document.addEventListener("keydown", (e) => {
       info.year +
       "</h2>" +
       '<p style="font-size:0.78rem;color:#64748b;margin:0 0 0.15rem;">יארצייט ויום הסתלקות צדיקים</p>' +
+      '<button id="hil-today-btn" style="background:rgba(251,191,36,0.15);border:1px solid rgba(251,191,36,0.45);color:#fbbf24;border-radius:0.5rem;padding:0.18rem 0.85rem;cursor:pointer;font-size:0.72rem;font-weight:700;margin:0.35rem auto 0.4rem;display:' +
+      (_dayOffset !== 0 ? "inline-block" : "none") +
+      ';">חזרה ליום הנוכחי</button>' +
       '<p id="hil-greg-date" style="font-size:0.78rem;color:#475569;margin:0;direction:ltr;">' +
       info.gregStr +
+      (info.specialDay ? ' <span style="color:#fbbf24;font-weight:700;" dir="rtl">• ' + info.specialDay + '</span>' : '') +
       "</p>" +
       "</div>" +
       // Navigation arrows
@@ -18038,14 +18130,9 @@ document.addEventListener("keydown", (e) => {
       'style="background:rgba(139,92,246,0.2);border:1px solid rgba(139,92,246,0.4);' +
       'color:#c4b5fd;border-radius:0.75rem;padding:0.4rem 0.9rem;cursor:pointer;font-size:1.2rem;" ' +
       'title="יום קודם">‹</button>' +
-      '<div style="display:flex;flex-direction:column;align-items:center;gap:0.25rem;">' +
       '<span id="hil-datelabel" style="color:#94a3b8;font-size:0.85rem;">' +
       dateLabel +
       "</span>" +
-      '<button id="hil-today-btn" style="background:rgba(251,191,36,0.15);border:1px solid rgba(251,191,36,0.45);color:#fbbf24;border-radius:0.5rem;padding:0.1rem 0.7rem;cursor:pointer;font-size:0.72rem;font-weight:700;display:' +
-      (_dayOffset !== 0 ? "block" : "none") +
-      ';">היום</button>' +
-      "</div>" +
       '<button id="hil-next" data-offset="' +
       (_dayOffset + 1) +
       '" ' +
@@ -18328,7 +18415,7 @@ document.addEventListener("keydown", (e) => {
       '<button onclick="window._hilCalToday()" ' +
       'style="background:rgba(251,191,36,0.15);border:1px solid rgba(251,191,36,0.45);' +
       "color:#fbbf24;border-radius:0.6rem;padding:0.18rem 0.9rem;cursor:pointer;" +
-      'font-size:0.78rem;font-weight:600;" title="חזור להיום">היום</button>' +
+      'font-size:0.78rem;font-weight:600;" title="חזור להיום">חזרה ליום הנוכחי</button>' +
       "</div>" +
       '<p id="hil-cal-greg-month" style="text-align:center;font-size:0.72rem;color:#475569;' +
       'margin:0 0 0.6rem;direction:ltr;"></p>' +

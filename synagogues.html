@@ -316,10 +316,11 @@
             <button class="radius-chip" data-r="1" type="button">1 ק"מ</button>
             <button class="radius-chip" data-r="3" type="button">3 ק"מ</button>
             <button class="radius-chip" data-r="5" type="button">5 ק"מ</button>
-            <button class="radius-chip active" data-r="10" type="button">10 ק"מ</button>
+            <button class="radius-chip" data-r="10" type="button">10 ק"מ</button>
             <button class="radius-chip" data-r="20" type="button">20 ק"מ</button>
             <button class="radius-chip" data-r="50" type="button">50 ק"מ</button>
             <button class="radius-chip" data-r="100" type="button">100 ק"מ</button>
+            <button class="radius-chip" data-r="150" type="button">150 ק"מ</button>
           </div>
         </div>
       </div>
@@ -349,8 +350,34 @@
       const LS_LOC_KEY = "shulMikve_lastLocation_v1";
       const LS_LOC_TTL_MS = 1000 * 60 * 60 * 24 * 7; // 7 days
       const LS_PERMISSION_KEY = "shulMikve_locPermissionGranted";
-      const LS_RADIUS_KEY = "shulMikve_lastRadius";
+      const LS_RADIUS_KEY = "shulMikve_lastRadius";          // legacy (kept for migration only)
+      const LS_RADIUS_KEY_PREFIX = "shulMikve_lastRadius_";  // per-tab: + "shul" / "mikvah" / "tzaddik"
       const LS_TAB_KEY = "shulMikve_lastTab";
+
+      // Per-tab default radius. Synagogues and mikvahs are dense — a small
+      // radius keeps queries fast and avoids Overpass timeouts (504) and
+      // rate-limit hits (429). Tzaddik graves are spread across Israel so
+      // a wide radius is expected/needed.
+      const TAB_DEFAULT_RADIUS = { shul: 3, mikvah: 5, tzaddik: 100 };
+      const RADIUS_OPTIONS = [1, 3, 5, 10, 20, 50, 100, 150];
+
+      function getRadiusForTab(tab) {
+        try {
+          const saved = parseFloat(localStorage.getItem(LS_RADIUS_KEY_PREFIX + tab));
+          if (saved && RADIUS_OPTIONS.includes(saved)) return saved;
+        } catch (e) {}
+        return TAB_DEFAULT_RADIUS[tab] || 10;
+      }
+
+      function saveRadiusForTab(tab, r) {
+        try { localStorage.setItem(LS_RADIUS_KEY_PREFIX + tab, String(r)); } catch (e) {}
+      }
+
+      function syncRadiusChipsToCurrent() {
+        document.querySelectorAll("#radius-chips .radius-chip").forEach(c => {
+          c.classList.toggle("active", parseFloat(c.dataset.r) === currentRadiusKm);
+        });
+      }
 
       // Overpass API endpoints — raced in parallel via Promise.any so the
       // fastest valid response wins. Endpoint reliability (tested empirically
@@ -366,8 +393,8 @@
         "https://overpass.kumi.systems/api/interpreter"
       ];
 
-      let currentTab = "shul";   // 'shul' | 'mikvah'
-      let currentRadiusKm = 10;
+      let currentTab = "shul";   // 'shul' | 'mikvah' | 'tzaddik'
+      let currentRadiusKm;
       let userLat = null;
       let userLon = null;
       let lastResults = [];
@@ -375,21 +402,14 @@
       // Async callbacks check that their captured gen still matches before mutating DOM.
       let fetchGen = 0;
 
-      // ── Init from localStorage ────────────────────────
+      // ── Init from localStorage (per-tab radius) ────────
       try {
         const savedTab = localStorage.getItem(LS_TAB_KEY);
         if (savedTab === "shul" || savedTab === "mikvah" || savedTab === "tzaddik") {
           currentTab = savedTab;
         }
-        const savedRadius = parseFloat(localStorage.getItem(LS_RADIUS_KEY));
-        if (savedRadius && [1,3,5,10,20,50,100].includes(savedRadius)) {
-          currentRadiusKm = savedRadius;
-        } else if (currentTab === "tzaddik") {
-          // Tzaddikim are spread across Israel — default to a wider radius
-          // for first-time visitors of this tab.
-          currentRadiusKm = 20;
-        }
       } catch (e) { /* ignore */ }
+      currentRadiusKm = getRadiusForTab(currentTab);
 
       // ── UI helpers ────────────────────────────────────
       function setStatus(text, showSpinner = true) {
@@ -473,6 +493,10 @@
           subtitle.textContent = "ציוני צדיקים בקרבת מקום, ממוינים לפי מרחק";
         }
 
+        // Switch radius to this tab's saved/default value
+        currentRadiusKm = getRadiusForTab(tab);
+        syncRadiusChipsToCurrent();
+
         if (userLat != null && userLon != null) {
           fetchAndRender();
         }
@@ -484,18 +508,18 @@
           const r = parseFloat(chip.dataset.r);
           if (!r || r === currentRadiusKm) return;
           currentRadiusKm = r;
-          try { localStorage.setItem(LS_RADIUS_KEY, String(r)); } catch(e) {}
-          document.querySelectorAll("#radius-chips .radius-chip").forEach(c => c.classList.remove("active"));
-          chip.classList.add("active");
+          saveRadiusForTab(currentTab, r);
+          // Also keep the legacy global key in sync (so other code paths that
+          // still read it don't get stale data).
+          try { localStorage.setItem(LS_RADIUS_KEY, String(r)); } catch (e) {}
+          syncRadiusChipsToCurrent();
           if (userLat != null && userLon != null) {
             fetchAndRender();
           }
         });
-        if (parseFloat(chip.dataset.r) === currentRadiusKm) {
-          document.querySelectorAll("#radius-chips .radius-chip").forEach(c => c.classList.remove("active"));
-          chip.classList.add("active");
-        }
       });
+      // Initial chip highlight reflects currentRadiusKm computed from the active tab.
+      syncRadiusChipsToCurrent();
 
       // Restore tab on load
       (function applyInitialTab() {
@@ -903,9 +927,35 @@
           const dist = haversineKm(userLat, userLon, lat, lon);
           list.push({ name, address, lat, lon, distanceKm: dist });
         }
+        // ── Merge manual extra tzaddikim (not in OSM) ──
+        if (t === "tzaddik") {
+          for (const extra of EXTRA_TZADDIKIM) {
+            const dist = haversineKm(userLat, userLon, extra.lat, extra.lon);
+            if (dist > currentRadiusKm + 0.05) continue;
+            const key = extra.name + "|" + extra.lat.toFixed(5) + "|" + extra.lon.toFixed(5);
+            if (seen.has(key)) continue;
+            seen.add(key);
+            list.push({
+              name: extra.name,
+              address: extra.address || "",
+              lat: extra.lat,
+              lon: extra.lon,
+              distanceKm: dist
+            });
+          }
+        }
         list.sort((a, b) => a.distanceKm - b.distanceKm);
         return list;
       }
+
+      // ── EXTRA TZADDIKIM (manual entries — supplements OSM data) ──────
+      // Some tzaddikim are not in OSM. Add them here. The merge above
+      // de-dupes by name+coords, so adding a tzaddik that IS in OSM
+      // won't cause a duplicate.
+      const EXTRA_TZADDIKIM = [
+        // הרב עוזי אזולאי משולם, קבור ביהוד צמוד לקבר הרב חיים סינואני
+        { name: "הרב עוזי אזולאי משולם", address: "בית עלמין יהוד", lat: 32.03168, lon: 34.88455 }
+      ];
 
       // ── Render results ────────────────────────────────
       function renderResults(items, tab) {

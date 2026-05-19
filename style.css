@@ -458,6 +458,17 @@
           margin-top: 0.3em;
         }
       }
+      /* בכפתור "בתי כנסת מקוואות וציוני צדיקים באזורך" — keep on a single line on mobile, same button size, by shrinking the text. */
+      #btn-shul-mikve span { white-space: nowrap; }
+      @media (max-width: 480px) {
+        #btn-shul-mikve span { font-size: 0.80rem; }
+      }
+      @media (max-width: 380px) {
+        #btn-shul-mikve span { font-size: 0.70rem; }
+      }
+      @media (max-width: 340px) {
+        #btn-shul-mikve span { font-size: 0.62rem; }
+      }
 
       /* ── Hero stat cards pulse on load ── */
       @keyframes fadeSlideUp {
@@ -743,5 +754,4 @@
       /* Sefaria modal — each paragraph */
       #sefaria-modal-content > p {
         scroll-snap-align: start;
-        scroll-snap-stop: normal; /* normal (לא always) - מאפשר לגלול חלוק ולוותר על snap points; מניע התקעות בגלילה */
-      }
+        scroll-snap-stop: normal; /* normal (ל

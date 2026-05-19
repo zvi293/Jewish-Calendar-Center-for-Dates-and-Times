@@ -16769,6 +16769,11 @@ openPrayer = async function (key, heLabel, enLabel) {
 };
 
 function toHebrewPsalmNumber(num) {
+  // Traditional Hebrew/Jewish numbering used in Tanach, Mishna, halacha:
+  //   15 → "טו" (9+6) — NOT "יה" (which spells part of the Divine Name)
+  //   16 → "טז" (9+7) — NOT "יו" (same reason)
+  // The 17/18/19 explicit entries are required because the greedy algorithm
+  // would otherwise pick 16 first and produce "טזא"/"טזב"/"טזג" — which is wrong.
   const numerals = [
     [400, "ת"],
     [300, "ש"],
@@ -16782,6 +16787,11 @@ function toHebrewPsalmNumber(num) {
     [40, "מ"],
     [30, "ל"],
     [20, "כ"],
+    [19, "יט"],
+    [18, "יח"],
+    [17, "יז"],
+    [16, "טז"],
+    [15, "טו"],
     [10, "י"],
     [9, "ט"],
     [8, "ח"],
@@ -17109,7 +17119,7 @@ openTehillimPage = function () {
       const verses = (data.he || [])
         .map(
           (verse, index) =>
-            `<p id="psalm-${chapter}-v${index + 1}" data-verse="${index + 1}" style="margin:0.3rem 0;color:#000000;"><strong style="color:#1d4ed8;font-size:0.75rem;">(${index + 1})</strong> ${verse}</p>`,
+            `<p id="psalm-${chapter}-v${index + 1}" data-verse="${index + 1}" style="margin:0.3rem 0;color:#000000;"><strong style="color:#1d4ed8;font-size:0.75rem;">(${toHebrewPsalmNumber(index + 1)})</strong> ${verse}</p>`,
         )
         .join("");
       const bmActive = thIsBM(chapter);

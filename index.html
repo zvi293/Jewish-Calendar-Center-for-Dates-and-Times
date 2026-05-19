@@ -1993,5 +1993,20 @@
     >📍</button>
 
     <script src="script.js?v=16"></script>
+
+    <!-- Service Worker registration — enables offline caching (PWA) -->
+    <script>
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", function () {
+          navigator.serviceWorker.register("/sw.js")
+            .then(function (reg) {
+              console.log("[SW] Registered successfully (scope: " + reg.scope + ")");
+            })
+            .catch(function (err) {
+              console.warn("[SW] Registration failed:", err);
+            });
+        });
+      }
+    </script>
     </body>
 </html>

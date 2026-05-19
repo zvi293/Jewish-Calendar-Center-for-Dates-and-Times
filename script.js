@@ -15928,6 +15928,12 @@ function openBenIshHaiPage() {
       '<p style="color:#f59e0b;font-size:0.75rem;font-weight:900;margin:0 0 0.5rem;">📌 סימניות שמורות:</p>'+
       (bms.length ? '<div style="display:flex;flex-direction:column;gap:0.3rem;">'+bms.map(b=>{
         const pr = YEARS[b.y] && YEARS[b.y].parshiyot[b.p];
+        if (b.isLastPos) {
+          return '<div style="display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0.6rem;background:rgba(245,158,11,0.18);border:1.5px solid rgba(245,158,11,0.5);border-radius:0.5rem;direction:rtl;">'+
+            '<button onclick="window._bihOpenParsha('+b.p+',0)" style="background:none;border:none;color:#fde68a;cursor:pointer;font-size:0.82rem;font-weight:700;text-align:right;flex:1;padding:0;">'+ b.label + '</button>'+
+            '<button onclick="window._bihBMRemove('+b.y+','+b.p+','+b.h+')" style="background:none;border:none;color:#fde68a;cursor:pointer;font-size:0.8rem;padding:0;flex-shrink:0;" title="הסר">✕</button>'+
+          '</div>';
+        }
         return '<div style="display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0.6rem;background:rgba(255,255,255,0.06);border-radius:0.5rem;direction:rtl;">'+
           '<button onclick="window._bihOpenParsha('+b.p+','+b.h+')" style="background:none;border:none;color:#e2e8f0;cursor:pointer;font-size:0.8rem;text-align:right;flex:1;padding:0;">🔖 '+(pr?pr.he:"?")+' — הלכה '+toHeb(b.h+1)+'</button>'+
           '<button onclick="window._bihBMRemove('+b.y+','+b.p+','+b.h+')" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:0.8rem;padding:0;flex-shrink:0;" title="הסר">✕</button>'+
@@ -15945,6 +15951,23 @@ function openBenIshHaiPage() {
     } else {
       panel.style.display = "none";
     }
+  };
+
+  // ── Save "last position" (called by floating button) ──
+  window._bihSaveLastPosition = function() {
+    if (!_loadedRange) return false;
+    const yIdx = getYIdx();
+    const pIdx = _loadedRange.start;
+    const parshiyot = getParshiyot();
+    const parshaName = parshiyot[pIdx] ? parshiyot[pIdx].he : "פרשה " + (pIdx + 1);
+    const modeLabel = _bihMode === "drashot" ? "דרשות" : _bihMode === "y1" ? "שנה שניה" : "שנה ראשונה";
+    let b = loadBMs();
+    // Remove existing last-position entry (regardless of year)
+    b = b.filter(x => !x.isLastPos);
+    b.unshift({ y: yIdx, p: pIdx, h: 0, label: "📍 מיקום אחרון — " + parshaName + " (" + modeLabel + ")", isLastPos: true, mode: _bihMode, ts: Date.now() });
+    saveBMs(b);
+    if (typeof buildBMPanel === "function") buildBMPanel();
+    return true;
   };
 
   // ── Infinite scroll ──
@@ -16867,11 +16890,26 @@ openTehillimPage = function () {
 
   // Bookmarks
   const TH_BM_KEY = "tehillim_bookmarks_v1";
+  const TH_LP_KEY = "tehillim_lastpos_v1";  // last position (separate from bookmarks)
   function thLoadBMs() { try { return JSON.parse(localStorage.getItem(TH_BM_KEY)||"[]"); } catch(e) { return []; } }
   function thSaveBMs(b) { try { localStorage.setItem(TH_BM_KEY, JSON.stringify(b)); } catch(e) {} }
   function thAddBM(ch) { const b=thLoadBMs(); if(!b.includes(ch)){b.push(ch);thSaveBMs(b);} }
   function thRemoveBM(ch) { thSaveBMs(thLoadBMs().filter(x=>x!==ch)); }
   function thIsBM(ch) { return thLoadBMs().includes(ch); }
+  // Last position (separate from regular bookmarks)
+  function thLoadLP() { try { return JSON.parse(localStorage.getItem(TH_LP_KEY)||"null"); } catch(e) { return null; } }
+  function thSaveLP(ch) { try { localStorage.setItem(TH_LP_KEY, JSON.stringify({ ch: ch, ts: Date.now() })); } catch(e) {} }
+  function thClearLP() { try { localStorage.removeItem(TH_LP_KEY); } catch(e) {} }
+  window._thSaveLastPosition = function() {
+    var ch = window._tehillimCurrentChapter;
+    if (!ch) return false;
+    thSaveLP(ch);
+    if (typeof window._thBuildBMPanel === "function") window._thBuildBMPanel();
+    if (typeof window._thBuildPsalmBMPanel === "function") window._thBuildPsalmBMPanel();
+    return true;
+  };
+  window._thRemoveLastPosition = function() { thClearLP(); if (typeof window._thBuildBMPanel === "function") window._thBuildBMPanel(); if (typeof window._thBuildPsalmBMPanel === "function") window._thBuildPsalmBMPanel(); };
+  window._thGoLastPosition = function() { var lp = thLoadLP(); if (lp && lp.ch && typeof window._thOpenPsalm === "function") window._thOpenPsalm(lp.ch); };
   window._thToggleBM = (ch) => {
     if (thIsBM(ch)) { thRemoveBM(ch); } else { thAddBM(ch); }
     const btn = document.getElementById("th-bm-btn-"+ch);
@@ -16890,11 +16928,17 @@ openTehillimPage = function () {
     const panel = document.getElementById("th-bm-panel");
     if (!panel) return;
     const bms = thLoadBMs().slice().sort((a,b)=>a-b);
+    const lp = thLoadLP();
+    const lpHtml = lp && lp.ch ?
+      '<div style="margin-bottom:0.6rem;padding:0.5rem 0.65rem;background:rgba(245,158,11,0.12);border:1.5px solid rgba(245,158,11,0.45);border-radius:0.5rem;display:flex;align-items:center;gap:0.4rem;">'+
+        '<button onclick="window._thGoLastPosition()" style="background:none;border:none;color:#92400e;cursor:pointer;font-size:0.85rem;font-weight:700;text-align:right;flex:1;padding:0;">📍 מיקום אחרון — תהילים פרק ' + lp.ch + '</button>'+
+        '<button onclick="window._thRemoveLastPosition()" style="background:none;border:none;color:#92400e;cursor:pointer;font-size:0.85rem;padding:0.1rem 0.3rem;flex-shrink:0;" title="הסר">✕</button>'+
+      '</div>' : '';
     if (!bms.length) {
-      panel.innerHTML = '<p style="color:#92400e;font-size:0.78rem;margin:0;text-align:center;">אין סמניות שמורות</p>';
+      panel.innerHTML = lpHtml + '<p style="color:#92400e;font-size:0.78rem;margin:0;text-align:center;">אין סמניות שמורות</p>';
       return;
     }
-    panel.innerHTML =
+    panel.innerHTML = lpHtml +
       '<p style="color:#92400e;font-size:0.78rem;font-weight:900;margin:0 0 0.5rem;">📌 פרקים מסומנים:</p>'+
       '<div style="display:flex;flex-wrap:wrap;gap:0.4rem;">'+
       bms.map(ch =>
@@ -21977,6 +22021,22 @@ function openSefarimNosafimPage(_pageMode) {
     else { _bmAdd(_bk.id, key, s.he, _sbk ? _sbk.he : null); }
     updateBMBtn(); buildBMPanel();
   };
+
+  // ── Save "last position" (called by floating button) ──
+  window._snSaveLastPosition = function() {
+    if (!_bk) return false;
+    // Suffix "|__LP__" preserves the regular sbid|sec format so existing _snBMGoto navigation works
+    var key = (_sbk ? _sbk.id : "") + "|" + _sec + "|__LP__";
+    var sections = _sbk ? _sbk.sections : (_bk.sections||[]);
+    var s = _bk.type === "hardcoded" ? {he:_bk.he} : (sections[_sec]||{he:""});
+    // Replace any existing last-position entry for this book
+    var d = _bmAll(), arr = (d[_bk.id] || []).filter(function(b){ return !b.isLastPos; });
+    arr.unshift({ key: key, label: "📍 מיקום אחרון — " + (s.he || _bk.he), sub: _sbk ? _sbk.he : null, ts: Date.now(), isLastPos: true });
+    d[_bk.id] = arr; _bmSave(d);
+    buildBMPanel();
+    if (typeof buildBookBMPanel === "function") { try { buildBookBMPanel(); } catch(e) {} }
+    return true;
+  };
   window._snBMRemove = function(bid, key) { _bmRemove(bid, key); buildBMPanel(); if(_bk&&_bk.id===bid) updateBMBtn(); };
   window._snBMGoto = function(bid, key) {
     var book = BOOKS.find(function(b){ return b.id === bid; });
@@ -22820,3 +22880,73 @@ function closeSefarimNosafimModal() {
   }
   if (steps > 0) history.go(-steps);
 }
+
+// ═══════════════════════════════════════════════════════
+// ✦  FLOATING "LAST POSITION" BUTTON — works across SN / BIH / Tehillim readers
+// ═══════════════════════════════════════════════════════
+(function() {
+  function getActiveReader() {
+    if (!Array.isArray(_activeModals) || !_activeModals.length) return null;
+    var top = _activeModals[_activeModals.length - 1];
+    if (top === "sn-reader-pane") return "sn";
+    if (top === "bih-reading-pane") return "bih";
+    // Tehillim: check that we're inside the modal AND the psalm-view is showing
+    if (top === "tehillim-modal") {
+      var pv = document.getElementById("th-psalm-view");
+      if (pv && pv.style.display !== "none" && pv.offsetHeight > 0) return "tehillim";
+    }
+    return null;
+  }
+
+  function showToast(msg) {
+    var container = document.getElementById("toast-container");
+    if (!container) {
+      container = document.createElement("div");
+      container.id = "toast-container";
+      document.body.appendChild(container);
+    }
+    var t = document.createElement("div");
+    t.className = "toast toast-success";
+    t.textContent = msg;
+    container.appendChild(t);
+    requestAnimationFrame(function(){ t.classList.add("show"); });
+    setTimeout(function(){ t.classList.remove("show"); setTimeout(function(){ t.remove(); }, 350); }, 2200);
+  }
+
+  window._lpSavePosition = function() {
+    var reader = getActiveReader();
+    if (!reader) return;
+    var ok = false, label = "";
+    try {
+      if (reader === "sn" && window._snSaveLastPosition) { ok = window._snSaveLastPosition(); label = "ספר נוסף"; }
+      else if (reader === "bih" && window._bihSaveLastPosition) { ok = window._bihSaveLastPosition(); label = "בן איש חי"; }
+      else if (reader === "tehillim" && window._thSaveLastPosition) { ok = window._thSaveLastPosition(); label = "תהילים"; }
+    } catch(e) { console.warn("LP save failed:", e); }
+    if (ok) showToast("📍 המיקום נשמר ב" + label);
+  };
+
+  function updateButtonVisibility() {
+    var btn = document.getElementById("floating-lastpos-btn");
+    if (!btn) return;
+    btn.style.display = getActiveReader() ? "flex" : "none";
+  }
+  window._lpUpdateButton = updateButtonVisibility;
+
+  // Hook into navigation events
+  window.addEventListener("popstate", function(){ setTimeout(updateButtonVisibility, 30); });
+  // Also patch pushModalState to update visibility after each push
+  if (typeof pushModalState === "function") {
+    var _origPMS = pushModalState;
+    window.pushModalState = function(s) {
+      var r = _origPMS.apply(this, arguments);
+      setTimeout(updateButtonVisibility, 20);
+      return r;
+    };
+  }
+  // Initial check after DOM ready
+  if (document.readyState === "complete" || document.readyState === "interactive") {
+    setTimeout(updateButtonVisibility, 300);
+  } else {
+    document.addEventListener("DOMContentLoaded", function(){ setTimeout(updateButtonVisibility, 300); });
+  }
+})();

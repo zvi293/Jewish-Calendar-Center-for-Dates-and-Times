@@ -1981,6 +1981,17 @@
     })();
     </script>
 
+    <!-- Floating "Save Last Position" button — shown only when a book reader is active -->
+    <button id="floating-lastpos-btn"
+      type="button"
+      onclick="window._lpSavePosition && window._lpSavePosition()"
+      aria-label="שמור מיקום אחרון בספר"
+      title="שמור מיקום אחרון"
+      style="display:none;position:fixed;bottom:1.5rem;left:1.2rem;z-index:10000;width:3.2rem;height:3.2rem;border-radius:50%;border:1.5px solid rgba(245,158,11,0.6);background:linear-gradient(135deg,rgba(245,158,11,0.92),rgba(251,191,36,0.92));color:#1e293b;cursor:pointer;align-items:center;justify-content:center;box-shadow:0 4px 18px rgba(245,158,11,0.4),0 2px 6px rgba(0,0,0,0.18);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);transition:transform 0.18s ease,box-shadow 0.18s ease;font-size:1.5rem;line-height:1;"
+      onmouseover="this.style.transform='scale(1.06)';this.style.boxShadow='0 6px 24px rgba(245,158,11,0.55),0 2px 6px rgba(0,0,0,0.18)'"
+      onmouseout="this.style.transform='scale(1)';this.style.boxShadow='0 4px 18px rgba(245,158,11,0.4),0 2px 6px rgba(0,0,0,0.18)'"
+    >📍</button>
+
     <script src="script.js?v=16"></script>
     </body>
 </html>

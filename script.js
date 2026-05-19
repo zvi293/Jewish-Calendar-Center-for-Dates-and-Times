@@ -15930,7 +15930,7 @@ function openBenIshHaiPage() {
         const pr = YEARS[b.y] && YEARS[b.y].parshiyot[b.p];
         if (b.isLastPos) {
           return '<div style="display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0.6rem;background:rgba(245,158,11,0.18);border:1.5px solid rgba(245,158,11,0.5);border-radius:0.5rem;direction:rtl;">'+
-            '<button onclick="window._bihOpenParsha('+b.p+',0)" style="background:none;border:none;color:#fde68a;cursor:pointer;font-size:0.82rem;font-weight:700;text-align:right;flex:1;padding:0;">'+ b.label + '</button>'+
+            '<button onclick="window._bihOpenParsha('+b.p+','+b.h+')" style="background:none;border:none;color:#fde68a;cursor:pointer;font-size:0.82rem;font-weight:700;text-align:right;flex:1;padding:0;">'+ b.label + '</button>'+
             '<button onclick="window._bihBMRemove('+b.y+','+b.p+','+b.h+')" style="background:none;border:none;color:#fde68a;cursor:pointer;font-size:0.8rem;padding:0;flex-shrink:0;" title="הסר">✕</button>'+
           '</div>';
         }
@@ -15953,18 +15953,44 @@ function openBenIshHaiPage() {
     }
   };
 
+  // Find the halacha currently at the top of the viewport for current parsha
+  function _bihCurrentVisibleHalacha() {
+    if (!_loadedRange) return { p: 0, h: 0 };
+    const contentArea = document.getElementById("bih-content-area");
+    if (!contentArea) return { p: _loadedRange.start, h: 0 };
+    const halachot = contentArea.querySelectorAll('[id^="bih-h-"]');
+    if (!halachot.length) return { p: _loadedRange.start, h: 0 };
+    const rect = contentArea.getBoundingClientRect();
+    let bestP = _loadedRange.start, bestH = 0, bestDist = Infinity;
+    for (let i = 0; i < halachot.length; i++) {
+      const r = halachot[i].getBoundingClientRect();
+      if (r.bottom < rect.top) continue;
+      const dist = Math.abs(r.top - rect.top - 40);
+      if (dist < bestDist) {
+        bestDist = dist;
+        // id = "bih-h-{p}-{h}"
+        const id = halachot[i].id;
+        const parts = id.split("-");
+        bestP = parseInt(parts[2]);
+        bestH = parseInt(parts[3]);
+      }
+    }
+    return { p: bestP, h: bestH };
+  }
+
   // ── Save "last position" (called by floating button) ──
   window._bihSaveLastPosition = function() {
     if (!_loadedRange) return false;
     const yIdx = getYIdx();
-    const pIdx = _loadedRange.start;
+    const cur = _bihCurrentVisibleHalacha();
+    const pIdx = cur.p, hIdx = cur.h;
     const parshiyot = getParshiyot();
     const parshaName = parshiyot[pIdx] ? parshiyot[pIdx].he : "פרשה " + (pIdx + 1);
     const modeLabel = _bihMode === "drashot" ? "דרשות" : _bihMode === "y1" ? "שנה שניה" : "שנה ראשונה";
     let b = loadBMs();
     // Remove existing last-position entry (regardless of year)
     b = b.filter(x => !x.isLastPos);
-    b.unshift({ y: yIdx, p: pIdx, h: 0, label: "📍 מיקום אחרון — " + parshaName + " (" + modeLabel + ")", isLastPos: true, mode: _bihMode, ts: Date.now() });
+    b.unshift({ y: yIdx, p: pIdx, h: hIdx, label: "📍 מיקום אחרון — " + parshaName + " — הלכה " + toHeb(hIdx + 1) + " (" + modeLabel + ")", isLastPos: true, mode: _bihMode, ts: Date.now() });
     saveBMs(b);
     if (typeof buildBMPanel === "function") buildBMPanel();
     return true;
@@ -16907,18 +16933,45 @@ openTehillimPage = function () {
   function thIsBM(ch) { return thLoadBMs().includes(ch); }
   // Last position (separate from regular bookmarks)
   function thLoadLP() { try { return JSON.parse(localStorage.getItem(TH_LP_KEY)||"null"); } catch(e) { return null; } }
-  function thSaveLP(ch) { try { localStorage.setItem(TH_LP_KEY, JSON.stringify({ ch: ch, ts: Date.now() })); } catch(e) {} }
+  function thSaveLP(ch, v) { try { localStorage.setItem(TH_LP_KEY, JSON.stringify({ ch: ch, v: v || null, ts: Date.now() })); } catch(e) {} }
   function thClearLP() { try { localStorage.removeItem(TH_LP_KEY); } catch(e) {} }
+  // Find the verse currently at the top of the psalm-text-area viewport
+  function thCurrentVisibleVerse(ch) {
+    var area = document.getElementById("psalm-text-area");
+    if (!area) return null;
+    var verses = area.querySelectorAll('[id^="psalm-' + ch + '-v"]');
+    if (!verses.length) return null;
+    var rect = area.getBoundingClientRect();
+    var bestV = null, bestDist = Infinity;
+    for (var i = 0; i < verses.length; i++) {
+      var r = verses[i].getBoundingClientRect();
+      var dist = Math.abs(r.top - rect.top - 40);
+      if (r.bottom < rect.top) continue;
+      if (dist < bestDist) { bestDist = dist; bestV = parseInt(verses[i].getAttribute("data-verse")); }
+    }
+    return bestV;
+  }
   window._thSaveLastPosition = function() {
     var ch = window._tehillimCurrentChapter;
     if (!ch) return false;
-    thSaveLP(ch);
+    var v = thCurrentVisibleVerse(ch);
+    thSaveLP(ch, v);
     if (typeof window._thBuildBMPanel === "function") window._thBuildBMPanel();
     if (typeof window._thBuildPsalmBMPanel === "function") window._thBuildPsalmBMPanel();
     return true;
   };
   window._thRemoveLastPosition = function() { thClearLP(); if (typeof window._thBuildBMPanel === "function") window._thBuildBMPanel(); if (typeof window._thBuildPsalmBMPanel === "function") window._thBuildPsalmBMPanel(); };
-  window._thGoLastPosition = function() { var lp = thLoadLP(); if (lp && lp.ch && typeof window._thOpenPsalm === "function") window._thOpenPsalm(lp.ch); };
+  window._thGoLastPosition = function() {
+    var lp = thLoadLP();
+    if (!lp || !lp.ch || typeof window._tehillimOpenPsalm !== "function") return;
+    window._tehillimOpenPsalm(lp.ch);
+    if (lp.v) {
+      setTimeout(function() {
+        var el = document.getElementById("psalm-" + lp.ch + "-v" + lp.v);
+        if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 600);
+    }
+  };
   window._thToggleBM = (ch) => {
     const wasAdded = !thIsBM(ch);
     if (thIsBM(ch)) { thRemoveBM(ch); } else { thAddBM(ch); }
@@ -16944,7 +16997,7 @@ openTehillimPage = function () {
     const lp = thLoadLP();
     const lpHtml = lp && lp.ch ?
       '<div style="margin-bottom:0.6rem;padding:0.5rem 0.65rem;background:rgba(245,158,11,0.12);border:1.5px solid rgba(245,158,11,0.45);border-radius:0.5rem;display:flex;align-items:center;gap:0.4rem;">'+
-        '<button onclick="window._thGoLastPosition()" style="background:none;border:none;color:#92400e;cursor:pointer;font-size:0.85rem;font-weight:700;text-align:right;flex:1;padding:0;">📍 מיקום אחרון — תהילים פרק ' + lp.ch + '</button>'+
+        '<button onclick="window._thGoLastPosition()" style="background:none;border:none;color:#92400e;cursor:pointer;font-size:0.85rem;font-weight:700;text-align:right;flex:1;padding:0;">📍 מיקום אחרון — תהילים פרק ' + toHebrewPsalmNumber(lp.ch) + (lp.v ? " פסוק " + toHebrewPsalmNumber(lp.v) : "") + '</button>'+
         '<button onclick="window._thRemoveLastPosition()" style="background:none;border:none;color:#92400e;cursor:pointer;font-size:0.85rem;padding:0.1rem 0.3rem;flex-shrink:0;" title="הסר">✕</button>'+
       '</div>' : '';
     if (!bms.length) {
@@ -16978,11 +17031,21 @@ openTehillimPage = function () {
     const panel = document.getElementById("th-psalm-bm-panel");
     if (!panel) return;
     const bms = thLoadBMs().slice().sort((a,b)=>a-b);
-    if (!bms.length) {
+    const lp = thLoadLP();
+    const lpHtml = lp && lp.ch ?
+      '<div style="margin-bottom:0.6rem;padding:0.5rem 0.65rem;background:rgba(245,158,11,0.12);border:1.5px solid rgba(245,158,11,0.45);border-radius:0.5rem;display:flex;align-items:center;gap:0.4rem;">'+
+        '<button onclick="window._thGoLastPosition()" style="background:none;border:none;color:#92400e;cursor:pointer;font-size:0.85rem;font-weight:700;text-align:right;flex:1;padding:0;">📍 מיקום אחרון — תהילים פרק ' + toHebrewPsalmNumber(lp.ch) + (lp.v ? " פסוק " + toHebrewPsalmNumber(lp.v) : "") + '</button>'+
+        '<button onclick="window._thRemoveLastPosition()" style="background:none;border:none;color:#92400e;cursor:pointer;font-size:0.85rem;padding:0.1rem 0.3rem;flex-shrink:0;" title="הסר">✕</button>'+
+      '</div>' : '';
+    if (!bms.length && !lp) {
       panel.innerHTML = '<p style="color:#92400e;font-size:0.78rem;margin:0;text-align:center;">אין סמניות שמורות</p>';
       return;
     }
-    panel.innerHTML =
+    if (!bms.length) {
+      panel.innerHTML = lpHtml;
+      return;
+    }
+    panel.innerHTML = lpHtml +
       '<p style="color:#92400e;font-size:0.78rem;font-weight:900;margin:0 0 0.5rem;">📌 פרקים מסומנים:</p>'+
       '<div style="display:flex;flex-wrap:wrap;gap:0.4rem;">'+
       bms.map(ch =>
@@ -17046,7 +17109,7 @@ openTehillimPage = function () {
       const verses = (data.he || [])
         .map(
           (verse, index) =>
-            `<p style="margin:0.3rem 0;color:#000000;"><strong style="color:#1d4ed8;font-size:0.75rem;">(${index + 1})</strong> ${verse}</p>`,
+            `<p id="psalm-${chapter}-v${index + 1}" data-verse="${index + 1}" style="margin:0.3rem 0;color:#000000;"><strong style="color:#1d4ed8;font-size:0.75rem;">(${index + 1})</strong> ${verse}</p>`,
         )
         .join("");
       const bmActive = thIsBM(chapter);
@@ -20537,13 +20600,28 @@ function openSefarimNosafimPage(_pageMode) {
   }
 
   // ── Render paragraphs ──
-  function renderParagraphs(he, color) {
+  // Build a per-paragraph bookmark button (rendered above each paragraph)
+  function _snParaBMHtml(secIdx, paraIdx) {
+    if (!_bk) return "";
+    var key = (_sbk ? _sbk.id : "") + "|" + secIdx + "|" + paraIdx;
+    var active = _bmHas(_bk.id, key);
+    return '<div style="text-align:center;margin:0 0 0.4rem;">' +
+      '<button id="sn-parabm-' + secIdx + '-' + paraIdx + '" onclick="window._snToggleBMByPara(' + secIdx + ',' + paraIdx + ')" ' +
+      'style="font-size:0.68rem;font-weight:700;padding:0.18rem 0.65rem;border-radius:999px;cursor:pointer;' +
+      'border:' + (active ? '1.5px solid #f59e0b' : '1.5px solid #d1d5db') + ';' +
+      'color:' + (active ? '#92400e' : '#9ca3af') + ';' +
+      'background:' + (active ? '#fffbeb' : 'transparent') + ';">' +
+      (active ? '🔖 מסומן' : '🔖 סמן') + '</button></div>';
+  }
+
+  function renderParagraphs(he, color, secIdx) {
     if (!Array.isArray(he) || he.length === 0)
       return "<p style=\"color:#9ca3af;text-align:center;padding:2rem;\">לא נמצא טקסט לסעיף זה</p>";
     return he.map(function(v, i) {
       var txt = Array.isArray(v) ? v.join("<br>") : String(v || "");
       if (!txt.trim()) return "";
-      return "<p style=\"margin:0 0 1.4rem;line-height:2.3;\">" +
+      var paraBM = (typeof secIdx === "number") ? _snParaBMHtml(secIdx, i) : "";
+      return paraBM + "<p id=\"sn-para-" + secIdx + "-" + i + "\" data-sn-para=\"" + i + "\" style=\"margin:0 0 1.4rem;line-height:2.3;\">" +
         "<span style=\"color:" + color + ";font-size:0.73em;font-weight:700;margin-left:0.35rem;\">[" + toHN(i + 1) + "]</span>" +
         txt + "</p>";
     }).filter(Boolean).join("");
@@ -22039,16 +22117,45 @@ function openSefarimNosafimPage(_pageMode) {
     }
   };
 
+  // Find the section + paragraph currently at the top of the reader-content viewport
+  function _snCurrentVisiblePara() {
+    var content = document.getElementById("sn-reader-content");
+    if (!content) return { secIdx: _sec, paraIdx: null };
+    var paras = content.querySelectorAll('[id^="sn-para-"]');
+    if (!paras.length) return { secIdx: _sec, paraIdx: null };
+    var rect = content.getBoundingClientRect();
+    var bestSec = _sec, bestPara = null, bestDist = Infinity;
+    for (var i = 0; i < paras.length; i++) {
+      var r = paras[i].getBoundingClientRect();
+      if (r.bottom < rect.top) continue;
+      var dist = Math.abs(r.top - rect.top - 40);
+      if (dist < bestDist) {
+        bestDist = dist;
+        var id = paras[i].id;  // "sn-para-{secIdx}-{paraIdx}"
+        var parts = id.split("-");
+        bestSec = parseInt(parts[2]);
+        bestPara = parseInt(parts[3]);
+      }
+    }
+    return { secIdx: isNaN(bestSec) ? _sec : bestSec, paraIdx: bestPara };
+  }
+
   // ── Save "last position" (called by floating button) ──
   window._snSaveLastPosition = function() {
     if (!_bk) return false;
-    // Suffix "|__LP__" preserves the regular sbid|sec format so existing _snBMGoto navigation works
-    var key = (_sbk ? _sbk.id : "") + "|" + _sec + "|__LP__";
+    var cur = _snCurrentVisiblePara();
+    var secIdx = cur.secIdx;
+    var paraIdx = cur.paraIdx;
+    // Key formats:
+    //   With paragraph: "sbid|sec|para|__LP__"
+    //   Without paragraph (e.g. hardcoded book): "sbid|sec|__LP__"
+    var key = (_sbk ? _sbk.id : "") + "|" + secIdx + (paraIdx !== null ? "|" + paraIdx : "") + "|__LP__";
     var sections = _sbk ? _sbk.sections : (_bk.sections||[]);
-    var s = _bk.type === "hardcoded" ? {he:_bk.he} : (sections[_sec]||{he:""});
+    var s = _bk.type === "hardcoded" ? {he:_bk.he} : (sections[secIdx]||{he:""});
+    var paraLabel = paraIdx !== null ? " — " + toHN(paraIdx + 1) : "";
     // Replace any existing last-position entry for this book
     var d = _bmAll(), arr = (d[_bk.id] || []).filter(function(b){ return !b.isLastPos; });
-    arr.unshift({ key: key, label: "📍 מיקום אחרון — " + (s.he || _bk.he), sub: _sbk ? _sbk.he : null, ts: Date.now(), isLastPos: true });
+    arr.unshift({ key: key, label: "📍 מיקום אחרון — " + (s.he || _bk.he) + paraLabel, sub: _sbk ? _sbk.he : null, ts: Date.now(), isLastPos: true });
     d[_bk.id] = arr; _bmSave(d);
     buildBMPanel();
     if (typeof buildBookBMPanel === "function") { try { buildBookBMPanel(); } catch(e) {} }
@@ -22061,13 +22168,28 @@ function openSefarimNosafimPage(_pageMode) {
   window._snBMGoto = function(bid, key) {
     var book = BOOKS.find(function(b){ return b.id === bid; });
     if (!book) return;
-    var parts = key.split("|"), sbid = parts[0], sidx = parseInt(parts[1]);
+    var parts = key.split("|");
+    var sbid = parts[0];
+    var sidx = parseInt(parts[1]);
+    // parts[2] is paragraph index OR "__LP__" sentinel; we also support 4-part LP keys
+    var paraIdx = null;
+    if (parts.length >= 3 && parts[2] !== "__LP__") {
+      var p = parseInt(parts[2]);
+      if (!isNaN(p)) paraIdx = p;
+    }
     _bk = book;
     _sbk = (book.type === "multi" && sbid) ? (book.subBooks.find(function(s){ return s.id === sbid; })||null) : null;
     var panel = document.getElementById("sn-bm-panel");
     if (panel) panel.style.display = "none";
     if (book.type === "hardcoded") { _sec = 0; openHardcoded(book); }
     else { _sec = isNaN(sidx) ? 0 : sidx; window._snOpenSection(_sec); }
+    // Scroll to specific paragraph after section opens (if applicable)
+    if (paraIdx !== null) {
+      setTimeout(function() {
+        var el = document.getElementById("sn-para-" + sidx + "-" + paraIdx);
+        if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 700);
+    }
   };
   window._snToggleBMPanel = function() {
     var p = document.getElementById("sn-bm-panel");
@@ -22310,6 +22432,47 @@ function openSefarimNosafimPage(_pageMode) {
   // ── Open section (reader) — continuous scroll ──
   var _snLoadedIdx = null;
 
+  // Build a per-section bookmark button (rendered above each section's heading)
+  function _snSecBMHtml(idx) {
+    if (!_bk) return "";
+    var key = (_sbk ? _sbk.id : "") + "|" + idx;
+    var active = _bmHas(_bk.id, key);
+    return '<div style="text-align:center;margin:0 0 0.75rem;">' +
+      '<button id="sn-secbm-' + idx + '" onclick="window._snToggleBMBySecIdx(' + idx + ')" ' +
+      'style="font-size:0.78rem;font-weight:700;padding:0.3rem 0.85rem;border-radius:999px;cursor:pointer;' +
+      'border:' + (active ? '1.5px solid #f59e0b' : '1.5px solid #d1d5db') + ';' +
+      'color:' + (active ? '#92400e' : '#64748b') + ';' +
+      'background:' + (active ? '#fffbeb' : 'transparent') + ';">' +
+      (active ? '🔖 מסומן' : '🔖 סמן') + '</button></div>';
+  }
+
+  // Per-paragraph (verse/halacha) bookmark toggle
+  window._snToggleBMByPara = function(secIdx, paraIdx) {
+    if (!_bk) return;
+    var sections = _sbk ? _sbk.sections : (_bk.sections || []);
+    var s = sections[secIdx] || {he:""};
+    var key = (_sbk ? _sbk.id : "") + "|" + secIdx + "|" + paraIdx;
+    var label = (s.he || "סעיף") + " — " + toHN(paraIdx + 1);
+    var wasAdded;
+    if (_bmHas(_bk.id, key)) { _bmRemove(_bk.id, key); wasAdded = false; }
+    else { _bmAdd(_bk.id, key, label, _sbk ? _sbk.he : null); wasAdded = true; }
+    // Update this specific button's appearance
+    var btn = document.getElementById("sn-parabm-" + secIdx + "-" + paraIdx);
+    if (btn) {
+      btn.style.border = wasAdded ? "1.5px solid #f59e0b" : "1.5px solid #d1d5db";
+      btn.style.color = wasAdded ? "#92400e" : "#9ca3af";
+      btn.style.background = wasAdded ? "#fffbeb" : "transparent";
+      btn.innerHTML = wasAdded ? "🔖 מסומן" : "🔖 סמן";
+    }
+    // Keep the global header button & panels in sync
+    if (typeof updateBMBtn === "function") updateBMBtn();
+    if (typeof buildBMPanel === "function") buildBMPanel();
+    if (typeof buildBookBMPanel === "function") { try { buildBookBMPanel(); } catch(e) {} }
+    if (typeof window.showToast === "function") {
+      window.showToast(wasAdded ? "🔖 הסימנייה נשמרה" : "🔖 הסימנייה הוסרה", "success", 2200);
+    }
+  };
+
   async function _snLoadChapter(idx, area, prepend) {
     if (!_bk) return;
     var sections = _sbk ? _sbk.sections : _bk.sections;
@@ -22327,7 +22490,7 @@ function openSefarimNosafimPage(_pageMode) {
     if (prepend && area.firstChild) area.insertBefore(chapterDiv, area.firstChild);
     else area.appendChild(chapterDiv);
     var he = await fetchSec(sec.ref);
-    var mainHtml = heading + renderParagraphs(he, _bk.color);
+    var mainHtml = heading + renderParagraphs(he, _bk.color, idx);
     var commentariesHtml = "";
     var needMB = _snMBSupported() && _snGetMB();
     var needBH = _snBHSupported() && _snGetBH();
@@ -22910,12 +23073,10 @@ function closeSefarimNosafimModal() {
     var top = _activeModals[_activeModals.length - 1];
     if (top === "sn-reader-pane") return "sn";
     if (top === "bih-reading-pane") return "bih";
-    // Tehillim: check that we're inside the modal AND a psalm is being read
-    if (top === "tehillim-modal") {
-      var pv = document.getElementById("psalm-content-pane");
-      if (pv && pv.style.display !== "none" && pv.offsetHeight > 0) return "tehillim";
-      if (window._tehillimCurrentChapter) return "tehillim";
-    }
+    // Tehillim: the active modal state during reading is "tehillim-psalm-pane"
+    // (pushed by _tehillimOpenPsalm). On the chapter-picker view it's "tehillim-modal"
+    // and we DON'T want the button to show.
+    if (top === "tehillim-psalm-pane") return "tehillim";
     return null;
   }
 

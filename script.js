@@ -16309,17 +16309,26 @@ function openBenIshHaiPage() {
   };
 
   window._bihBMToggle = (y,p,h,label) => {
+    let wasAdded;
     if (isBM(y,p,h)) {
       removeBM(y,p,h);
       const btn=document.getElementById("bih-bm-"+p+"-"+h);
       if(btn){btn.style.border="1.5px solid #d1d5db";btn.style.background="#fff";btn.style.color="#9ca3af";btn.innerHTML="🔖 סמן";}
+      wasAdded = false;
     } else {
       addBM(y,p,h,label);
       const btn=document.getElementById("bih-bm-"+p+"-"+h);
       if(btn){btn.style.border="1.5px solid #f59e0b";btn.style.background="#fef9c3";btn.style.color="#92400e";btn.innerHTML="🔖 מסומן";}
+      wasAdded = true;
+    }
+    if (typeof window.showToast === "function") {
+      window.showToast(wasAdded ? "🔖 הסימנייה נשמרה" : "🔖 הסימנייה הוסרה", "success", 2200);
     }
   };
-  window._bihBMRemove = (y,p,h) => { removeBM(y,p,h); buildBMPanel(); };
+  window._bihBMRemove = (y,p,h) => {
+    removeBM(y,p,h); buildBMPanel();
+    if (typeof window.showToast === "function") window.showToast("🔖 הסימנייה הוסרה", "success", 2000);
+  };
 
   modal.addEventListener("click", (e) => { if(e.target===modal) closeBenIshHaiModal(); });
   document.body.appendChild(modal);
@@ -16911,6 +16920,7 @@ openTehillimPage = function () {
   window._thRemoveLastPosition = function() { thClearLP(); if (typeof window._thBuildBMPanel === "function") window._thBuildBMPanel(); if (typeof window._thBuildPsalmBMPanel === "function") window._thBuildPsalmBMPanel(); };
   window._thGoLastPosition = function() { var lp = thLoadLP(); if (lp && lp.ch && typeof window._thOpenPsalm === "function") window._thOpenPsalm(lp.ch); };
   window._thToggleBM = (ch) => {
+    const wasAdded = !thIsBM(ch);
     if (thIsBM(ch)) { thRemoveBM(ch); } else { thAddBM(ch); }
     const btn = document.getElementById("th-bm-btn-"+ch);
     if (btn) {
@@ -16922,6 +16932,9 @@ openTehillimPage = function () {
     }
     window._thBuildBMPanel();
     if (window._thBuildPsalmBMPanel) window._thBuildPsalmBMPanel();
+    if (typeof window.showToast === "function") {
+      window.showToast(wasAdded ? "🔖 הסימנייה נשמרה" : "🔖 הסימנייה הוסרה", "success", 2200);
+    }
   };
 
   window._thBuildBMPanel = () => {
@@ -22017,9 +22030,13 @@ function openSefarimNosafimPage(_pageMode) {
     var key = (_sbk ? _sbk.id : "") + "|" + _sec;
     var sections = _sbk ? _sbk.sections : (_bk.sections||[]);
     var s = _bk.type === "hardcoded" ? {he:_bk.he} : (sections[_sec]||{he:""});
-    if (_bmHas(_bk.id, key)) { _bmRemove(_bk.id, key); }
-    else { _bmAdd(_bk.id, key, s.he, _sbk ? _sbk.he : null); }
+    var wasAdded;
+    if (_bmHas(_bk.id, key)) { _bmRemove(_bk.id, key); wasAdded = false; }
+    else { _bmAdd(_bk.id, key, s.he, _sbk ? _sbk.he : null); wasAdded = true; }
     updateBMBtn(); buildBMPanel();
+    if (typeof window.showToast === "function") {
+      window.showToast(wasAdded ? "🔖 הסימנייה נשמרה" : "🔖 הסימנייה הוסרה", "success", 2200);
+    }
   };
 
   // ── Save "last position" (called by floating button) ──
@@ -22037,7 +22054,10 @@ function openSefarimNosafimPage(_pageMode) {
     if (typeof buildBookBMPanel === "function") { try { buildBookBMPanel(); } catch(e) {} }
     return true;
   };
-  window._snBMRemove = function(bid, key) { _bmRemove(bid, key); buildBMPanel(); if(_bk&&_bk.id===bid) updateBMBtn(); };
+  window._snBMRemove = function(bid, key) {
+    _bmRemove(bid, key); buildBMPanel(); if(_bk&&_bk.id===bid) updateBMBtn();
+    if (typeof window.showToast === "function") window.showToast("🔖 הסימנייה הוסרה", "success", 2000);
+  };
   window._snBMGoto = function(bid, key) {
     var book = BOOKS.find(function(b){ return b.id === bid; });
     if (!book) return;
@@ -22890,10 +22910,11 @@ function closeSefarimNosafimModal() {
     var top = _activeModals[_activeModals.length - 1];
     if (top === "sn-reader-pane") return "sn";
     if (top === "bih-reading-pane") return "bih";
-    // Tehillim: check that we're inside the modal AND the psalm-view is showing
+    // Tehillim: check that we're inside the modal AND a psalm is being read
     if (top === "tehillim-modal") {
-      var pv = document.getElementById("th-psalm-view");
+      var pv = document.getElementById("psalm-content-pane");
       if (pv && pv.style.display !== "none" && pv.offsetHeight > 0) return "tehillim";
+      if (window._tehillimCurrentChapter) return "tehillim";
     }
     return null;
   }
@@ -22913,6 +22934,20 @@ function closeSefarimNosafimModal() {
     setTimeout(function(){ t.classList.remove("show"); setTimeout(function(){ t.remove(); }, 350); }, 2200);
   }
 
+  function flashButtonGreen() {
+    var btn = document.getElementById("floating-lastpos-btn");
+    if (!btn) return;
+    var origBg = btn.style.background;
+    btn.style.background = "linear-gradient(135deg,rgba(16,185,129,0.95),rgba(34,197,94,0.95))";
+    btn.style.borderColor = "rgba(16,185,129,0.7)";
+    btn.style.color = "#ffffff";
+    setTimeout(function() {
+      btn.style.background = origBg;
+      btn.style.borderColor = "rgba(245,158,11,0.6)";
+      btn.style.color = "#1e293b";
+    }, 3000);
+  }
+
   window._lpSavePosition = function() {
     var reader = getActiveReader();
     if (!reader) return;
@@ -22922,7 +22957,10 @@ function closeSefarimNosafimModal() {
       else if (reader === "bih" && window._bihSaveLastPosition) { ok = window._bihSaveLastPosition(); label = "בן איש חי"; }
       else if (reader === "tehillim" && window._thSaveLastPosition) { ok = window._thSaveLastPosition(); label = "תהילים"; }
     } catch(e) { console.warn("LP save failed:", e); }
-    if (ok) showToast("📍 המיקום נשמר ב" + label);
+    if (ok) {
+      if (typeof window.showToast === "function") window.showToast("📍 המיקום נשמר ב" + label, "success", 2500);
+      flashButtonGreen();
+    }
   };
 
   function updateButtonVisibility() {

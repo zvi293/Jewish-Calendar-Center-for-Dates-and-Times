@@ -754,7 +754,9 @@
       /* Sefaria modal — each paragraph */
       #sefaria-modal-content > p {
         scroll-snap-align: start;
-        scroll-snap-stop: normal; /* normal (ל
+        scroll-snap-stop: normal; /* normal (לא forced) */
+      }
+
       /* ── Pulse highlight for "תפילות נוספות" & "ספרים נוספים" buttons ── */
       @keyframes prayer-cta-pulse {
         0%, 100% {

@@ -608,7 +608,7 @@
           </div>
           <!-- כפתור עוד -->
           <div class="flex justify-center mb-2">
-            <button id="prayer-more-btn" onclick="toggleMorePrayers()" class="flex items-center gap-1.5 text-blue-200/70 hover:text-blue-100 text-xs font-bold px-4 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all">
+            <button id="prayer-more-btn" onclick="toggleMorePrayers()" class="chevron-cta-pulse flex items-center gap-1.5 text-blue-200/70 hover:text-blue-100 text-xs font-bold px-4 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all">
               <span id="prayer-more-label">תפילות נוספות</span>
               <svg id="prayer-more-chevron" class="w-3 h-3 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
             </button>
@@ -645,10 +645,10 @@
             <button onclick="openBenIshHaiPage()" class="prayer-btn">
               <span class="prayer-icon">📚</span><span class="prayer-label">בן איש חי</span>
             </button>
-            <button onclick="openTefilotNosafotPage()" class="prayer-btn">
+            <button onclick="openTefilotNosafotPage()" class="prayer-btn prayer-cta-highlight">
               <span class="prayer-icon">🙏</span><span class="prayer-label">תפילות נוספות</span>
             </button>
-            <button onclick="openSefarimNosafimPage()" class="prayer-btn">
+            <button onclick="openSefarimNosafimPage()" class="prayer-btn prayer-cta-highlight">
               <span class="prayer-icon">📚</span><span class="prayer-label">ספרים נוספים</span>
             </button>
           </div>
@@ -1365,6 +1365,7 @@
     <div
       id="compass-modal"
       class="fixed inset-0 z-[100] bg-slate-900/95 backdrop-blur-md hidden flex items-center justify-center p-4 opacity-0 transition-opacity duration-300"
+      style="overflow-y:auto;overscroll-behavior:contain;"
       role="dialog"
       aria-modal="true"
       aria-labelledby="compass-modal-title"

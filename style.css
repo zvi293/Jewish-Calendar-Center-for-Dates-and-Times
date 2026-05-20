@@ -755,3 +755,45 @@
       #sefaria-modal-content > p {
         scroll-snap-align: start;
         scroll-snap-stop: normal; /* normal (ל
+      /* ── Pulse highlight for "תפילות נוספות" & "ספרים נוספים" buttons ── */
+      @keyframes prayer-cta-pulse {
+        0%, 100% {
+          box-shadow: 0 0 0 0 rgba(251,191,36,0.55),
+                      0 6px 18px rgba(251,191,36,0.25),
+                      inset 0 0 0 1.5px rgba(251,191,36,0.55);
+          transform: scale(1);
+        }
+        50% {
+          box-shadow: 0 0 0 12px rgba(251,191,36,0),
+                      0 6px 18px rgba(251,191,36,0.40),
+                      inset 0 0 0 1.5px rgba(251,191,36,0.85);
+          transform: scale(1.025);
+        }
+      }
+      .prayer-btn.prayer-cta-highlight {
+        animation: prayer-cta-pulse 2.4s ease-in-out infinite;
+        position: relative;
+      }
+      .prayer-btn.prayer-cta-highlight .prayer-label {
+        color: #fde68a !important;
+        font-weight: 800;
+      }
+
+      /* ── Pulse for the small chevron "more prayers" button ── */
+      @keyframes chevron-cta-pulse {
+        0%, 100% {
+          background-color: rgba(251,191,36,0.12);
+          border-color: rgba(251,191,36,0.40);
+          color: rgb(254,243,199);
+          box-shadow: 0 0 0 0 rgba(251,191,36,0.45);
+        }
+        50% {
+          background-color: rgba(251,191,36,0.22);
+          border-color: rgba(251,191,36,0.65);
+          color: rgb(253,224,71);
+          box-shadow: 0 0 0 7px rgba(251,191,36,0);
+        }
+      }
+      #prayer-more-btn.chevron-cta-pulse {
+        animation: chevron-cta-pulse 2.2s ease-in-out infinite;
+      }

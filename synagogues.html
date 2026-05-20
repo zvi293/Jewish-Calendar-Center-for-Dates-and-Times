@@ -358,7 +358,7 @@
 
     <!-- ══════ Tzaddik Prayers Modal ══════ -->
     <div id="tzaddik-prayers-modal" style="display:none;position:fixed;inset:0;
-      background:rgba(0,0,0,0.75);z-index:1000;padding:1rem;overflow-y:auto;backdrop-filter:blur(4px);"
+      background:rgba(0,0,0,0.75);z-index:1000;padding:1rem;overflow-y:auto;overscroll-behavior:contain;backdrop-filter:blur(4px);"
       onclick="if(event.target===this) closeTzaddikPrayersModal()">
       <div style="max-width:760px;margin:1rem auto;background:linear-gradient(180deg,#fffbeb,#fef3c7);
         border-radius:1.25rem;padding:1.5rem 1.25rem;color:#1c1917;
@@ -589,11 +589,7 @@
         if (body) body.innerHTML = TZADIK_PRAYERS_HTML;
         const m = document.getElementById("tzaddik-prayers-modal");
         if (m) m.style.display = "block";
-        const sy = window.scrollY;
-        document.body.dataset.tzaddikScrollY = sy;
-        document.body.style.position = "fixed";
-        document.body.style.top = "-" + sy + "px";
-        document.body.style.width = "100%";
+        document.documentElement.style.overflow = "hidden";
         document.body.style.overflow = "hidden";
         if (!_tzaddikPrayersModalOpen) {
           _tzaddikPrayersModalOpen = true;
@@ -603,12 +599,8 @@
       function closeTzaddikPrayersModal() {
         const m = document.getElementById("tzaddik-prayers-modal");
         if (m) m.style.display = "none";
-        const sy = parseInt(document.body.dataset.tzaddikScrollY || "0", 10);
-        document.body.style.position = "";
-        document.body.style.top = "";
-        document.body.style.width = "";
+        document.documentElement.style.overflow = "";
         document.body.style.overflow = "";
-        window.scrollTo(0, sy);
         if (_tzaddikPrayersModalOpen) {
           _tzaddikPrayersModalOpen = false;
           if (history.state && history.state.tzaddikPrayersModal) {
@@ -620,12 +612,8 @@
         const m = document.getElementById("tzaddik-prayers-modal");
         if (m && m.style.display === "block") {
           m.style.display = "none";
-          const sy = parseInt(document.body.dataset.tzaddikScrollY || "0", 10);
-          document.body.style.position = "";
-          document.body.style.top = "";
-          document.body.style.width = "";
+          document.documentElement.style.overflow = "";
           document.body.style.overflow = "";
-          window.scrollTo(0, sy);
           _tzaddikPrayersModalOpen = false;
         }
       });

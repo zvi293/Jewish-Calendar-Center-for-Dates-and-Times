@@ -647,7 +647,6 @@ window.addEventListener("popstate", function (e) {
     } else if (modalId === "donation-modal" || modalId === "contact-modal" || modalId === "chapter-nav-popup" || modalId === "cal-month-year-picker") {
       var _popupEl = document.getElementById(modalId);
       if (_popupEl) _popupEl.remove();
-      unlockBodyScroll();
     } else {
       removeModalById(modalId);
     }
@@ -4316,7 +4315,6 @@ function openCompass() {
   m.classList.remove("hidden");
   setTimeout(() => m.classList.remove("opacity-0"), 10);
   startCompass();
-  lockBodyScroll();
   pushModalState("compass-modal");
 }
 
@@ -15109,7 +15107,7 @@ window.openDonationModal = function() {
   if (existing) { window._closePopupViaBack('donation-modal'); return; }
   var overlay = document.createElement('div');
   overlay.id = 'donation-modal';
-  overlay.style.cssText = 'position:fixed;inset:0;z-index:10080;background:rgba(2,6,23,0.7);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:1rem;';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:10080;background:rgba(2,6,23,0.7);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:1rem;overflow-y:auto;overscroll-behavior:contain;';
   overlay.addEventListener('click', function(e){ if (e.target === overlay) window._closePopupViaBack('donation-modal'); });
   overlay.innerHTML = '<div style="background:linear-gradient(160deg,#1a1f3a,#0f1628);border:1.5px solid rgba(251,191,36,0.4);border-radius:1.5rem;padding:1.75rem 1.5rem;max-width:440px;width:100%;text-align:center;direction:rtl;box-shadow:0 25px 60px rgba(0,0,0,0.6);position:relative;">'+
     '<button onclick="window._closePopupViaBack(\'donation-modal\');" style="position:absolute;top:0.8rem;left:0.8rem;background:rgba(255,255,255,0.08);border:none;color:#cbd5e1;width:34px;height:34px;border-radius:50%;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;" aria-label="סגור">✕</button>'+
@@ -15123,7 +15121,6 @@ window.openDonationModal = function() {
     '<p style="color:#94a3b8;font-size:0.72rem;margin:0.85rem 0 0;">הקישור פותח את דף התרומה — מאובטח ופרטי</p>'+
   '</div>';
   document.body.appendChild(overlay);
-  lockBodyScroll();
   pushModalState('donation-modal');
 };
 
@@ -18861,7 +18858,8 @@ document.addEventListener("keydown", (e) => {
     modal.setAttribute("aria-modal", "true");
     modal.style.cssText =
       "position:fixed;inset:0;z-index:9999;display:flex;align-items:center;" +
-      "justify-content:center;background:rgba(0,0,0,0.65);backdrop-filter:blur(6px);padding:1rem;";
+      "justify-content:center;background:rgba(0,0,0,0.65);backdrop-filter:blur(6px);padding:1rem;" +
+      "overflow-y:auto;overscroll-behavior:contain;";
 
     var dateLabel;
     if (_dayOffset === 0) dateLabel = "היום";
@@ -18933,7 +18931,6 @@ document.addEventListener("keydown", (e) => {
       "</div>";
 
     document.body.appendChild(modal);
-    lockBodyScroll();
     pushModalState("hilulot-modal");
 
     function navTo(newOffset) {

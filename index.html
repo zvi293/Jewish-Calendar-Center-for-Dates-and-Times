@@ -244,7 +244,7 @@
       href="https://fonts.googleapis.com/css2?family=Assistant:wght@200;400;600;700;800&family=Frank+Ruhl+Libre:wght@400;500;700;900&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="style.css?v=8" />
+    <link rel="stylesheet" href="style.css?v=10" />
 
     <!-- OneSignal Web Push SDK -->
     <script>
@@ -321,6 +321,34 @@
   <body
     class="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200 pb-24"
   >
+    <!-- ═══ מסך פתיחה קולנועי ═══ -->
+    <div id="lux-splash" aria-hidden="true">
+      <div class="lux-splash-inner">
+        <svg class="lux-splash-star" viewBox="0 0 512 512" fill="none" aria-hidden="true">
+          <path class="lux-splash-path" d="M256 112L371 312H141Z" stroke-width="26" stroke-linejoin="round"/>
+          <path class="lux-splash-path lux-splash-path2" d="M256 400L371 200H141Z" stroke-width="26" stroke-linejoin="round"/>
+        </svg>
+        <div class="lux-splash-title">הלוח היהודי</div>
+        <div class="lux-splash-sub">לוח שנה עברי · זמנים · תפילות</div>
+      </div>
+    </div>
+    <script>
+      (function () {
+        var s = document.getElementById("lux-splash");
+        if (!s) return;
+        try {
+          if (sessionStorage.getItem("luxSplashShown")) { s.parentNode.removeChild(s); return; }
+          sessionStorage.setItem("luxSplashShown", "1");
+        } catch (e) {}
+        var kill = function () {
+          if (!s) return;
+          s.classList.add("lux-splash-out");
+          setTimeout(function () { if (s && s.parentNode) s.parentNode.removeChild(s); s = null; }, 750);
+        };
+        setTimeout(kill, 1700);
+        s.addEventListener("click", kill);
+      })();
+    </script>
     <div
       class="fixed top-0 left-0 right-0 z-50 px-4 py-3 flex justify-between items-center pointer-events-none"
       role="toolbar"
@@ -1971,7 +1999,11 @@
       onmouseout="this.style.transform='scale(1)';this.style.boxShadow='0 4px 18px rgba(245,158,11,0.4),0 2px 6px rgba(0,0,0,0.18)'"
     >📍</button>
 
+    <!-- ═══ ניווט תחתון — מובייל בלבד; התוכן מרונדר ע"י lux.js לפי בחירת המשתמש ═══ -->
+    <nav id="lux-bottom-nav" aria-label="ניווט מהיר"></nav>
+
     <script src="script.js?v=18"></script>
+    <script src="lux.js?v=2" defer></script>
 
     <!-- Service Worker registration — enables offline caching (PWA) -->
     <script>

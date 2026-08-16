@@ -244,7 +244,7 @@
       href="https://fonts.googleapis.com/css2?family=Assistant:wght@200;400;600;700;800&family=Frank+Ruhl+Libre:wght@400;500;700;900&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="style.css?v=10" />
+    <link rel="stylesheet" href="style.css?v=12" />
 
     <!-- OneSignal Web Push SDK -->
     <script>
@@ -675,6 +675,13 @@
           >
             מסנכרן נתונים...
           </p>
+          <!-- שלדי טעינה מוזהבים -->
+          <div class="lux-skeleton-grid" aria-hidden="true">
+            <div class="lux-skeleton-card"></div>
+            <div class="lux-skeleton-card"></div>
+            <div class="lux-skeleton-card"></div>
+            <div class="lux-skeleton-card"></div>
+          </div>
         </div>
 
         <div
@@ -1627,19 +1634,6 @@
                   <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
                 </svg>
               </button>
-              <button
-                type="button"
-                id="theme-circle-blue"
-                onclick="applyTheme('blue')"
-                class="theme-circle w-12 h-12 rounded-full border-2 border-slate-300 dark:border-slate-600 transition-all flex items-center justify-center shadow-md hover:scale-110"
-                style="background:linear-gradient(135deg,#0ea5e9,#0284c7);"
-                title="עיצוב ים"
-                aria-label="עיצוב ים"
-              >
-                <svg class="w-6 h-6" fill="none" stroke="#ffffff" stroke-width="2" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M3 15c2.5 0 2.5-4 5-4s2.5 4 5 4 2.5-4 5-4 2.5 4 5 4M3 9c2.5 0 2.5-4 5-4s2.5 4 5 4 2.5-4 5-4 2.5 4 5 4"></path>
-                </svg>
-              </button>
             </div>
           </div>
 
@@ -2003,7 +1997,7 @@
     <nav id="lux-bottom-nav" aria-label="ניווט מהיר"></nav>
 
     <script src="script.js?v=18"></script>
-    <script src="lux.js?v=2" defer></script>
+    <script src="lux.js?v=4" defer></script>
 
     <!-- Service Worker registration — enables offline caching (PWA) -->
     <script>

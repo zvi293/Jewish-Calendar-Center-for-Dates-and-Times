@@ -22,5 +22,31 @@
       "type": "image/png",
       "purpose": "any maskable"
     }
+  ],
+  "shortcuts": [
+    {
+      "name": "תהילים",
+      "short_name": "תהילים",
+      "url": "/?open=tehillim",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "זמני היום",
+      "short_name": "זמנים",
+      "url": "/?open=zmanim",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "לוח שנה חודשי",
+      "short_name": "לוח שנה",
+      "url": "/?open=calendar",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "ספרים נוספים",
+      "short_name": "ספרים",
+      "url": "/?open=sefarim",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    }
   ]
 }

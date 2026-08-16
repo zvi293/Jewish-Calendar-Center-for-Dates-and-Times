@@ -425,8 +425,9 @@ function updateCompassStatusText() {
 }
 
 function refreshLiveLanguageUI() {
-  document.getElementById("lang-indicator").textContent =
-    CURRENT_LANG.toUpperCase();
+  // בורר השפות הוסר — האלמנט אינו קיים עוד, נעדכן רק אם נמצא
+  const _langInd = document.getElementById("lang-indicator");
+  if (_langInd) _langInd.textContent = CURRENT_LANG.toUpperCase();
   document.documentElement.lang = CURRENT_LANG;
   document.documentElement.dir = CURRENT_LANG === "he" ? "rtl" : "ltr";
   applyTranslations();
@@ -679,7 +680,9 @@ let CURRENT_THEME = ["light", "dark", "blue"].includes(
 )
   ? localStorage.getItem("moadim_theme")
   : "light";
-let CURRENT_LANG = localStorage.getItem("moadim_lang") || "he";
+// האפליקציה בעברית בלבד — בורר השפות הוסר לבקשת בעל האתר
+let CURRENT_LANG = "he";
+try { localStorage.setItem("moadim_lang", "he"); } catch (e) {}
 let CURRENT_NUSACH = localStorage.getItem("moadim_nusach") || "mizrahi";
 const DAY_NOTES_STORAGE_KEY = "moadim_day_notes";
 const FS_LABELS = ["רגיל", "גדול", "גדול מאוד", "ענק", "ענק מאוד"];
@@ -1108,19 +1111,31 @@ function _stopOmerCountdown() {
 // ── 🌙 Levana Countdown Timer (last day) ─────────────────────────────────────
 let _levanaCountdownInterval = null;
 
-function _startLevanaCountdown(endDateStr) {
+/* רגע הזמן (במילישניות) של תחילת/סוף חלון ברכת הלבנה בתאריך נתון */
+function _levanaZmanMs(dateStr, which) {
+  const d = new Date(dateStr);
+  const zman = getApproxZmanim(d)[which === "s" ? "s" : "e"];
+  const [zh, zm] = zman.split(":").map(Number);
+  const t = new Date(d);
+  t.setHours(zh, zm, 0, 0);
+  return t.getTime();
+}
+
+function _startLevanaCountdown(endDateStr, which) {
+  // which: "e" (ברירת מחדל) — ספירה לסוף זמן הברכה; "s" — ספירה לתחילת הזמן
   _stopLevanaCountdown();
+  const zmanKey = which === "s" ? "s" : "e";
   function update() {
     const el = document.getElementById("levana-countdown-display");
     if (!el) { _stopLevanaCountdown(); return; }
-    const endDate = new Date(endDateStr);
-    const zman = getApproxZmanim(endDate).e; // e.g. "05:20"
-    const [zh, zm] = zman.split(":").map(Number);
-    const target = new Date(endDate);
-    target.setHours(zh, zm, 0, 0);
+    const target = _levanaZmanMs(endDateStr, zmanKey);
     const diff = target - Date.now();
     if (diff <= 0) {
-      el.textContent = "00:00:00";
+      if (zmanKey === "s" && el.parentElement) {
+        el.parentElement.innerHTML = "🌙 ניתן לברך כעת!";
+      } else {
+        el.textContent = "00:00:00";
+      }
       _stopLevanaCountdown();
       return;
     }
@@ -1144,6 +1159,61 @@ function _stopLevanaCountdown() {
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ── 🌙 הבהוב סמל ברכת הלבנה + "ברכתי" ─────────────────────────────────────────
+function _levanaBlessedKey() {
+  const mv = (typeof ALL_EVENTS !== "undefined" ? ALL_EVENTS : []).find(
+    (e) => e.type === "moon",
+  );
+  const id = window.LEVANA_START_DATE || (mv && mv.endDate) || "";
+  return "levana_blessed_" + id;
+}
+
+function updateLevanaBlink() {
+  const icon = document.getElementById("levana-blink-icon");
+  if (!icon) return;
+  let open = false;
+  try {
+    const s = window.LEVANA_START_DATE;
+    const e = window.LEVANA_END_DATE;
+    if (s && e) {
+      const now = Date.now();
+      open = now >= _levanaZmanMs(s, "s") && now <= _levanaZmanMs(e, "e");
+    } else {
+      const mv = (typeof ALL_EVENTS !== "undefined" ? ALL_EVENTS : []).find(
+        (ev) => ev.type === "moon",
+      );
+      if (mv && mv.heb === "ניתן לברך כעת" && mv.endDate) {
+        open = Date.now() <= _levanaZmanMs(mv.endDate, "e");
+      }
+    }
+  } catch (err) {}
+  let blessed = null;
+  try {
+    blessed = localStorage.getItem(_levanaBlessedKey());
+  } catch (err) {}
+  if (open && !blessed) {
+    icon.classList.remove("hidden");
+    icon.classList.add("levana-blinking");
+  } else {
+    icon.classList.add("hidden");
+    icon.classList.remove("levana-blinking");
+  }
+}
+
+window._markLevanaBlessed = function (btn) {
+  try {
+    localStorage.setItem(_levanaBlessedKey(), "1");
+  } catch (e) {}
+  if (btn) {
+    btn.textContent = "✓ תבורך! נתראה בחודש הבא";
+    btn.classList.add("blessed");
+    btn.disabled = true;
+  }
+  if (typeof showToast === "function")
+    showToast("🌙 חודש טוב! הסמל יפסיק להבהב עד לחודש הבא", "info");
+  updateLevanaBlink();
+};
+
 function openOmerModal() {
   document.getElementById("omer-modal-text").textContent =
     generateOmerText(CURRENT_OMER_DAY);
@@ -1162,12 +1232,16 @@ function closeOmerModal() {
 }
 
 // --- Sefaria Modal Logic ---
-async function openSefariaModal(hebTitle, enRef) {
+async function openSefariaModal(hebTitle, enRef, opts) {
   if (!enRef) return;
   // Remove shmikra toggles if present (from previous Shnayim Mikra use)
   const existingToggles = document.getElementById("shmikra-toggles");
   if (existingToggles) existingToggles.remove();
   const ui = getDynamicUiText();
+  const isDaf = !!(opts && opts.daf);
+  window._dafState = null;
+  // ניקוי כפתורי הפירושים של הדף היומי כשפותחים תוכן אחר במודאל
+  if (!isDaf) document.getElementById("daf-cm-toggles")?.remove();
   let cleanRef = enRef.replace("Parashat ", "").replace(/ /g, "_");
   if (/\d/.test(cleanRef)) cleanRef = cleanRef.replace("_", "."); // For Daf Yomi
 
@@ -1195,6 +1269,17 @@ async function openSefariaModal(hebTitle, enRef) {
       `https://www.sefaria.org/api/texts/${cleanRef}?context=0`,
     );
     let textHtml = "";
+    if (isDaf && data.he && data.he.length > 0) {
+      // דף יומי: מצב מיוחד — פירושים בתוך הטקסט + סימון שורה במרקר
+      const paras = [];
+      (function flat(x) {
+        if (typeof x === "string" && x.trim()) paras.push(x);
+        else if (Array.isArray(x)) x.forEach(flat);
+      })(data.he);
+      window._dafState = { paras, ref: cleanRef };
+      await renderDafContent();
+      return;
+    }
     if (data.he && data.he.length > 0) {
       textHtml = data.he.map((p) => `<p>${p}</p>`).join("");
     } else if (data.text && data.text.length > 0) {
@@ -1212,6 +1297,146 @@ async function openSefariaModal(hebTitle, enRef) {
   } catch (e) {
     document.getElementById("sefaria-modal-content").innerHTML =
       "<p class='text-center text-rose-500 font-bold mt-10'>שגיאה בטעינת הטקסט. אנא בדוק חיבור לאינטרנט.</p>";
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// ✦ דף יומי — פירושי רש"י ותוספות בתוך הטקסט + סימון שורה במרקר
+// ══════════════════════════════════════════════════════════════
+async function _fetchDafCommentary(name, ref) {
+  try {
+    const refSpaced = ref.replace(/_/g, " ").replace(/\./g, " ");
+    const data = await fetchHebcalWithCache(
+      `https://www.sefaria.org/api/texts/${encodeURIComponent(name + " on " + refSpaced)}?context=0`,
+    );
+    if (!data || data.error || !data.he) return null;
+    const flat = [];
+    (function push(x) {
+      if (typeof x === "string" && x.trim()) flat.push(x);
+      else if (Array.isArray(x)) x.forEach(push);
+    })(data.he);
+    return flat.length ? flat : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+window._dafToggleCm = function (which) {
+  const k = "daf_show_" + which;
+  localStorage.setItem(k, localStorage.getItem(k) === "true" ? "false" : "true");
+  renderDafContent();
+};
+
+async function renderDafContent() {
+  const st = window._dafState;
+  const cont = document.getElementById("sefaria-modal-content");
+  if (!st || !cont) return;
+  const showRashi = localStorage.getItem("daf_show_rashi") === "true";
+  const showTosafot = localStorage.getItem("daf_show_tosafot") === "true";
+  const markKey = "daf_line_mark_" + st.ref;
+  let marked = parseInt(localStorage.getItem(markKey) || "-1", 10);
+  if (isNaN(marked)) marked = -1;
+
+  const cmBtn = (id, he, color, on) =>
+    `<button onclick="window._dafToggleCm('${id}')" ` +
+    `style="min-width:44px;height:32px;padding:0 0.65rem;border-radius:999px;border:1.5px solid ${on ? color : "rgba(0,0,0,0.2)"};` +
+    `background:${on ? color + "22" : "rgba(255,255,255,0.7)"};color:${color};font-size:0.72rem;font-weight:900;cursor:pointer;white-space:nowrap;" ` +
+    `title="${on ? "כבה " : "הצג "}${he}">${he}</button>`;
+
+  // כפתורי הפירושים יושבים בפאנל התחתון, ליד כפתורי הגדלת/הקטנת הכתב —
+  // כמו בשאר האתר (חוק לישראל, ספרים נוספים)
+  const fontBar = document.getElementById("sefaria-font-bar");
+  if (fontBar) {
+    const oldToggles = document.getElementById("daf-cm-toggles");
+    if (oldToggles) oldToggles.remove();
+    fontBar.insertAdjacentHTML(
+      "afterbegin",
+      `<div id="daf-cm-toggles" style="display:flex;align-items:center;gap:0.45rem;flex-wrap:nowrap;direction:rtl;">` +
+        cmBtn("rashi", 'רש"י', "#7c3aed", showRashi) +
+        cmBtn("tosafot", "תוספות", "#0d9488", showTosafot) +
+        `</div>`,
+    );
+    fontBar.style.flexWrap = "wrap";
+    fontBar.style.rowGap = "0.4rem";
+  }
+
+  let html =
+    `<div style="text-align:center;font-size:0.66rem;color:#94a3b8;margin:0 0 0.7rem;">💡 לחיצה על שורה מסמנת אותה במרקר · כפתורי רש"י ותוספות בפאנל התחתון</div>`;
+
+  let parasHtml = st.paras
+    .map(
+      (t, i) =>
+        `<span class="daf-line${i === marked ? " daf-line-marked" : ""}" data-line="${i}" style="display:block;margin:0 0 0.9rem;cursor:pointer;">${t}</span>`,
+    )
+    .join("");
+
+  if (showRashi || showTosafot) {
+    cont.innerHTML =
+      html +
+      parasHtml +
+      `<div style="text-align:center;color:#7c3aed;font-size:0.78rem;font-style:italic;margin-top:0.6rem;">טוען פירושים...</div>`;
+  }
+  if (showRashi) {
+    const r = await _fetchDafCommentary("Rashi", st.ref);
+    if (r) {
+      parasHtml = _buildTextWithInlineComments(parasHtml, r, {
+        label: 'רש"י',
+        emoji: "📝",
+        color: "#7c3aed",
+        diburColor: "#b45309",
+        textColor: "#4c1d95",
+      });
+    } else {
+      parasHtml += `<div style="margin-top:0.6rem;padding:0.45rem 0.7rem;border-radius:0.4rem;border:1px dashed rgba(124,58,237,0.3);color:#7c3aed;font-size:0.72rem;font-style:italic;text-align:center;">📝 לא נמצא רש"י על דף זה</div>`;
+    }
+  }
+  if (showTosafot) {
+    const t = await _fetchDafCommentary("Tosafot", st.ref);
+    if (t) {
+      parasHtml = _buildTextWithInlineComments(parasHtml, t, {
+        label: "תוספות",
+        emoji: "📜",
+        color: "#0d9488",
+        diburColor: "#b45309",
+        textColor: "#134e4a",
+      });
+    } else {
+      parasHtml += `<div style="margin-top:0.6rem;padding:0.45rem 0.7rem;border-radius:0.4rem;border:1px dashed rgba(13,148,136,0.3);color:#0d9488;font-size:0.72rem;font-style:italic;text-align:center;">📜 לא נמצאו תוספות על דף זה</div>`;
+    }
+  }
+
+  html +=
+    parasHtml +
+    '<div style="margin-top:2rem;padding-top:0.85rem;border-top:1px solid rgba(0,0,0,0.08);color:#94a3b8;font-size:0.72rem;text-align:center;direction:rtl;">מקור הטקסט: <a href="https://www.sefaria.org.il/" target="_blank" rel="noopener" style="color:#3b82f6;">Sefaria.org</a> · ברישיון פתוח</div>';
+  cont.innerHTML = html;
+  applyPrayerFontSize("#sefaria-modal-content");
+
+  // סימון שורה במרקר — לחיצה מסמנת, לחיצה נוספת מבטלת
+  cont.onclick = (e) => {
+    if (e.target.closest("[class*='chok-rashi']")) return;
+    if (e.target.closest("#daf-cm-toggles")) return;
+    if (e.target.closest("a")) return;
+    const line = e.target.closest(".daf-line");
+    if (!line) return;
+    const i = Number(line.dataset.line);
+    const cur = parseInt(localStorage.getItem(markKey) || "-1", 10);
+    cont
+      .querySelectorAll(".daf-line-marked")
+      .forEach((el) => el.classList.remove("daf-line-marked"));
+    if (cur === i) {
+      localStorage.setItem(markKey, "-1");
+    } else {
+      localStorage.setItem(markKey, String(i));
+      line.classList.add("daf-line-marked");
+    }
+  };
+
+  // גלילה אוטומטית לשורה המסומנת
+  if (marked >= 0) {
+    setTimeout(() => {
+      const el = cont.querySelector(".daf-line-marked");
+      if (el) el.scrollIntoView({ block: "center", behavior: "smooth" });
+    }, 200);
   }
 }
 
@@ -1592,15 +1817,33 @@ async function fetchChokLeIsraelData() {
     const dayName = dayMap[now.getDay()];
 
     // Fetch today's calendar from Sefaria (date-keyed → cache auto-expires next day)
-    const calData = await fetchHebcalWithCache(
-      'https://www.sefaria.org/api/calendars?diaspora=1&timezone=Asia%2FJerusalem&date=' + todayStr
-    );
-    const chokItem = (calData.calendar_items || []).find(
-      (i) => i.title && i.title.he && i.title.he.includes('חק לישראל')
-    );
-    if (!chokItem) return;
-
-    const parshaHe = (chokItem.displayValue && chokItem.displayValue.he) || '';
+    // diaspora=0 — לוח ארץ ישראל (בשבועות שבהם הפרשה שונה בחו"ל)
+    let parshaHe = '';
+    try {
+      const calData = await fetchHebcalWithCache(
+        'https://www.sefaria.org/api/calendars?diaspora=0&timezone=Asia%2FJerusalem&date=' + todayStr
+      );
+      const chokItem = (calData.calendar_items || []).find(
+        (i) => i.title && i.title.he && i.title.he.includes('חק לישראל')
+      );
+      if (chokItem) {
+        parshaHe = (chokItem.displayValue && chokItem.displayValue.he) || '';
+      }
+    } catch (e2) {
+      console.warn('Chok: Sefaria calendars unavailable, using fallback', e2);
+    }
+    // Fallback חסין-תקלות: גזירת שם הפרשה מפרשת השבוע שכבר נטענה מ-Hebcal
+    if (!parshaHe && window.SHABBAT_PARASHA_NAME) {
+      parshaHe = String(window.SHABBAT_PARASHA_NAME)
+        .replace(/^פרשת\s+/, '')
+        .replace(/^שבת\s+/, '')
+        .trim();
+    }
+    if (!parshaHe) {
+      // אין מקור לפרשה — נאפשר ניסיון חוזר בקריאה הבאה
+      _chokLeIsraelFetchDate = null;
+      return;
+    }
     const textEl = document.getElementById('chok-israel-text');
     if (textEl) textEl.textContent = parshaHe || 'פרשת השבוע';
 
@@ -1626,16 +1869,26 @@ async function fetchChokLeIsraelData() {
       _chokLeIsraelData = { sheetId: matchSheet.id, parshaHe, dayHe: dayName };
       const btn = document.getElementById('chok-israel-btn');
       if (btn) btn.onclick = (e) => { e.preventDefault(); openChokLeIsraelModal(); };
+    } else {
+      // גיליון לא נמצא — נאפשר ניסיון חוזר בקריאה הבאה
+      _chokLeIsraelFetchDate = null;
     }
   } catch (e) {
     console.warn('Chok LeIsrael fetch error:', e);
+    // כשל רשת/שרת — איפוס כדי שקריאה חוזרת תנסה שוב
+    _chokLeIsraelFetchDate = null;
   }
 }
 
 async function openChokLeIsraelModal() {
   if (!_chokLeIsraelData) {
     await fetchChokLeIsraelData();
-    if (!_chokLeIsraelData) return;
+    if (!_chokLeIsraelData) {
+      if (typeof showToast === 'function') {
+        showToast('לא ניתן לטעון את חוק לישראל כעת — בדוק חיבור לאינטרנט ונסה שוב', 'error');
+      }
+      return;
+    }
   }
   const m = document.getElementById('chok-israel-modal');
   if (!m) return;
@@ -1708,75 +1961,106 @@ function _numToHebVerseNum(n) {
   return r.slice(0, -1) + '"' + r.slice(-1);
 }
 
-// Embeds Rashi comments inline in Gemara text by matching the dibur hamatchil
-function _buildGemaraWithInlineRashi(gemaraHtml, rashiComments) {
-  if (!rashiComments || !rashiComments.length) return gemaraHtml;
-  let result = gemaraHtml;
+// ── שיבוץ פירושים בתוך הטקסט עצמו ──
+// מזהה את הדיבור-המתחיל של כל פירוש ומשבץ את הפירוש מיד אחרי המילים
+// שעליהן הוא נאמר. פירוש שלא נמצא לו מיקום — מוצג בסוף אותו קטע.
+// אפשרויות: { label, emoji, color, diburColor, textColor }
+function _buildTextWithInlineComments(sourceHtml, comments, opts) {
+  if (!comments || !comments.length) return sourceHtml;
+  opts = opts || {};
+  const label = opts.label || 'רש״י';
+  const emoji = opts.emoji || '📝';
+  const color = opts.color || '#7c3aed';
+  const diburColor = opts.diburColor || '#b45309';
+  const textColor = opts.textColor || '#4c1d95';
+  const hx = color.replace('#', '');
+  const hn = parseInt(hx.length === 3 ? hx.split('').map((c) => c + c).join('') : hx, 16);
+  const rC = (hn >> 16) & 255, gC = (hn >> 8) & 255, bC = hn & 255;
+  const rgba = (a) => `rgba(${rC},${gC},${bC},${a})`;
+  let result = sourceHtml;
   const unmatched = [];
   const blockBase = 'display:block;margin:0.6rem 0;padding:0.45rem 0.75rem;' +
-    'background:rgba(124,58,237,0.08);border:2px solid rgba(124,58,237,0.25);border-right:4px solid #7c3aed;border-radius:0.4rem;' +
-    'font-size:0.82em;line-height:1.7;';
+    `background:${rgba(0.08)};border:2px solid ${rgba(0.25)};border-right:4px solid ${color};border-radius:0.4rem;` +
+    'font-size:0.82em;line-height:1.7;text-align:right;';
 
-  for (const rashiText of rashiComments) {
-    if (!rashiText || typeof rashiText !== 'string') continue;
-
-    // Rashi format: "DIBUR_HAMATCHIL. rashi" — extract the dibur (everything before first . : – -)
-    const diburMatch = rashiText.match(/^([^.־:–—\-]{2,40})[.־:–—\-]/);
-
-    // Build colored rashiHtml: dibur in amber, rest in purple (classes override .holy-text-style via !important in CSS)
-    let inner;
-    if (diburMatch) {
-      const dibur = diburMatch[1].trim();
-      const rest = rashiText.slice(diburMatch[0].length).trim();
-      inner = `<span class="chok-rashi-dibur">${dibur}</span>` +
+  const buildInner = (t) => {
+    // ניקוי סימוני ס"ק כמו "(א)" בתחילת פירוש (משנה ברורה / באר היטב)
+    const cleaned = t.replace(/^\s*(?:<b>)?\(([א-ת]{1,3})\)(?:<\/b>)?\s*/, '');
+    const m = cleaned.match(/^([^.־:–—\-]{2,40})[.־:–—\-]/);
+    let inner, dibur = null;
+    if (m) {
+      dibur = m[1].replace(/<[^>]*>/g, '').trim();
+      const rest = cleaned.slice(m[0].length).trim();
+      inner = `<span class="chok-rashi-dibur" style="color:${diburColor} !important;">${m[1].trim()}</span>` +
               `<span class="chok-rashi-sep"> — </span>` +
-              `<span class="chok-rashi-rest">${rest}</span>`;
+              `<span class="chok-rashi-rest" style="color:${textColor} !important;">${rest}</span>`;
     } else {
-      inner = `<span class="chok-rashi-rest">${rashiText}</span>`;
+      inner = `<span class="chok-rashi-rest" style="color:${textColor} !important;">${cleaned}</span>`;
     }
-    const rashiHtml = `<div style="${blockBase}"><span class="chok-rashi-label">📝 רש״י</span>${inner}</div>`;
+    return { inner, dibur };
+  };
 
-    if (diburMatch) {
-      const dibur = diburMatch[1].trim();
-      // Escape for regex — search in raw HTML (avoid matching inside HTML tags)
-      const esc = dibur.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  for (const commentText of comments) {
+    if (!commentText || typeof commentText !== 'string') continue;
+    const { inner, dibur } = buildInner(commentText);
+    const commentHtml = `<div style="${blockBase}"><span class="chok-rashi-label" style="color:${color} !important;">${emoji} ${label}</span>${inner}</div>`;
+
+    if (dibur) {
+      // דיוק: מסירים "וכו'" וגרשיים ואת הניקוד מהדיבור לפני חיפוש
+      const cleanDibur = dibur
+        .replace(/\s*וכו'?\s*$/, '')
+        .replace(/["'׳״]/g, '')
+        .replace(/[֑-ׇ]/g, '')
+        .trim();
+      // התאמה עיוורת-ניקוד: בין אות לאות מותרים סימני ניקוד/טעמים,
+      // ורווח בדיבור מתאים גם למקף (־) בטקסט המקור
+      const nikudify = (s) =>
+        s
+          .split('')
+          .map((ch) => {
+            if (ch === ' ') return '[\\s\\u05BE]+';
+            const esc = ch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            return /[א-ת]/.test(ch) ? esc + '[\\u0591-\\u05C7]*' : esc;
+          })
+          .join('');
       // (?![^<]*>) prevents matching inside an HTML attribute
-      const rx = new RegExp('(' + esc + ')(?![^<]*>)', '');
-      if (rx.test(result)) {
-        result = result.replace(rx, '$1' + rashiHtml);
+      const rx = new RegExp('(' + nikudify(cleanDibur) + ')(?![^<]*>)', '');
+      if (cleanDibur.length >= 2 && rx.test(result)) {
+        result = result.replace(rx, '$1' + commentHtml);
         continue;
       }
       // Fallback: try first word only (min 3 chars)
-      const firstWord = dibur.split(/\s+/)[0];
+      const firstWord = cleanDibur.split(/\s+/)[0] || '';
       if (firstWord.length >= 3) {
-        const rxWord = new RegExp('(' + firstWord.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')(?![^<]*>)', '');
+        const rxWord = new RegExp('(' + nikudify(firstWord) + ')(?![^<]*>)', '');
         if (rxWord.test(result)) {
-          result = result.replace(rxWord, '$1' + rashiHtml);
+          result = result.replace(rxWord, '$1' + commentHtml);
           continue;
         }
       }
     }
-    unmatched.push(rashiText);
+    unmatched.push(commentText);
   }
 
-  // Any comment whose dibur wasn't found — each gets its own styled card
+  // Any comment whose dibur wasn't found — each gets its own styled card at the end
   if (unmatched.length) {
-    result += unmatched.map(t => {
-      const m = t.match(/^([^.־:–—\-]{2,40})[.־:–—\-]/);
-      let inner;
-      if (m) {
-        const dibur = m[1].trim();
-        const rest = t.slice(m[0].length).trim();
-        inner = `<span class="chok-rashi-dibur">${dibur}</span>` +
-                `<span class="chok-rashi-sep"> — </span>` +
-                `<span class="chok-rashi-rest">${rest}</span>`;
-      } else {
-        inner = `<span class="chok-rashi-rest">${t}</span>`;
-      }
-      return `<div style="${blockBase}"><span class="chok-rashi-label">📝 רש״י</span>${inner}</div>`;
+    result += unmatched.map((t) => {
+      const { inner } = buildInner(t);
+      return `<div style="${blockBase}"><span class="chok-rashi-label" style="color:${color} !important;">${emoji} ${label}</span>${inner}</div>`;
     }).join('');
   }
   return result;
+}
+
+// Embeds Rashi comments inline in Gemara text by matching the dibur hamatchil
+function _buildGemaraWithInlineRashi(gemaraHtml, rashiComments) {
+  return _buildTextWithInlineComments(gemaraHtml, rashiComments, {
+    label: 'רש״י',
+    emoji: '📝',
+    color: '#7c3aed',
+    diburColor: '#b45309',
+    textColor: '#4c1d95',
+  });
 }
 
 function renderChokContent() {
@@ -1838,61 +2122,49 @@ function renderChokContent() {
         html += `<div style="font-size:0.68rem;color:#94a3b8;font-weight:600;margin-bottom:0.4rem;">${src.heRef}</div>`;
       }
 
-      // Gemara: embed Rashi inline in the text
-      if (showRashi && currentSection === 'גמרא' && src.ref) {
+      // רש״י משובץ בתוך הטקסט — גמרא, תורה, נביאים וכתובים
+      const _wantInlineRashi =
+        showRashi &&
+        src.ref &&
+        (currentSection === 'גמרא' ||
+          _CHOK_VERSE_LABEL_SECTIONS.has(currentSection));
+      if (_wantInlineRashi) {
         const rashiVal = _chokRashiCache[src.ref];
         if (rashiVal && rashiVal.verses) {
           const allComments = rashiVal.verses.flat().filter(Boolean);
-          html += _buildGemaraWithInlineRashi(src.text.he, allComments);
+          if (allComments.length) {
+            html += _buildGemaraWithInlineRashi(src.text.he, allComments);
+          } else {
+            html += src.text.he;
+            html += `<div style="margin-top:0.6rem;padding:0.45rem 0.7rem;border-radius:0.4rem;background:rgba(124,58,237,0.04);border:1px dashed rgba(124,58,237,0.25);color:#7c3aed;font-size:0.72rem;font-style:italic;text-align:center;">📝 אין פירוש רש״י על קטע זה</div>`;
+          }
         } else {
           html += src.text.he;
           if (rashiVal === 'loading') {
             html += `<div style="margin-top:0.4rem;font-size:0.75rem;color:#7c3aed;font-style:italic;opacity:0.7;">טוען פירוש רש״י...</div>`;
+          } else if (rashiVal === null) {
+            html += `<div style="margin-top:0.6rem;padding:0.45rem 0.7rem;border-radius:0.4rem;background:rgba(124,58,237,0.04);border:1px dashed rgba(124,58,237,0.25);color:#7c3aed;font-size:0.72rem;font-style:italic;text-align:center;">📝 אין פירוש רש״י על קטע זה</div>`;
+          }
+        }
+      } else if (showBartenura && currentSection === 'משנה' && src.ref) {
+        // ברטנורא משובץ בתוך טקסט המשנה
+        const bartVal = _chokBartenuraCache[src.ref];
+        if (Array.isArray(bartVal) && bartVal.length > 0) {
+          html += _buildTextWithInlineComments(src.text.he, bartVal, {
+            label: 'ברטנורא',
+            emoji: '📖',
+            color: '#0891b2',
+            diburColor: '#b45309',
+            textColor: '#164e63',
+          });
+        } else {
+          html += src.text.he;
+          if (bartVal === 'loading') {
+            html += `<div style="margin-top:0.4rem;font-size:0.75rem;color:#0891b2;font-style:italic;opacity:0.7;">טוען פירוש ברטנורא...</div>`;
           }
         }
       } else {
         html += src.text.he;
-      }
-
-      // Rashi block — for Torah / Nevi'im / Ketuvim (per-verse, with labels)
-      if (showRashi && _CHOK_VERSE_LABEL_SECTIONS.has(currentSection) && src.ref) {
-        const rashiVal = _chokRashiCache[src.ref];
-        if (rashiVal && rashiVal.verses) {
-          const hasAny = rashiVal.verses.some(v => v.length > 0);
-          if (hasAny) {
-            html += `<div style="margin-top:0.8rem;padding:0.6rem 0.8rem;border-radius:0.5rem;background:rgba(124,58,237,0.05);border:1px solid rgba(124,58,237,0.18);">
-              <div style="font-size:0.65rem;color:#7c3aed;font-weight:900;margin-bottom:0.5rem;">📝 רש״י:</div>`;
-            const startVerse = rashiVal.startVerse || 1;
-            rashiVal.verses.forEach((verseTexts, i) => {
-              if (!verseTexts.length) return;
-              const verseNum = startVerse + i;
-              html += `<div style="font-size:0.63rem;color:#7c3aed;font-weight:700;margin:0.45rem 0 0.2rem;">פסוק ${_numToHebVerseNum(verseNum)}</div>`;
-              html += verseTexts.map(t => `<p style="line-height:1.85;margin:0 0 0.25rem 0;color:#4c1d95;font-size:0.92em;">${t}</p>`).join('');
-            });
-            html += `</div>`;
-          } else {
-            // Fetched but no commentary on these verses
-            html += `<div style="margin-top:0.6rem;padding:0.45rem 0.7rem;border-radius:0.4rem;background:rgba(124,58,237,0.04);border:1px dashed rgba(124,58,237,0.25);color:#7c3aed;font-size:0.72rem;font-style:italic;text-align:center;">📝 אין פירוש רש״י על פסוקים אלה</div>`;
-          }
-        } else if (rashiVal === 'loading') {
-          html += `<div style="margin-top:0.4rem;font-size:0.75rem;color:#7c3aed;font-style:italic;opacity:0.7;">טוען פירוש רש״י...</div>`;
-        } else if (rashiVal === null) {
-          // Fetch completed but returned no Rashi content
-          html += `<div style="margin-top:0.6rem;padding:0.45rem 0.7rem;border-radius:0.4rem;background:rgba(124,58,237,0.04);border:1px dashed rgba(124,58,237,0.25);color:#7c3aed;font-size:0.72rem;font-style:italic;text-align:center;">📝 אין פירוש רש״י על פסוקים אלה</div>`;
-        }
-      }
-
-      // Bartenura block
-      if (showBartenura && currentSection === 'משנה' && src.ref) {
-        const bartVal = _chokBartenuraCache[src.ref];
-        if (Array.isArray(bartVal) && bartVal.length > 0) {
-          html += `<div style="margin-top:0.8rem;padding:0.6rem 0.8rem;border-radius:0.5rem;background:rgba(8,145,178,0.05);border:1px solid rgba(8,145,178,0.18);">
-            <div style="font-size:0.65rem;color:#0891b2;font-weight:900;margin-bottom:0.35rem;">📖 ר׳ עובדיה מברטנורא:</div>
-            ${bartVal.map(t => `<p style="line-height:1.85;margin:0 0 0.25rem 0;color:#164e63;font-size:0.92em;">${t}</p>`).join('')}
-          </div>`;
-        } else if (bartVal === 'loading') {
-          html += `<div style="margin-top:0.4rem;font-size:0.75rem;color:#0891b2;font-style:italic;opacity:0.7;">טוען פירוש ברטנורא...</div>`;
-        }
       }
 
       html += `</div>`;
@@ -2437,7 +2709,7 @@ async function fetchLiveCalendarData() {
       document.getElementById("daf-yomi-text").textContent = displayDaf;
       document.getElementById("daf-yomi-link").onclick = (e) => {
         e.preventDefault();
-        openSefariaModal(displayDaf, dafEvent.title);
+        openSefariaModal(displayDaf, dafEvent.title, { daf: true });
       };
     }
 
@@ -2536,6 +2808,67 @@ async function fetchLiveCalendarData() {
                 <span id="shabbat-exit" class="dashboard-shabbat-value" dir="ltr">${h}</span>
               </div>
             `;
+    }
+
+    /* ── זיהוי כניסת חג קרובה: הדלקת נרות + צאת החג (לטיימר ולמודאל) ── */
+    try {
+      const _hcBase = new Date();
+      _hcBase.setHours(0, 0, 0, 0);
+      const _hcIso = (d) =>
+        `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      const _hcEnd = new Date(_hcBase);
+      _hcEnd.setDate(_hcEnd.getDate() + 3);
+      const hcData = await fetchHebcalWithCache(
+        `https://www.hebcal.com/hebcal?v=1&cfg=json&c=on&${getGeoParams()}&start=${_hcIso(_hcBase)}&end=${_hcIso(_hcEnd)}&maj=on&i=on`,
+      );
+      window.HOLIDAY_CANDLES_TIME = null;
+      window.HOLIDAY_HAVDALAH_TIME = null;
+      window.HOLIDAY_CANDLES_STR = "";
+      window.HOLIDAY_HAVDALAH_STR = "";
+      window.HOLIDAY_NAME_HE = "";
+      if (hcData && hcData.items) {
+        const candleItem = hcData.items.find(
+          (i) =>
+            i.category === "candles" &&
+            new Date(i.date).getDay() !== 5 &&
+            new Date(i.date) > new Date(),
+        );
+        if (candleItem) {
+          let candleDate = new Date(candleItem.date);
+          // דיוק: חישוב הדלקת נרות לפי KosherZmanim אם הספרייה זמינה
+          try {
+            const kzC = computeKosherZmanim(new Date(candleItem.date));
+            if (kzC && kzC.times && kzC.times.candleLighting) {
+              candleDate = new Date(kzC.times.candleLighting);
+            }
+          } catch (e2) {}
+          window.HOLIDAY_CANDLES_TIME = candleDate;
+          window.HOLIDAY_CANDLES_STR = formatTimeStr(candleDate.toISOString());
+          // שם החג: אירוע החג שביום שאחרי ההדלקה
+          const dayAfter = new Date(candleItem.date);
+          dayAfter.setDate(dayAfter.getDate() + 1);
+          const dayAfterIso = _hcIso(dayAfter);
+          const holEv = hcData.items.find(
+            (i) =>
+              i.category === "holiday" &&
+              i.date &&
+              i.date.substring(0, 10) === dayAfterIso,
+          );
+          window.HOLIDAY_NAME_HE = holEv
+            ? holEv.hebrew
+            : candleItem.memo || "חג";
+          // צאת החג: ההבדלה הראשונה שאחרי ההדלקה
+          const havItem = hcData.items.find(
+            (i) => i.category === "havdalah" && new Date(i.date) > candleDate,
+          );
+          if (havItem) {
+            window.HOLIDAY_HAVDALAH_TIME = new Date(havItem.date);
+            window.HOLIDAY_HAVDALAH_STR = formatTimeStr(havItem.date);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("Holiday candles detection:", e);
     }
 
     const cy = dateForHebcal.getFullYear();
@@ -2685,7 +3018,11 @@ async function fetchLiveCalendarData() {
         return;
       }
 
-      if (ev.category === "fast" || /Tzom|Ta'anit|Tisha/.test(ev.title)) {
+      if (
+        ev.category === "fast" ||
+        ev.subcat === "fast" ||
+        /Tzom|Ta'anit|Tisha|Tish'a/.test(ev.title)
+      ) {
         type = "fast";
         icon = "⚖️";
       } else if (ev.category === "holiday") {
@@ -2771,8 +3108,16 @@ async function fetchLiveCalendarData() {
     );
     if (nextH) {
       window._nextMoadName = nextH.name;
-      document.getElementById("stat-next").innerHTML =
-        `${nextH.name} <br><span class="text-sm font-normal opacity-80">(בעוד ${getDaysDiff(nextH.date)} ימים)</span>`;
+      const diffH = getDaysDiff(nextH.date);
+      if (diffH <= 0) {
+        // ביום המועד עצמו — מציגים זמני כניסה ויציאה במקום "בעוד 0 ימים"
+        document.getElementById("stat-next").innerHTML =
+          `${nextH.name} <br><span id="stat-next-times" class="text-sm font-normal opacity-90">⏳ מחשב זמנים...</span>`;
+        renderNextMoedTimes(nextH);
+      } else {
+        document.getElementById("stat-next").innerHTML =
+          `${nextH.name} <br><span class="text-sm font-normal opacity-80">(בעוד ${diffH} ימים)</span>`;
+      }
     }
 
     const nextM = ALL_EVENTS.find((e) => e.type === "moon");
@@ -2788,6 +3133,11 @@ async function fetchLiveCalendarData() {
           document.getElementById("stat-moon").innerHTML =
             `${nextM.name.replace("קידוש לבנה - ", "")} <br><span class="text-sm font-normal opacity-80" style="color:#fbbf24">(סוף זמן בעוד ${daysToEnd} ימים)</span>`;
         }
+      } else if (getDaysDiff(nextM.date) <= 0) {
+        // חלון הברכה נפתח היום — ספירה לאחור עד תחילת הזמן הערב
+        document.getElementById("stat-moon").innerHTML =
+          `${nextM.name.replace("קידוש לבנה - ", "")} <br><span class="text-sm font-normal opacity-80" style="color:#6ee7b7">⏱ ניתן לברך בעוד: <span id="levana-countdown-display">00:00:00</span></span>`;
+        _startLevanaCountdown(nextM.date, "s");
       } else {
         document.getElementById("stat-moon").innerHTML =
           `${nextM.name.replace("קידוש לבנה - ", "")} <br><span class="text-sm font-normal opacity-80">(בעוד ${getDaysDiff(nextM.date)} ימים)</span>`;
@@ -2917,7 +3267,7 @@ const PRAYER_DB = {
   "tefillat-haderech": {
     title: "תפילת הדרך",
     nusach: {
-      mizrahi: `יְהִי רָצוֹן מִלְּפָנֶיךָ יְהֹוָה אֱלֹהֵינוּ וֵאלֹהֵי אֲבוֹתֵינוּ, שֶׁתּוֹלִיכֵנוּ לְשָׁלוֹם, וְתַצְעִידֵנוּ לְשָׁלוֹם, וְתַדְרִיכֵנוּ לְשָׁלוֹם, וְתַגִּיעֵנוּ לִמְחוֹז חֶפְצֵנוּ לְשָׁלוֹם: <span style="font-size:0.7em;">(וְתַחֲזִירֵנוּ לְשָׁלוֹם)</span>, וְתַצִּילֵנוּ מִכַּף כָּל-אוֹיֵב וְאוֹרֵב בַּדֶּרֶךְ, וְתִשְׁלַח בְּרָכָה בְּמַעֲשֵׂי יָדֵינוּ, וְתִתְּנֵנוּ לְחֵן וּלְחֶסֶד וּלְרַחֲמִים בְּעֵינֶיךָ וּבְעֵינֵי כָל-רוֹאֵינוּ, וְתִשְׁמַע קוֹל תַּחֲנוּנֵינוּ. כִּי אֵל שׁוֹמֵעַ תְּפִלָּה וְתַחֲנוּן אָתָּה. בָּרוּךְ אַתָּה יְהֹוָה שׁוֹמֵעַ תְּפִלָּה:\n\n<span style="color:blue;font-size:0.82em;">וַיַּעֲקֹב הָלַךְ לְדַרְכּוֹ, וַיִּפְגְּעוּ בוֹ מַלְאֲכֵי אֱלֹהִים: וַיֹּאמֶר יַעֲקֹב כַּאֲשֶׁר רָאָם, מַחֲנֵה אֱלֹהִים זֶה, וַיִּקְרָא שֵׁם הַמָּקוֹם הַהוּא מַחֲנָיִם:</span>\n\n<span style="color:blue;font-size:0.82em;">(ג' פעמים) וַיִּסָּעוּ, וַיְהִי חִתַּת אֱלֹהִים עַל הֶעָרִים אֲשֶׁר סְבִיבוֹתֵיהֶם, וְלֹא רָדְפוּ אַחֲרֵי בְּנֵי יַעֲקֹב:</span>\n\n<span style="color:blue;font-size:0.82em;">לִישׁוּעָתְךָ קִוִּיתִי יְהֹוָה (ג' פעמים)</span>\n\n<span style="color:blue;font-size:0.82em;">יְבָרֶכְךָ יְהֹוָה וְיִשְׁמְרֶךָ: | יָאֵר יְהֹוָה פָּנָיו אֵלֶיךָ וִיחֻנֶּךָּ: | יִשָּׂא יְהֹוָה פָּנָיו אֵלֶיךָ, וְיָשֵׂם לְךָ שָׁלוֹם: (ג' פעמים)</span>`,
+      mizrahi: `יְהִי רָצוֹן מִלְּפָנֶיךָ יְהֹוָה אֱלֹהֵינוּ וֵאלֹהֵי אֲבוֹתֵינוּ, שֶׁתּוֹלִיכֵנוּ לְשָׁלוֹם וְתַצְעִידֵנוּ לְשָׁלוֹם וְתַדְרִיכֵנוּ לְשָׁלוֹם, וְתַגִּיעֵנוּ לִמְחוֹז חֶפְצֵנוּ לְחַיִּים וּלְשִׂמְחָה וּלְשָׁלוֹם. <span style="font-size:0.7em;">(וְתַחְזִירֵנוּ לְשָׁלוֹם)</span> וְתַצִּילֵנוּ מִכַּף כָּל אוֹיֵב וְאוֹרֵב וְלִסְטִים וְחַיּוֹת רָעוֹת בַּדֶּרֶךְ, וּמִכָּל מִינֵי פֻּרְעָנֻיּוֹת הַמִּתְרַגְּשׁוֹת לָבוֹא לָעוֹלָם, וְתִשְׁלַח בְּרָכָה בְּכָל מַעֲשֵׂה יָדֵינוּ, וְתִתְּנֵנוּ לְחֵן וּלְחֶסֶד וּלְרַחֲמִים בְּעֵינֶיךָ וּבְעֵינֵי כָל רוֹאֵינוּ, וְתִשְׁמַע כָּל תַּחֲנוּנֵינוּ, כִּי אֵל שׁוֹמֵעַ תְּפִלָּה וְתַחֲנוּן אָתָּה. בָּרוּךְ אַתָּה יְהֹוָה שׁוֹמֵעַ תְּפִלָּה:\n\n<span style="color:blue;font-size:0.82em;">וַיַּעֲקֹב הָלַךְ לְדַרְכּוֹ, וַיִּפְגְּעוּ בוֹ מַלְאֲכֵי אֱלֹהִים: וַיֹּאמֶר יַעֲקֹב כַּאֲשֶׁר רָאָם, מַחֲנֵה אֱלֹהִים זֶה, וַיִּקְרָא שֵׁם הַמָּקוֹם הַהוּא מַחֲנָיִם:</span>\n\n<span style="color:blue;font-size:0.82em;">(ג' פעמים) וַיִּסָּעוּ, וַיְהִי חִתַּת אֱלֹהִים עַל הֶעָרִים אֲשֶׁר סְבִיבוֹתֵיהֶם, וְלֹא רָדְפוּ אַחֲרֵי בְּנֵי יַעֲקֹב:</span>\n\n<span style="color:blue;font-size:0.82em;">לִישׁוּעָתְךָ קִוִּיתִי יְהֹוָה (ג' פעמים)</span>\n\n<span style="color:blue;font-size:0.82em;">יְבָרֶכְךָ יְהֹוָה וְיִשְׁמְרֶךָ: | יָאֵר יְהֹוָה פָּנָיו אֵלֶיךָ וִיחֻנֶּךָּ: | יִשָּׂא יְהֹוָה פָּנָיו אֵלֶיךָ, וְיָשֵׂם לְךָ שָׁלוֹם: (ג' פעמים)</span>`,
       ashkenaz: `יְהִי רָצוֹן מִלְּפָנֶיךָ יְהֹוָה אֱלֹהֵינוּ וֵאלֹהֵי אֲבוֹתֵינוּ, שֶׁתּוֹלִיכֵנוּ לְשָׁלוֹם וְתַצְעִידֵנוּ לְשָׁלוֹם וְתַדְרִיכֵנוּ לְשָׁלוֹם, וְתִסְמְכֵנוּ לְשָׁלוֹם וְתַגִּיעֵנוּ לִמְחוֹז חֶפְצֵנוּ לְחַיִּים וּלְשִׂמְחָה וּלְשָׁלוֹם. וְתַצִּילֵנוּ מִכַּף כָּל אוֹיֵב וְאוֹרֵב וְלִסְטִים וְחַיּוֹת רָעוֹת בַּדֶּרֶךְ, וּמִכָּל מִינֵי פֻּרְעָנֻיּוֹת הַמִּתְרַגְּשׁוֹת לָבוֹא לָעוֹלָם. וְתִשְׁלַח בְּרָכָה בְּכָל מַעֲשֵׂה יָדֵינוּ, וְתִתְּנֵנוּ לְחֵן וּלְחֶסֶד וּלְרַחֲמִים בְּעֵינֶיךָ וּבְעֵינֵי כָל רוֹאֵינוּ. וְתִשְׁמַע קוֹל תַּחֲנוּנֵינוּ, כִּי אֵל שׁוֹמֵעַ תְּפִלָּה וְתַחֲנוּן אָתָּה.\n\nבָּרוּךְ אַתָּה יְהֹוָה, שׁוֹמֵעַ תְּפִלָּה.`,
     },
     seasonal: () => "",
@@ -3240,7 +3590,7 @@ function openPrayer(key, heLabel, enLabel) {
             </div>
             <div class="modal-nusach" style="color:#64748b;font-size:0.75rem;margin-bottom:1.2rem;">נוסח: <strong style="color:#818cf8;">${nusachNames[CURRENT_NUSACH] || CURRENT_NUSACH}</strong> &nbsp;|&nbsp; ניתן לשנות בהגדרות</div>
             ${seasonNote ? `<div class="modal-season" style="background:rgba(234,179,8,0.12);border:1px solid rgba(234,179,8,0.3);border-radius:1rem;padding:0.85rem 1rem;margin-bottom:1rem;font-size:0.82rem;color:#fde047;line-height:1.7;">${seasonNote.replace(/\n/g, "<br>")}</div>` : ""}
-            <div class="modal-body" style="background:rgba(255,255,255,0.04);border-radius:1rem;padding:1.25rem;font-size:1rem;line-height:2;color:#e2e8f0;font-family:'David Libre','Frank Ruhl Libre',serif;max-height:60vh;overflow-y:auto;">
+            <div class="modal-body" style="background:rgba(255,255,255,0.04);border-radius:1rem;padding:1.25rem;font-size:1rem;line-height:2;color:#e2e8f0;font-family:'Frank Ruhl Libre','David Libre',serif;max-height:60vh;overflow-y:auto;">
               ${formatText(text)}
               ${entry.extraLink ? `<br><br><a href="${entry.extraLink}" target="_blank" style="color:#60a5fa;font-size:0.85rem;">📖 פתח טקסט מלא ב-Sefaria.org ←</a>` : ""}
             </div>
@@ -3376,7 +3726,7 @@ function openTehillimPage() {
                 <h3 id="psalm-title" style="color:#f1f5f9;font-size:1rem;font-weight:900;margin:0;">תהלים א</h3>
                 <div style="width:60px;"></div>
               </div>
-              <div id="psalm-text-area" style="padding:1.25rem;overflow-y:auto;flex:1;font-family:'David Libre','Frank Ruhl Libre',serif;font-size:1.05rem;line-height:2;color:#e2e8f0;text-align:center;direction:rtl;">
+              <div id="psalm-text-area" style="padding:1.25rem;overflow-y:auto;flex:1;font-family:'Frank Ruhl Libre','David Libre',serif;font-size:1.05rem;line-height:2;color:#e2e8f0;text-align:center;direction:rtl;">
                 <div style="text-align:center;padding:2rem;">
                   <div style="width:36px;height:36px;border:3px solid ${color};border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 1rem;"></div>
                   <p style="color:#64748b;">טוען...</p>
@@ -3908,85 +4258,34 @@ function showZmanOpinions(key) {
   pushModalState("zman-opinions-modal");
 }
 
-async function fetchFastTimes(name, dateStr, elementId) {
-  try {
-    const ui = getDynamicUiText();
-    let isMajorFast =
-      name.includes("Kippur") ||
-      name.includes("Av") ||
-      name.includes("כיפור") ||
-      name.includes("באב");
-    let startStr = "",
-      endStr = "";
+/* ── חישוב חלון צום: כניסה ויציאה כאובייקטי Date ──
+   צום גדול (ת"ב / יוה"כ): נכנס בערב — ת"ב בשקיעה, יוה"כ בהדלקת נרות.
+   צום קטן: נכנס בעלות השחר של אותו יום. היציאה תמיד בצאת הכוכבים. */
+async function computeFastWindow(name, dateStr) {
+  const isMajorFast =
+    name.includes("Kippur") ||
+    name.includes("Av") ||
+    name.includes("כיפור") ||
+    name.includes("באב");
+  const isKippur = name.includes("Kippur") || name.includes("כיפור");
 
-    await ensureCityCoords();
+  await ensureCityCoords();
 
-    if (isMajorFast) {
-      let prevDay = new Date(dateStr);
-      prevDay.setDate(prevDay.getDate() - 1);
-      const kzPrev = computeKosherZmanim(prevDay);
-      const kzCurr = computeKosherZmanim(new Date(dateStr));
-      let resPrev, resCurr;
-      if (
-        kzPrev &&
-        kzPrev.times &&
-        kzPrev.times.sunset &&
-        kzCurr &&
-        kzCurr.times
-      ) {
-        resPrev = kzPrev;
-        resCurr = kzCurr;
-      } else {
-        let prevIso = prevDay.toISOString().split("T")[0];
-        [resPrev, resCurr] = await Promise.all([
-          fetchHebcalWithCache(
-            `https://www.hebcal.com/zmanim?cfg=json&${getGeoParams()}&date=${prevIso}`,
-          ),
-          fetchHebcalWithCache(
-            `https://www.hebcal.com/zmanim?cfg=json&${getGeoParams()}&date=${dateStr}`,
-          ),
-        ]);
-      }
-      startStr = formatLocalizedTime(resPrev.times.sunset);
-      window.FAST_END_TIME = new Date(resCurr.times.tzeit7083deg);
-      endStr = formatLocalizedTime(window.FAST_END_TIME);
-    } else {
-      const kzRes = computeKosherZmanim(new Date(dateStr));
-      let res;
-      if (kzRes && kzRes.times && kzRes.times.alotHaShachar) {
-        res = kzRes;
-      } else {
-        res = await fetchHebcalWithCache(
-          `https://www.hebcal.com/zmanim?cfg=json&${getGeoParams()}&date=${dateStr}`,
-        );
-      }
-      startStr = formatLocalizedTime(res.times.alotHaShachar);
-      window.FAST_END_TIME = new Date(res.times.tzeit7083deg);
-      endStr = formatLocalizedTime(window.FAST_END_TIME);
-    }
-
-    const el = document.getElementById(elementId);
-    if (el) {
-      if (CURRENT_LANG !== "he") {
-        el.innerHTML = `<span class="bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300 px-2 py-1 rounded-lg border border-rose-200 dark:border-rose-800">${ui.fastStart}: <strong dir="ltr">${startStr}</strong></span> <span class="bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300 px-2 py-1 rounded-lg border border-rose-200 dark:border-rose-800">${ui.fastEnd}: <strong dir="ltr">${endStr}</strong></span>`;
-        return;
-      }
-      el.innerHTML = `<span class="bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300 px-2 py-1 rounded-lg border border-rose-200 dark:border-rose-800">תחילת צום: <strong dir="ltr">${startStr}</strong></span> <span class="bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300 px-2 py-1 rounded-lg border border-rose-200 dark:border-rose-800">סיום צום: <strong dir="ltr">${endStr}</strong></span>`;
-    }
-  } catch (err) {
-    const el = document.getElementById(elementId);
-    if (el) el.innerHTML = "";
+  // אירועי "ערב" (ערב תשעה באב וכו') — הצום עצמו הוא ביום שאחרי
+  let fastDay = new Date(dateStr);
+  if (name.includes("ערב") || name.includes("Erev")) {
+    fastDay.setDate(fastDay.getDate() + 1);
   }
-}
+  const fastDayIso = `${fastDay.getFullYear()}-${String(fastDay.getMonth() + 1).padStart(2, "0")}-${String(fastDay.getDate()).padStart(2, "0")}`;
 
-async function fetchHolidayTimes(name, dateStr, elementId) {
-  try {
-    const ui = getDynamicUiText();
-    let prevDay = new Date(dateStr);
+  let start = null,
+    end = null;
+
+  if (isMajorFast) {
+    const prevDay = new Date(fastDay);
     prevDay.setDate(prevDay.getDate() - 1);
-    await ensureCityCoords();
     const kzPrev = computeKosherZmanim(prevDay);
-    const kzCurr = computeKosherZmanim(new Date(dateStr));
+    const kzCurr = computeKosherZmanim(fastDay);
     let resPrev, resCurr;
     if (
       kzPrev &&
@@ -3998,18 +4297,197 @@ async function fetchHolidayTimes(name, dateStr, elementId) {
       resPrev = kzPrev;
       resCurr = kzCurr;
     } else {
-      let prevIso = prevDay.toISOString().split("T")[0];
+      const prevIso = `${prevDay.getFullYear()}-${String(prevDay.getMonth() + 1).padStart(2, "0")}-${String(prevDay.getDate()).padStart(2, "0")}`;
       [resPrev, resCurr] = await Promise.all([
         fetchHebcalWithCache(
           `https://www.hebcal.com/zmanim?cfg=json&${getGeoParams()}&date=${prevIso}`,
         ),
         fetchHebcalWithCache(
-          `https://www.hebcal.com/zmanim?cfg=json&${getGeoParams()}&date=${dateStr}`,
+          `https://www.hebcal.com/zmanim?cfg=json&${getGeoParams()}&date=${fastDayIso}`,
         ),
       ]);
     }
-    let startStr = formatLocalizedTime(resPrev.times.sunset);
-    let endStr = formatLocalizedTime(resCurr.times.tzeit7083deg);
+    // יוה"כ נכנס בהדלקת נרות; ת"ב בשקיעה
+    const startIso =
+      isKippur && resPrev.times.candleLighting
+        ? resPrev.times.candleLighting
+        : resPrev.times.sunset;
+    start = startIso ? new Date(startIso) : null;
+    end = resCurr.times.tzeit7083deg
+      ? new Date(resCurr.times.tzeit7083deg)
+      : null;
+  } else {
+    const kzRes = computeKosherZmanim(fastDay);
+    let res;
+    if (kzRes && kzRes.times && kzRes.times.alotHaShachar) {
+      res = kzRes;
+    } else {
+      res = await fetchHebcalWithCache(
+        `https://www.hebcal.com/zmanim?cfg=json&${getGeoParams()}&date=${fastDayIso}`,
+      );
+    }
+    start = res.times.alotHaShachar ? new Date(res.times.alotHaShachar) : null;
+    end = res.times.tzeit7083deg ? new Date(res.times.tzeit7083deg) : null;
+  }
+  return { start, end };
+}
+
+/* ── טיימר חי לסיום הצום: מעדכן כל אלמנט .fast-live-countdown לפי data-end ── */
+function _ensureFastCountdownTicker() {
+  if (window._fastCountdownInterval) return;
+  const tick = () => {
+    const els = document.querySelectorAll(".fast-live-countdown");
+    if (!els.length) {
+      clearInterval(window._fastCountdownInterval);
+      window._fastCountdownInterval = null;
+      return;
+    }
+    const now = Date.now();
+    els.forEach((el) => {
+      const end = Number(el.dataset.end || 0);
+      const diff = end - now;
+      if (diff <= 0) {
+        el.textContent = "הצום הסתיים";
+        el.classList.remove("fast-live-countdown");
+        return;
+      }
+      const totalSecs = Math.floor(diff / 1000);
+      const h = Math.floor(totalSecs / 3600);
+      const m = Math.floor((totalSecs % 3600) / 60);
+      const s = totalSecs % 60;
+      const pad = (n) => String(n).padStart(2, "0");
+      el.textContent = `${pad(h)}:${pad(m)}:${pad(s)}`;
+    });
+  };
+  tick();
+  window._fastCountdownInterval = setInterval(tick, 1000);
+}
+
+/* ── טיימר תגיות ברכת הלבנה: מעדכן כל .levana-badge-countdown לפי data-target ── */
+function _ensureLevanaBadgeTicker() {
+  if (window._levanaBadgeInterval) return;
+  const tick = () => {
+    const els = document.querySelectorAll(".levana-badge-countdown");
+    if (!els.length) {
+      clearInterval(window._levanaBadgeInterval);
+      window._levanaBadgeInterval = null;
+      return;
+    }
+    const now = Date.now();
+    els.forEach((el) => {
+      const target = Number(el.dataset.target || 0);
+      const diff = target - now;
+      if (diff <= 0) {
+        el.textContent = "הזמן הסתיים";
+        el.classList.remove("levana-badge-countdown");
+        return;
+      }
+      const totalSecs = Math.floor(diff / 1000);
+      const h = Math.floor(totalSecs / 3600);
+      const m = Math.floor((totalSecs % 3600) / 60);
+      const s = totalSecs % 60;
+      const pad = (n) => String(n).padStart(2, "0");
+      el.textContent = `${pad(h)}:${pad(m)}:${pad(s)}`;
+    });
+  };
+  tick();
+  window._levanaBadgeInterval = setInterval(tick, 1000);
+}
+
+/* HTML של ספירה לאחור לסיום הצום — מוצג רק כשהצום בעיצומו */
+function _fastCountdownHtml(win) {
+  if (!win || !win.end) return "";
+  const now = new Date();
+  if (!(win.start && now >= win.start && now < win.end)) return "";
+  return `<span class="bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-2 py-1 rounded-lg border border-amber-200 dark:border-amber-800">⏱ לסיום הצום: <strong dir="ltr" class="fast-live-countdown" data-end="${win.end.getTime()}">--:--:--</strong></span>`;
+}
+
+async function fetchFastTimes(name, dateStr, elementId) {
+  try {
+    const ui = getDynamicUiText();
+    const win = await computeFastWindow(name, dateStr);
+    const startStr = win.start ? formatLocalizedTime(win.start) : "--:--";
+    const endStr = win.end ? formatLocalizedTime(win.end) : "--:--";
+    // FAST_END_TIME משמש להתראת סיום צום — נשמר רק כשהצום קרוב/בעיצומו
+    if (
+      win.start &&
+      win.end &&
+      Date.now() >= win.start.getTime() - 24 * 3600 * 1000 &&
+      Date.now() < win.end.getTime()
+    ) {
+      window.FAST_END_TIME = win.end;
+    }
+
+    const el = document.getElementById(elementId);
+    if (el) {
+      if (CURRENT_LANG !== "he") {
+        el.innerHTML = `<span class="bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300 px-2 py-1 rounded-lg border border-rose-200 dark:border-rose-800">${ui.fastStart}: <strong dir="ltr">${startStr}</strong></span> <span class="bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300 px-2 py-1 rounded-lg border border-rose-200 dark:border-rose-800">${ui.fastEnd}: <strong dir="ltr">${endStr}</strong></span>`;
+        return;
+      }
+      const countdownHtml = _fastCountdownHtml(win);
+      el.innerHTML = `<span class="bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300 px-2 py-1 rounded-lg border border-rose-200 dark:border-rose-800">כניסת הצום: <strong dir="ltr">${startStr}</strong></span> <span class="bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300 px-2 py-1 rounded-lg border border-rose-200 dark:border-rose-800">יציאת הצום: <strong dir="ltr">${endStr}</strong></span>${countdownHtml}`;
+      if (countdownHtml) _ensureFastCountdownTicker();
+    }
+  } catch (err) {
+    const el = document.getElementById(elementId);
+    if (el) el.innerHTML = "";
+  }
+}
+
+/* ── חישוב חלון חג: כניסה בהדלקת נרות של ערב החג, יציאה בצאת הכוכבים ── */
+async function computeHolidayWindow(name, dateStr) {
+  let holidayDay = new Date(dateStr);
+  if (name.includes("ערב") || name.includes("Erev")) {
+    holidayDay.setDate(holidayDay.getDate() + 1);
+  }
+  const dayIso = `${holidayDay.getFullYear()}-${String(holidayDay.getMonth() + 1).padStart(2, "0")}-${String(holidayDay.getDate()).padStart(2, "0")}`;
+  const prevDay = new Date(holidayDay);
+  prevDay.setDate(prevDay.getDate() - 1);
+  await ensureCityCoords();
+  const kzPrev = computeKosherZmanim(prevDay);
+  const kzCurr = computeKosherZmanim(holidayDay);
+  let resPrev, resCurr;
+  if (kzPrev && kzPrev.times && kzPrev.times.sunset && kzCurr && kzCurr.times) {
+    resPrev = kzPrev;
+    resCurr = kzCurr;
+  } else {
+    const prevIso = `${prevDay.getFullYear()}-${String(prevDay.getMonth() + 1).padStart(2, "0")}-${String(prevDay.getDate()).padStart(2, "0")}`;
+    [resPrev, resCurr] = await Promise.all([
+      fetchHebcalWithCache(
+        `https://www.hebcal.com/zmanim?cfg=json&${getGeoParams()}&date=${prevIso}`,
+      ),
+      fetchHebcalWithCache(
+        `https://www.hebcal.com/zmanim?cfg=json&${getGeoParams()}&date=${dayIso}`,
+      ),
+    ]);
+  }
+  // כניסת החג = הדלקת נרות (שקיעה פחות 18/20/40 דק' לפי מקום); fallback לשקיעה
+  let startIso = resPrev.times.candleLighting || null;
+  if (!startIso && resPrev.times.sunset) {
+    const coords = getLocationCoords();
+    const isIsrael =
+      coords.lat >= 29.4 &&
+      coords.lat <= 33.5 &&
+      coords.lon >= 34.2 &&
+      coords.lon <= 35.9;
+    const offsetMin = isIsrael ? 20 : 18;
+    startIso = new Date(
+      new Date(resPrev.times.sunset).getTime() - offsetMin * 60000,
+    ).toISOString();
+  }
+  const start = startIso ? new Date(startIso) : null;
+  const end = resCurr.times.tzeit7083deg
+    ? new Date(resCurr.times.tzeit7083deg)
+    : null;
+  return { start, end };
+}
+
+async function fetchHolidayTimes(name, dateStr, elementId) {
+  try {
+    const ui = getDynamicUiText();
+    const win = await computeHolidayWindow(name, dateStr);
+    const startStr = win.start ? formatLocalizedTime(win.start) : "--:--";
+    const endStr = win.end ? formatLocalizedTime(win.end) : "--:--";
 
     const el = document.getElementById(elementId);
     if (el) {
@@ -4017,11 +4495,47 @@ async function fetchHolidayTimes(name, dateStr, elementId) {
         el.innerHTML = `<span class="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-lg border border-blue-200 dark:border-blue-800">${ui.holidayEnter}: <strong dir="ltr">${startStr}</strong></span> <span class="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-lg border border-blue-200 dark:border-blue-800">${ui.holidayExit}: <strong dir="ltr">${endStr}</strong></span>`;
         return;
       }
-      el.innerHTML = `<span class="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-lg border border-blue-200 dark:border-blue-800">כניסת חג: <strong dir="ltr">${startStr}</strong></span> <span class="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-lg border border-blue-200 dark:border-blue-800">יציאת חג: <strong dir="ltr">${endStr}</strong></span>`;
+      el.innerHTML = `<span class="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-lg border border-blue-200 dark:border-blue-800">כניסת החג: <strong dir="ltr">${startStr}</strong></span> <span class="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-lg border border-blue-200 dark:border-blue-800">יציאת החג: <strong dir="ltr">${endStr}</strong></span>`;
     }
   } catch (err) {
     const el = document.getElementById(elementId);
     if (el) el.innerHTML = "";
+  }
+}
+
+/* ── כרטיסיית "המועד הבא": ביום המועד מציגים זמני כניסה/יציאה ── */
+async function renderNextMoedTimes(e) {
+  const el = document.getElementById("stat-next-times");
+  if (!el) return;
+  try {
+    const isFast =
+      e.type === "fast" || /צום|תענית|כיפור|באב/.test(e.name || "");
+    // חגים ללא כניסה/יציאה (פורים, חנוכה, חול המועד) — מציגים "היום"
+    if (!isFast && !shouldShowHolidayTimes(e)) {
+      el.innerHTML = `<span class="opacity-80">✨ היום!</span>`;
+      return;
+    }
+    const win = isFast
+      ? await computeFastWindow(e.name, e.date)
+      : await computeHolidayWindow(e.name, e.date);
+    const enterLabel = isFast ? "כניסת הצום" : "כניסת החג";
+    const exitLabel = isFast ? "יציאת הצום" : "יציאת החג";
+    const startStr = win.start ? formatLocalizedTime(win.start) : "--:--";
+    const endStr = win.end ? formatLocalizedTime(win.end) : "--:--";
+    let html =
+      `<span class="inline-flex items-center gap-1">${enterLabel}: <strong dir="ltr" style="color:#fde68a;">${startStr}</strong></span>` +
+      ` · <span class="inline-flex items-center gap-1">${exitLabel}: <strong dir="ltr" style="color:#c4b5fd;">${endStr}</strong></span>`;
+    // צום בעיצומו — מוסיפים ספירה לאחור חיה לסיום הצום
+    if (isFast && win.start && win.end) {
+      const now = new Date();
+      if (now >= win.start && now < win.end) {
+        html += `<br><span style="color:#fbbf24;">⏱ לסיום הצום: <strong dir="ltr" class="fast-live-countdown" data-end="${win.end.getTime()}">--:--:--</strong></span>`;
+      }
+    }
+    el.innerHTML = html;
+    if (el.querySelector(".fast-live-countdown")) _ensureFastCountdownTicker();
+  } catch (err) {
+    el.innerHTML = `<span class="opacity-80">✨ היום!</span>`;
   }
 }
 
@@ -4774,7 +5288,12 @@ function render(filter = "all", search = "") {
     const dateDisplay = `${ui.weekdayNames[new Date(e.date).getDay()]} | ${formatLocalizedDate(new Date(e.date), { day: "2-digit", month: "2-digit", year: "numeric" })} | <span class="text-slate-800 dark:text-slate-200 font-bold">${getHebrewDateString(new Date(e.date))}</span>`;
 
     let extraTimesHtml = "";
-    if (e.type === "fast") {
+    const _isFastEv =
+      e.type === "fast" ||
+      /צום|תענית|כיפור|באב|Tzom|Ta'anit|Tish'a|Tisha/.test(
+        (e.name || "") + " " + (e.titleStr || ""),
+      );
+    if (_isFastEv) {
       const elId = `fast-times-${e.date}`;
       extraTimesHtml = `<div id="${elId}" class="mt-3 flex flex-wrap gap-2 text-xs" aria-live="polite">מחשב זמני צום...</div>`;
       fetchFastTimes(e.name, e.date, elId);
@@ -4812,9 +5331,13 @@ function render(filter = "all", search = "") {
     const isMoonOpen =
       e.type === "moon" && e.heb === "ניתן לברך כעת" && e.endDate;
     const moonDaysLeft = isMoonOpen ? getDaysDiff(e.endDate) : 0;
+    // ביום האחרון של חלון הברכה — ספירה לאחור חיה עד הרגע האחרון
+    const moonLastDay = isMoonOpen && moonDaysLeft <= 1;
     const badgeText = isMoonOpen
       ? CURRENT_LANG === "he"
-        ? `סוף הזמן: ${moonDaysLeft} ימים`
+        ? moonLastDay
+          ? `⏱ סוף הזמן: <span class="levana-badge-countdown" dir="ltr" data-target="${_levanaZmanMs(e.endDate, "e")}">--:--:--</span>`
+          : `סוף הזמן: ${moonDaysLeft} ימים`
         : `Closes in ${moonDaysLeft} days`
       : isToday
         ? CURRENT_LANG === "he"
@@ -4848,6 +5371,7 @@ function render(filter = "all", search = "") {
     if (countdownEl && !isMoonOpen)
       countdownEl.textContent = formatDaysUntilText(diff);
   });
+  if (c.querySelector(".levana-badge-countdown")) _ensureLevanaBadgeTicker();
   if (!filtered.length)
     c.innerHTML = `<div class="text-center py-10 text-slate-400 font-bold text-lg" role="alert">לא נמצאו מועדים תואמים.</div>`;
   if (!filtered.length && CURRENT_LANG !== "he") {
@@ -5719,6 +6243,12 @@ function setupCardObserver() {
 function openShabbatInfoModal() {
   document.getElementById("shabbat-info-modal")?.remove();
 
+  // כשהטיימר סופר לכניסת חג — מציגים את פרטי החג במקום פרטי שבת
+  if (window._countdownMode === "holiday" && window.HOLIDAY_CANDLES_TIME) {
+    openHolidayInfoModal();
+    return;
+  }
+
   const candles = window.SHABBAT_CANDLES_STR || "--:--";
   const havdalah = window.SHABBAT_HAVDALAH_STR || "--:--";
   const parasha = window.SHABBAT_PARASHA_NAME || "";
@@ -5778,6 +6308,73 @@ function openShabbatInfoModal() {
   lockBodyScroll();
 }
 
+/* ── מודאל פרטי חג (נפתח בלחיצה על טיימר כניסת החג) ── */
+function openHolidayInfoModal() {
+  document.getElementById("shabbat-info-modal")?.remove();
+
+  const candles = window.HOLIDAY_CANDLES_STR || "--:--";
+  const havdalah = window.HOLIDAY_HAVDALAH_STR || "--:--";
+  const holName = window.HOLIDAY_NAME_HE || "החג הקרוב";
+
+  const overlay = document.createElement("div");
+  overlay.id = "shabbat-info-modal";
+  overlay.style.cssText = [
+    "position:fixed",
+    "inset:0",
+    "z-index:500",
+    "display:flex",
+    "align-items:center",
+    "justify-content:center",
+    "background:rgba(0,0,0,0.55)",
+    "backdrop-filter:blur(4px)",
+  ].join(";");
+
+  // כפתור דבר תורה — רק אם קיים דבר תורה לחג הזה
+  const hasDvarTorah =
+    typeof window._matchMoad === "function" &&
+    window._matchMoad(holName) &&
+    window._DT &&
+    window._DT[window._matchMoad(holName)];
+  const dvarTorahBtn = hasDvarTorah
+    ? `
+            <div style="border-top:1px solid rgba(255,255,255,0.1);padding-top:16px;">
+              <button onclick="document.getElementById('shabbat-info-modal').remove();unlockBodyScroll();window._openMoadByName('${holName.replace(/'/g, "\\'")}');"
+                style="background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;border-radius:12px;padding:10px 20px;color:#fff;font-size:1rem;font-weight:700;cursor:pointer;width:100%;display:flex;align-items:center;justify-content:center;gap:8px;">
+                <span>📖</span><span>דבר תורה ל${holName}</span>
+              </button>
+            </div>`
+    : "";
+
+  overlay.innerHTML = `
+          <div style="background:linear-gradient(145deg,#1e3a5f,#0f2742);border:1px solid rgba(255,255,255,0.12);border-radius:20px;padding:28px 32px 24px;min-width:260px;max-width:340px;width:90vw;text-align:center;color:#fff;box-shadow:0 20px 60px rgba(0,0,0,0.5);position:relative;">
+            <button onclick="document.getElementById('shabbat-info-modal').remove();unlockBodyScroll();"
+              style="position:absolute;top:12px;left:14px;background:none;border:none;color:rgba(255,255,255,0.5);font-size:1.4rem;cursor:pointer;line-height:1;" aria-label="סגור">×</button>
+            <div style="font-size:1.6rem;margin-bottom:6px;">🕯️</div>
+            <div style="font-size:1.15rem;font-weight:800;letter-spacing:.5px;margin-bottom:20px;color:#fde68a;">${holName}</div>
+            <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:20px;">
+              <div style="background:rgba(255,255,255,0.08);border-radius:12px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;">
+                <span style="font-size:0.88rem;color:rgba(255,255,255,0.7);">כניסת החג</span>
+                <span style="font-size:1.25rem;font-weight:900;color:#fde68a;direction:ltr;" dir="ltr">${candles}</span>
+              </div>
+              <div style="background:rgba(255,255,255,0.08);border-radius:12px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;">
+                <span style="font-size:0.88rem;color:rgba(255,255,255,0.7);">יציאת החג</span>
+                <span style="font-size:1.25rem;font-weight:900;color:#c4b5fd;direction:ltr;" dir="ltr">${havdalah}</span>
+              </div>
+            </div>
+            ${dvarTorahBtn}
+          </div>`;
+
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) {
+      overlay.remove();
+      unlockBodyScroll();
+    }
+  });
+  document.body.appendChild(overlay);
+  pushModalState("shabbat-info-modal");
+  lockBodyScroll();
+}
+
 // ═══════════════════════════════════════════════════════
 let countdownInterval;
 function startShabbatCountdown() {
@@ -5789,23 +6386,26 @@ function startShabbatCountdown() {
   // Determine which candle-lighting to count down to
   const now = new Date();
   const isFriday = now.getDay() === 5;
+  const DAY_MS = 24 * 3600 * 1000;
   const hasHolidayCandles =
-    !!window.HOLIDAY_CANDLES_TIME && window.HOLIDAY_CANDLES_TIME > now;
+    !!window.HOLIDAY_CANDLES_TIME &&
+    window.HOLIDAY_CANDLES_TIME > now &&
+    window.HOLIDAY_CANDLES_TIME - now <= DAY_MS; // טיימר חג: 24 שעות לפני הכניסה
   const hasShabbatCandles =
     !!window.SHABBAT_CANDLES_TIME && window.SHABBAT_CANDLES_TIME > now;
 
   let target = null;
   let label = "";
+  window._countdownMode = null;
 
   if (isFriday && hasShabbatCandles) {
     target = window.SHABBAT_CANDLES_TIME;
     label = "כניסת שבת";
+    window._countdownMode = "shabbat";
   } else if (hasHolidayCandles) {
     target = window.HOLIDAY_CANDLES_TIME;
     label = "כניסת החג";
-  } else if (isFriday && hasShabbatCandles) {
-    target = window.SHABBAT_CANDLES_TIME;
-    label = "כניסת שבת";
+    window._countdownMode = "holiday";
   }
 
   if (!target) {
@@ -5813,6 +6413,8 @@ function startShabbatCountdown() {
     return;
   }
   if (eventLabel) eventLabel.textContent = label;
+  wrap.title =
+    window._countdownMode === "holiday" ? "לחץ לפרטי החג" : "לחץ לפרטי שבת";
 
   function tick() {
     const diff = target - new Date();
@@ -6083,7 +6685,7 @@ function openMotzeiShabbatModal(activeTab) {
   document.getElementById("motzei-shabbat-modal")?.remove();
   _motzeiShabbatModalOpen = true;
 
-  const tab = activeTab || "havdalah";
+  const tab = activeTab || "veyiten";
   const occasion  = _getMotzeiOccasion();
   // Shabbat-combined types (Shabbat+YomTov / Shabbat+YomKippur) use the
   // full motzei-shabbat nusach (with besamim and fire), since shabbat
@@ -6101,6 +6703,7 @@ function openMotzeiShabbatModal(activeTab) {
   const story = BESHT_STORIES[Math.floor(Math.random() * BESHT_STORIES.length)];
 
   const tabs = [
+    { id: "veyiten",  label: "🌿 ויתן לך" },
     { id: "havdalah", label: "✡️ הבדלה" },
     { id: "bracha",   label: "🍇 ברכה אחרונה" },
     { id: "seuda4",   label: "🍞 סעודה רביעית" },
@@ -6294,7 +6897,91 @@ function openMotzeiShabbatModal(activeTab) {
     <button onclick="openMotzeiShabbatModal('besht')" style="width:100%;padding:10px;border:1px solid rgba(255,255,255,0.15);border-radius:12px;background:transparent;color:rgba(255,255,255,0.55);font-size:0.8rem;font-weight:700;cursor:pointer;transition:all .2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='transparent'">🔄 סיפור אחר</button>
   </div>`;
 
+  // ── ויתן לך — פסוקי ברכה הנאמרים במוצאי שבת ─────────────────────────────────
+  const _vyDivider = `<div style="height:1px;background:linear-gradient(to left,transparent,rgba(251,191,36,0.35),transparent);margin:14px 0;"></div>`;
+  const veyitenText =
+    `וְיִתֶּן לְךָ הָאֱלֹהִים מִטַּל הַשָּׁמַיִם וּמִשְׁמַנֵּי הָאָרֶץ, וְרֹב דָּגָן וְתִירֹשׁ:<br><br>` +
+    `יַעֲבְדוּךָ עַמִּים וְיִשְׁתַּחֲווּ לְךָ לְאֻמִּים, הֱוֵה גְבִיר לְאַחֶיךָ וְיִשְׁתַּחֲווּ לְךָ בְּנֵי אִמֶּךָ, אֹרֲרֶיךָ אָרוּר וּמְבָרֲכֶיךָ בָּרוּךְ:<br><br>` +
+    `וְאֵ-ל שַׁדַּי יְבָרֵךְ אֹתְךָ וְיַפְרְךָ וְיַרְבֶּךָ, וְהָיִיתָ לִקְהַל עַמִּים:<br><br>` +
+    `וְיִתֶּן לְךָ אֶת בִּרְכַּת אַבְרָהָם לְךָ וּלְזַרְעֲךָ אִתָּךְ, לְרִשְׁתְּךָ אֶת אֶרֶץ מְגֻרֶיךָ אֲשֶׁר נָתַן אֱלֹהִים לְאַבְרָהָם:<br><br>` +
+    `מֵאֵ-ל אָבִיךָ וְיַעְזְרֶךָּ וְאֵת שַׁדַּי וִיבָרֲכֶךָּ, בִּרְכֹת שָׁמַיִם מֵעָל, בִּרְכֹת תְּהוֹם רֹבֶצֶת תָּחַת, בִּרְכֹת שָׁדַיִם וָרָֽחַם:<br><br>` +
+    `בִּרְכֹת אָבִיךָ גָבְרוּ עַל בִּרְכֹת הוֹרַי, עַד תַּאֲוַת גִּבְעֹת עוֹלָם, תִּהְיֶיןָ לְראֹשׁ יוֹסֵף וּלְקָדְקֹד נְזִיר אֶחָיו:<br><br>` +
+    `וַאֲהֵבְךָ וּבֵרַכְךָ וְהִרְבֶּךָ, וּבֵרַךְ פְּרִי בִטְנְךָ וּפְרִי אַדְמָתֶךָ, דְּגָנְךָ וְתִירשְׁךָ וְיִצְהָרֶךָ, שְׁגַר אֲלָפֶיךָ וְעַשְׁתְּרֹת צֹאנֶךָ, עַל הָאֲדָמָה אֲשֶׁר נִשְׁבַּע לַאֲבֹתֶיךָ לָתֶת לָךְ:<br><br>` +
+    `בָּרוּךְ תִּהְיֶה מִכָּל הָעַמִּים, לֹא יִהְיֶה בְךָ עָקָר וַעֲקָרָה, וּבִבְהֶמְתֶּךָ:<br><br>` +
+    `וְהֵסִיר יְיָ מִמְּךָ כָּל חֹלִי, וְכָל מַדְוֵי מִצְרַיִם הָרָעִים אֲשֶׁר יָדַעְתָּ, לֹא יְשִׂימָם בָּךְ, וּנְתָנָם בְּכָל שֹׂנְאֶיךָ:` +
+    _vyDivider +
+    `הַמַּלְאָךְ הַגֹּאֵל אֹתִי מִכָּל רָע, יְבָרֵךְ אֶת הַנְּעָרִים, וְיִקָּרֵא בָהֶם שְׁמִי וְשֵׁם אֲבֹתַי אַבְרָהָם וְיִצְחָק, וְיִדְגּוּ לָרֹב בְּקֶרֶב הָאָרֶץ:<br><br>` +
+    `יְיָ אֱלֹהֵיכֶם הִרְבָּה אֶתְכֶם, וְהִנְּכֶם הַיּוֹם כְּכוֹכְבֵי הַשָּׁמַיִם לָרֹב:<br><br>` +
+    `יְיָ אֱלֹהֵי אֲבוֹתֵיכֶם יֹסֵף עֲלֵיכֶם כָּכֶם אֶלֶף פְּעָמִים, וִיבָרֵךְ אֶתְכֶם כַּאֲשֶׁר דִּבֶּר לָכֶם:` +
+    _vyDivider +
+    `בָּרוּךְ אַתָּה בָּעִיר, וּבָרוּךְ אַתָּה בַּשָּׂדֶה:<br><br>` +
+    `בָּרוּךְ אַתָּה בְּבֹאֶךָ, וּבָרוּךְ אַתָּה בְּצֵאתֶךָ:<br><br>` +
+    `בָּרוּךְ טַנְאֲךָ וּמִשְׁאַרְתֶּךָ:<br><br>` +
+    `בָּרוּךְ פְּרִי בִטְנְךָ וּפְרִי אַדְמָתְךָ וּפְרִי בְהֶמְתֶּךָ, שְׁגַר אֲלָפֶיךָ וְעַשְׁתְּרוֹת צֹאנֶךָ:<br><br>` +
+    `יְצַו יְיָ אִתְּךָ אֶת הַבְּרָכָה בַּאֲסָמֶיךָ וּבְכֹל מִשְׁלַח יָדֶךָ, וּבֵרַכְךָ בָּאָרֶץ אֲשֶׁר יְיָ אֱלֹהֶיךָ נתֵן לָךְ:<br><br>` +
+    `יִפְתַּח יְיָ לְךָ אֶת אוֹצָרוֹ הַטּוֹב אֶת הַשָּׁמַיִם, לָתֵת מְטַר אַרְצְךָ בְּעִתּוֹ וּלְבָרֵךְ אֵת כָּל מַעֲשֵׂה יָדֶךָ, וְהִלְוִיתָ גּוֹיִם רַבִּים וְאַתָּה לֹא תִלְוֶה:<br><br>` +
+    `כִּי יְיָ אֱלֹהֶיךָ בֵּרַכְךָ כַּאֲשֶׁר דִּבֶּר לָךְ, וְהַעֲבַטְתָּ גּוֹיִם רַבִּים וְאַתָּה לֹא תַעֲבט, וּמָשַׁלְתָּ בְּגוֹיִם רַבִּים וּבְךָ לֹא יִמְשׁלוּ:<br><br>` +
+    `אַשְׁרֶיךָ יִשְׂרָאֵל מִי כָמוֹךָ עַם נוֹשַׁע בַּייָ, מָגֵן עֶזְרֶךָ וַאֲשֶׁר חֶרֶב גַּאֲוָתֶךָ, וְיִכָּחֲשׁוּ אֹיְבֶיךָ לָךְ, וְאַתָּה עַל בָּמוֹתֵימוֹ תִדְרֹךְ:` +
+    _vyDivider +
+    `מָחִיתִי כָעָב פְּשָׁעֶיךָ וְכֶעָנָן חַטֹּאתֶיךָ, שׁוּבָה אֵלַי כִּי גְאַלְתִּיךָ:<br><br>` +
+    `רָנּוּ שָׁמַיִם כִּי עָשָׂה יְיָ, הָרִיעוּ תַּחְתִּיּוֹת אָרֶץ פִּצְחוּ הָרִים רִנָּה יַעַר וְכָל עֵץ בּוֹ, כִּי גָאַל יְיָ יַעֲקֹב וּבְיִשְׂרָאֵל יִתְפָּאָר:<br><br>` +
+    `גֹּאֲלֵנוּ יְיָ צְבָאוֹת שְׁמוֹ, קְדוֹשׁ יִשְׂרָאֵל:` +
+    _vyDivider +
+    `יִשְׂרָאֵל נוֹשַׁע בַּיְיָ תְּשׁוּעַת עוֹלָמִים, לֹא תֵבשׁוּ וְלֹא תִכָּלְמוּ עַד עוֹלְמֵי עַד:<br><br>` +
+    `וַאֲכַלְתֶּם אָכוֹל וְשָׂבוֹעַ, וְהִלַּלְתֶּם אֶת שֵׁם יְיָ אֱלֹהֵיכֶם אֲשֶׁר עָשָׂה עִמָּכֶם לְהַפְלִיא, וְלֹא יֵבשׁוּ עַמִּי לְעוֹלָם:<br><br>` +
+    `וִידַעְתֶּם כִּי בְקֶרֶב יִשְׂרָאֵל אָנִי, וַאֲנִי יְיָ אֱלֹהֵיכֶם וְאֵין עוֹד, וְלֹא יֵבשׁוּ עַמִּי לְעוֹלָם:<br><br>` +
+    `כִּי בְשִׂמְחָה תֵצֵאוּ וּבְשָׁלוֹם תּוּבָלוּן, הֶהָרִים וְהַגְּבָעוֹת יִפְצְחוּ לִפְנֵיכֶם רִנָּה, וְכָל עֲצֵי הַשָּׂדֶה יִמְחֲאוּ כָף:<br><br>` +
+    `הִנֵּה אֵל יְשׁוּעָתִי אֶבְטַח וְלֹא אֶפְחָד, כִּי עָזִּי וְזִמְרָת יָהּ יְיָ, וַיְהִי לִי לִישׁוּעָה:<br><br>` +
+    `וּשְׁאַבְתֶּם מַיִם בְּשָׂשׁוֹן מִמַּעַיְנֵי הַיְשׁוּעָה:<br><br>` +
+    `וַאֲמַרְתֶּם בַּיּוֹם הַהוּא, הוֹדוּ לַייָ קִרְאוּ בִשְׁמוֹ הוֹדִיעוּ בָעַמִּים עֲלִילוֹתָיו, הַזְכִּירוּ כִּי נִשְׂגָּב שְׁמוֹ:<br><br>` +
+    `זַמְּרוּ יְיָ כִּי גֵאוּת עָשָׂה, מוּדַעַת זֹאת בְּכָל הָאָרֶץ:<br><br>` +
+    `צַהֲלִי וָרֹנִּי יֹשֶׁבֶת צִיּוֹן, כִּי גָדוֹל בְּקִרְבֵּךְ קְדוֹשׁ יִשְׂרָאֵל:<br><br>` +
+    `וְאָמַר בַּיּוֹם הַהוּא, הִנֵּה אֱלֹהֵינוּ זֶה, קִוִּינוּ לוֹ וְיוֹשִׁיעֵנוּ, זֶה יְיָ קִוִּינוּ לוֹ נָגִילָה וְנִשְׂמְחָה בִּישׁוּעָתוֹ:` +
+    _vyDivider +
+    `בֵּית יַעֲקֹב, לְכוּ וְנֵלְכָה בְּאוֹר יְיָ:<br><br>` +
+    `וְהָיָה אֱמוּנַת עִתֶּיךָ חֹסֶן יְשׁוּעֹת חָכְמַת וָדַעַת, יִרְאַת יְיָ הִיא אוֹצָרוֹ:<br><br>` +
+    `וַיְהִי דָוִד לְכָל דְּרָכָו מַשְׂכִּיל, וַיְיָ עִמּוֹ:` +
+    _vyDivider +
+    `פָּדָה בְשָׁלוֹם נַפְשִׁי מִקְּרָב לִי, כִּי בְרַבִּים הָיוּ עִמָּדִי:<br><br>` +
+    `וַיֹּאמֶר הָעָם אֶל שָׁאוּל, הֲיוֹנָתָן יָמוּת אֲשֶׁר עָשָׂה הַיְשׁוּעָה הַגְּדוֹלָה הַזֹּאת בְּיִשְׂרָאֵל, חָלִילָה, חַי יְיָ אִם יִפֹּל מִשַּׂעֲרַת רֹאשׁוֹ אַרְצָה, כִּי עִם אֱלֹהִים עָשָׂה הַיּוֹם הַזֶּה, וַיִּפְדּוּ הָעָם אֶת יוֹנָתָן וְלֹא מֵת:<br><br>` +
+    `וּפְדוּיֵי יְיָ יְשֻׁבוּן וּבָאוּ צִיּוֹן בְּרִנָּה, וְשִׂמְחַת עוֹלָם עַל רֹאשָׁם, שָׂשׂוֹן וְשִׂמְחָה יַשִּׂיגוּ, וְנָסוּ יָגוֹן וַאֲנָחָה:` +
+    _vyDivider +
+    `הָפַכְתָּ מִסְפְּדִי לְמָחוֹל לִי, פִּתַּחְתָּ שַׂקִּי וַתְּאַזְּרֵנִי שִׂמְחָה:<br><br>` +
+    `וְלֹא אָבָה יְיָ אֱלֹהֶיךָ לִשְׁמֹעַ אֶל בִּלְעָם, וַיַּהֲפֹךְ יְיָ אֱלֹהֶיךָ לְךָ אֶת הַקְּלָלָה לִבְרָכָה, כִּי אֲהֵבְךָ יְיָ אֱלֹהֶיךָ:<br><br>` +
+    `אָז תִּשְׂמַח בְּתוּלָה בְּמָחוֹל, וּבַחֻרִים וּזְקֵנִים יַחְדָּו, וְהָפַכְתִּי אֶבְלָם לְשָׂשׂוֹן וְנִחַמְתִּים, וְשִׂמַּחְתִּים מִיגוֹנָם:` +
+    _vyDivider +
+    `בּוֹרֵא נִיב שְׂפָתָיִם שָׁלוֹם, שָׁלוֹם לָרָחוֹק וְלַקָּרוֹב אָמַר יְיָ וּרְפָאתִיו:<br><br>` +
+    `וְרוּחַ לָבְשָׁה אֶת עֲמָשַׂי ראשׁ הַשָּׁלִישִׁים, לְךָ דָוִיד וְעִמְּךָ בֶן יִשַׁי שָׁלוֹם, שָׁלוֹם לְךָ וְשָׁלוֹם לְעוֹזְרֶךָ כִּי עֲזָרְךָ אֱלֹהֶיךָ, וַיְקַבְּלֵם דָּוִיד וַיִּתְּנֵם בְּרָאשֵׁי הַגְּדוּד:<br><br>` +
+    `וַאֲמַרְתֶּם כֹּה לֶחָי, וְאַתָּה שָׁלוֹם וּבֵיתְךָ שָׁלוֹם וְכֹל אֲשֶׁר לְךָ שָׁלוֹם:<br><br>` +
+    `יְיָ עֹז לְעַמּוֹ יִתֵּן, יְיָ יְבָרֵךְ אֶת עַמּוֹ בַשָּׁלוֹם:` +
+    _vyDivider +
+    `אָמַר רַבִּי יוֹחָנָן בְּכָל מָקוֹם שָׁאַתָּה מוֹצֵא גְּדֻלָּתוֹ שֶׁל הַקָּדוֹשׁ בָּרוּךְ הוּא, שָׁם אַתָּה מוֹצֵא עַנְוְתָנוּתוֹ, דָּבָר זֶה כָּתוּב בַּתּוֹרָה, וְשָׁנוּי בַּנְּבִיאִים, וּמְשֻׁלָּשׁ בַּכְּתוּבִים:<br><br>` +
+    `כָּתוּב בַּתּוֹרָה, כִּי יְיָ אֱלֹהֵיכֶם הוּא אֱלֹהֵי הָאֱלֹהִים וַאֲדֹנֵי הָאֲדֹנִים, הָאֵל הַגָּדוֹל הַגִּבֹּר וְהַנּוֹרָא אֲשֶׁר לֹא יִשָּׂא פָנִים וְלֹא יִקַּח שֹׁחַד:<br><br>` +
+    `וּכְתִיב בַּתְרֵיהּ, עֹשֶׂה מִשְׁפַּט יָתוֹם וְאַלְמָנָה, וְאֹהֵב גֵּר לָתֶת לוֹ לֶחֶם וְשִׂמְלָה:<br><br>` +
+    `שָׁנוּי בַּנְּבִיאִים דִּכְתִיב, כִּי כֹה אָמַר רָם וְנִשָּׂא שׁכֵן עַד וְקָדוֹשׁ שְׁמוֹ, מָרוֹם וְקָדוֹשׁ אֶשְׁכּוֹן, וְאֶת דַּכָּא וּשְׁפַל רוּחַ, לְהַחֲיוֹת רוּחַ שְׁפָלִים וּלְהַחֲיוֹת לֵב נִדְכָּאִים:<br><br>` +
+    `מְשֻׁלָּשׁ בַּכְּתוּבִים, דִּכְתִיב, שִׁירוּ לֵאֱלֹהִים זַמְּרוּ שְׁמוֹ סֹלוּ לָרֹכֵב בָּעֲרָבוֹת בְּיָהּ שְׁמוֹ, וְעִלְזוּ לְפָנָיו:<br><br>` +
+    `וּכְתִיב בַּתְרֵהּ, אֲבִי יְתוֹמִים וְדַיַּן אַלְמָנוֹת אֱלֹהִים בִּמְעוֹן קָדְשׁוֹ:<br><br>` +
+    `יְהִי יְיָ אֱלֹהֵינוּ עִמָּנוּ כַּאֲשֶׁר הָיָה עִם אֲבוֹתֵינוּ, אַל יַעַזְּבֵנוּ וְאַל יִטְּשֵׁנוּ:<br><br>` +
+    `וְאַתֶּם הַדְּבֵקִים בַּייָ אֱלֹהֵיכֶם, חַיִּים כֻּלְּכֶם הַיּוֹם:<br><br>` +
+    `כִּי נִחַם יְיָ צִיּוֹן נִחַם כָּל חָרְבֹתֶיהָ, וַיָּֽשֶׂם מִדְבָּרָהּ כְּעֵדֶן וְעַרְבָתָהּ כְּגַן יְיָ, שָׂשׂוֹן וְשִׂמְחָה יִמָּצֵא בָהּ תּוֹדָה וְקוֹל זִמְרָה:<br><br>` +
+    `יְיָ חָפֵץ לְמַעַן צִדְקוֹ, יַגְדִּיל תּוֹרָה וְיַאְדִּיר:` +
+    _vyDivider +
+    `שִׁיר הַמַּעֲלוֹת, אַשְׁרֵי כָּל יְרֵא יְיָ הַהֹלֵךְ בִּדְרָכָיו:<br><br>` +
+    `יְגִיעַ כַּפֶּיךָ כִּי תֹאכֵל, אַשְׁרֶיךָ וְטוֹב לָךְ:<br><br>` +
+    `אֶשְׁתְּךָ כְּגֶפֶן פֹּרִיָּה בְּיַרְכְּתֵי בֵיתֶךָ, בָּנֶיךָ כִּשְׁתִלֵי זֵיתִים סָבִיב לְשֻׁלְחָנֶךָ:<br><br>` +
+    `הִנֵּה כִי כֵן יְבֹרַךְ גָּבֶר, יְרֵא יְיָ:<br><br>` +
+    `יְבָרֶכְךָ יְיָ מִצִּיּוֹן וּרְאֵה בְּטוּב יְרוּשָׁלָיִם, כֹּל יְמֵי חַיֶּיךָ:<br><br>` +
+    `וּרְאֵה בָנִים לְבָנֶיךָ, שָׁלוֹם עַל יִשְׂרָאֵל:`;
+
+  const veyitenHTML = `<div style="direction:rtl;text-align:right;">
+    <p style="font-size:0.75rem;color:rgba(255,255,255,0.5);margin-bottom:12px;line-height:1.6;text-align:center;">"וְיִתֶּן לְךָ" — פסוקי ברכה הנאמרים במוצאי שבת</p>
+    <div style="background:rgba(255,255,255,0.07);border-radius:14px;padding:16px;margin-bottom:10px;">
+      <p style="font-size:0.86rem;line-height:2.1;color:rgba(255,255,255,0.95);">${veyitenText}</p>
+    </div>
+  </div>`;
+
   const contentMap = {
+    veyiten:  veyitenHTML,
     havdalah: havdalahHTML,
     bracha:   brachaHTML,
     seuda4:   seuda4HTML,
@@ -8085,9 +8772,19 @@ function buildBirkatHamazonPayload(context) {
         "הָרַחֲמָן הוּא יְחַיֵּֽנוּ וִיזַכֵּֽנוּ וִיקָֽרְבֵֽנוּ לִימוֹת הַמָּשִֽׁיחַ וּלְבִנְיַן בֵּית הַמִּקְדָּשׁ וּלְחַיֵּי הָעוֹלָם הַבָּא.",
       ),
     );
+    // מגדיל/מגדול — דינמי: בימים שיש בהם מוסף אומרים "מגדול" (ורק אותו)
+    const _useMigdol =
+      context.isShabbat ||
+      context.isRoshChodesh ||
+      context.isCholHamoed ||
+      context.isPesach ||
+      context.isShavuot ||
+      context.isSukkot ||
+      context.isRoshHaShana;
     parts.push(
       p(
-        'מַגְדִּיל <span style="font-size:70%">(וּבְמוֹצָאֵי שַׁבָּת, בְּסְעֻדַּת פּוּרִים וּסְעֻדַּת מִילָה: מִגְדּוֹל)</span> יְשׁוּעֹת מַלְכּוֹ וְעֹֽשֶׂה־חֶסֶד לִמְשִׁיחוֹ לְדָוִד וּלְזַרְעוֹ עַד־עוֹלָם: כְּ֭פִירִים רָשׁ֣וּ וְרָעֵ֑בוּ וְדֹרְשֵׁ֥י יְ֝הֹוָ֗ה לֹא־יַחְסְרוּ כָל־טֽוֹב: נַ֤עַר ׀ הָיִ֗יתִי גַּם־זָ֫קַ֥נְתִּי וְֽלֹא־רָ֭אִיתִי צַדִּ֣יק נֶעֱזָ֑ב וְ֝זַרְעוֹ מְבַקֶּשׁ־לָֽחֶם: כָּל־הַיּוֹם חוֹנֵן וּמַלְוֶה וְזַרְעוֹ לִבְרָכָה: מַה שֶּׁאָכַֽלְנוּ יִהְיֶה לְשָׂבְעָה. וּמַה שֶּׁשָּׁתִֽינוּ יִהְיֶה לִרְפוּאָה. וּמַה שֶּׁהוֹתַֽרְנוּ יִהְיֶה לִבְרָכָה. כְּדִכְתִיב, וַיִּתֵּן לִפְנֵיהֶם וַיֹּאכְלוּ וַיּוֹתִרוּ כִּדְבַר יְהֹוָה: בְּרוּכִים אַתֶּם לַיהֹוָה עֹשֵׂה שָׁמַיִם וָאָרֶץ: בָּרוּךְ הַגֶּבֶר אֲשֶׁר יִבְטַח בַּיהֹוָה וְהָיָה יְהֹוָה מִבְטַחוֹ: יְהֹוָה עֹז לְעַמּוֹ יִתֵּן יְהֹוָה יְבָרֵךְ אֶת־עַמּוֹ בַשָּׁלוֹם: עֹשֶׂה שָׁלוֹם בִּמְרוֹמָיו, הוּא בְּרַחֲמָיו יַעֲשֶׂה שָׁלוֹם עָלֵֽינוּ. וְעַל כָּל־עַמּוֹ יִשְׂרָאֵל, וְאִמְרוּ אָמֵן:',
+        (_useMigdol ? 'מִגְדּוֹל' : 'מַגְדִּיל') +
+        ' יְשׁוּעֹת מַלְכּוֹ וְעֹֽשֶׂה־חֶסֶד לִמְשִׁיחוֹ לְדָוִד וּלְזַרְעוֹ עַד־עוֹלָם: כְּ֭פִירִים רָשׁ֣וּ וְרָעֵ֑בוּ וְדֹרְשֵׁ֥י יְ֝הֹוָ֗ה לֹא־יַחְסְרוּ כָל־טֽוֹב: נַ֤עַר ׀ הָיִ֗יתִי גַּם־זָ֫קַ֥נְתִּי וְֽלֹא־רָ֭אִיתִי צַדִּ֣יק נֶעֱזָ֑ב וְ֝זַרְעוֹ מְבַקֶּשׁ־לָֽחֶם: כָּל־הַיּוֹם חוֹנֵן וּמַלְוֶה וְזַרְעוֹ לִבְרָכָה: מַה שֶּׁאָכַֽלְנוּ יִהְיֶה לְשָׂבְעָה. וּמַה שֶּׁשָּׁתִֽינוּ יִהְיֶה לִרְפוּאָה. וּמַה שֶּׁהוֹתַֽרְנוּ יִהְיֶה לִבְרָכָה. כְּדִכְתִיב, וַיִּתֵּן לִפְנֵיהֶם וַיֹּאכְלוּ וַיּוֹתִרוּ כִּדְבַר יְהֹוָה: בְּרוּכִים אַתֶּם לַיהֹוָה עֹשֵׂה שָׁמַיִם וָאָרֶץ: בָּרוּךְ הַגֶּבֶר אֲשֶׁר יִבְטַח בַּיהֹוָה וְהָיָה יְהֹוָה מִבְטַחוֹ: יְהֹוָה עֹז לְעַמּוֹ יִתֵּן יְהֹוָה יְבָרֵךְ אֶת־עַמּוֹ בַשָּׁלוֹם: עֹשֶׂה שָׁלוֹם בִּמְרוֹמָיו, הוּא בְּרַחֲמָיו יַעֲשֶׂה שָׁלוֹם עָלֵֽינוּ. וְעַל כָּל־עַמּוֹ יִשְׂרָאֵל, וְאִמְרוּ אָמֵן:',
       ),
     );
   } else {
@@ -8342,7 +9039,17 @@ function buildBirkatHamazonPayload(context) {
     // סיום
     parts.push(
       p(
-        "הָרַחֲמָן הוּא יְזַכֵּֽנוּ לִימוֹת הַמָּשִֽׁיחַ וּלְחַיֵּי הָעוֹלָם הַבָּא, מַגְדִּיל יְשׁוּעוֹת מַלְכּוֹ (בְּשַׁבָּת וּבְיוֹם טוֹב: מִגְדּוֹל יְשׁוּעוֹת מַלְכּוֹ), וְעֹֽשֶׂה חֶֽסֶד לִמְשִׁיחוֹ לְדָוִד וּלְזַרְעוֹ עַד עוֹלָם: עֹשֶׂה שָׁלוֹם בִּמְרוֹמָיו, הוּא יַעֲשֶׂה שָׁלוֹם עָלֵֽינוּ וְעַל כָּל־יִשְׂרָאֵל, וְאִמְרוּ אָמֵן:",
+        "הָרַחֲמָן הוּא יְזַכֵּֽנוּ לִימוֹת הַמָּשִֽׁיחַ וּלְחַיֵּי הָעוֹלָם הַבָּא, " +
+          (context.isShabbat ||
+          context.isRoshChodesh ||
+          context.isCholHamoed ||
+          context.isPesach ||
+          context.isShavuot ||
+          context.isSukkot ||
+          context.isRoshHaShana
+            ? "מִגְדּוֹל"
+            : "מַגְדִּיל") +
+          " יְשׁוּעוֹת מַלְכּוֹ, וְעֹֽשֶׂה חֶֽסֶד לִמְשִׁיחוֹ לְדָוִד וּלְזַרְעוֹ עַד עוֹלָם: עֹשֶׂה שָׁלוֹם בִּמְרוֹמָיו, הוּא יַעֲשֶׂה שָׁלוֹם עָלֵֽינוּ וְעַל כָּל־יִשְׂרָאֵל, וְאִמְרוּ אָמֵן:",
       ),
     );
     parts.push(
@@ -8552,6 +9259,60 @@ function normalizePrayerRuleText(text) {
     .replace(/[\u0591-\u05BD\u05BF-\u05C7]/g, "")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+/* ── ברכת הלבנה: הדגשות מיוחדות ──
+   1. פס הדגשה מ"בסימן טוב" עד הוראת "שלש פעמים" (נאמר ג' פעמים)
+   2. הבלטת הוראות החזרה (ג'/שלש/שבע פעמים)
+   3. צבע שונה ל"דוד מלך ישראל" ו"לב טהור" (נאמרים מספר פעמים)
+   4. כפתור "ברכתי" בסוף — מפסיק את הבהוב הסמל עד החודש הבא */
+function applyKiddushLevanaEnhancements(html) {
+  if (!html) return html;
+  const wrapper = document.createElement("div");
+  wrapper.innerHTML = html;
+  const strip = (s) => normalizePrayerRuleText(s);
+  let startEl = null,
+    endEl = null;
+  wrapper.querySelectorAll("p").forEach((p) => {
+    const t = strip(p.textContent);
+    if (!startEl && t.startsWith("בסימן טוב")) startEl = p;
+    if (
+      t.includes("בסימן טוב") &&
+      /(שלש|שלוש) פעמים/.test(t) &&
+      t.startsWith("יאמר")
+    )
+      endEl = p;
+    if (/^(יאמר|ואומרים)/.test(t) && /(שלש|שלוש|ג'|שבע) פעמים/.test(t)) {
+      p.classList.add("levana-repeat-note");
+    }
+    if (t.startsWith("דוד מלך ישראל")) p.classList.add("levana-phrase-david");
+    if (t.startsWith("לב טהור")) p.classList.add("levana-phrase-lev");
+  });
+  if (startEl && endEl && startEl.parentNode === endEl.parentNode) {
+    const box = document.createElement("div");
+    box.className = "levana-siman-tov-box";
+    startEl.parentNode.insertBefore(box, startEl);
+    let cur = startEl;
+    while (cur) {
+      const next = cur.nextElementSibling;
+      box.appendChild(cur);
+      if (cur === endEl) break;
+      cur = next;
+    }
+  }
+  wrapper.querySelectorAll("small").forEach((sm) => {
+    const t = strip(sm.textContent);
+    if (/(שלש|שלוש|שבע|ג') פעמים/.test(t))
+      sm.classList.add("levana-times-badge");
+  });
+  const done = document.createElement("div");
+  done.className = "levana-blessed-wrap";
+  done.innerHTML =
+    '<button type="button" class="levana-blessed-btn" onclick="window._markLevanaBlessed && window._markLevanaBlessed(this)">\uD83C\uDF19 ברכתי</button>' +
+    '<div class="levana-blessed-note">לאחר הלחיצה הסמל בדף הראשי יפסיק להבהב עד לחודש הבא</div>';
+  const richtext = wrapper.querySelector(".prayer-richtext") || wrapper;
+  richtext.appendChild(done);
+  return wrapper.innerHTML;
 }
 
 function wrapShacharitSupplementRange(startEl, shouldContinue) {
@@ -15078,7 +15839,11 @@ async function getFullPrayerContent(key) {
             markPrayerSupplements(result.html, key),
             context,
           )
-        : markPrayerSupplements(result.html, key),
+        : key === "kiddush-levana"
+          ? applyKiddushLevanaEnhancements(
+              markPrayerSupplements(result.html, key),
+            )
+          : markPrayerSupplements(result.html, key),
     nusachLabel: nusach.label,
     seasonalHtml: resolveSeasonalPrayerAdditions(key, context),
   };
@@ -15490,7 +16255,7 @@ function openShirHashirimPage() {
       );
       const results = await Promise.all(fetches);
 
-      let html = '<div style="max-width:640px;margin:0 auto;padding:1.5rem 1.25rem 0.5rem;font-family:\'David Libre\',\'Frank Ruhl Libre\',serif;direction:rtl;text-align:center;color:#1a1a1a;">';
+      let html = '<div style="max-width:640px;margin:0 auto;padding:1.5rem 1.25rem 0.5rem;font-family:\'Frank Ruhl Libre\',\'David Libre\',serif;direction:rtl;text-align:center;color:#1a1a1a;">';
 
       results.forEach((data, idx) => {
         const heTexts = data.he || [];
@@ -15738,7 +16503,7 @@ function openBenIshHaiPage() {
   const BM_KEY = "bih_bookmarks_v1";
   function loadBMs() { try { return JSON.parse(localStorage.getItem(BM_KEY)||"[]"); } catch(e) { return []; } }
   function saveBMs(b) { try { localStorage.setItem(BM_KEY, JSON.stringify(b)); } catch(e) {} }
-  function addBM(y,p,h,label) { const b=loadBMs(); if(!b.some(x=>x.y===y&&x.p===p&&x.h===h)){b.push({y,p,h,label,ts:Date.now()});saveBMs(b);} }
+  function addBM(y,p,h,label) { const b=loadBMs(); if(!b.some(x=>x.y===y&&x.p===p&&x.h===h)){b.push({y,p,h,label,mode:_bihMode,ts:Date.now()});saveBMs(b);} }
   function removeBM(y,p,h) { saveBMs(loadBMs().filter(x=>!(x.y===y&&x.p===p&&x.h===h))); }
   function isBM(y,p,h) { return loadBMs().some(x=>x.y===y&&x.p===p&&x.h===h); }
 
@@ -15844,10 +16609,20 @@ function openBenIshHaiPage() {
     }
     const body = document.createElement("div");
     texts.forEach((t,i) => {
+      // סימניות גם בדרשות — y=2 מזהה ייחודי למצב דרשות
+      const bmed = isBM(2, pIdx, i);
       const item = document.createElement("div");
       item.id = "bih-h-"+pIdx+"-"+i;
       item.style.cssText = "margin-bottom:1.25rem;padding-bottom:1rem;border-bottom:1px solid rgba(0,0,0,0.07);direction:rtl;";
-      item.innerHTML = t;
+      item.innerHTML =
+        '<div style="display:flex;align-items:center;justify-content:center;gap:0.6rem;margin-bottom:0.5rem;">'+
+          '<span style="color:'+color+';font-size:0.78rem;font-weight:900;">דרשה '+toHeb(i+1)+'</span>'+
+          '<button id="bih-bm-'+pIdx+'-'+i+'" '+
+            'onclick="window._bihBMToggle(2,'+pIdx+','+i+',\''+parshaHe.replace(/'/g,"\\'")+' דרשה '+toHeb(i+1)+'\')" '+
+            'style="border:1.5px solid '+(bmed?'#f59e0b':'#d1d5db')+';background:'+(bmed?'#fef9c3':'#fff')+';color:'+(bmed?'#92400e':'#9ca3af')+';padding:0.15rem 0.5rem;border-radius:0.35rem;cursor:pointer;font-size:0.72rem;font-weight:600;white-space:nowrap;transition:all 0.15s;">'+
+            (bmed?'🔖 מסומן':'🔖 סמן')+'</button>'+
+        '</div>'+
+        '<div style="direction:rtl;">'+t+'</div>';
       body.appendChild(item);
     });
     div.appendChild(body);
@@ -15923,11 +16698,20 @@ function openBenIshHaiPage() {
     const panel = document.getElementById("bih-bm-panel");
     if (!panel) return;
     const yIdx = getYIdx();
-    const bms = loadBMs().filter(b => _bihMode === "drashot" ? false : b.y === yIdx);
+    // כל ספר (שנה א / שנה ב / דרשות) מציג רק את הסימניות והמיקום האחרון שלו
+    const _bmMode = (b) => b.mode || (b.y === 2 ? "drashot" : b.y === 1 ? "y1" : "y0");
+    const bms = loadBMs().filter(b => {
+      if (b.isLastPos) return _bmMode(b) === _bihMode;
+      if (_bihMode === "drashot") return _bmMode(b) === "drashot";
+      return _bmMode(b) !== "drashot" && b.y === yIdx;
+    });
+    const isDrashotEntry = (b) => _bmMode(b) === "drashot";
     panel.innerHTML =
       '<p style="color:#f59e0b;font-size:0.75rem;font-weight:900;margin:0 0 0.5rem;">📌 סימניות שמורות:</p>'+
       (bms.length ? '<div style="display:flex;flex-direction:column;gap:0.3rem;">'+bms.map(b=>{
-        const pr = YEARS[b.y] && YEARS[b.y].parshiyot[b.p];
+        const list = isDrashotEntry(b) ? DRASHOT_PARSHIYOT : (YEARS[b.y] && YEARS[b.y].parshiyot);
+        const pr = list && list[b.p];
+        const unitLabel = isDrashotEntry(b) ? "דרשה" : "הלכה";
         if (b.isLastPos) {
           return '<div style="display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0.6rem;background:rgba(245,158,11,0.18);border:1.5px solid rgba(245,158,11,0.5);border-radius:0.5rem;direction:rtl;">'+
             '<button onclick="window._bihOpenParsha('+b.p+','+b.h+')" style="background:none;border:none;color:#fde68a;cursor:pointer;font-size:0.82rem;font-weight:700;text-align:right;flex:1;padding:0;">'+ b.label + '</button>'+
@@ -15935,7 +16719,7 @@ function openBenIshHaiPage() {
           '</div>';
         }
         return '<div style="display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0.6rem;background:rgba(255,255,255,0.06);border-radius:0.5rem;direction:rtl;">'+
-          '<button onclick="window._bihOpenParsha('+b.p+','+b.h+')" style="background:none;border:none;color:#e2e8f0;cursor:pointer;font-size:0.8rem;text-align:right;flex:1;padding:0;">🔖 '+(pr?pr.he:"?")+' — הלכה '+toHeb(b.h+1)+'</button>'+
+          '<button onclick="window._bihOpenParsha('+b.p+','+b.h+')" style="background:none;border:none;color:#e2e8f0;cursor:pointer;font-size:0.8rem;text-align:right;flex:1;padding:0;">🔖 '+(pr?pr.he:"?")+' — '+unitLabel+' '+toHeb(b.h+1)+'</button>'+
           '<button onclick="window._bihBMRemove('+b.y+','+b.p+','+b.h+')" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:0.8rem;padding:0;flex-shrink:0;" title="הסר">✕</button>'+
         '</div>';
       }).join("")+'</div>'
@@ -15947,6 +16731,55 @@ function openBenIshHaiPage() {
     if (!panel) return;
     if (panel.style.display === "none") {
       buildBMPanel();
+      panel.style.display = "block";
+    } else {
+      panel.style.display = "none";
+    }
+  };
+
+  // ── פאנל סימניות בתוך מסך הקריאה (רקע בהיר) ──
+  function buildReaderBMPanel() {
+    const panel = document.getElementById("bih-reader-bm-panel");
+    if (!panel) return;
+    const yIdx = getYIdx();
+    const _bmMode = (b) => b.mode || (b.y === 2 ? "drashot" : b.y === 1 ? "y1" : "y0");
+    const bms = loadBMs().filter(b => {
+      if (b.isLastPos) return _bmMode(b) === _bihMode;
+      if (_bihMode === "drashot") return _bmMode(b) === "drashot";
+      return _bmMode(b) !== "drashot" && b.y === yIdx;
+    });
+    const isDrashotEntry = (b) => _bmMode(b) === "drashot";
+    panel.innerHTML =
+      '<p style="color:#92400e;font-size:0.75rem;font-weight:900;margin:0 0 0.5rem;">📌 סימניות שמורות:</p>'+
+      (bms.length ? '<div style="display:flex;flex-direction:column;gap:0.3rem;">'+bms.map(b=>{
+        const list = isDrashotEntry(b) ? DRASHOT_PARSHIYOT : (YEARS[b.y] && YEARS[b.y].parshiyot);
+        const pr = list && list[b.p];
+        const unitLabel = isDrashotEntry(b) ? "דרשה" : "הלכה";
+        const goto = 'window._bihOpenParsha('+b.p+','+b.h+');document.getElementById(\'bih-reader-bm-panel\').style.display=\'none\';';
+        if (b.isLastPos) {
+          return '<div style="display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0.6rem;background:rgba(245,158,11,0.16);border:1.5px solid rgba(245,158,11,0.45);border-radius:0.5rem;">'+
+            '<button onclick="'+goto+'" style="background:none;border:none;color:#92400e;cursor:pointer;font-size:0.82rem;font-weight:700;text-align:right;flex:1;padding:0;">'+ b.label + '</button>'+
+            '<button onclick="window._bihBMRemove('+b.y+','+b.p+','+b.h+');window._bihRefreshReaderBMPanel();" style="background:none;border:none;color:#b45309;cursor:pointer;font-size:0.8rem;padding:0;flex-shrink:0;" title="הסר">✕</button>'+
+          '</div>';
+        }
+        return '<div style="display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0.6rem;background:rgba(0,0,0,0.04);border-radius:0.5rem;">'+
+          '<button onclick="'+goto+'" style="background:none;border:none;color:#1e293b;cursor:pointer;font-size:0.8rem;text-align:right;flex:1;padding:0;">🔖 '+(pr?pr.he:"?")+' — '+unitLabel+' '+toHeb(b.h+1)+'</button>'+
+          '<button onclick="window._bihBMRemove('+b.y+','+b.p+','+b.h+');window._bihRefreshReaderBMPanel();" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:0.8rem;padding:0;flex-shrink:0;" title="הסר">✕</button>'+
+        '</div>';
+      }).join("")+'</div>'
+      : '<p style="color:#b45309;font-size:0.78rem;text-align:center;margin:0;">אין סימניות עדיין — לחץ 🔖 ליד הלכה או דרשה כדי לסמן</p>');
+  }
+
+  window._bihRefreshReaderBMPanel = () => {
+    const panel = document.getElementById("bih-reader-bm-panel");
+    if (panel && panel.style.display !== "none") buildReaderBMPanel();
+  };
+
+  window._bihToggleReaderBMPanel = () => {
+    const panel = document.getElementById("bih-reader-bm-panel");
+    if (!panel) return;
+    if (panel.style.display === "none") {
+      buildReaderBMPanel();
       panel.style.display = "block";
     } else {
       panel.style.display = "none";
@@ -15987,12 +16820,15 @@ function openBenIshHaiPage() {
     const parshiyot = getParshiyot();
     const parshaName = parshiyot[pIdx] ? parshiyot[pIdx].he : "פרשה " + (pIdx + 1);
     const modeLabel = _bihMode === "drashot" ? "דרשות" : _bihMode === "y1" ? "שנה שניה" : "שנה ראשונה";
+    const unitLabel = _bihMode === "drashot" ? "דרשה" : "הלכה";
     let b = loadBMs();
-    // Remove existing last-position entry (regardless of year)
-    b = b.filter(x => !x.isLastPos);
-    b.unshift({ y: yIdx, p: pIdx, h: hIdx, label: "📍 מיקום אחרון — " + parshaName + " — הלכה " + toHeb(hIdx + 1) + " (" + modeLabel + ")", isLastPos: true, mode: _bihMode, ts: Date.now() });
+    // מיקום אחרון נפרד לכל ספר: מוחקים רק את המיקום של הספר הנוכחי
+    const _lpMode = (x) => x.mode || (x.y === 2 ? "drashot" : x.y === 1 ? "y1" : "y0");
+    b = b.filter(x => !(x.isLastPos && _lpMode(x) === _bihMode));
+    b.unshift({ y: yIdx, p: pIdx, h: hIdx, label: "📍 מיקום אחרון — " + parshaName + " — " + unitLabel + " " + toHeb(hIdx + 1) + " (" + modeLabel + ")", isLastPos: true, mode: _bihMode, ts: Date.now() });
     saveBMs(b);
     if (typeof buildBMPanel === "function") buildBMPanel();
+    if (window._bihRefreshReaderBMPanel) window._bihRefreshReaderBMPanel();
     return true;
   };
 
@@ -16120,9 +16956,11 @@ function openBenIshHaiPage() {
         '<button onclick="window._bihCloseReading()" style="background:rgba(0,0,0,0.06);border:none;color:#1e293b;padding:0.4rem 0.75rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;white-space:nowrap;flex-shrink:0;">← חזרה</button>'+
         '<h3 id="bih-reading-title" style="color:#1e293b;font-size:0.95rem;font-weight:900;margin:0;text-align:center;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></h3>'+
         '<button onclick="window._bihGoToChapters()" style="background:rgba(0,0,0,0.06);border:none;color:#1e293b;padding:0.4rem 0.55rem;border-radius:999px;cursor:pointer;font-size:0.82rem;flex-shrink:0;margin-left:0.35rem;" title="כל הפרשיות">📑</button>'+
+        '<button onclick="window._bihToggleReaderBMPanel()" id="bih-reader-bm-pin" style="background:rgba(0,0,0,0.06);border:none;color:#1e293b;padding:0.4rem 0.55rem;border-radius:999px;cursor:pointer;font-size:0.82rem;flex-shrink:0;margin-left:0.35rem;" title="סימניות">📌</button>'+
         '<button onclick="window._bihOpenSearch()" style="background:rgba(0,0,0,0.06);border:none;color:#1e293b;padding:0.4rem 0.75rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;white-space:nowrap;flex-shrink:0;">🔍 חיפוש</button>'+
       '</div>'+
-      '<div id="bih-content-area" style="overflow-y:auto;flex:1;padding:0.5rem 1.5rem 1rem;font-family:\'David Libre\',\'Frank Ruhl Libre\',serif;font-size:100%;line-height:2;color:#1e293b;text-align:center;direction:rtl;">'+
+      '<div id="bih-reader-bm-panel" style="display:none;background:#fffbeb;border-bottom:1px solid rgba(245,158,11,0.35);padding:0.7rem 1.1rem;flex-shrink:0;max-height:40vh;overflow-y:auto;direction:rtl;"></div>'+
+      '<div id="bih-content-area" style="overflow-y:auto;flex:1;padding:0.5rem 1.5rem 1rem;font-family:\'Frank Ruhl Libre\',\'David Libre\',serif;font-size:100%;line-height:2;color:#1e293b;text-align:center;direction:rtl;">'+
         '<div id="bih-parsha-sections"></div>'+
       '</div>'+
       '<div style="display:flex;align-items:center;justify-content:center;gap:0.75rem;padding:0.5rem 1rem;border-top:1px solid rgba(0,0,0,0.08);background:#faf9f6;flex-shrink:0;">'+
@@ -16350,9 +17188,11 @@ function openBenIshHaiPage() {
     if (typeof window.showToast === "function") {
       window.showToast(wasAdded ? "🔖 הסימנייה נשמרה" : "🔖 הסימנייה הוסרה", "success", 2200);
     }
+    if (window._bihRefreshReaderBMPanel) window._bihRefreshReaderBMPanel();
   };
   window._bihBMRemove = (y,p,h) => {
     removeBM(y,p,h); buildBMPanel();
+    if (window._bihRefreshReaderBMPanel) window._bihRefreshReaderBMPanel();
     if (typeof window.showToast === "function") window.showToast("🔖 הסימנייה הוסרה", "success", 2000);
   };
 
@@ -17227,11 +18067,13 @@ window.showDashboard = function () {
     startShabbatCountdown();
     if (CURRENT_OMER_DAY > 0) updateOmerRing(CURRENT_OMER_DAY);
     updateMotzeiShabbatBtn();
+    try { updateLevanaBlink(); } catch (e) {}
     // Ensure the Motzei Shabbat/Chag button appears immediately at tzeit
     // and disappears at alot, even if the page is left open.
     if (!window._motzeiShabbatBtnInterval) {
       window._motzeiShabbatBtnInterval = setInterval(() => {
         try { updateMotzeiShabbatBtn(); } catch (e) {}
+        try { updateLevanaBlink(); } catch (e) {}
       }, 60000);
     }
   }, 600);
@@ -19780,366 +20622,373 @@ document.addEventListener("keydown", (e) => {
         },
       ],
     ],
+    'ט"ו בשבט': [
+      [
+        {
+          title: "ראש השנה לאילן",
+          source: "משנה ראש השנה א, א",
+          text: "'באחד בשבט ראש השנה לאילן כדברי בית שמאי, בית הלל אומרים בחמישה עשר בו'. דווקא בעיצומו של החורף, כשהעצים עומדים בשלכת, נקבע ראש השנה לאילן — כי בפנים, בתוך הגזע, כבר החל השרף לעלות. כך גם באדם: לפעמים דווקא בתקופות הקרות והחשוכות מתחילה הצמיחה האמיתית, גם אם עדיין אינה נראית לעין.",
+          icon: "🌳",
+        },
+        {
+          title: "כי האדם עץ השדה",
+          source: "דברים כ, יט",
+          text: "התורה משווה את האדם לעץ השדה. מה העץ — אם שורשיו מרובים ואיתנים, אין כל רוחות שבעולם זזות אותו ממקומו; כך האדם: אם שורשיו — אמונתו ומידותיו — עמוקים ויציבים, שום סערה לא תעקור אותו. ט\"ו בשבט מזמין אותנו לבדוק את השורשים, לא רק את הפירות.",
+          icon: "🌱",
+        },
+      ],
+    ],
+    'ט"ו באב': [
+      [
+        {
+          title: "לא היו ימים טובים לישראל",
+          source: "משנה תענית ד, ח",
+          text: "'לא היו ימים טובים לישראל כחמישה עשר באב וכיום הכיפורים'. שבועות ספורים אחרי ט' באב — היום הכואב ביותר — מגיע יום האהבה והשמחה. בנות ירושלים יצאו בכלי לבן שאולים, שלא לבייש את מי שאין לו. הדרך מהאבל הגדול לשמחה הגדולה קצרה משנדמה — כשהלב נפתח לאהבת ישראל.",
+          icon: "💖",
+        },
+      ],
+    ],
   };
 
   var MONTH_DT = {
     תשרי: [
       {
-        title: "תשרי – חודש המלכת ה'",
-        source: "הרב קוק",
-        text: "תשרי הוא החודש הכי עמוס במועדים: ראש השנה, יום כיפור, סוכות, שמיני עצרת. כולם סובבים סביב נושא אחד – מלכות ה'. בתשרי אנחנו מכתירים את הקדוש ברוך הוא כמלך, מתכפרים, ושמחים. חודש שלם של עבודת ה' מתוך אהבה ויראה.",
+        title: "כל השביעין חביבין",
+        source: "ויקרא רבה כט, יא",
+        text: "אמרו במדרש: 'כל השביעין חביבין' — השבת שביעית לימים, השמיטה שביעית לשנים, ותשרי שביעי לחודשים. ודרשו: החודש השביעי — שהוא מְשׂוּבָּע בכל המצוות: שופר בראש השנה, תשובה ביום הכיפורים, סוכה ולולב וערבה בחג. חודש אחד — ואוצר שלם של קדושה. מי שפותח את לבו בתשרי, ממלא את כליו לכל השנה כולה.",
         icon: "🎺",
       },
       {
-        title: "תשרי – ראש לחודשים",
-        source: "בעל התניא",
-        text: "אף שניסן נקרא 'ראש חודשים', תשרי הוא ראש השנה. תשרי הוא ראש הלב, ניסן הוא ראש הדעת. תשרי מסמל את שורש הקיום – הרצון לחיות ולהיות, להיות מחובר לה'. כל מה שמתחדש בשנה – שרשו בתשרי.",
-        icon: "🌟",
+        title: "בכסה ליום חגנו",
+        source: "ראש השנה ח, ב",
+        text: "'תקעו בחודש שופר בכסה ליום חגנו' — אמרו חכמים: איזהו חג שהחודש מתכסה בו? זה ראש השנה, שהלבנה נסתרת בו. דווקא ביום הדין הגדול ישראל נכנסים בענווה, כלבנה המתכסה. ולימדונו: הבא לפני המלך קטן ושפל — הקב״ה מקבלו ברחמים, שנאמר 'לב נשבר ונדכה אלהים לא תבזה'.",
+        icon: "🌑",
       },
     ],
     חשון: [
       {
-        title: "חשון – חודש ללא מועד",
-        source: "מדרש",
-        text: "חשון הוא החודש היחיד בשנה ללא שום חג או צום. יש מדרש שאומר: 'חשון חייב' ויקבל שכרו – כי בו ייבנה בית המקדש השלישי. החודש הריק הוא גם חודש של הכנה. אחרי הרעש של תשרי – חשון הוא שקט, חזרה לשגרה, ובינוי פנימי שקט.",
-        icon: "🌧️",
+        title: "החודש ששכרו שמור לעתיד",
+        source: "ילקוט שמעוני מלכים א, קפד",
+        text: "בית המקדש הראשון נגמר בחודש חשון — 'בירח בול' — אך חנוכתו נדחתה לתשרי. אמרו במדרש: אמר הקב״ה, עלי לשלם לחודש זה את שכרו — ועתיד להיפרע לו בחנוכת הבית השלישי. חשון נראה חודש ריק, בלא חג ומועד — אך דווקא לו שמורה השמחה הגדולה מכולן. כך גם בחיינו: התקופות ה'אפורות' — שכרן גנוז לעתיד.",
+        icon: "🏛️",
       },
       {
-        title: "חשון – חודש המים",
-        source: 'חז"ל',
-        text: "בחשון מתחילים לבקש גשמים בתפילה ('ותן טל ומטר לברכה'). המים מסמלים תורה – 'אין מים אלא תורה'. אחרי ההתעוררות הגדולה של תשרי, חשון הוא הזמן שבו הלמידה מתיישבת, כמו שמים חודרים לאדמה ומשקים אותה לאט לאט.",
-        icon: "💧",
+        title: "שואלים על הגשמים",
+        source: "משנה תענית א, ג",
+        text: "בשבעה במרחשון מתחילים בארץ ישראל לשאול על הגשמים — 'ותן טל ומטר לברכה'. אמרו חכמים: גדול יום הגשמים כיום שנבראו בו שמים וארץ (תענית ז). הגשם יורד בשקט, מחלחל לאט — ומחיה עולם שלם. זהו סוד חשון: אחרי התרוממות תשרי באה העבודה השקטה של יום-יום, טיפה ועוד טיפה — והיא שמצמיחה הכל.",
+        icon: "🌧️",
       },
     ],
     כסלו: [
       {
-        title: "כסלו – אור בחשכה",
-        source: "השפת אמת",
-        text: "כסלו הוא חודש חנוכה – חודש שבו ימי החורף הקצרים ביותר, והחשכה הגדולה ביותר. ודווקא בו מדליקים נרות חנוכה. אור בחשכה חזק יותר מאור ביום. כסלו מלמד: דווקא כשהמצב קשה, כשהחשכה גדולה – זה הזמן להדליק, להאיר, להחזיק בטוב.",
+        title: "נר קטן שמאיר שמונה ימים",
+        source: "שבת כא, ב",
+        text: "'מאי חנוכה? — שכשנכנסו יוונים להיכל טימאו כל השמנים, ולא מצאו אלא פך אחד קטן חתום בחותמו של כהן גדול, ולא היה בו להדליק אלא יום אחד — ונעשה בו נס והדליקו ממנו שמונה ימים'. פך אחד קטן וטהור הספיק להאיר את הכל. כך באדם: די בנקודה אחת טהורה שבלב — ממנה יכול לצאת אור גדול משיערנו.",
         icon: "🕎",
       },
       {
-        title: "חודש הגאולה",
-        source: 'מנהג חב"ד',
-        text: "בחסידות חב\"ד נקרא כסלו 'חודש הגאולה' – כי ב-י\"ט כסלו שוחרר אדמו\"ר הזקן מהכלא ברוסיה, ומסירת חסידות חב\"ד נמשכה. כל שנה חוגגים זאת ב'חג הגאולה'. כסלו מבשר: גם בתוך הגלות, יש רגעים של שחרור, של אור, של נצחון הנשמה על הגוף.",
+        title: "קץ שם לחושך",
+        source: "בראשית רבה פט, א",
+        text: "על הפסוק 'ויהי מקץ' — הנקרא בחודש כסלו — דרשו במדרש את הכתוב 'קץ שם לחושך': זמן קצוב נתן הקב״ה ליוסף בבית האסורים, וכשהגיע הקץ — 'ויריצוהו מן הבור'. לכל חושך יש קץ קבוע מן השמים, ולפעמים הישועה באה במרוצה, ברגע אחד. כסלו, חודש הלילות הארוכים — הוא דווקא חודש הבשורה: האור בוא יבוא.",
         icon: "✨",
       },
     ],
     טבת: [
       {
-        title: "טבת – חשכה ואור נסתר",
-        source: "ספר יצירה",
-        text: "טבת הוא החודש הקר ביותר, חשוך ביותר. עשרה בטבת – צום. ואף על פי כן, בתוך כסלו וטבת מאירים נרות חנוכה. הניגוד הזה הוא מסר עמוק: גם בשפל הרוחני, האור קיים. אל תחפש את ה' רק בהרים – מצא אותו גם בעמקים.",
-        icon: "❄️",
+        title: "מנהגו של עולם",
+        source: "עבודה זרה ח, א",
+        text: "אמרו חכמים: אדם הראשון, כשראה שהימים הולכים ומתקצרים, אמר: אוי לי, שמא העולם חשוך בעווני וחוזר לתוהו. עמד וישב בתענית. כיוון שראה תקופת טבת — שהימים חוזרים ומאריכים — אמר: מנהגו של עולם הוא! עמד ועשה ימים טובים. מטבת ואילך האור גובר מיום ליום — ללמדך שגם כשנדמה שהחושך משתלט, סדר העולם הוא שהאור חוזר.",
+        icon: "🌅",
       },
       {
-        title: "טבת – חודש החזרה בתשובה",
-        source: "הרב אברהם פאלאג'י",
-        text: "טבת בא אחרי שמחת חנוכה. אחרי הנרות, החשכה חוזרת. כאן נבחן האדם: האם האור שקיבל בחנוכה נשאר איתו? טבת הוא חודש של עיבוד פנימי, של הפיכת הנרות החיצוניים לאור פנימי שאינו כבה גם כשהחורף ארוך.",
+        title: "עצם היום הזה",
+        source: "יחזקאל כד, ב",
+        text: "ביום עשרה בטבת אמר ה' ליחזקאל: 'כתב לך את שם היום, את עצם היום הזה — סמך מלך בבל אל ירושלים בעצם היום הזה'. עוד לא נבקעה חומה ולא נשרף דבר — רק מצור החל. אך התורה מלמדת: את תחילת הצרה זוכרים, כי שם השורש. ומידה טובה מרובה: גם כל התחלה קטנה של קדושה — 'עצם היום הזה' — נכתבת ונחקקת לדורות.",
         icon: "🕯️",
       },
     ],
     שבט: [
       {
-        title: "שבט – חודש ההתעוררות",
-        source: "מנהג ישראל",
-        text: 'ט"ו בשבט הוא ראש השנה לאילנות. בשבט האילנות מתחילים לינוק שוב מן הקרקע, אפילו שבחוץ עדיין חורף. הנשמה גם היא כך: לפעמים ההתחדשות מתחילה בפנים, הרבה לפני שהיא נראית מבחוץ. שבט מלמד: אמון בתהליכים שקטים שמתנהלים מתחת לפני השטח.',
+        title: "ראש השנה לאילן",
+        source: "משנה ראש השנה א, א",
+        text: "'באחד בשבט ראש השנה לאילן כדברי בית שמאי; בית הלל אומרים בחמישה עשר בו'. ותמוה: הלוא בשבט העצים עומדים בשלכת! אלא שכבר עלה רוב השרף באילנות, והפרי מתחיל להיווצר בסתר. הצמיחה האמיתית מתחילה במקום שאין העין רואה. כך האדם — 'כי האדם עץ השדה': גם כשלא נראה פרי, בפנים כבר עולה השרף.",
         icon: "🌳",
       },
       {
-        title: "פרי העץ – שמחת הטבע",
-        source: "הרב קוק",
-        text: "ט\"ו בשבט הוא יום שמחה על פירות הארץ. הרב קוק ראה בקדושת הטבע ביטוי לאלוקות. כל אילן, כל פרי – הוא יצירה אלוקית. בט\"ו בשבט אנחנו מכירים תודה לה' על הטבע. 'מלוא כל הארץ כבודו' – הכבוד מתגלה גם בפרח, גם בעץ, גם בפרי.",
-        icon: "🍎",
+        title: "הואיל משה באר",
+        source: "דברים א, ג-ה",
+        text: "'בעשתי עשר חודש באחד לחודש' — בראש חודש שבט — 'הואיל משה באר את התורה הזאת'. שבט הוא החודש שבו פתח משה רבנו בביאור התורה לישראל, שלושים ושבעה ימים לפני פטירתו. מכאן שקבעו קדמונים את שבט כזמן של התחדשות בלימוד: כשם שהאילן מתחדש בו בסתר — כך התורה נובעת בו באר חדשה.",
+        icon: "📖",
       },
     ],
     אדר: [
       {
-        title: "אדר – חודש השמחה",
-        source: "גמרא תענית",
-        text: "'משנכנס אדר מרבים בשמחה'. הגמרא אומרת: כשם שמשנכנס אב ממעטים בשמחה, כשנכנס אדר מרבים. אדר הוא ה'אנטי-אב'. בחודש שבו נגזר הכלייה על ישראל – ונהפך לנס – אנחנו חוגגים את היכולת האלוקית להפוך רע לטוב.",
-        icon: "🎉",
+        title: "מרבין בשמחה",
+        source: "תענית כט, א-ב",
+        text: "'משנכנס אדר מרבין בשמחה'. ואמר רב פפא: ישראל בחודש אדר — 'בריא מזליה', מזלו איתן. מהי השמחה הזו? לא שמחת יין בלבד, אלא שמחת הביטחון: באדר ראו ישראל איך גזרה חתומה בטבעת המלך נהפכת ביום אחד. מי שיודע שהכל ביד ה' — שמחתו אינה תלויה בדבר, ולכן היא הולכת ומתרבה.",
+        icon: "🎭",
       },
       {
-        title: "מזל אדר",
-        source: "בעל התניא",
-        text: "מזל אדר הוא דגים. 'כדגים הרבים שאין עין הרע שולטת בהם'. כמו דגים שחיים מתחת לפני המים, מחוץ לראייה של עין הרע – כך ישראל בפורים ניצחו כי זכות מיוחדת הגנה עליהם. אדר מבשר: יש הגנה עליונה שמתגלה ברגע האמת.",
-        icon: "🐟",
+        title: "החודש אשר נהפך",
+        source: "אסתר ט, כב",
+        text: "'והחודש אשר נהפך להם מיגון לשמחה ומאבל ליום טוב'. המגילה לא אומרת שהיגון בטל — אלא שנהפך. הצרה עצמה נעשתה חומר לשמחה: אותו יום שנקבע לחורבן נעשה יום משתה. זהו כוחו של אדר וזה כוחה של תשובה מאהבה, שעליה אמרו חכמים (יומא פו) שזדונות נעשות לו כזכויות — לא מחיקה, אלא היפוך.",
+        icon: "🔄",
       },
     ],
     "אדר א": [
       {
-        title: "אדר ראשון – שמחה מוכפלת",
-        source: 'הרמ"א',
-        text: "בשנת עיבור יש שני חודשי אדר. אמרו חז\"ל: 'מרבים שמחה בשני האדרים'. יש מחלוקת איזה אדר הוא הפורים האמיתי – הלכה שהוא אדר שני. אך אדר ראשון גם הוא זמן שמחה. 'אדר א' מלמד: כשיש הזדמנות שנייה – שמח בה לא פחות מהראשונה.",
-        icon: "🎊",
+        title: "החודש שכולו תוספת",
+        source: "סנהדרין יא-יב",
+        text: "בשנה מעוברת מוסיפים בית דין חודש שלם, כדי שיחול פסח באביב — 'שמור את חודש האביב'. התורה מסרה את קביעת הזמנים לחכמי ישראל: 'החודש הזה לכם'. אדר ראשון הוא חודש שכולו מתנה — תוספת זמן שנבראה בידי ישראל עצמם. ללמדך כמה גדול כוחם של ישראל, שהקב״ה מכוון את מועדיו על פי בית דין של מטה.",
+        icon: "🗓️",
       },
       {
-        title: "שנת העיבור – הוספה לשלמות",
-        source: "ספר הזוהר",
-        text: "השנה המעוברת נוספת כדי לאזן בין הלוח הירחי לשמשי. השנה המעוברת היא שנה עמוקה יותר – שנה שבה יש זמן נוסף לתיקון ולעמקות. אדר ראשון הוא מתנה – חודש שלם נוסף של עבודה, של הכנה, של שמחה.",
-        icon: "🌙",
+        title: "שישים יום של שמחה",
+        source: "חתם סופר, או\"ח קס",
+        text: "כתב החתם סופר: בשנה מעוברת יש שישים יום של 'משנכנס אדר מרבין בשמחה' — שני אדרים שלמים. ושישים הוא שיעור ביטול — 'בטל בשישים': שישים יום של שמחה יש בכוחם לבטל את כל הדינים והדאגות של השנה. שנה שיש בה יותר אדר — היא שנה שנועדה ליותר שמחה.",
+        icon: "😊",
       },
     ],
     "אדר ב": [
       {
-        title: "אדר שני – עת הנס",
-        source: "גמרא מגילה",
-        text: "פורים חל באדר שני – הסמוך לניסן, חודש הגאולה. 'הסמך גאולה לגאולה' – נס פורים קרוב לנס יציאת מצרים. אדר שני הוא שיא שמחת אדר, הזמן שבו כל הפוטנציאל של חודש השמחה מתממש. 'ונהפוך הוא' – ההיפוך הגדול קורה כאן.",
-        icon: "🎭",
+        title: "מסמך גאולה לגאולה",
+        source: "מגילה ו, ב",
+        text: "מפני מה קוראים את המגילה באדר השני ולא בראשון? אמרו בגמרא: 'מסמך גאולה לגאולה עדיף' — לסמוך את גאולת פורים לגאולת פסח. חכמים סידרו את השנה כך שהגאולות מחוברות זו לזו, שרשרת אחת של חסדים. כך ראוי לאדם לסדר את ימיו — לחבר מעשה טוב לחברו, ואור אחד לאור הבא אחריו.",
+        icon: "🔗",
       },
       {
-        title: "גאולה בצינעה",
-        source: 'הגר"א',
-        text: "נס פורים הוא נס נסתר – שם ה' לא מוזכר במגילה. אדר שני מלמד: הגאולה לא תמיד באה בקולות ובברקים. לפעמים היא מתרחשת בשקט, בצינעה, ורק בסוף מבינים: 'כי לא בחזקה ולא בגבורה'. זהו עומק פורים – לזהות את יד ה' בתוך המציאות הטבעית.",
-        icon: "✡️",
+        title: "אדר של מעשה",
+        source: "אסתר ט, כח",
+        text: "'והימים האלה נזכרים ונעשים בכל דור ודור'. דרשו קדמונים: נזכרים — ואז נעשים; כל שנה כשמגיע אדר, אותה הארה של נס פורים חוזרת ומתעוררת. באדר השני, שבו חל פורים בפועל, הזכירה נעשית מעשה: משלוח מנות, מתנות לאביונים, משתה ושמחה. הזיכרון בישראל אינו נוסטלגיה — הוא מנוע של עשייה.",
+        icon: "🎁",
       },
     ],
     ניסן: [
       {
-        title: "ניסן – ראש לחודשים",
-        source: "שמות יב",
-        text: "'החודש הזה לכם ראש חודשים, ראשון הוא לכם לחודשי השנה'. ניסן הוא ראש החודשים לפי מצות התורה. בניסן יצאנו ממצרים, בניסן נגאל. ניסן הוא חודש ה'ראשוניות' – של התחלות חדשות, של קפיצות אל הלא נודע, של בטחון שה' עמנו.",
-        icon: "🌊",
+        title: "בניסן עתידין להיגאל",
+        source: "ראש השנה יא, א",
+        text: "רבי יהושע אומר: 'בניסן נגאלו — ובניסן עתידין להיגאל'. ניסן איננו רק זיכרון של גאולה שהייתה, אלא הבטחה של גאולה שתהיה. בכל שנה, כשמגיע ניסן, נפתחים אותם שערים שנפתחו במצרים. לכן נקרא 'חודש האביב' — זמן שהעולם כולו מעיד: מה שנראה מת כל החורף — פורח מחדש.",
+        icon: "🌸",
       },
       {
-        title: "ניסן – חודש האביב",
-        source: "שמות יג",
-        text: "נקרא גם 'חודש האביב'. בניסן הטבע מתחדש – הצמחים פורחים, האוויר מתחמם. חז\"ל ראו בחידוש הטבע בניסן רמז לגאולת ישראל. 'עורי צפון ובואי תימן' – רוחות האביב הן קול הגאולה. ניסן מלמד: חידוש תמיד אפשרי, אפילו אחרי חורף ארוך.",
-        icon: "🌸",
+        title: "החודש הזה לכם",
+        source: "שמות יב, ב",
+        text: "המצוה הראשונה שנצטוו ישראל כעם היא קידוש החודש — 'החודש הזה לכם ראש חודשים'. עבד אין לו זמן משלו; אדוניו קובע את יומו. המתנה הראשונה של הגאולה היא הבעלות על הזמן. ודרשו: 'החודש' — לשון התחדשות: מסר הקב״ה לישראל את סוד ההתחדשות — שיכולים הם להתחיל מחדש בכל עת.",
+        icon: "🌙",
       },
     ],
     אייר: [
       {
-        title: "אייר – חודש הרפואה",
-        source: 'חז"ל',
-        text: "ראשי תיבות של 'אייר': א-נוכי י-הוה ר-ופאך. חודש אייר הוא חודש הרפואה. בו קיבלו ישראל את מצוות מרה, בו ירד המן. אייר הוא חודש של מעבר – בין פסח לשבועות, בין גאולה לקבלת תורה. מסע הספירה שבו הוא מסע ריפוי מידות.",
-        icon: "💊",
+        title: "חודש שכולו ספירה",
+        source: "ספר החינוך, מצוה שו",
+        text: "אייר הוא החודש היחיד שכל ימיו בתוך ספירת העומר. כתב ספר החינוך: הספירה היא ביטוי לכיסופים — כאדם המונה את הימים לקראת היום הנכסף לו, כך אנו מונים לקראת קבלת התורה, 'כי היא כל עיקרן של ישראל'. ולימדו בעלי המוסר: שבע שבתות — כנגד שבע המידות; כל יום באייר הוא מדרגה בסולם של עבודת הלב.",
+        icon: "🌾",
       },
       {
-        title: "ספירת העומר – מסע של 49 יום",
-        source: 'הרמח"ל',
-        text: "כל ימי אייר נמצאים בתוך ספירת העומר. ה-49 ימים הם תיקון שבע המידות. בכל שבוע עובדים על מידה אחרת: חסד, גבורה, תפארת, נצח, הוד, יסוד, מלכות. אייר הוא חודש של עבודה פנימית שקטה – להכין את עצמנו לקבלת תורה בשבועות.",
-        icon: "✨",
+        title: "אני ה' רופאך",
+        source: "שמות טו, כו",
+        text: "קדמונים דרשו: איי\"ר — ראשי תיבות 'אֲנִי יְיָ רֹפְאֶךָ'. ואכן באייר החל המן לרדת לישראל — לחם שכולו רפואה, שאמרו עליו חכמים (יומא עה) שנבלע באיברים ולא הזיק מעולם. חודש אייר, שבו הטבע כולו מבריא ומלבלב, נמסר בידינו כחודש של רפואת הגוף והנפש — 'כל המחלה אשר שמתי במצרים לא אשים עליך'.",
+        icon: "🌿",
       },
     ],
     סיון: [
       {
-        title: "סיון – זמן מתן תורתנו",
-        source: "שמות יט",
-        text: "בסיון ניתנה תורה. 'בחודש השלישי לצאת בני ישראל מארץ מצרים, ביום הזה באו מדבר סיני'. סיון הוא חודש ה'שלישי' – שלוש אבות, שלוש כיתות (כוהנים לויים ישראלים), שלושה ימי הגבלה. הכל מתכנס לנקודה אחת: קבלת התורה.",
+        title: "תורה משולשת",
+        source: "שבת פח, א",
+        text: "דרש ההוא גלילי: 'בריך רחמנא דיהב אוריאן תליתאי (תורה משולשת — תורה נביאים וכתובים) לעם תליתאי (כהנים לויים וישראלים) על ידי תליתאי (משה, שלישי לבטן) ביום תליתאי בירחא תליתאי' — הוא סיון, החודש השלישי. הכל בתורה בנוי חוליות-חוליות, שרשרת מסודרת — ללמדך שקבלת התורה איננה מקרה אלא בניין מכוון מששת ימי בראשית.",
         icon: "📜",
       },
       {
-        title: "סיון – חודש השמחה הרוחנית",
-        source: "ספר החינוך",
-        text: "שבועות בסיון הוא 'זמן מתן תורתנו'. שמחת סיון היא שמחה רוחנית – שמחת החכמה, שמחת הידיעה ש ה' בחר בנו ונתן לנו את תורתו. 'אשרינו מה טוב חלקנו' – חלקנו לדעת, ללמוד, לחיות לפי התורה.",
-        icon: "🌿",
+        title: "כאיש אחד בלב אחד",
+        source: "רש\"י שמות יט, ב (מכילתא)",
+        text: "'ויחן שם ישראל נגד ההר' — ויחן לשון יחיד. פירש רש״י: 'כאיש אחד בלב אחד' — אבל שאר החניות בתרעומת ובמחלוקת. רק כשנעשו ישראל אחד — יכלה תורה אחת מא-ל אחד לשכון בתוכם. זהו תנאי מתן תורה בכל דור: האחדות קודמת לקבלה. סיון הוא חודש האחדות — ההר מחכה שנחנה נגדו יחד.",
+        icon: "🤝",
       },
     ],
     תמוז: [
       {
-        title: "תמוז – חודש של עמידה במסה",
-        source: 'רש"י',
-        text: "בתמוז נשברו הלוחות, הוקם העגל הזהב. תמוז הוא חודש של ניסיון – כשמשה עיכב, ישראל לא החזיקו. אבל הנפילה של תמוז מלמדת: אל תיבנה את אמונתך רק על הנהגה חיצונית. הביטחון צריך להיות פנימי, עמוק, שאינו נשבר כשהמדריך נעלם.",
-        icon: "☀️",
+        title: "צומות שיהפכו לששון",
+        source: "זכריה ח, יט; רמב\"ם תעניות ה, יט",
+        text: "'כה אמר ה' צבאות: צום הרביעי (י\"ז בתמוז) וצום החמישי... יהיה לבית יהודה לששון ולשמחה ולמועדים טובים'. פסק הרמב״ם: 'כל הצומות האלו עתידים ליבטל לימות המשיח, ולא עוד אלא שהם עתידים להיות ימים טובים וימי ששון ושמחה'. הצום איננו מטרה — הוא דרך. מי שצם ומתקן, הופך בעצמו את ימי האבל לזרעים של מועד.",
+        icon: "🌇",
       },
       {
-        title: "בין המצרים – שלושה שבועות",
-        source: "ספר מלכים",
-        text: "מי\"ז בתמוז עד ט' באב הם 'שלושת השבועות' – ימי אבל על חורבן הבית. תמוז נכנס לתקופה של ירידה. אך חז\"ל הבטיחו: 'כל המתאבל על ירושלים זוכה ורואה בשמחתה'. האבל של תמוז הוא הכנה לנחמה.",
-        icon: "😢",
+        title: "לוחות שניים",
+        source: "שמות לב-לד",
+        text: "בי״ז בתמוז שבר משה את הלוחות למרגלות ההר. אך לא נסתיים הסיפור בשבירה: משה חזר ועלה, וביום הכיפורים ירד עם לוחות שניים. ואמרו חכמים (מנחות צט): 'לוחות ושברי לוחות מונחין בארון' — גם השברים קדושים ושמורים. תמוז מלמד את סוד הנפילה של האדם: השבר איננו סוף — הוא תחילת העלייה השנייה.",
+        icon: "🪨",
       },
     ],
     אב: [
       {
-        title: "אב – מאבל לנחמה",
-        source: "ישעיהו",
-        text: "חודש אב מתחיל בשלושת השבועות ומגיע לשיאם בט' באב. אבל אחרי ט' באב מגיע שבת נחמו – 'נחמו נחמו עמי'. אב הוא חודש של קאתרזיס – שחרור הכאב, ואז פתיחה לנחמה. 'הצי לך מזרחה ומצפונה ומנגבה ותאכלי חיל גויים' – אחרי החורבן, הבטחת הגאולה.",
-        icon: "😢",
+        title: "קרא עלי מועד",
+        source: "איכה א, טו; תענית כט",
+        text: "'משנכנס אב ממעטין בשמחה' — ובאותה נשימה קראו חכמים לתשעה באב 'מועד', על שם הכתוב 'קרא עלי מועד', ולכן אין אומרים בו תחנון. יום החורבן נושא בתוכו גרעין של יום טוב, שהרי אמרו במדרש (איכה רבה א) שביום זה נולד המשיח. האבל בישראל לעולם איננו ייאוש — הוא געגוע שמחכה להתממש.",
+        icon: "🌱",
       },
       {
-        title: "חמישה עשר באב – חג האהבה",
-        source: "גמרא תענית",
-        text: "'לא היו ימים טובים לישראל כחמישה עשר באב'. ט\"ו באב – שבועות ספורות אחרי ט' באב – הוא חג האהבה. בנות ירושלים יצאו לכרמים. האופן שבו הכאב הגדול ביותר הופך לשמחה גדולה – תוך שבועות – מגלה את כוח ישראל: לצאת מהעמקים ולשמוח שוב.",
-        icon: "💕",
+        title: "מנחם אב",
+        source: "תענית ל, ב",
+        text: "אמרו חכמים: 'כל המתאבל על ירושלים — זוכה ורואה בשמחתה'. לא 'יזכה' לשון עתיד נאמר בלשון המשנה, דייקו קדמונים — אלא 'זוכה', מיד: עצם האבלות היא חיבור חי אל ירושלים, ומי שמחובר — כבר יש לו חלק בבניינה. לכן נקרא החודש 'מנחם אב': הנחמה גנוזה בתוך האבל עצמו, וממנו היא צומחת.",
+        icon: "🕊️",
       },
     ],
     אלול: [
       {
-        title: "אלול – חודש התשובה",
-        source: 'הרמב"ם',
-        text: "'אני לדודי ודודי לי' – ראשי תיבות: א-ל-ו-ל. חודש אלול הוא חודש שבו ה' קרוב אלינו במיוחד. 'המלך בשדה' – הקדוש ברוך הוא יוצא לקראתנו. כל יום בחודש זה תוקעים בשופר כדי לעורר את הלבבות. אלול הוא חודש הרחמים והסליחות – הכנה לראש השנה.",
-        icon: "🌙",
+        title: "אני לדודי ודודי לי",
+        source: "שיר השירים ו, ג; אבודרהם",
+        text: "כתבו הקדמונים: אלו\"ל — ראשי תיבות 'אֲנִי לְדוֹדִי וְדוֹדִי לִי'. וסימנך: סופי התיבות ארבע יודין — כנגד ארבעים יום מראש חודש אלול עד יום הכיפורים, ימי הרצון. הסדר מדויק: תחילה 'אני לדודי' — האדם עושה צעד ראשון, ואז 'ודודי לי' — הקב״ה רץ לקראתו. באלול, אמרו משלו הקדמונים, 'המלך בשדה' — קרוב לכל קוראיו.",
+        icon: "💛",
       },
       {
-        title: "ארבעים יום של רצון",
-        source: "שמות לד",
-        text: "משה עלה שנית להר סיני בראש חודש אלול וירד ביום הכיפורים – ארבעים יום של רצון אלוקי לסליחה. מאז, ארבעים הימים שבין ראש חודש אלול לכיפור הם 'עת רצון'. בכל שנה חוזר חלון הזמן הזה. זה הזמן שבו התשובה 'קלה' יותר, שבו שערי שמים פתוחים לרווחה.",
-        icon: "✨",
+        title: "ארבעים ימי רצון",
+        source: "פרקי דרבי אליעזר מו",
+        text: "בראש חודש אלול עלה משה אל ההר לקבל לוחות שניים, ותקעו שופר במחנה. ארבעים יום עמד שם — עד יום הכיפורים, שבו ירד ובידו הלוחות ובפיו 'סלחתי'. מאז נקבעו ארבעים הימים הללו לדורות כימי רצון וסליחה, ולכן תוקעים בשופר בכל בוקר של אלול: השופר שהעיר אז את המחנה — מעיר אותנו עדיין.",
+        icon: "🎺",
       },
     ],
   };
-
   var PARSHA_DT = {
     בראשית: [
       [
         {
-          title: "בראשית – בשביל מי?",
-          source: 'רש"י',
-          text: "'בשביל התורה שנקראת ראשית ובשביל ישראל שנקראו ראשית'. רש\"י שואל: מדוע התורה מתחילה בבריאה ולא במצווה הראשונה? כדי שנדע שארץ ישראל שלנו, כי ה' ברא הכל ויכול לתת לכל מה שרצה. הבריאה כולה היא ביסוס זכותנו.",
+          title: "בשביל ישראל שנקראו ראשית",
+          source: "רש\"י בראשית א, א",
+          text: "פתח רש״י את פירושו לתורה: 'בראשית — בשביל התורה שנקראת ראשית דרכו, ובשביל ישראל שנקראו ראשית תבואתה'. העולם כולו — שמים, ים וכוכבים — נברא בשביל התורה ובשביל ישראל המקיימים אותה. כל יהודי הפותח חומש שומע כאן דבר עצום: אתה לא תוספת לעולם — אתה הסיבה שהוא קיים.",
           icon: "🌍",
         },
-      ],
-      [
         {
-          title: "ויאמר אלוהים – כוח הדיבור",
-          source: "הרב קוק",
-          text: "'ויאמר אלוהים יהי אור' – העולם נברא בדיבור. גם לאדם הנברא בצלם אלוהים יש כוח דיבור יוצר. מילים יוצרות מציאות. לכן התורה מקפידה כל כך על לשון הרע, על שבועה שווא, על אמת. כל מילה שלנו היא יצירה – לטוב ולרע.",
-          icon: "💬",
+          title: "תן דעתך שלא תקלקל",
+          source: "קהלת רבה ז, יג",
+          text: "בשעה שברא הקב״ה את אדם הראשון, נטלו והחזירו על כל אילני גן עדן ואמר לו: 'ראה מעשי כמה נאים ומשובחים הן, וכל מה שבראתי — בשבילך בראתי. תן דעתך שלא תקלקל ותחריב את עולמי'. מהמדרש הזה למדנו את היסוד: העולם הופקד בידינו כפיקדון יקר. כל מעשה טוב — בניין עולם; וכבוד הבריות והבריאה — עבודת ה' ממש.",
+          icon: "🌿",
         },
       ],
     ],
     נח: [
       [
         {
-          title: "נח איש צדיק",
-          source: 'רש"י – גמרא סנהדרין',
-          text: "'נח איש צדיק תמים היה בדורותיו' – רש\"י מביא שתי דעות: יש שאומרים 'בדורותיו' לשבח – שבדורו היה צדיק ובדור אברהם אף הוא היה נחשב. ויש שאומרים לגנאי. נח הוא אדם שניצל אך לא הציל. לאחר שיצא מהתיבה – שתה. הצדיקות חייבת להיות אקטיבית.",
-          icon: "🕊️",
-        },
-      ],
-      [
-        {
-          title: "קשת בענן – ברית עולם",
-          source: "בראשית ט",
-          text: "'את קשתי נתתי בענן' – ה' נתן קשת כסימן לברית שלא יהיה מבול שוב. הקשת מופיעה דווקא אחרי הסערה. היא נוצרת מחיבור השמש והגשם. כך גם בחיי האדם: אחרי הסערה הגדולה ביותר – מופיע הסימן שה' לא עזב. הברית נצחית.",
+          title: "תמים היה בדורותיו",
+          source: "רש\"י בראשית ו, ט; סנהדרין קח",
+          text: "'נח איש צדיק תמים היה בדורותיו' — יש מרבותינו דורשים אותו לשבח: אילו היה בדור של צדיקים היה צדיק יותר. ללמדך שאין תירוץ בסביבה: אפשר לעמוד נקי גם כשכל העולם סביב שטוף חמס. ומי שמחזיק בצדקו בדור קשה — אמרו שהוא חביב עוד יותר, כי אורו נלחם בחושך ממש.",
           icon: "🌈",
+        },
+        {
+          title: "שנה של חסד רצוף",
+          source: "סנהדרין קח, ב",
+          text: "אמר רבי לוי: כל שנים עשר חודש בתיבה לא טעם נח טעם שינה, לא ביום ולא בלילה — שהיה טרוד וזן את הבריות שעמו. עולם שנחרב בגלל 'חמס' — נטילה מן הזולת — נבנה מחדש בתיבה שכולה נתינה בלתי פוסקת. זהו סוד ההצלה: כשהעולם מסביב קורס, בונים בפנים עולם קטן שכולו חסד — וממנו מתחילה הבריאה מחדש.",
+          icon: "⛵",
         },
       ],
     ],
     "לך לך": [
       [
         {
-          title: "לך לך – צא מנחמת אזורך",
-          source: "הבעל שם טוב",
-          text: "'לך לך מארצך ומולדתך ומבית אביך'. ה' מצווה אברהם לצאת משלושה דברים: ארץ, מולדת, בית אב – שלושה עיגונים של הנוחות. הדרך הרוחנית מתחילה ביציאה. כל אחד מאתנו מקבל 'לך לך' – לצאת מהנוחות המוכרת אל ייעודו האמיתי.",
-          icon: "🚶",
+          title: "הבירה הדולקת",
+          source: "בראשית רבה לט, א",
+          text: "'ויאמר ה' אל אברם לך לך' — משל לאחד שהיה עובר ממקום למקום וראה בירה אחת דולקת (מוארת). אמר: תאמר שהבירה הזו בלא מנהיג? הציץ עליו בעל הבירה ואמר לו: אני הוא בעל הבירה. כך אברהם אבינו הביט בעולם ושאל — עד שהציץ עליו הקב״ה. האמונה של אברהם לא באה מנס, אלא מהתבוננות: מי שמסתכל באמת על העולם — מוצא את בעליו.",
+          icon: "🏰",
         },
-      ],
-      [
         {
-          title: "אברהם אבינו – פורץ דרך",
-          source: 'הרמב"ם',
-          text: "אברהם הגיע לאמונה בה' בכוח עצמו, ללא מסורת, ללא הורים מאמינים. 'אברהם איש גדול' – גדולתו שגילה את ה' בתוך עולם שכחתו. כל אדם שמחפש אמת ולא מסתפק בנוחות הדת המוכרת – עוקב אחרי נתיב אברהם.",
-          icon: "⭐",
+          title: "להנאתך ולטובתך",
+          source: "רש\"י בראשית יב, א",
+          text: "'לך לך' — פירש רש״י: 'להנאתך ולטובתך'. הציווי לעזוב ארץ, מולדת ובית אב נשמע כקורבן כבד — והתורה מגלה שהוא כולו מתנה: 'ושם אעשך לגוי גדול'. כמה פעמים אנו נאחזים במוכר ומפחדים מן הדרך — והקב״ה אומר לכל אחד כמו לאברהם: הליכה זו, שנראית קשה — להנאתך ולטובתך היא.",
+          icon: "🚶",
         },
       ],
     ],
     וירא: [
       [
         {
-          title: "הכנסת אורחים מעל הכל",
-          source: "גמרא שבת",
-          text: "'ה' נראה אליו' – ואברהם ישב בפתח האוהל. רש\"י: ביקר את החולה. גם כשהשכינה עמו – כשראה אברהם אורחים, עזב את השכינה לכבד אותם. 'גדולה הכנסת אורחים מקבלת פני שכינה'. לשרת אנשים בצרכיהם – זה עצמו קבלת פני שכינה.",
-          icon: "🏕️",
+          title: "גדולה הכנסת אורחים",
+          source: "שבת קכז, א",
+          text: "אברהם אבינו, ביום השלישי למילתו, יושב פתח האוהל בחום היום — ובראותו שלושה אורחים הוא רץ לקראתם ומניח את השכינה: 'אדני, אל נא תעבור מעל עבדך'. מכאן אמר רב יהודה אמר רב: 'גדולה הכנסת אורחים מהקבלת פני שכינה'. הקב״ה עצמו מלמדנו שכבודו — שנכבד את בריותיו. חסד לאדם הוא הדרך הגבוהה ביותר אל האלוקים.",
+          icon: "⛺",
         },
-      ],
-      [
         {
-          title: "עקדת יצחק – מבחן הנכונות",
-          source: 'הרמב"ן',
-          text: "עקידת יצחק לא נועדה לשחוט – ה' לא רצה קורבן אדם. נועדה להוציא את פוטנציאל אברהם מכח לפועל. מה שהיה אפשרי – נעשה ממשי. 'עתה ידעתי כי ירא אלוהים אתה' – לא ידע קודם, כי עד שנבחן, הפוטנציאל נסתר. הנסיונות מגלים מי אנחנו.",
-          icon: "🔥",
+          title: "ביום השלישי — והאמונה איתנה",
+          source: "בראשית רבה נו, ג",
+          text: "בעקדה נאמר: 'ביום השלישי וישא אברהם את עיניו וירא את המקום מרחוק'. דרשו במדרש: למה ביום השלישי? שלא יאמרו הממו וערבבו — בהפתעה עשה. שלושה ימים תמימים הלך אברהם עם הניסיון, התבונן בו — ולא נחלש. התלהבות של רגע מצויה היא; גדולת אברהם — אמונה שמחזיקה מעמד גם ביום השלישי, בשגרת הדרך הארוכה.",
+          icon: "⛰️",
         },
       ],
     ],
     "חיי שרה": [
       [
         {
-          title: "אחרי המוות – חיים ממשיכים",
-          source: "השפת אמת",
-          text: "הפרשה נקראת 'חיי שרה' אך מתחילה במותה. חייה של שרה ממשיכים אחרי מותה: דרך יצחק שמצא אשה, דרך האמונה שהשאירה. 'חיי שרה' הם החיים שהיא הותירה. אנחנו חיים בזכות מה שהורינו ואבותינו נטעו בנו.",
-          icon: "🌹",
+          title: "כולן שווין לטובה",
+          source: "רש\"י בראשית כג, א",
+          text: "'ויהיו חיי שרה מאה שנה ועשרים שנה ושבע שנים' — פירש רש״י: לכך נכתב 'שנה' בכל כלל וכלל, לומר לך שכל אחד נדרש לעצמו: בת מאה כבת עשרים לחטא, ובת עשרים כבת שבע ליופי. וסיים: 'כולן שווין לטובה'. חיים שכל שנותיהם שוות לטובה — אינם חיים בלא ניסיונות, אלא חיים שבכל מצב נשארו באותה שלמות פנימית.",
+          icon: "👑",
         },
-      ],
-      [
         {
-          title: "ריבקה – הכרת טובה",
-          source: "בראשית כד",
-          text: "כשאליעזר ביקש סימן ל'הכרת הנבחרת', ריבקה הציעה מים לנסיכים, לאנשים, ולגמלים. אחד שמשקה גמלים – הרבה יותר ממה שנדרש ממנו – מגלה נפש נדיבה. הבחירה של ריבקה הייתה בגלל מידותיה, לא רק מוצאה. כך בכל בחירה חשובה בחיים.",
-          icon: "💧",
+          title: "בא בימים",
+          source: "בראשית רבה נט, ו",
+          text: "'ואברהם זקן בא בימים' — דרשו במדרש שבא עם ימיו: כל יום ויום היה בידו, לא חסר אחד. יש אדם שמזקין והימים חלפו לידו; ואברהם נכנס לזקנתו כשכל יום ארוז ומלא — יום של חסד, יום של אמונה, יום של ניסיון שעמד בו. זו הצוואה לכל מבקש: לחיות כך שבסוף הדרך תוכל לבוא — עם הימים שלך.",
+          icon: "🌅",
         },
       ],
     ],
     תולדות: [
       [
         {
-          title: "יעקב ועשו – שתי דרכים",
-          source: 'הרמב"ן',
-          text: "'שני גויים בבטנך' – שתי אומות, שתי גישות לחיים. עשו – האדמוני, הציד, חיי הרגע. יעקב – ישב אוהלים, חיי עומק. הבכורה שנמכרה: עשו מכר את עתידו בעד נזיד עדשים. כל אחד מאתנו בוחר: האם לחיות לרגע, או לבנות עתיד?",
-          icon: "🏕️",
+          title: "איש תם יושב אהלים",
+          source: "רש\"י בראשית כה, כז",
+          text: "'ויעקב איש תם יושב אהלים' — פירש רש״י: אינו בקי ברמאות; כלבו כן פיו. ומהו 'יושב אהלים'? אהלו של שם ואהלו של עבר — בתי המדרש. שני הדברים כרוכים זה בזה: התורה שיעקב ספג באוהל היא שעשתה אותו 'תם' — אדם שתוכו כברו. הישיבה באוהל התורה איננה בריחה מהעולם; היא בית היוצר של יושר בעולם.",
+          icon: "⛺",
         },
-      ],
-      [
         {
-          title: "'קול קול יעקב' – כוח ישראל",
-          source: 'חז"ל',
-          text: "'הקול קול יעקב' – כוחו של יעקב הוא בקול, בתפילה, בתורה. 'הידיים ידי עשו' – כוחו של עשו בידיים, בחרב. ישראל מנצחים כשהם נאמנים לקולם – לתורה, לתפילה. כשישראל מחקים את 'ידי עשו', הם מאבדים את מקור כוחם.",
-          icon: "🎤",
+          title: "חופר הבארות מחדש",
+          source: "בראשית כו, יח",
+          text: "'וישב יצחק ויחפור את בארות המים אשר חפרו בימי אברהם אביו, ויסתמום פלשתים'. באר אחת נקראה עשק, השנייה שטנה — ורק בשלישית: 'רחובות, כי עתה הרחיב ה' לנו'. יצחק לא התייאש מבאר שנסתמה — חפר שוב ושוב. מסורת אבות שנסתמה אפשר וצריך לחפור מחדש, וגם כשההתנגדות חוזרת — המים החיים מחכים בעומק למי שמתמיד.",
+          icon: "⛲",
         },
       ],
     ],
     ויצא: [
       [
         {
-          title: "יעקב חולם – הסולם",
-          source: "בעל התניא",
-          text: "'סולם מוצב ארצה וראשו מגיע השמימה'. הסולם מסמל את הקשר בין שמים לארץ. כל מעשה של אדם – גם הגשמי ביותר – יכול להגיע לשמים. 'ומלאכי אלוהים עולים ויורדים' – המלאכים עולים תחילה: הם נבנים מהמעשים הארציים שלנו.",
+          title: "סולם מוצב ארצה",
+          source: "בראשית כח, יב",
+          text: "'והנה סולם מוצב ארצה וראשו מגיע השמימה'. זהו האדם עצמו: רגליו נטועות בקרקע — בעולם המעשה, הפרנסה והחומר — וראשו יכול לגעת בשמים. והעולים והיורדים בו מלמדים שאין עמידה במקום: או מעלה או מטה. יעקב ראה זאת דווקא בברחו מביתו, בלילה, על אבן — ללמדך שהסולם ניצב בכל מקום שאדם נמצא בו.",
           icon: "🪜",
         },
-      ],
-      [
         {
-          title: "אהבת רחל – ויהיו בעיניו כימים אחדים",
-          source: "בראשית כט",
-          text: "'ויעבוד יעקב ברחל שבע שנים ויהיו בעיניו כימים אחדים באהבתו אותה'. שבע שנות עבודה כימים אחדים – כי האהבה מקצרת הכל. מה שנעשה מאהבה – לא נחשב לעמל. כשאנחנו עושים מה שאנחנו אוהבים ומאמינים בו – הזמן טס.",
-          icon: "❤️",
+          title: "ואנכי לא ידעתי",
+          source: "בראשית כח, טז",
+          text: "'וייקץ יעקב משנתו ויאמר: אכן יש ה' במקום הזה — ואנכי לא ידעתי'. במקום שנראה לו תחנת דרכים אקראית, גילה יעקב שער השמים. כמה פעמים אנו עוברים במקומות ובמצבים ואומרים 'זה סתם, זה בדרך' — והתורה מלמדת: אין 'סתם'. יש ה' במקום הזה, בעבודה הזו, בתקופה הזו — גם אם אנחנו עוד לא ידענו.",
+          icon: "🌌",
         },
       ],
     ],
     וישלח: [
       [
         {
-          title: "מאבק יעקב עם המלאך",
-          source: "הזוהר הקדוש",
-          text: "'ויאבק איש עמו עד עלות השחר'. יעקב נאבק כל הלילה ויצא ממנו פגוע אך ניצח. 'כי שרית עם אלוהים ועם אנשים ותוכל' – השם ישראל נולד מהנצחון הזה. המאבק הפנימי, הקשה, הלילי – הוא שיוצר את הזהות העמוקה ביותר.",
-          icon: "⚔️",
+          title: "קטנתי מכל החסדים",
+          source: "בראשית לב, יא; רש\"י שם",
+          text: "לפני המפגש עם עשו מתפלל יעקב: 'קטונתי מכל החסדים ומכל האמת אשר עשית את עבדך'. פירש רש״י: נתמעטו זכויותי על ידי החסדים שעשית עמי. ככל שיעקב מקבל יותר — הוא מרגיש קטן יותר, לא בעל זכויות אלא בעל חובות של תודה. זו מידת ישראל: השפע האמיתי אינו מגביה את הלב — הוא מעמיק את הענווה ואת ההודאה.",
+          icon: "🙏",
         },
-      ],
-      [
         {
-          title: "שלום עם עשו",
-          source: 'רש"י – בראשית לג',
-          text: "'וירץ עשו לקראתו ויחבקהו'. לאחר עשרים שנה של פחד, יעקב ועשו מתפייסים. יעקב שלח מנחה גדולה לפני המפגש. 'כבוד הבריות דוחה לא תעשה'. גם עם מי שאנחנו חוששים ממנו – ניתן לבנות שלום. כבוד כלפי האחר פותח דלתות.",
-          icon: "🤝",
+          title: "ויאבק איש עמו",
+          source: "בראשית לב, כה-כט; חולין צא",
+          text: "'ויוותר יעקב לבדו ויאבק איש עמו עד עלות השחר' — אמרו חכמים: שרו של עשו היה. המאבק הקשה ביותר מגיע דווקא בלילה, כשאדם לבדו. יעקב יוצא ממנו צולע — אך מנצח, ועם שם חדש: 'לא יעקב ייאמר עוד שמך כי אם ישראל, כי שרית עם אלהים ועם אנשים ותוכל'. מן המאבקים הליליים שלנו אנו יוצאים לפעמים צולעים — אבל עם שם גדול יותר.",
+          icon: "🌘",
         },
       ],
     ],
     וישב: [
       [
         {
-          title: "יוסף וחלומותיו",
-          source: 'הרמב"ם',
-          text: "יוסף חלם חלומות ושיתף – ואחיו שנאוהו. לפעמים הנבואה מוקדמת לזמנה, ויש שאינם יכולים לשאת אותה. יוסף הצדיק לא הפסיק לחלום גם בבור, גם בבית האסורים. הצדיק שומר על חזונו גם כשהמציאות סותרת אותו.",
-          icon: "⭐",
+          title: "מים אין בו — אבל...",
+          source: "שבת כב, א",
+          text: "'והבור ריק אין בו מים' — דרש רב כהנא: ממשמע שנאמר 'ריק' איני יודע שאין בו מים? אלא: מים אין בו — אבל נחשים ועקרבים יש בו. וקדמונים ראו כאן רמז לנפש: 'אין מים אלא תורה' — לב שמתרוקן מתורה אינו נשאר ריק; נכנסים בו נחשים ועקרבים. אין מצב ביניים ניטרלי — או שממלאים את הפנים בטוב, או שהריק מתמלא מעצמו.",
+          icon: "🕳️",
         },
-      ],
-      [
         {
-          title: "מבור לאסרים – ה' עם יוסף",
-          source: "בראשית לט",
-          text: "'ויהי ה' את יוסף' – שלוש פעמים הפסוק חוזר על כך. בבית פוטיפר, בבית הסוהר – 'ה' עמו'. ההצלחה החיצונית לא הייתה ביד יוסף, אבל הנוכחות האלוקית תמיד הייתה. הצדיק שנמצא ב'בור' – לא לבד. ה' שם.",
+          title: "וה' את יוסף",
+          source: "בראשית לט, ב-ג; תנחומא וישב ח",
+          text: "נער עברי, עבד, מנותק ממשפחתו — ועליו נאמר: 'ויהי ה' את יוסף ויהי איש מצליח'. ואפילו אדוניו המצרי 'וירא אדוניו כי ה' אתו'. אמרו במדרש: שם שמים היה שגור בפיו של יוסף. יוסף לא הניח לגלות לנתק אותו; בכל מדרגה — בבית האדון, בבור הכלא — הוא נשאר 'איש אשר רוח אלהים בו'. ההצלחה האמיתית: שה' איתך, וכולם רואים.",
           icon: "🌟",
         },
       ],
@@ -20147,18 +20996,16 @@ document.addEventListener("keydown", (e) => {
     מקץ: [
       [
         {
-          title: "מגדול ופרעה – מהצינוק לשלטון",
-          source: "בראשית מא",
-          text: "תוך יום אחד עלה יוסף מהכלא לביצוע פרעה. 'אין נבון וחכם כמוך'. הגאולה יכולה לבוא מהר מאוד. 'ברגע אחד' כתב רב יהודה. מי שמתאמץ ומכין את עצמו – ברגע שה' פותח את הדלת, הוא מוכן לכניסה.",
-          icon: "👑",
+          title: "קץ שם לחושך",
+          source: "בראשית רבה פט, א",
+          text: "'ויהי מקץ שנתיים ימים' — פתחו במדרש: 'קץ שם לחושך' (איוב כח, ג) — זמן קצוב נתן הקב״ה ליוסף כמה שנים יעשה באפילת בית האסורים. כיוון שהגיע הקץ — 'וישלח פרעה ויריצוהו מן הבור': לא יציאה איטית אלא ריצה. שתים עשרה שנה בבור, ובבוקר אחד — משנה למלך מצרים. כשמגיע הקץ שקבע הקב״ה, אין הישועה מתעכבת אף רגע.",
+          icon: "⏳",
         },
-      ],
-      [
         {
-          title: "הקץ – 'קץ שם לחושך'",
-          source: "איוב כח",
-          text: "'מקץ שנתיים ימים' – אחרי שנתיים בכלא, מגיע הסוף לחושך. שם הפרשה 'מקץ' – הקץ לסבל. ה' קובע קץ לכל צרה. 'זכרוני נא' – יוסף ביקש שישכחוהו אך ה' לא שכח. מי שסובל ועמד באמונתו – בא הקץ לסבלו.",
-          icon: "⏰",
+          title: "אלהים יענה את שלום פרעה",
+          source: "בראשית מא, טז",
+          text: "רגע לפני הרגע הגדול של חייו, כשפרעה אומר לו 'שמעתי עליך תשמע חלום לפתור אותו' — עונה יוסף: 'בלעדי! אלהים יענה את שלום פרעה'. בשיא ההזדמנות, כשאפשר היה ליטול את הכבוד — יוסף מפנה הכל למעלה. וכך גם אחר כך: 'את האלהים אני ירא'. זו גדולתו האמיתית של יוסף הצדיק: ההצלחה לא ערפלה לרגע את הידיעה מאין היא באה.",
+          icon: "👑",
         },
       ],
     ],
@@ -20166,106 +21013,94 @@ document.addEventListener("keydown", (e) => {
       [
         {
           title: "ויגש אליו יהודה",
-          source: 'רש"י – בראשית מד',
-          text: "'ויגש אליו יהודה' – יהודה לא ביקש, לא התחנן. הוא ניגש עם עמדה. הגישה היא צורת עמידה: לא כנועה, לא תוקפנית – אלא ישירה ואחראית. יהודה נכשל בתחילה (יוסף ותמר) ועכשיו מתקן. הוא מציע את עצמו תמורת בנימין – נפש תחת נפש.",
-          icon: "💪",
+          source: "בראשית רבה צג, ו",
+          text: "'ויגש אליו יהודה' — דרשו במדרש: הגשה זו כוללת הכל — הגשה למלחמה, הגשה לפיוס, הגשה לתפילה. יהודה ניגש אל השליט האדיר כשהוא מוכן לכל הדרכים, ובלבד שיציל את אחיו שערב לו. מכוח אותה הגשה של אחריות — נבקע הקרח ויוסף מתגלה. כשאדם לוקח אחריות מלאה על אחיו — נפתחות דלתות שהיו נעולות שנים.",
+          icon: "🤝",
         },
-      ],
-      [
         {
-          title: "גילוי יוסף – מחילה שלמה",
-          source: "בראשית מה",
-          text: "'אני יוסף אחיכם' – ויהודה לא יכל לענות כי נבהלו. רש\"י: אוי לנו מיום הדין. כשיוסף נגלה – האחים בושו. אך יוסף אמר: 'ועתה אל תעצבו ואל יחר בעיניכם'. המחילה האמיתית כוללת שחרור האחר מבושתו. 'כי למחיה שלחני אלוהים'.",
-          icon: "🤗",
+          title: "למחיה שלחני אלהים",
+          source: "בראשית מה, ה",
+          text: "ברגע ההתגלות אומר יוסף לאחיו: 'ועתה אל תעצבו ואל יחר בעיניכם כי מכרתם אותי הנה — כי למחיה שלחני אלהים לפניכם'. עשרים ושתיים שנות סבל, ויוסף אינו נוקם ואינו נוטר; הוא רואה בכל המסע יד מכוונת אחת. מבט כזה על העבר — רואה בצרות של אתמול את השליחות של היום — הוא המפתח לסליחה אמיתית ולשלום בית ובלב.",
+          icon: "💫",
         },
       ],
     ],
     ויחי: [
       [
         {
-          title: "ברכת יעקב – מורשת לדורות",
-          source: "בראשית מט",
-          text: "לפני מותו בירך יעקב את בניו – כל אחד בברכה ייחודית. הוא ראה את הטוב שבכל אחד, גם אם היה בו גם פגם. כך כל הורה: הברכה הגדולה היא לראות את ייחוד ילדך ולאמץ אותו. 'ויברך אותם, איש אשר כברכתו ברך אותם'.",
-          icon: "✋",
+          title: "יעקב אבינו לא מת",
+          source: "תענית ה, ב",
+          text: "אמר רבי יוחנן: יעקב אבינו לא מת. אמרו לו: וכי בכדי ספדו ספדיא וחנטו חנטיא? אמר להם: מקרא אני דורש — 'ואתה אל תירא עבדי יעקב... כי הנני מושיעך מרחוק ואת זרעך': מה זרעו בחיים — אף הוא בחיים. כל זמן שבניו של יעקב חיים בדרכו, מאמינים באמונתו ולומדים תורתו — יעקב חי ממש. הנצח של האבות עובר דרכנו.",
+          icon: "🌳",
         },
-      ],
-      [
         {
-          title: "ויחי יעקב – חיים שממשיכים",
-          source: "גמרא תענית",
-          text: "'ויחי יעקב' – 'יעקב אבינו לא מת'. פרשה זו 'סתומה' – אין רווח לפניה. מדוע? כי עם מות יעקב – גלה ישראל. אך יעקב לא מת באמת – הוא חי בתוך בניו, בתורתו, בזרעו. כך כל אדם גדול: רוחו ממשיכה לחיות בתוך אלה שחינך.",
-          icon: "🌟",
+          title: "ישימך אלהים כאפרים וכמנשה",
+          source: "בראשית מח, כ",
+          text: "'בך יברך ישראל לאמר: ישימך אלהים כאפרים וכמנשה' — עד היום מברכים כך אבות את בניהם. ולמה דווקא הם? אפרים הצעיר הוקדם למנשה הבכור בברכת יעקב — ומנשה לא קינא, ולא מצינו ביניהם מחלוקת. הם הראשונים ששברו את שרשרת הקנאה שבספר בראשית: קין והבל, יצחק וישמעאל, יעקב ועשו, יוסף ואחיו. ילדים שאינם מקנאים זה בזה — זו הברכה הגדולה מכולן.",
+          icon: "👨‍👦‍👦",
         },
       ],
     ],
     שמות: [
       [
         {
-          title: "שם – הזהות ששומרת",
-          source: "מדרש שמות",
-          text: "'ואלה שמות בני ישראל'. חז\"ל אמרו: ישראל לא שינו את שמותיהם במצרים. בתוך הגלות הקשה – שמרו על שמותיהם, לשונם, מלבושם. הזהות ששמרו – היא שהצילה אותם. 'כשם שנכנסו, כך יצאו'. לשמר את השם שלך – לשמר את עצמך.",
-          icon: "📜",
+          title: "אין מקום פנוי משכינה",
+          source: "שמות רבה ב, ה",
+          text: "'מדוע לא יבער הסנה?' — שאלו במדרש: למה נגלה הקב״ה למשה דווקא מתוך סנה, השפל שבאילנות? 'ללמדך שאין מקום פנוי בלא שכינה — אפילו סנה'. ועוד אמרו: מה הסנה הזה קשה שבאילנות — כך ישראל בצרתם, והקב״ה עמהם: 'עמו אנכי בצרה'. אין מקום נמוך מדי, אין מצב אבוד מדי — בכל סנה בוערת אש שאיננה אוכלת.",
+          icon: "🔥",
         },
-      ],
-      [
         {
-          title: "משה – גדול ממשפחה שקטה",
-          source: "שמות ב",
-          text: "משה גדל בבית פרעה – אך לא שכח שהוא עברי. 'ויגדל משה ויצא אל אחיו וירא בסבלותם'. הוא ראה, הוא השגיח. גדולתו של משה לא בשכלו או בכוחו בלבד – אלא בכך שלא התעלם מסבל אחרים. הנהגה מתחילה בראייה.",
-          icon: "👁️",
+          title: "בזכות נשים צדקניות",
+          source: "סוטה יא, ב",
+          text: "דרש רב עוירא: בשכר נשים צדקניות שהיו באותו הדור — נגאלו ישראל ממצרים. המיילדות שפרה ופועה שלא שמעו אל מלך מצרים 'ותיראן המיילדות את האלהים', יוכבד ומרים, ובנות ישראל שלא נואשו. הגברים כרעו תחת העבודה — והנשים החזיקו את האמונה ואת עתיד העם. כך היה וכך יהיה: 'בזכות נשים צדקניות עתידין להיגאל'.",
+          icon: "🌸",
         },
       ],
     ],
     וארא: [
       [
         {
-          title: "שש עשר שמות ה'",
-          source: "שמות ו",
-          text: "'וארא אל אברהם אל יצחק ואל יעקב באל שדי ושמי ה' לא נודעתי להם'. לאבות נגלה ה' בשם אחד; למשה – בשם ה', שם הנצחיות. כל דור מגלה פן חדש של אלוקות. כל אחד מאתנו פוגש את ה' בצורה שמתאימה לו ולדורו.",
-          icon: "✨",
+          title: "ארבע לשונות של גאולה",
+          source: "שמות ו, ו-ז; ירושלמי פסחים י, א",
+          text: "'והוצאתי... והצלתי... וגאלתי... ולקחתי' — כנגד ארבע לשונות הגאולה הללו תיקנו חכמים ארבע כוסות בליל הסדר. הגאולה איננה מאורע אחד אלא תהליך מדורג: קודם יוצאים מן הסבל, אחר כך מן השעבוד, אחר כך נגאלים בלב — ולבסוף 'ולקחתי אתכם לי לעם'. כך בכל גאולה פרטית: שלב אחר שלב, וה' נאמן להשלים את כולן.",
+          icon: "🍷",
         },
-      ],
-      [
         {
-          title: "עשר המכות – שבירת אמונת המצרים",
-          source: "הרב שמשון רפאל הירש",
-          text: "כל מכה כוונה לאל מצרי ספציפי: הנילוס, הצפרדעים, השמש. ה' הוכיח שאלוהי מצרים אינם אלוהים – רק הוא הוא. הלמידה: לפעמים צריך להפריך עבודה זרה לפני שאפשר לקבל אמת. פינוי השקר הוא ההכנה לאמת.",
-          icon: "🌿",
+          title: "מקוצר רוח ומעבודה קשה",
+          source: "שמות ו, ט",
+          text: "משה מביא לישראל את בשורת הגאולה הגדולה — 'ולא שמעו אל משה, מקוצר רוח ומעבודה קשה'. התורה אינה מאשימה אותם; היא מבינה: לב שחוק מצרות אינו מסוגל לפעמים לשמוע אפילו בשורה טובה. ומה עשה הקב״ה? לא ויתר — המשיך לדבר גאולה, עד שנפתחו הלבבות. וכך עם כל אדם: גם כשאין לו כוח לשמוע — הישועה ממשיכה לדבר אליו.",
+          icon: "💙",
         },
       ],
     ],
     בא: [
       [
         {
-          title: "קידוש הזמן – מצווה ראשונה",
-          source: "שמות יב",
-          text: "'החודש הזה לכם ראש חודשים' – מצווה ראשונה שנצטוו ישראל כעם. לא מצווה מוסרית, אלא קידוש הזמן. ישראל מקדשים זמן לפני שמקדשים מקום. הזמן קודם למרחב. כל ימי חייך – כל רגע – ניתן לקדש. זה הלמידה הראשונה של חירות.",
-          icon: "📅",
-        },
-      ],
-      [
-        {
-          title: "קרבן פסח – ביטול האל המצרי",
-          source: "שמות יב",
-          text: "'ושחטו את הפסח' – הכבש היה אל מצרי. ישראל נצטוו לשחוט אותו ולמרוח דמו על המשקוף. זה לא רק מצווה – זה הצהרה: אנחנו לא מפחדים מאלוהיכם. השחיטה בגלוי נדרשה בגלל האמירה החזקה שהיא מבטאת: יש רק אלוהים אחד.",
+          title: "מצוה ראשונה — לקדש את הזמן",
+          source: "שמות יב, ב; רש\"י בראשית א, א",
+          text: "'החודש הזה לכם ראש חודשים' — אמר רבי יצחק: לא היה צריך להתחיל את התורה אלא מכאן, שהיא מצוה ראשונה שנצטוו ישראל. ולמה דווקא קידוש החודש? כי עבד — זמנו שייך לאדונו; בן חורין — הזמן שלו. המתנה הראשונה של הגאולה היא הריבונות על הזמן: היכולת לקדש אותו, למלא אותו תוכן, ולהתחדש בו כלבנה המתחדשת.",
           icon: "🌙",
+        },
+        {
+          title: "אין הקב\"ה מקפח שכר כל בריה",
+          source: "מכילתא משפטים; רש\"י שמות כב, ל",
+          text: "ביציאת מצרים 'לא יחרץ כלב לשונו' — הכלבים שתקו. ומה שכרם? כשציוותה תורה 'ובשר בשדה טרפה לא תאכלו — לכלב תשליכון אותו', פירש רש״י מן המכילתא: ללמדך שאין הקב״ה מקפח שכר כל בריה. שתיקה של כלבים בלילה אחד לפני אלפי שנים — נחקקה בתורה לנצח. אם כך לכלב, קל וחומר לאדם: שום מעשה טוב, קטן ונסתר ככל שיהיה, אינו הולך לאיבוד.",
+          icon: "🐕",
         },
       ],
     ],
     בשלח: [
       [
         {
-          title: "שירת הים – שיר הנשמה",
-          source: "מכילתא",
-          text: "אחרי קריעת ים סוף – ישראל שרו שירה. 'אז ישיר משה' – אז: כשראו את הנס לגמרי. שירה נולדת ממלאות. לא מדברים שירה – שרים אותה. כשהאדם רואה את גדולת ה' בחייו – הוא פורץ בשירה. 'אשירה לה' כי גאה גאה'.",
-          icon: "🎵",
+          title: "קפיצתו של נחשון",
+          source: "סוטה לז, א",
+          text: "ישראל עומדים על הים, מצרים מאחור והים מלפנים — וזה אומר איני יורד תחילה וזה אומר איני יורד תחילה. קפץ נחשון בן עמינדב וירד לים תחילה, ועליו הכתוב אומר 'הושיעני אלהים כי באו מים עד נפש'. ואז נאמר למשה: 'דבר אל בני ישראל — וייסעו'. הים לא נבקע לפני שקפצו אליו. יש רגעים שהנס מחכה לצעד הראשון של האדם.",
+          icon: "🌊",
         },
-      ],
-      [
         {
-          title: "מן – לחם מן השמים",
-          source: "שמות טז",
-          text: "'הנני ממטיר לכם לחם מן השמים'. המן ירד כל יום מחדש. לא ניתן לשמור ליום המחרת. ה' לא רצה שנאגור – רצה שנסמוך עליו יום יום. הביטחון האמיתי: לא לדאוג למחר, אלא לבטוח שמה שנצטרך – יהיה. 'כיום הזה' – כל יום חדש.",
+          title: "דבר יום ביומו",
+          source: "יומא עו, א",
+          text: "שאלו תלמידיו את רבי שמעון בר יוחאי: מפני מה לא ירד להם מן פעם אחת בשנה? משל למלך שהיה נותן לבנו מזונותיו פעם אחת בשנה — ולא היה מקביל פני אביו אלא פעם אחת בשנה. עמד ונתן לו מזונותיו בכל יום, והיה מקביל פניו כל יום. כך ישראל: מי שפרנסתו מזומנת לו יום-יום — לבו תלוי באביו שבשמים בכל יום. הדאגה היומית איננה עונש — היא הזמנה לקשר יומי.",
           icon: "🍞",
         },
       ],
@@ -20273,71 +21108,63 @@ document.addEventListener("keydown", (e) => {
     יתרו: [
       [
         {
-          title: "מעמד הר סיני",
-          source: "שמות יט",
-          text: "'ויחרד כל ההר מאוד' – ה' ירד על ההר. 600,000 נשמות עמדו שם, ולפי חז\"ל גם כל נשמות ישראל לדורות. 'לא עם אלה בלבד אנוכי כורת את הברית' – כל אחד מאתנו היה בהר סיני. הברית אינה עניין היסטורי בלבד – היא ברית אישית שכל אחד מאתנו חלק ממנה.",
-          icon: "⛰️",
+          title: "כאיש אחד בלב אחד",
+          source: "רש\"י שמות יט, ב (מכילתא)",
+          text: "'ויחן שם ישראל נגד ההר' — ויחן, לשון יחיד. פירש רש״י: 'כאיש אחד בלב אחד, אבל שאר כל החניות — בתרעומת ובמחלוקת'. שישים ריבוא איש, ולתורה הם מגיעים כגוף אחד. לא במקרה סמכה התורה את האחדות למתן תורה: תורה אחת יכולה להינתן רק לעם אחד. וכל מחלוקת שנעקרת מן הלב — היא הכנה לקבלת התורה מחדש.",
+          icon: "💞",
         },
-      ],
-      [
         {
-          title: "כבד את אביך ואמך",
-          source: "עשרת הדיברות",
-          text: "בין מצוות 'בין אדם למקום' לבין מצוות 'בין אדם לחברו' עומד 'כבד אביך ואמך'. ההורים הם הגשר: דרכם קיבלנו את החיים, את הערכים, את הזהות. לכבד הורים הוא לכבד את שרשרת הדורות – את כל מי שעמד לפנינו כדי שנוכל לעמוד.",
-          icon: "👪",
+          title: "רואים את הקולות",
+          source: "שמות כ, טו; מכילתא שם",
+          text: "'וכל העם רואים את הקולות' — אמרו במכילתא: רואין את הנשמע, מה שאי אפשר לראות בשום מקום אחר. במעמד הר סיני נפקחו החושים: האמת הרוחנית, שבדרך כלל רק 'שומעים' עליה מרחוק — נעשתה מוחשית וברורה כאילו רואים אותה בעיניים. הרגעים הגדולים של האמונה הם אלו שבהם מה ששמענו נהיה למה שאנחנו רואים וחיים.",
+          icon: "⚡",
         },
       ],
     ],
     משפטים: [
       [
         {
-          title: "וספר הברית",
-          source: "שמות כד",
-          text: "'ויכתוב משה את כל דברי ה'' – אחרי מעמד הר סיני, הדברים נכתבו. הכתיבה מחייבת. המחויבות לא נשארת בלב בלבד – היא מוצאת ביטוי ממשי, ניתנת לקריאה, לחינוך, להעברה. 'ויאמרו כל אשר דיבר ה' נעשה ונשמע'.",
-          icon: "📜",
-        },
-      ],
-      [
-        {
-          title: "עין תחת עין – משפט אמיתי",
-          source: 'הרמב"ם',
-          text: "'עין תחת עין' – לא פשוטו כמשמעו. חז\"ל פירשו: תשלום ממוני. הצדק אינו נקמה – הוא השבת המשוות. פגעת בי כלכלית – שלם. פגעת בי גופנית – שלם. המשפט העברי לא מחפש סבל – מחפש תיקון.",
+          title: "מה הראשונים מסיני",
+          source: "רש\"י שמות כא, א",
+          text: "'ואלה המשפטים אשר תשים לפניהם' — פירש רש״י: כל מקום שנאמר 'אלה' פסל את הראשונים; 'ואלה' — מוסיף על הראשונים: מה הראשונים מסיני, אף אלו מסיני. דיני שור שנגח, שומרים והלוואה — קדושים כעשרת הדברות עצמם. היושר בממון, בשכנות ובעסקים איננו 'דרך ארץ' בעלמא — הוא תורה מסיני ממש.",
           icon: "⚖️",
+        },
+        {
+          title: "נעשה ונשמע",
+          source: "שבת פח, א",
+          text: "בשעה שהקדימו ישראל 'נעשה' ל'נשמע', יצתה בת קול ואמרה: מי גילה לבני רז זה שמלאכי השרת משתמשים בו? ובאו שישים ריבוא של מלאכי השרת וקשרו לכל אחד מישראל שני כתרים — אחד כנגד נעשה ואחד כנגד נשמע. סוד הכתרים: ההתחייבות שלפני ההבנה. מי שמקיים רק את מה שכבר הבין — תלמיד; מי שמתחייב תחילה ומבין תוך כדי — בן.",
+          icon: "👑",
         },
       ],
     ],
     תרומה: [
       [
         {
-          title: "ועשו לי מקדש",
-          source: "שמות כה",
-          text: "'ועשו לי מקדש ושכנתי בתוכם' – לא 'בתוכו' אלא 'בתוכם'. ה' לא שוכן בבניין – הוא שוכן בתוך כל אחד מאתנו. המשכן הוא מודל – לנו ללמוד כיצד לעשות את עצמנו 'דירה לה''. כל אחד יכול להפוך את לבו למקדש פנימי.",
+          title: "ושכנתי בתוכם",
+          source: "שמות כה, ח; אלשיך שם",
+          text: "'ועשו לי מקדש ושכנתי בתוכם' — דקדק האלשיך הקדוש: 'בתוכו' לא נאמר, אלא 'בתוכם' — בתוך כל אחד ואחד מישראל. המשכן החיצוני הוא רק שיקוף: המקום האמיתי שהקב״ה מבקש לשכון בו הוא לבו של אדם. כל אחד נושא בקרבו מקדש קטן — וכשם שבמשכן היה שולחן, מנורה ומזבח, כך בלב: פרנסה בקדושה, תורה מאירה, והקרבה של אהבה.",
           icon: "🏛️",
         },
-      ],
-      [
         {
-          title: "נדבת הלב",
-          source: "שמות כה",
-          text: "'מאת כל איש אשר ידבנו לבו תקחו את תרומתי'. התרומה לא הייתה חובה – הייתה נדבת לב. כשאנחנו נותנים מרצון, מאהבה, בלי חובה – הנתינה שלמה אחרת. 'כפרה בנדבה' – נדבה מכפרת כי היא מבטאת את הפנימיות.",
-          icon: "❤️",
+          title: "אשר ידבנו לבו",
+          source: "שמות כה, ב",
+          text: "'דבר אל בני ישראל ויקחו לי תרומה — מאת כל איש אשר ידבנו לבו'. משכן ה' לא נבנה ממס חובה אלא מנדבת לב. זהב, כסף ונחושת — לכל אחד לפי יכולתו, אבל התנאי אחד: שהלב יתנדב. הקדושה אינה נבנית בכפייה; היא נבנית מן הרצון. ומכאן למדו קדמונים: ערכה של נתינה אינו נמדד בכמות — אלא בכמה לב יש בתוכה.",
+          icon: "💝",
         },
       ],
     ],
     תצוה: [
       [
         {
-          title: "בגדי הכהן – לכבוד ולתפארת",
-          source: "שמות כח",
-          text: "'ועשית בגדי קודש לאהרן אחיך לכבוד ולתפארת'. הכהן לובש בגדים מיוחדים לא כדי להתגאות – אלא כדי לייצג. הבגד הוא ממשק בין האדם הפנימי לעולם החיצוני. גם בחיי יום יום: מה שלובשים, כיצד מציגים את עצמנו – זה חלק מהקדושה.",
-          icon: "👘",
+          title: "הפרשה שאין בה משה",
+          source: "בעל הטורים שמות כז, כ",
+          text: "תצוה היא הפרשה היחידה מלידת משה ועד סוף התורה ששמו אינו נזכר בה. כתב בעל הטורים: משום שאמר משה 'מחני נא מספרך אשר כתבת' — וקללת חכם אפילו על תנאי באה. משה היה מוכן להימחק כדי להציל את ישראל — ודווקא המחיקה הזו נעשתה מצבת זיכרון נצחית למסירותו. מנהיג אמיתי נמדד במה שהוא מוכן לוותר עבור צאנו.",
+          icon: "📜",
         },
-      ],
-      [
         {
-          title: "נר תמיד – אור שאינו כבה",
-          source: "שמות כז",
-          text: "'להעלות נר תמיד' – בבית המקדש הנר לא כבה לעולם. כנגד כל חשכה – אור. כנגד כל ספק – אמונה. 'נר תמיד' הוא לא רק פיזי – הוא מסמל שישנו עיקר שאינו נכבה. האמונה הפנימית של ישראל היא נר שלא יכבה.",
+          title: "נר תמיד",
+          source: "שמות כז, כ",
+          text: "'ויקחו אליך שמן זית זך כתית — למאור, להעלות נר תמיד'. פירש רש״י: כתית למאור — ולא כתית למנחות. ורמזו בזה דורשי הפרשה: הזית אינו נותן את שמנו הזך אלא כשהוא נכתש; אך התורה מדגישה — הכתישה היא 'למאור': ייסורי האדם וכתישותיו נועדו להוציא ממנו אור, לא לשבור אותו. ומן השמן הזה עולה 'נר תמיד' — אור שאינו כבה.",
           icon: "🕯️",
         },
       ],
@@ -20345,71 +21172,63 @@ document.addEventListener("keydown", (e) => {
     "כי תשא": [
       [
         {
-          title: "חטא העגל – הנפילה הגדולה",
-          source: "שמות לב",
-          text: "'וירא העם כי בשש משה לרדת' – עיכוב של שש שעות הוביל לחטא הגדול ביותר. ישראל לא יכלו לחכות. הנסיון הגדול ביותר הוא לפעמים הסבלנות. המתנה לה', למנהיג, לתשובה – זה דורש כוח רצון גדול מהנפילה המיידית.",
-          icon: "🐂",
+          title: "העשיר לא ירבה והדל לא ימעיט",
+          source: "שמות ל, טו",
+          text: "במחצית השקל נצטוו: 'העשיר לא ירבה והדל לא ימעיט ממחצית השקל — לכפר על נפשותיכם'. לפני הקב״ה אין חשבון בנק: עשיר ועני שווים בדיוק. ולמה דווקא מחצית ולא שקל שלם? רמזו קדמונים: שידע כל יחיד שאינו אלא מחצית — ואין הוא נשלם אלא בחיבורו עם אחיו. שלמותנו אינה בבדידות אלא בציבור.",
+          icon: "🪙",
         },
-      ],
-      [
         {
-          title: "משה מבקש לראות את ה'",
-          source: "שמות לג",
-          text: "'הראני נא את כבודך' – אחרי חטא העגל, משה מבקש חיבור עמוק לה'. 'לא תוכל לראות את פני' – אבל 'וראית את אחורי'. ה' מסביר: האדם רואה את ה' מאחור – בדיעבד, בהיסטוריה. רק לאחר שהמאורע עבר, רואים כיצד ה' היה שם.",
-          icon: "✨",
+          title: "לוחות שניים ביום הכיפורים",
+          source: "תענית ל, ב; שמות לד",
+          text: "אחרי שבירת הלוחות עלה משה שנית להר, וביום הכיפורים ירד ובידו לוחות שניים ובפיו בשורת 'סלחתי'. אמרו חכמים: לא היו ימים טובים לישראל כיום הכיפורים — שבו ניתנו לוחות אחרונות. הלוחות הראשונים ניתנו בקולות וברקים ונשברו; השניים ניתנו בצנעה — והתקיימו. מה שנבנה אחרי שבר, בענווה ובשקט — מחזיק מעמד לנצח.",
+          icon: "🪨",
         },
       ],
     ],
     ויקהל: [
       [
         {
-          title: "שבת לפני המשכן",
-          source: "שמות לה",
-          text: "לפני ציווי בניין המשכן – משה מזכיר את השבת. ה' מלמד: גם בנין הקודש אינו דוחה שבת. 'אל יצא איש ממקומו'. השבת היא גדולה מהמשכן. העיקרון: גם המצווה הגדולה ביותר מוגבלת ע\"י ערכים עליונים. אין 'מטרה מקדשת אמצעים'.",
+          title: "שבת קודמת למשכן",
+          source: "רש\"י שמות לה, ב",
+          text: "משה מקהיל את כל עדת ישראל לצוות על בניית המשכן — ופותח דווקא בשבת: 'ששת ימים תיעשה מלאכה וביום השביעי יהיה לכם קודש'. פירש רש״י: הקדים להם אזהרת שבת לציווי מלאכת המשכן — לומר שאינה דוחה את השבת. אפילו בניין בית לה' אינו דוחה את השבת. קדושת הזמן קודמת לקדושת המקום — כי המקדש האמיתי הראשון של יהודי הוא הזמן המקודש.",
           icon: "🕯️",
         },
-      ],
-      [
         {
-          title: "נדבת הנשים",
-          source: "שמות לה",
-          text: "'ויבואו האנשים על הנשים, כל נדיב לב' – גברים ונשים יחד תרמו למשכן. הנשים הביאו ראי נחושת שתרמו לכיור. הדבר שאנחנו מחשיבים כחיצוני – הראי – הופך לחלק מהקדושה. כל מה שבנינו בחיינו, כולל הגשמי, יכול להיות תרומה לשכינה.",
-          icon: "🪞",
+          title: "אשר נשאו לבו",
+          source: "רמב\"ן שמות לה, כא",
+          text: "'ויבואו כל איש אשר נשאו לבו' — כתב הרמב״ן: לא היה בהם מי שלמד את המלאכות הללו ממלמד, ולא מי שאימן בהן ידיו כלל, אלא מצא בטבעו שידע לעשות כן — 'ויגבה לבו בדרכי ה' לבוא לפני משה לאמור: אני אעשה כל אשר אדוני דובר'. הכישרון הגדול ביותר הוא לב שמתנשא ומאמין. מי שלבו נושא אותו למשימה קדושה — שמים נותנים לו את הכלים.",
+          icon: "🎨",
         },
       ],
     ],
     פקודי: [
       [
         {
-          title: "ויכל משה את המלאכה",
-          source: "שמות מ",
-          text: "'ויכל משה את המלאכה' – ו'וימלא הכבוד את המשכן'. כשמשה סיים – השכינה ירדה. מסר: עשה את שלך עד הסוף. אל תחשוב שה' יסיים את מה שאתה לא סיימת. 'כלה מלאכתך ואחר כך בקש ממנו ברכה'. הסיום של האדם פותח את הברכה האלוקית.",
-          icon: "🏛️",
+          title: "והייתם נקיים",
+          source: "שמות רבה נא, א-ו",
+          text: "'אלה פקודי המשכן' — משה רבנו, נאמן הבית שעליו העיד הקב״ה 'בכל ביתי נאמן הוא', עומד מעצמו ונותן דין וחשבון על כל שקל שנתרם למשכן. אמרו במדרש: שמע ליצני הדור מרננים — ואמר: חייכם, משנגמר המשכן אני נותן להם חשבון. מכאן למדו חכמים: צריך אדם לצאת ידי הבריות כדרך שצריך לצאת ידי המקום — 'והייתם נקיים מה' ומישראל'.",
+          icon: "📋",
         },
-      ],
-      [
         {
-          title: "כאשר צוה ה' את משה",
-          source: "שמות לח-מ",
-          text: "חמישה עשר פעמים בפרשה חוזרת הביטוי 'כאשר צוה ה' את משה'. כל חלק נבנה בדיוק לפי הציווי. הצייתנות הזו אינה עבדות – היא שלמות. כשכל חלק תואם לתכנון האלוקי – הכל מתאחד ליצירה שלמה. הדיוק יוצר קדושה.",
-          icon: "✅",
+          title: "וכבוד ה' מלא את המשכן",
+          source: "שמות מ, לג-לד",
+          text: "'ויכל משה את המלאכה — ויכס הענן את אוהל מועד וכבוד ה' מלא את המשכן'. שמונה עשרה פעמים נאמר בפרשה 'כאשר ציוה ה' את משה': כל קרס, כל יתד, כל חוט תכלת — בדיוק כמצווה. ורק כשנעשה הכל בנאמנות עד הפרט האחרון — ירדה השכינה. ההשראה הגדולה שוכנת דווקא בנאמנות הקטנה: עשה את שלך בשלמות, והכבוד יבוא מאליו.",
+          icon: "☁️",
         },
       ],
     ],
     ויקרא: [
       [
         {
-          title: "ויקרא – הקריאה האלוקית",
-          source: "ויקרא א",
-          text: "'ויקרא אל משה וידבר ה' אליו'. 'ויקרא' – בקריאה, לא רק בדיבור. ה' לא רק מדבר אל משה – הוא קורא לו. יש הבדל: דיבור הוא מידע, קריאה היא זימון. ה' מזמן כל אחד מאתנו לתפקיד מיוחד. הלמידה: כדאי לשאול – לאיזה תפקיד ה' קורא לי?",
-          icon: "📢",
+          title: "האל\"ף הקטנה",
+          source: "בעל הטורים ויקרא א, א",
+          text: "'ויקרא אל משה' — האל״ף של 'ויקרא' נכתבת זעירא, קטנה. כתב בעל הטורים: משה, בענוותנותו, ביקש לכתוב 'ויקר' — לשון מקרה, כמו שנאמר בבלעם — כאילו רק נקרה ה' אליו. אמר לו הקב״ה לכתוב גם את האל״ף; כתבה משה קטנה. דווקא הענווה הזו היא שעשתה את משה לכלי לקבל את כל התורה: מים יורדים מן הגבוה — ונקווים אל הנמוך.",
+          icon: "🔤",
         },
-      ],
-      [
         {
-          title: "קרבן – קירוב",
-          source: 'הרמב"ן',
-          text: "'קרבן' מלשון 'קרוב'. הקרבן אינו מזון לה' – הוא דרך להתקרב. בזמן שהביאו קרבן, האדם נתן מן הבהמה שבתוכו. 'האיש הוא השור', פירש הרמב\"ן. הקרבן הוא סמל לוויתור על האנוכיות.",
+          title: "נחת רוח לפני",
+          source: "רש\"י ויקרא א, ט (ספרא)",
+          text: "על הקרבן נאמר 'ריח ניחוח לה'' — פירש רש״י מן הספרא: 'נחת רוח לפני — שאמרתי ונעשה רצוני'. הקב״ה אינו צריך לא בשר ולא ריח; כל הנחת היא דבר אחד: שאמרתי — ונעשה רצוני. וכבר אמרו חכמים: אחד המרבה ואחד הממעיט, ובלבד שיכוון לבו לשמים (מנחות קי). גדולת המעשה אינה בגודלו — אלא בכך שהוא עשיית רצון ה' באהבה.",
           icon: "🔥",
         },
       ],
@@ -20417,234 +21236,208 @@ document.addEventListener("keydown", (e) => {
     צו: [
       [
         {
-          title: "אש תמיד תוקד",
-          source: "ויקרא ו",
-          text: "'אש תמיד תוקד על המזבח, לא תכבה'. הכהן היה אחראי לשמור על האש שתבער. כך בחיי הרוח: האש הפנימית – ההתלהבות, האמונה, האהבה לה' – אינה נשמרת מעצמה. יש להוסיף עצים בכל יום. 'לא תכבה' – זו מצווה אקטיבית.",
+          title: "מצוה להביא מן ההדיוט",
+          source: "יומא כא, ב",
+          text: "אש ירדה מן השמים על המזבח — ואף על פי כן ציוותה תורה: 'ונתנו בני אהרן הכהן אש על המזבח'. אמרו חכמים: אף על פי שהאש יורדת מן השמים — מצוה להביא מן ההדיוט. הקב״ה יכול לעשות הכל לבדו, אך הוא מבקש את האש הקטנה שלנו. וכשאדם מביא את שלו — האש שמן השמים יורדת ושורה על גבי מאמציו. ההשתדלות האנושית היא המזמינה את הנס.",
           icon: "🔥",
         },
-      ],
-      [
         {
-          title: "כהן שעובד – כהן שלומד",
-          source: "ויקרא ז",
-          text: "הכהן לא רק מקריב – הוא גם לומד ומלמד. 'כי שפתי כהן ישמרו דעת ותורה יבקשו מפיהו'. הדמות הדתית שמנהיגה את העם חייבת להיות גם חכמה. מנהיג שרק מבצע – לא מדריך. מנהיג שגם לומד וחושב – הוא שמוביל.",
-          icon: "📚",
+          title: "קרבן תודה אינו בטל",
+          source: "ויקרא רבה ט, ז",
+          text: "אמר רבי פינחס: לעתיד לבוא כל הקרבנות בטלים — וקרבן תודה אינו בטל; כל התפילות בטלות — וההודאה אינה בטלה לעולם. בעולם מתוקן, שאין בו חטא ואין בו צרה, לא יהיה צורך בכפרה — אבל הכרת הטוב לא תיפסק לעולם, כי היא אינה תגובה לחיסרון אלא עצם הקשר. להודות — זו התפילה הנצחית ביותר שיש.",
+          icon: "🙏",
         },
       ],
     ],
     שמיני: [
       [
         {
-          title: "יום השמיני – יום ייחודי",
-          source: "ויקרא ט",
-          text: "'ויהי ביום השמיני' – שמיני ימי המילואים, היום הראשון לעבודת המשכן. שבעה ימים הם המחזור הטבעי. השמיני הוא מעבר לטבע – קדושה עליונה. 'שמיני עצרת' גם הוא שמיני, יום ייחודי. המספר שמונה מסמל בקבלה את הנצח שמעל לטבע.",
-          icon: "8️⃣",
+          title: "שכר השתיקה",
+          source: "רש\"י ויקרא י, ג; ויקרא רבה יב",
+          text: "ביום הגדול של חנוכת המשכן מתו שני בני אהרן — 'ויידום אהרן'. לא צעק, לא הטיח, גם לא הסביר — דמם. ומה שכרו? פירש רש״י: זכה ונתייחד עמו הדיבור, שנאמרה לו לבדו פרשת שתויי יין. יש רגעים שאין בהם תשובות, ורק שתיקה של אמונה. ודווקא אל השתיקה הזו — מתייחד הדיבור האלוקי.",
+          icon: "🤫",
         },
-      ],
-      [
         {
-          title: "מות נדב ואביהו – אש זרה",
-          source: "ויקרא י",
-          text: "'ויקריבו אש זרה אשר לא ציוה אותם'. נדב ואביהו קרבו מה שלא נצטוו. הם אהבו את ה' – אך לא הסתפקו בגבולות שנקבעו. הלמידה: גם בקדושה ובאהבה – יש גבולות. הרצון הפרטי, אפילו מתוך מסירות, אינו יכול לדחות את הציווי.",
-          icon: "🔥",
+          title: "שמחה כיום בריאת העולם",
+          source: "מגילה י, ב",
+          text: "'ויהי ביום השמיני' — אמרו חכמים: אותו היום, יום הקמת המשכן, הייתה שמחה לפני הקב״ה כיום שנבראו בו שמים וארץ. מדוע שקולה חנוכת אוהל קטן לבריאת עולם ומלואו? כי כל תכלית הבריאה הייתה — שתשרה שכינה בתחתונים. עולם בלא מקום לה' — בניין בלא דייר. ביום שאדם עושה מקום לשכינה בחייו — הוא משלים את מעשה בראשית.",
+          icon: "🎉",
         },
       ],
     ],
     תזריע: [
       [
         {
-          title: "לידה וטהרה",
-          source: "ויקרא יב",
-          text: "לאחר לידה, האשה טמאה לימים מסוימים. 'טומאה' בתורה אינה לכלוך – היא מצב של עוצמה גבוהה מדי לקדושת המקדש. כוח הלידה – יצירת חיים – הוא עוצמה אדירה. אחרי מגע עם עוצמה כזו, האדם צריך תהליך של 'התכוונות מחדש' לפני כניסה לקדש.",
+          title: "אם זכה — אומרים לו: אתה קדמת",
+          source: "ויקרא רבה יד, א",
+          text: "'אשה כי תזריע' — דרש רבי שמלאי: כשם שיצירת האדם אחר כל בהמה חיה ועוף במעשה בראשית, כך תורתו נתפרשה אחר תורת בהמה חיה ועוף. ואמרו: אם זכה — אומרים לו: אתה קדמת לכל מעשה בראשית; ואם לאו — אומרים לו: יתוש קדמך. הכל תלוי בבחירה: האדם יכול להיות תכלית הבריאה כולה — או אחרון הברואים. מקומנו בעולם אינו נתון — הוא נבחר.",
           icon: "👶",
         },
-      ],
-      [
         {
-          title: "צרעת – מחלת הנפש",
-          source: 'חז"ל – מסכת ערכין',
-          text: "חז\"ל אמרו שצרעת באה בעיקר על לשון הרע. הגוף מתנגד לרע שיצא מהפה. 'ויצעק העם ויצא מחוץ למחנה' – המצורע יושב לבד. הבדידות מאפשרת לו להכיר בנזק שגרם. לשון הרע פוגע בחיבור בין אנשים – הפרידה היא תיקון.",
-          icon: "🔇",
+          title: "בדד ישב",
+          source: "רש\"י ויקרא יג, מו; ערכין טז",
+          text: "המצורע — 'בדד ישב, מחוץ למחנה מושבו'. פירש רש״י מדברי חכמים: מה נשתנה משאר טמאים לישב בדד? הואיל והוא הבדיל בלשון הרע בין איש לאשתו ובין איש לרעהו — אף הוא ייבדל. מידה כנגד מידה מדויקת: מי שפירק חיבורים בדיבורו — יטעם בדידות, וידע מה עולל. והתיקון בצידה: הלשון שהפרידה יכולה לחבר, לפייס ולקרב.",
+          icon: "🗣️",
         },
       ],
     ],
     מצורע: [
       [
         {
-          title: "טהרת המצורע – חזרה",
-          source: "ויקרא יד",
-          text: "טהרת המצורע היא תהליך ארוך ומפורט. שתי ציפורים, ארז, שני, אזוב. הציפור השחוטה כנגד הלשון שגרמה נזק. הציפור המשוחררת – כנגד דיבור חדש, חופשי וטהור. כשאדם חוזר בתשובה מלשון הרע – הוא משתחרר כציפור מן הכלוב.",
-          icon: "🐦",
+          title: "תורת המוציא שם רע",
+          source: "ערכין טו, ב",
+          text: "'זאת תהיה תורת המצורע' — דרשו חכמים: תורת המוציא שם רע. ושם אמרו: כל המספר לשון הרע כאילו כפר בעיקר, ומה תקנתו? אם תלמיד חכם הוא — יעסוק בתורה, שנאמר 'מרפא לשון עץ חיים'. הלשון שקלקלה — היא עצמה כלי התיקון: אותו פה שדיבר רע ילמד תורה, ידבר טוב, יעודד ויברך. אין איבר שנופל ברשעו — שאינו יכול לעלות בקדושתו.",
+          icon: "💬",
         },
-      ],
-      [
         {
-          title: "נגע הבית – שיקוף של הנפש",
-          source: 'רמב"ן',
-          text: "נגע שבא על הבית מביא לבדיקה ולהריסה אם לא מרפא. הרמב\"ן: 'זו מדה כנגד מדה'. הבית הוא ביטוי של בעליו. כשהאדם רקוב מבפנים – זה מתגלה גם בחיצוני. תיקון הפנימי מרפא גם החיצוני.",
-          icon: "🏠",
+          title: "ציפורים מפטפטות",
+          source: "רש\"י ויקרא יד, ד",
+          text: "בטהרת המצורע נצטווה להביא 'שתי ציפורים חיות טהורות'. פירש רש״י: לפי שהנגעים באים על לשון הרע שהוא מעשה פטפוטי דברים — לפיכך הוזקקו לטהרתו ציפורים, שמפטפטות תמיד בצפצוף קול. הרפואה מתחילה בהכרה: שיראה האדם את פטפוטו מן הצד, כציפור זו המצייצת בלי חשבון. הדיבור מתנה יקרה היא — שנועדה לתפילה, לתורה ולמילה טובה.",
+          icon: "🕊️",
         },
       ],
     ],
     "אחרי מות": [
       [
         {
-          title: "עבודת יום הכיפורים",
-          source: "ויקרא טז",
-          text: "'בזאת יבוא אהרן אל הקודש' – 'בזאת', לא בדרך אחרת. יש סדר מדויק לעבודת כהן גדול ביום כיפור. מה שנראה כפורמליזם הוא לאמת הכנסת המחשבה לסדר. הטקס מסדר את הפנימיות. כשאנחנו עושים דברים בסדר – גם לבנו מסתדר.",
-          icon: "🏛️",
+          title: "לפני מי אתם מיטהרים",
+          source: "משנה יומא ח, ט",
+          text: "בפרשה נאמרה עבודת יום הכיפורים — 'כי ביום הזה יכפר עליכם לטהר אתכם'. ועליה דרש רבי עקיבא: 'אשריכם ישראל! לפני מי אתם מיטהרים ומי מטהר אתכם — אביכם שבשמים'. אין מתווכים, אין שערים נעולים: כל יהודי ניגש ישירות אל אביו. הטהרה אינה טקס רחוק — היא מפגש של בן עם אב שמחכה לו כל השנה.",
+          icon: "💧",
         },
-      ],
-      [
         {
-          title: "ואהבת לרעך כמוך",
-          source: "ויקרא יח-יט",
-          text: "פרשת אחרי מות מסתיימת בפרשת קדושים. קדושת ישראל מבוססת על מוסר. לא רק 'לא תגנוב', לא רק 'לא תרצח' – אלא 'ואהבת לרעך כמוך'. רבי עקיבא: כלל גדול בתורה. הקדושה האמיתית באה לידי ביטוי ביחס לאחר.",
-          icon: "❤️",
+          title: "וחי בהם",
+          source: "ויקרא יח, ה; יומא פה, ב",
+          text: "'ושמרתם את חוקותי ואת משפטי אשר יעשה אותם האדם — וחי בהם'. דרשו חכמים: 'וחי בהם — ולא שימות בהם'; מכאן שפיקוח נפש דוחה את כל התורה כולה. התורה איננה עול המכביד על החיים — היא תורת חיים, שכל מגמתה חיים: חיי הגוף, חיי הנשמה, חיים של טעם. מצוה שנעשית בשמחה ובחיות — היא המצוה בשלמותה.",
+          icon: "🌱",
         },
       ],
     ],
     קדושים: [
       [
         {
-          title: "קדושים תהיו",
-          source: "ויקרא יט",
-          text: "'קדושים תהיו כי קדוש אני ה' אלוהיכם'. הפקודה להיות קדושים היא תמוהה – האם ניתן לצוות על קדושה? אמר הרמב\"ן: 'קדש עצמך במותר לך'. גם מה שמותר – יש להשתמש בו בצניעות. הקדושה היא מידה של ריסון עצמי מתוך אהבה.",
-          icon: "✨",
+          title: "כלל גדול בתורה",
+          source: "ספרא קדושים; ירושלמי נדרים ט, ד",
+          text: "'ואהבת לרעך כמוך אני ה'' — אמר רבי עקיבא: זה כלל גדול בתורה. ובן עזאי הוסיף: 'זה ספר תולדות אדם' — כלל גדול ממנו: שכל בני האדם נבראו בצלם, ובן אב אחד כולם. וסיום הפסוק מדויק — 'אני ה'': אהבת הבריות ואמונת ה' אינן שני עניינים; מי שאוהב את האב — אוהב את בניו.",
+          icon: "❤️",
         },
-      ],
-      [
         {
-          title: "מפני שיבה תקום",
-          source: "ויקרא יט",
-          text: "'מפני שיבה תקום' – לקום לפני זקן. כבוד הזיקנה אינו רק נימוס – הוא הכרת ערכה של ניסיון. הזקן הביא את עצמו עד לגיל הזה – הוא ראה, חווה, ולמד. לכבד אותו הוא ללמוד מחייו. 'שאל אביך ויגדך, זקניך ויאמרו לך'.",
-          icon: "👴",
+          title: "קדש עצמך במותר לך",
+          source: "רמב\"ן ויקרא יט, ב",
+          text: "'קדושים תהיו' — כתב הרמב״ן: יכול אדם להיות 'נבל ברשות התורה' — לקיים את כל הדינים ולהישאר שטוף בתאוות. לכן באה מצוה כללית זו: 'קדש עצמך במותר לך' — למעט ולעדן גם במה שמותר. הקדושה אינה רשימת איסורים; היא אצילות פנימית, שאדם שואל לא רק 'מה מותר' אלא 'מה מכבד את הנשמה שבי'.",
+          icon: "✨",
         },
       ],
     ],
     אמור: [
       [
         {
-          title: "מועדי ה'",
-          source: "ויקרא כג",
-          text: "פרשת אמור כוללת את רשימת המועדות. 'אלה מועדי ה' מקראי קודש אשר תקראו אותם במועדם'. המועדים אינם חגים לאומיים בלבד – הם 'מועדי ה''. פגישות שה' קובע. בכל חג, ה' מחכה לנו. אנחנו קובעים את הזמן – ה' ממלא אותו בנוכחות.",
-          icon: "📅",
+          title: "להזהיר גדולים על הקטנים",
+          source: "יבמות קיד, א",
+          text: "'אמור אל הכהנים... ואמרת אליהם' — כפל הלשון בא, כדברי חכמים, 'להזהיר גדולים על הקטנים': שישגיחו הגדולים על חינוך הקטנים. וכבר דייקו המפרשים: אין הקטנים לומדים ממה שאומרים להם — אלא ממה שרואים. 'אמור ואמרת' — אמירה כפולה: אחת בפה ואחת במעשה. חינוך אמיתי הוא כשהילד רואה את אביו חי את מה שהוא מלמד.",
+          icon: "👨‍👦",
         },
-      ],
-      [
         {
-          title: "כי קציר הוא – לא תכלה",
-          source: "ויקרא כג",
-          text: "'ובקוצרכם את קציר ארצכם, לא תכלה פאת שדך לקצור... לעני ולגר תעזוב אותם'. ממש בתוך תיאור המועדות, מוכנסת מצווה חברתית. הקשר: שמחת החג אינה שלמה בלי שיתוף. לא ניתן לחגוג בעושר בזמן שהסביבה עוני. הזיכרון לדאוג לאחר הוא חלק מהקדושה.",
-          icon: "🌾",
+          title: "שיהא שם שמים מתאהב על ידך",
+          source: "יומא פו, א",
+          text: "בפרשה נאמר 'ונקדשתי בתוך בני ישראל'. ומהו קידוש השם של יום-יום? אמרו חכמים: 'ואהבת את ה' אלהיך — שיהא שם שמים מתאהב על ידך': שיהא אדם קורא ושונה ומשאו ומתנו בנחת עם הבריות — מה הבריות אומרות עליו? אשרי אביו שלימדו תורה... ראו כמה נאים דרכיו! כל יהודי שדובר אמת ומכבד את הבריות — מקדש שם שמים ברבים.",
+          icon: "🌟",
         },
       ],
     ],
     בהר: [
       [
         {
-          title: "שמיטה – שבת לאדמה",
-          source: "ויקרא כה",
-          text: "'כי תבואו אל הארץ... ושבתה הארץ שבת לה''. הארץ גם צריכה שבת. בשנה השביעית – לא עובדים, לא קוצרים למכירה, הכל הפקר. הקדוש ברוך הוא אומר: הארץ שלי, לא שלכם. הטעמת הנתינה לה' – כשמניחים לאדמה לנוח, מכירים בכך שהכל מה'.",
-          icon: "🌿",
+          title: "וציויתי את ברכתי",
+          source: "ויקרא כה, כ-כא",
+          text: "התורה עצמה מקדימה את שאלת המאמין: 'וכי תאמרו מה נאכל בשנה השביעית — הן לא נזרע ולא נאסוף את תבואתנו?' והתשובה: 'וציויתי את ברכתי לכם בשנה השישית ועשת את התבואה לשלוש השנים'. שנת השמיטה היא בית הספר הגדול של הביטחון: פעם בשבע שנים עם שלם מפקיר את שדותיו — ולומד בגופו שהפרנסה מידו של הקב״ה, והשדה רק צינור.",
+          icon: "🌾",
         },
-      ],
-      [
         {
-          title: "יובל – שחרור מוחלט",
-          source: "ויקרא כה",
-          text: "כל חמישים שנה – שנת יובל. עבדים משתחררים, קרקעות חוזרות לבעליהן המקוריים. יובל מבטל עצמה את כל העיוותים הכלכליים שנצטברו. זהו 'reset' חברתי. הרעיון: אין עוני נצחי, אין עשירות נצחית. ה' שומר על שוויון בסיסי.",
-          icon: "🔔",
+          title: "כי גרים ותושבים אתם עמדי",
+          source: "ויקרא כה, כג",
+          text: "'והארץ לא תימכר לצמיתות — כי לי הארץ, כי גרים ותושבים אתם עמדי'. אפילו בארצנו שלנו אנו 'גרים ותושבים' — אורחים אצל בעל הבית. הידיעה הזו אינה מקטינה אלא משחררת: מי שיודע שהכל פיקדון — נותן בקלות, שומט בשמחה, ואינו נאחז בחרדה. וקדמונים דרשו: אם תהיו כגרים בעולם הזה — תהיו תושבים אצלי לעולם.",
+          icon: "🏞️",
         },
       ],
     ],
     בחקותי: [
       [
         {
-          title: "אם בחקותי תלכו",
-          source: "ויקרא כו",
-          text: "'אם בחקותי תלכו ואת מצוותי תשמרו' – ואז: גשמים בעתם, פרי האדמה, שלום בארץ. 'בחקותי' – בחוקים, גם אלה שאינם מובנים. ה' מבקש אמון: לא להבין הכל, אלא ללכת. ה'הליכה' עצמה – בלי שאלות – מביאה את הברכה.",
-          icon: "🌧️",
+          title: "עמלים בתורה",
+          source: "רש\"י ויקרא כו, ג (תורת כהנים)",
+          text: "'אם בחוקותי תלכו' — פירש רש״י: יכול זה קיום המצוות? כשהוא אומר 'ואת מצוותי תשמרו' — הרי קיום המצוות אמור; הא מה אני מקיים 'אם בחוקותי תלכו'? שתהיו עמלים בתורה. הברכות כולן תלויות לא בידיעה אלא בעמל: הזיעה שאדם משקיע בהבנת דף, החזרה שוב ושוב. התורה נקנית בעמל — ומי שעמל בה, היא נעשית שלו.",
+          icon: "💪",
         },
-      ],
-      [
         {
-          title: "אם לא תשמעו – הנבואה לא פסימיסטית",
-          source: "הרב קוק",
-          text: "פרשת 'תוכחה' נראית קשה. אבל היא מסתיימת: 'ואף גם זאת... לא מאסתים ולא גיחלתים לכלותם'. גם אחרי כל הצרות – ה' לא עוזב. הברית נצחית. התוכחה היא לא עונש – היא אזהרה מאב. ואהבת האב אינה מסתיימת לעולם.",
-          icon: "❤️",
+          title: "והתהלכתי בתוככם",
+          source: "ויקרא כו, יב; תורת כהנים",
+          text: "שיא הברכות: 'ונתתי משכני בתוככם... והתהלכתי בתוככם והייתי לכם לאלהים'. אמרו בתורת כהנים: משל למלך שיצא לטייל עם אריסו בפרדס — כך עתיד הקב״ה לטייל עם הצדיקים בגן עדן. מכל הברכות — גשמים, שלום, שובע — הגדולה שבכולן היא הקרבה עצמה: 'והתהלכתי בתוככם'. השכר האמיתי של הדרך — הוא ההולך איתך בה.",
+          icon: "🌳",
         },
       ],
     ],
     במדבר: [
       [
         {
-          title: "מנין ישראל – כל אחד נחשב",
-          source: "במדבר א",
-          text: "'שאו את ראש כל עדת בני ישראל' – לספור כל אחד. חז\"ל: 'מרוב חיבתם לפניו מונה אותם תמיד'. כשסופרים כל אחד – אומרים שכל אחד חשוב. אין ישראל גוש אנונימי – כל נשמה ספורה ונזכרת. 'אף על פי שחטא, ישראל הוא'.",
-          icon: "🔢",
+          title: "הפקר כמדבר",
+          source: "במדבר רבה א, ז",
+          text: "'וידבר ה' אל משה במדבר סיני' — למה במדבר? אמרו במדרש: כל מי שאינו עושה עצמו כמדבר הפקר — אינו יכול לקנות את החכמה והתורה. המדבר אינו שייך לאיש, פתוח לכל רוח — וכך הלב הקונה תורה: בלא גאווה של 'שלי', בלא מחיצות של כבוד. ועוד: התורה ניתנה במדבר — לא בארץ של שבט אחד — שלא יאמר אדם לחברו: היא שלי ולא שלך.",
+          icon: "🏜️",
         },
-      ],
-      [
         {
-          title: "ארבעת המחנות – סדר בתנועה",
-          source: "במדבר ב",
-          text: "ישראל חנו במדבר לפי סדר: כל שבט בדגלו, כל מחנה בכיוונו. 'כדגלו' – לכל שבט דגל, זהות. גם בתנועה – יש סדר. גם כשנוסעים ממקום למקום – השייכות לשבט, למשפחה, לזהות – נשמרת. הסדר הוא שומר הזהות.",
-          icon: "🏕️",
+          title: "מתוך חיבתן — מונה אותם",
+          source: "רש\"י במדבר א, א",
+          text: "חומש שלם נפתח בספירה: 'שאו את ראש כל עדת בני ישראל'. פירש רש״י: מתוך חיבתן לפניו — מונה אותם כל שעה: כשיצאו ממצרים מנאן, כשנפלו בעגל מנאן, כשבא להשרות שכינתו עליהם מנאן. אדם מונה את מה שיקר לו. וכל יחיד נמנה בפני עצמו — לא נאמדו באומד: אצל הקב״ה אין 'המון'; יש שישים ריבוא שמות, וכל אחד עולם מלא.",
+          icon: "🔢",
         },
       ],
     ],
     נשא: [
       [
         {
-          title: "ברכת כוהנים – שלושה שלבים",
-          source: "במדבר ו",
-          text: "'יברכך ה' וישמרך. יאר ה' פניו אליך ויחונך. ישא ה' פניו אליך וישם לך שלום'. שלושה פסוקים: הגנה, אהבה, שלום. ה'שלום' האמיתי בא בסוף, כשמרגישים שה' פונה אלינו. השלום אינו רק היעדר מלחמה – הוא מלאות, שלמות.",
-          icon: "🙏",
+          title: "וכי לא אשא פנים לישראל?",
+          source: "ברכות כ, ב",
+          text: "בברכת כהנים נאמר 'ישא ה' פניו אליך'. אמרו מלאכי השרת לפני הקב״ה: כתוב בתורתך 'אשר לא ישא פנים' — ואתה נושא פנים לישראל? אמר להם: וכי לא אשא פנים לישראל, שכתבתי להם 'ואכלת ושבעת וברכת' — והם מדקדקים על עצמם עד כזית ועד כביצה! מי שמדקדק להודות גם על מעט — הקב״ה נושא לו פנים לפנים משורת הדין. ההודאה על הקטן פותחת את שערי הגדול.",
+          icon: "🤲",
         },
-      ],
-      [
         {
-          title: "סוטה – קנאת הבעל",
-          source: "במדבר ה",
-          text: "פרשת סוטה, בין ברכת כוהנים לנדרי הנזיר, נראית לא במקומה. אבל יש קשר: שלושתם עוסקים ביחסים – בין אדם לה', בין בני זוג, בין האדם לעצמו. האמון הוא ערך מרכזי. כשמשהו נשבר – ה' מרפא. ה' עצמו גרם למחיקת שמו כדי לשים שלום.",
-          icon: "⚖️",
+          title: "כל אחד יכול להתקדש",
+          source: "במדבר ו, ב",
+          text: "'איש או אשה כי יפליא לנדור נדר נזיר להזיר לה'' — איש פשוט, או אשה — כל אדם מישראל יכול לקום בבוקר ולקבל על עצמו קדושה, ועליו אומרת התורה 'קדוש יהיה'. הקדושה אינה שמורה לכהנים בלבד: היא פתוחה לכל מי ש'יפליא' — שיעשה מעשה מופלא של התעלות. ואמרו חכמים: הרוצה ליטול את השם — יבוא וייטול.",
+          icon: "🌿",
         },
       ],
     ],
     בהעלותך: [
       [
         {
-          title: "בהעלותך את הנרות",
-          source: "במדבר ח",
-          text: "'בהעלותך את הנרות' – האיר לפני המנורה. אהרן לא עבד מכנית – הוא 'העלה' את הנרות, בנשמה. הרמב\"ן: 'להדליק שיהיה הלהב עולה מאליו'. מנהיג טוב לא רק מפעיל – הוא מדליק, ממריץ, מחיה. הדלקת הנרות היא אמנות ההנהגה.",
-          icon: "🕯️",
+          title: "עד שתהא שלהבת עולה מאליה",
+          source: "רש\"י במדבר ח, ב",
+          text: "'בהעלותך את הנרות' — למה נאמר 'בהעלותך' ולא 'בהדליקך'? פירש רש״י: שצריך להדליק עד שתהא השלהבת עולה מאליה. וזו תורת החינוך וההשפעה כולה: אין די בהצתה רגעית — יש להחזיק את האש עד שהתלמיד, הילד, החבר — דולק מעצמו, בלי תלות במדליק. מחנך אמיתי שואף לרגע שבו לא יצטרכו אותו עוד.",
+          icon: "🕎",
         },
-      ],
-      [
         {
-          title: "אספה שבעים זקנים",
-          source: "במדבר יא",
-          text: "'אספה לי שבעים איש מזקני ישראל'. ה' מצווה על ייסוד מוסד: סנהדרין. ההנהגה אינה יכולה להיות יחידה – היא צריכה להישען על קולקטיב של חכמה. 'ונשאו אתך במשא העם ולא תישא אתה לבדך'. הנהגה שיתופית היא בריאות לאומית.",
-          icon: "👨‍⚖️",
+          title: "והאיש משה עניו מאד",
+          source: "במדבר יב, ג",
+          text: "'והאיש משה עניו מאד מכל האדם אשר על פני האדמה'. האיש שדיבר עם ה' פנים אל פנים, שהוריד תורה משמים, שקרע ים — הוא העניו מכל אדם. הא כיצד? הענווה אינה חוסר ידיעת ערך עצמו; היא ידיעה שהכל מתנה. משה ידע את גדולתו — וידע שכולה מאת הנותן, ולכן לא החזיק טובה לעצמו. ככל שהכלי גדול יותר — כך הוא ריק יותר מגאווה.",
+          icon: "🌾",
         },
       ],
     ],
     שלח: [
       [
         {
-          title: "המרגלים – פחד הגדולה",
-          source: "במדבר יג",
-          text: "המרגלים ראו את הארץ הטובה – ובכל זאת אמרו 'לא נוכל'. הם ראו את הענקים ואמרו: 'ונהי בעינינו כחגבים'. הבעיה לא הייתה במציאות – הייתה בתפיסה העצמית. כשאדם רואה את עצמו כחגב – הוא פועל כחגב. כלב ויהושע ראו אותו דבר ובטחו בה'.",
-          icon: "🕵️",
+          title: "ונהי בעינינו כחגבים",
+          source: "במדבר יג, לג",
+          text: "המרגלים חוזרים ואומרים: 'ונהי בעינינו כחגבים — וכן היינו בעיניהם'. הסדר מדויק: קודם 'בעינינו', ורק אחר כך 'בעיניהם'. מי שרואה עצמו חגב — כך יראוהו אחרים. חטא המרגלים לא התחיל בענקים שבחוץ אלא בקטנות שבפנים. וכלב בן יפונה, באותה ארץ ומול אותם ענקים, אמר: 'עלה נעלה וירשנו אותה — כי יכול נוכל לה'. הארץ לא השתנתה — העיניים.",
+          icon: "👀",
         },
-      ],
-      [
         {
-          title: "חלה – ראשית לה'",
-          source: "במדבר טו",
-          text: "'מראשית עריסותיכם תרימו חלה תרומה'. מהלחם הראשון – תנו לה'. הקדמת ה' לפני עצמנו. 'כבד את ה' מהונך ומראשית כל תבואתך'. עיקרון ה'ראשית': לא מה שנשאר נותנים – אלא מהראשון, מהטוב ביותר. זה מה שמקדש את השאר.",
-          icon: "🍞",
+          title: "שקולה כנגד כל המצוות",
+          source: "מנחות מג, ב",
+          text: "בסוף הפרשה — מצות ציצית: 'וראיתם אותו וזכרתם את כל מצוות ה''. אמרו חכמים: שקולה מצוה זו כנגד כל המצוות כולן. ולמה תכלת? שהתכלת דומה לים, וים דומה לרקיע, ורקיע דומה לכיסא הכבוד. חוט קטן בכנף הבגד — ומבט אחד בו מטפס עד כיסא הכבוד. כזו היא דרכה של קדושה: מהדברים הקטנים והיומיומיים — אל הגבוה מכל.",
+          icon: "🧵",
         },
       ],
     ],
@@ -20652,16 +21445,14 @@ document.addEventListener("keydown", (e) => {
       [
         {
           title: "מחלוקת שלא לשם שמים",
-          source: "אבות ה",
-          text: "'כל מחלוקת שהיא לשם שמים סופה להתקיים. שלא לשם שמים – אין סופה להתקיים'. מחלוקת קרח לא הייתה לשם שמים – הייתה לשם כבוד עצמי. 'כי כל העדה כולם קדושים' – טענה שנראית כדמוקרטיה אבל היא רק כיסוי לשאיפת שלטון.",
-          icon: "⚡",
+          source: "משנה אבות ה, יז",
+          text: "'כל מחלוקת שהיא לשם שמים — סופה להתקיים; ושאינה לשם שמים — אין סופה להתקיים. איזו היא מחלוקת לשם שמים? זו מחלוקת הלל ושמאי; ושאינה לשם שמים? זו מחלוקת קרח וכל עדתו'. ודייקו: לא נאמר 'מחלוקת קרח ומשה' אלא 'קרח וכל עדתו' — כי החולקים שלא לשם שמים חלוקים גם בינם לבין עצמם; כל אחד מבקש את כבוד עצמו.",
+          icon: "⚔️",
         },
-      ],
-      [
         {
-          title: "עץ השקדים – נצחון השירות",
-          source: "במדבר יז",
-          text: "אחרי מחלוקת קרח, ה' הוכיח את בחירת אהרן: מטהו הצמיח שקדים. השקד פורח לפני כולם – 'שקד' גם מלשון 'לשקוד', עבודה שקדנית. אהרן זכה לא בגלל כוח אלא בגלל שרות. ה'ראיה' לנבחר האמיתי היא פרי עבודתו.",
+          title: "מטה השקדים הפורח",
+          source: "במדבר יז, כג",
+          text: "לאחר המחלוקת הנוראה — 'והנה פרח מטה אהרן לבית לוי, ויוצא פרח ויצץ ציץ ויגמול שקדים'. מקל יבש, כרות מן העץ — מלבלב בן לילה. זהו המענה האלוקי למחלוקת: לא עוד אש ובליעה, אלא פריחה. הכהונה האמיתית מוכיחה עצמה בחיים שהיא מצמיחה. ולמה שקדים? הממהר שבפירות — כדרכו של אהרן, שהיה ממהר: אוהב שלום ורודף שלום.",
           icon: "🌸",
         },
       ],
@@ -20669,288 +21460,256 @@ document.addEventListener("keydown", (e) => {
     חקת: [
       [
         {
-          title: "פרה אדומה – חוק שמעל הדעת",
-          source: "במדבר יט",
-          text: "פרה אדומה היא 'חוק' – חוק שאין לו טעם מובן. אותה פרה מטהרת את הטמאים ומטמאת את הטהורים. שלמה המלך אמר שזה הכי רחוק מהבנתו. יש בתורה דברים שמעל לשכל. כשאנחנו מקיימים גם את מה שלא מבינים – זה ביטוי עמוק של אמונה.",
+          title: "אמרתי אחכמה — והיא רחוקה",
+          source: "במדבר רבה יט, ג",
+          text: "פרה אדומה — מטהרת את הטמאים ומטמאת את הטהורים. אמר שלמה המלך, החכם מכל אדם: 'על כל אלה עמדתי; ופרשה של פרה אדומה — חקרתי ושאלתי ופשפשתי. אמרתי אחכמה — והיא רחוקה ממני'. יש בתורה מה שמעל השכל, וזה עצמו לימוד: מי שמקיים רק את המובן לו — עושה את דעתו אלוהיו; המקיים גם את החוק — עובד את ה'.",
           icon: "🐄",
         },
-      ],
-      [
         {
-          title: "מי מריבה – כוח וחולשה",
-          source: "במדבר כ",
-          text: "'ויך את הסלע' – משה הוכה בסלע במקום לדבר אליו. ה' אמר לו 'לא הקדשתם אותי'. משה, הגדול שבנביאים, נענש על פעולה קטנה. ממי שניתן לו הרבה – נדרש הרבה. 'נאמן ביתי הוא' – ממנהיג נאמן מצפים לדיוק מוחלט.",
-          icon: "💧",
+          title: "בזמן שמשעבדים את לבם",
+          source: "משנה ראש השנה ג, ח",
+          text: "על נחש הנחושת שאלו חכמים: 'וכי נחש ממית או נחש מחיה?' אלא: בזמן שישראל מסתכלין כלפי מעלה ומשעבדין את לבם לאביהם שבשמים — היו מתרפאים, ואם לאו — היו נימוקים. הנחש על הנס היה רק אמצעי להרים את העיניים. וכך בכל רפואה וישועה: הכלים רבים — אך המרפא אחד, והמבט כלפי מעלה הוא התרופה שבתוך כל התרופות.",
+          icon: "⬆️",
         },
       ],
     ],
     בלק: [
       [
         {
-          title: "בלעם – נביא שלא שינה",
-          source: "במדבר כב",
-          text: "בלעם היה נביא אמיתי. ה' דיבר איתו. אך הוא ביקש לקלל את ישראל. ה' הפך את הקללה לברכה. בלעם ניסה שלוש פעמים – ושלוש פעמים בירך. המסר: ה' שומר על ישראל גם ממי שניסה לפגוע בהם.",
-          icon: "🐴",
+          title: "מה טובו אהליך",
+          source: "בבא בתרא ס, א",
+          text: "בלעם בא לקלל — ומברך: 'מה טובו אוהליך יעקב משכנותיך ישראל'. מה ראה? אמרו חכמים: ראה שאין פתחי אהליהם מכוונים זה לזה — שלא יציץ אדם לאוהל חברו. הצניעות וכיבוד רשות הפרט של הזולת — הם שהפכו את הקללה לברכה מאליה. בית ישראלי ששומר על עיניו ועל גבולות רעהו — אפילו בלעם אינו מוצא בו פתח לקטרוג.",
+          icon: "⛺",
         },
-      ],
-      [
         {
-          title: "מה טובו אוהליך יעקב",
-          source: "במדבר כד",
-          text: "'מה טובו אוהליך יעקב, משכנותיך ישראל' – בלעם, בניסיונו לקלל, פתח בברכה יפה שאנחנו אומרים עד היום בתפילה. אירוני: הגדול ביותר בברכת ישראל בא מאויב. הקדוש ברוך הוא יכול להוציא ברכה ממי שלא ציפינו לה.",
-          icon: "🌟",
+          title: "ויהפוך את הקללה לברכה",
+          source: "דברים כג, ו",
+          text: "'ולא אבה ה' אלהיך לשמוע אל בלעם, ויהפוך ה' אלהיך לך את הקללה לברכה — כי אהבך ה' אלהיך'. בלעם ובלק תכננו, שכרו, בנו מזבחות — וישראל בכלל לא ידעו שמתחוללת עליהם מלחמה שמימית. כמה גזרות מתבטלות עלינו בלי שנדע כלל! ומה הסוד? שלוש מילים בסוף הפסוק: 'כי אהבך ה''. אהבה זו אינה תלויה בדבר — והיא המגן שאין לו חדירה.",
+          icon: "🛡️",
         },
       ],
     ],
     פינחס: [
       [
         {
-          title: "קנאות לשם שמים",
-          source: "במדבר כה",
-          text: 'פינחס עצר מגפה בגלל מעשה קנאי. הוא לא חיכה לאישור – הוא פעל. חז"ל הסבירו: קנאות לשם שמים – כשהיא במקומה – עוצרת חורבן. אבל גם הוסיפו: אם שאל, לא היו מורים לו כן. יש פעולות שנכונות בדיעבד, אך אין להמליץ עליהן.',
-          icon: "⚔️",
+          title: "בריתי שלום",
+          source: "במדבר כה, יב; העמק דבר שם",
+          text: "לפינחס הקנאי ניתן דווקא 'בריתי שלום'. וביאר הנצי״ב מוולוז'ין: הברכה היא שהקנאות לא תשחית את נפשו — שיישאר איש שלום בלבו, ולא יימשך אחר החרון. מעשה של קנאה אמיתית לשם שמים הוא נדיר וחד-פעמי; החיים עצמם צריכים להיות ברית שלום. מי שנלחם — זקוק לברכה שהמלחמה לא תיכנס לו הביתה, אל הלב.",
+          icon: "🕊️",
         },
-      ],
-      [
         {
-          title: "בנות צלופחד – דין לפני משה",
-          source: "במדבר כז",
-          text: "'בנות צלופחד... ותקרבנה לפני משה'. הן תבעו ירושת אביהן. משה לא ידע – שאל את ה'. ה' אמר: 'כן בנות צלופחד דוברות'. לשתוק מול עוול – גם כשהמסגרת לא מכירה בך – זה אומץ. ה' מכיר בצדקתך גם כשהמערכת לא.",
-          icon: "⚖️",
+          title: "כן בנות צלפחד דוברות",
+          source: "רש\"י במדבר כז, ז (ספרי)",
+          text: "חמש אחיות, שאהבו את הארץ וביקשו נחלה בה — וזכו שפרשה בתורה נכתבה על ידן: 'כן בנות צלפחד דוברות'. פירש רש״י מן הספרי: אשרי אדם שהקב״ה מודה לדבריו; יפה תבעו — כך כתובה פרשה זו לפני במרום. תביעה שבאה מאהבה אמיתית — אהבת ארץ ישראל — אינה חוצפה; היא זוכה שהקב״ה עצמו יאמר עליה: כן.",
+          icon: "🏞️",
         },
       ],
     ],
     מטות: [
       [
         {
-          title: "נדר – כוח הדיבור",
-          source: "במדבר ל",
-          text: "'כל הנודר נדר לה' לא יחל דברו'. הנדר מחייב. 'כל היוצא מפיו יעשה'. הדיבור יוצר מציאות. לכן תורה מקפידה כל כך: אל תינדר, ואם נדרת – קיים. 'טוב אשר לא תידור משתידור ולא תשלם'. כוח הדיבור הוא כוח של בריאה – ויש להשתמש בו בזהירות.",
-          icon: "🗣️",
+          title: "ככל היוצא מפיו יעשה",
+          source: "במדבר ל, ג",
+          text: "'איש כי ידור נדר לה'... לא יחל דברו — ככל היוצא מפיו יעשה'. התורה מתייחסת למילה של אדם כאל מציאות ממשית: דיבור שיצא מן הפה מחייב כקניין וכשבועה. ללמדך מה כוחו של דיבור בישראל — בונה עולמות ומחריבן. אדם שמילתו מילה, שהבטחתו קודש — הוא אדם שדיבורו קרוב לדיבור שבו נברא העולם.",
+          icon: "💬",
         },
-      ],
-      [
         {
-          title: "מלחמת מדין – גמול וסיום",
-          source: "במדבר לא",
-          text: "ישראל נאבקו במדין שהיה אחראי לחטא בעל פעור. בסיום המלחמה, חזרו עם שלל גדול. אך משה כועס: מדוע החיתם את הנשים שגרמו לחטא? הניצחון הצבאי אינו מספיק – צריך לסיים גם את מה שגרם לנפילה הרוחנית.",
-          icon: "⚔️",
+          title: "העיקר והטפל",
+          source: "רש\"י במדבר לב, טז ו-כד",
+          text: "בני גד וראובן אמרו: 'גדרות צאן נבנה למקננו פה — וערים לטפנו'. הקדימו את הצאן לילדים. ומשה בתשובתו הפך את הסדר: 'בנו לכם ערים לטפכם — וגדרות לצאנכם'. פירש רש״י: הם חסו על ממונם יותר מבניהם ובנותיהם; אמר להם משה: לא כן — עשו העיקר עיקר. תיקון של שתי מילים — ובו תורת סדר העדיפויות כולה: קודם הנשמות, אחר כך הנכסים.",
+          icon: "👨‍👧‍👦",
         },
       ],
     ],
     מסעי: [
       [
         {
-          title: "42 מסעות – מסע הנשמה",
-          source: "ספר הזוהר",
-          text: "42 מסעות של ישראל במדבר. הבעל שם טוב לימד שה-42 מסעות הם 42 תחנות בחיי כל אדם, מלידה עד מוות. בכל תחנה, ה' עמנו. גם כשחונים במקומות קשים – אלה הם 'מסעי בני ישראל אשר יצאו מארץ מצרים' – עדיין במסלול היציאה.",
+          title: "כל המסעות — חיבה",
+          source: "רש\"י במדבר לג, א (תנחומא)",
+          text: "'אלה מסעי בני ישראל' — למה נכתבו כל מ״ב המסעות? פירש רש״י מן המדרש: משל למלך שהיה בנו חולה והוליכו למקום רחוק לרפאותו. כיוון שחזרו, התחיל אביו מונה כל המסעות: כאן ישננו, כאן הוקרנו, כאן חששת את ראשך. כך אמר הקב״ה למשה: מנה להם כל המקומות היכן הכעיסוני — ואף על פי כן, כל תחנה זכורה באהבה. גם התחנות הקשות של חיינו — נמנות אצלו בחיבה.",
           icon: "🗺️",
         },
-      ],
-      [
         {
-          title: "ערי המקלט – כי יכה אדם",
-          source: "במדבר לה",
-          text: "ערי מקלט נועדו למי שהרג בשגגה. לא לרוצח במזיד. ה' מבחין: יש הבדל בין מזיד לשוגג. המשפט האלוקי מדויק. אדם שפגע בלי כוונה – מוגן. ה'מקלט' הוא לא בריחה מאחריות – הוא הגנה מנקמה עיוורת. ה' אוהב צדק מדויק.",
-          icon: "🏙️",
+          title: "ערי מקלט — דרך לשוגג",
+          source: "במדבר לה; מכות י",
+          text: "התורה מצווה להכין ערי מקלט לרוצח בשגגה — ואמרו חכמים שהיו כתובים שלטים בכל פרשת דרכים: 'מקלט, מקלט'. אפילו למי שנכשל במעשה הנורא ביותר — בלא כוונה — התורה סוללת דרך מסומנת של תיקון ומחסה. ואם כך דאגה תורה לשוגג בנפש — קל וחומר שיש דרך פתוחה ומסומנת לכל מי ששגג ורוצה לחזור.",
+          icon: "🏘️",
         },
       ],
     ],
     דברים: [
       [
         {
-          title: "אלה הדברים – שפת הנהגה",
-          source: "דברים א",
-          text: "'אלה הדברים אשר דיבר משה'. ספר דברים הוא נאום פרידה של משה. 40 שנה עמד לפני ה' – ועכשיו מדבר אל העם. הנהגה שלמה מסתיימת בהעברת המסר. לא רק לעשות – גם לסכם, לחנך, להדגיש. 'אלה הדברים' – הכל מסתכם בדיבור.",
-          icon: "🎤",
+          title: "תוכחה ברמז",
+          source: "רש\"י דברים א, א",
+          text: "'אלה הדברים אשר דיבר משה... במדבר בערבה מול סוף' — פירש רש״י: לפי שהן דברי תוכחות ומנה כאן כל המקומות שהכעיסו לפני המקום בהן — לפיכך סתם את הדברים והזכירם ברמז, מפני כבודן של ישראל. משה, ברגעיו האחרונים, מלמד איך מוכיחים: לא בהשפלה ולא בפירוט מביך, אלא ברמז עדין ששומר על כבוד השומע. תוכחה שאין בה כבוד — אינה נשמעת.",
+          icon: "🗣️",
         },
-      ],
-      [
         {
-          title: "ראה נתתי לפניך",
-          source: "דברים א",
-          text: "'ראה נתתי לפניך את הארץ, בוא ורש'. ה' נתן – אבל ישראל צריכים לקחת. גם ארץ ישראל, גם כל ברכה בחיים – ה' נותן לנו את ה'לפני', אבל אנחנו צריכים לפסוע. הנסכיות מה' אינן פאסיביות – הן זימון לפעולה.",
-          icon: "🌍",
+          title: "לא תגורו מפני איש",
+          source: "דברים א, יז",
+          text: "בציווי לשופטים אומר משה: 'לא תכירו פנים במשפט, כקטן כגדול תשמעון, לא תגורו מפני איש — כי המשפט לאלהים הוא'. הנימוק מפעים: הדיין אינו צריך אומץ מפני שהוא גיבור — אלא מפני שהמשפט כלל אינו שלו; שליח הוא של שופט כל הארץ. וכך כל עמידה על האמת: כשאדם יודע שהאמת אינה 'שלו' אלא של הקב״ה — הפחד מאבד את אחיזתו.",
+          icon: "⚖️",
         },
       ],
     ],
     ואתחנן: [
       [
         {
-          title: "שמע ישראל – אחדות ה'",
-          source: "דברים ו",
-          text: "'שמע ישראל ה' אלוהינו ה' אחד' – יסוד האמונה. לא רק שה' קיים – הוא אחד. אחד: לא מחולק, לא מורכב, לא מוגבל. כשמכירים בזה – מבינים שאין 'מחוץ לה'' ואין 'בלי ה''. כל מה שקיים – קיים בתוכו. זה שינוי תפיסה מהותי.",
-          icon: "☝️",
+          title: "תקט\"ו תפילות",
+          source: "דברים רבה יא, י",
+          text: "'ואתחנן אל ה' בעת ההיא' — דרשו במדרש: ואתחנ״ן בגימטריה תקט״ו (515) — חמש מאות וחמש עשרה תפילות התפלל משה להיכנס לארץ. ולא נענה — ואף על פי כן לא הפסיק, עד שאמר לו הקב״ה 'רב לך'. ואם משה, שידע שנגזרה גזרה, התפלל תקט״ו פעמים — אנו, שלא נגזר עלינו דבר, על אחת כמה וכמה שאין לנו להתייאש מן התפילה לעולם.",
+          icon: "🙏",
         },
-      ],
-      [
         {
-          title: "ואהבת – מצוות האהבה",
-          source: "דברים ו",
-          text: "'ואהבת את ה' אלוהיך בכל לבבך ובכל נפשך ובכל מאודך'. איך מצווים על אהבה? ה'אהבה' כאן היא לא רגש בלבד – היא כיוון חיים. 'בכל לבבך' – בשני יצריך, טוב ורע. 'בכל מאודך' – אפילו בנסיבות שקשה לאהוב.",
-          icon: "❤️",
+          title: "בכל יום — כחדשים",
+          source: "רש\"י דברים ו, ו (ספרי)",
+          text: "בפרשה — קריאת שמע: 'והיו הדברים האלה אשר אנכי מצוך היום על לבבך'. פירש רש״י: 'אשר אנכי מצוך היום' — לא יהיו בעיניך כדיוטגמא (פקודה) ישנה שאין אדם סופנה, אלא כחדשה שהכל רצין לקראתה. התורה בת אלפי שנים — והציווי הוא לפגוש אותה בכל בוקר כאיגרת שנכתבה הבוקר אליך אישית. ההתחדשות אינה בתורה — היא בלב הקורא.",
+          icon: "📜",
         },
       ],
     ],
     עקב: [
       [
         {
-          title: "מה ה' שואל מעמך",
-          source: "דברים י",
-          text: "'ועתה ישראל מה ה' אלוהיך שואל מעמך כי אם ליראה' – 'מה' מלשון מעט? רש\"י: גדול הוא אצל ה'. אמר חז\"ל: 'הכל בידי שמים חוץ מיראת שמים'. הבחירה החופשית הגדולה ביותר שניתנה לאדם היא: האם לירא מה' – לבחור בו.",
-          icon: "🙏",
+          title: "מצוות שאדם דש בעקביו",
+          source: "רש\"י דברים ז, יב (תנחומא)",
+          text: "'והיה עקב תשמעון' — פירש רש״י מן המדרש: אם המצוות הקלות שאדם דש בעקביו תשמעון — 'ושמר ה' אלהיך לך את הברית ואת החסד'. דווקא המצוות ה'קטנות' — ברכה בכוונה, מילה טובה, דקדוק קל שאיש אינו רואה — הן המפתח לברית. גדלות האדם אינה נמדדת ברגעים הגדולים, שכולם עומדים בהם — אלא בקטנים, שרק הוא ושמים יודעים עליהם.",
+          icon: "👣",
         },
-      ],
-      [
         {
-          title: "ארץ זבת חלב ודבש",
-          source: "דברים יא",
-          text: "'ארץ אשר ה' אלוהיך דורש אותה תמיד, עיני ה' אלוהיך בה מראשית השנה ועד אחרית שנה'. ה' 'דורש' את הארץ – מסתכל בה, עוקב אחריה. ארץ ישראל היא לא רק גיאוגרפיה – היא נחלת ה' המיוחדת. לחיות בה היא קיום מצווה.",
-          icon: "🌿",
+          title: "ואכלת ושבעת וברכת",
+          source: "דברים ח, י; ברכות לה",
+          text: "מן הפרשה למדנו ברכת המזון מן התורה: 'ואכלת ושבעת — וברכת את ה' אלהיך על הארץ הטובה'. ואמרו חכמים: כל הנהנה מן העולם הזה בלא ברכה — כאילו גוזל להקב״ה וכנסת ישראל. העולם מלא טובה — והברכה היא הקופה שבה משלמים עליה: רגע של הכרה. אדם המברך בכוונה מאה ברכות ביום — חי מאה רגעים של פליאה והודיה.",
+          icon: "🍞",
         },
       ],
     ],
     ראה: [
       [
         {
-          title: "ראה – בחירה אישית",
-          source: "דברים יא",
-          text: "'ראה אנוכי נותן לפניכם ברכה וקללה' – 'ראה' בלשון יחיד, 'לפניכם' בלשון רבים. כל אחד לחוד, אבל כולם יחד. הבחירה בטוב ובחיים היא אחריות אישית – אף אחד לא יכול לבחור בשבילך. אבל ההשלכות הן על הכלל.",
+          title: "ראה — לשון יחיד",
+          source: "אבן עזרא דברים יא, כו",
+          text: "'ראה אנכי נותן לפניכם היום ברכה וקללה' — פתח בלשון יחיד 'ראה' וסיים בלשון רבים 'לפניכם'. ביאר האבן עזרא: לכל אחד ואחד ידבר. הברכה והקללה מונחות לפני הציבור כולו — אבל הבחירה היא לעולם של היחיד. אין אדם יכול לומר 'הסביבה קבעה': בתוך אותם תנאים בדיוק, כל יחיד רואה, שוקל — ובוחר. ו'היום' — הבחירה מתחדשת בכל יום מחדש.",
           icon: "👁️",
         },
-      ],
-      [
         {
-          title: "שופטים ושוטרים – מוסדות הצדק",
-          source: "דברים טז",
-          text: "'שופטים ושוטרים תיתן לך בכל שעריך'. שני מוסדות: השופטים – קובעים את הדין. השוטרים – אוכפים אותו. חברה צודקת צריכה שניהם. לא מספיק לדעת מה נכון – צריך גם לאכוף. 'צדק צדק תרדוף' – רדוף, אל תשב ותחכה.",
-          icon: "⚖️",
+          title: "עשר בשביל שתתעשר",
+          source: "תענית ט, א",
+          text: "'עשר תעשר את כל תבואת זרעך' — דרש רבי יוחנן: עשר בשביל שתתעשר. ועוד אמרו שם: בכל דבר אסור לנסות את ה' — חוץ מזו, שנאמר 'הביאו את כל המעשר... ובחנוני נא בזאת... אם לא אפתח לכם את ארובות השמים'. הנתינה היא ההשקעה היחידה שהקב״ה ערב לה בעצמו: מה שאדם נותן — אינו חסר, אלא נפתח.",
+          icon: "💰",
         },
       ],
     ],
     שופטים: [
       [
         {
-          title: "לא תסור – סמכות המסורת",
-          source: "דברים יז",
-          text: "'לא תסור מן הדבר אשר יגידו לך ימין ושמאל'. גם אם נראה לך שהם אומרים ימין שזה שמאל – שמע להם. זה נראה מוקצן, אבל הרעיון: מסורת ומחויבות למוסדות הדת יוצרת רצף. בלי מסגרת – כל אחד עושה מה שנראה בעיניו.",
-          icon: "⚖️",
+          title: "השערים של האדם",
+          source: "של\"ה הקדוש, פרשת שופטים",
+          text: "'שופטים ושוטרים תיתן לך בכל שעריך' — כתב השל״ה הקדוש: רמז לשערי האדם — העיניים, האוזניים, הפה והחוטם; שיעמיד אדם שופט על כל שער ושער: מה נכנס פנימה ומה יוצא החוצה. עיר בלא שומרים בשעריה — כל אויב נכנס אליה; אדם בלא משמר על עיניו ופיו — הפקר. שמירת השערים היא ראשית כל עבודת הנפש.",
+          icon: "🚪",
         },
-      ],
-      [
         {
-          title: "מלך ישראל – גבולות הכוח",
-          source: "דברים יז",
-          text: "'שום תשים עליך מלך' – מותר למנות מלך. אבל: 'לא ירבה לו סוסים... ולא ירבה לו נשים... וכסף וזהב לא ירבה'. המלך – הכוח הגדול ביותר – חייב בגבולות. ריכוז כוח ועושר מושחת. ה' מגביל את המלך מראש. זה עיקרון דמוקרטי שהקדים את זמנו.",
-          icon: "👑",
+          title: "תמים תהיה",
+          source: "רש\"י דברים יח, יג",
+          text: "'תמים תהיה עם ה' אלהיך' — פירש רש״י: התהלך עמו בתמימות ותצפה לו, ולא תחקור אחר העתידות; אלא כל מה שיבוא עליך — קבל בתמימות, ואז תהיה עמו ולחלקו. הדאגה מן המחר גוזלת את היום. ההולך בתמימות אינו תמים במובן של נאיבי — הוא גיבור שבחר להניח את העתיד ביד נאמנה, ולחיות את ההווה בשלמות.",
+          icon: "🤍",
         },
       ],
     ],
     "כי תצא": [
       [
         {
-          title: "כי תצא למלחמה",
-          source: "דברים כא",
-          text: "פרשת כי תצא פותחת במלחמה ובאסיר המלחמה. אפילו בשעת מלחמה – ה' אומר: יש גבולות. יש חוקים. אסיר אינו הפקר. כבוד האדם חל גם על אויב. מלחמה כשרה מבחינה מוסרית אינה מלחמה ללא גבולות.",
-          icon: "⚔️",
+          title: "שילוח הקן — לימוד הרחמים",
+          source: "רמב\"ן דברים כב, ו",
+          text: "'כי יקרא קן ציפור לפניך... שלח תשלח את האם ואת הבנים תיקח לך — למען ייטב לך והארכת ימים'. כתב הרמב״ן: טעם המצוה — ללמד אותנו מידת הרחמנות, שלא נתאכזר; שהמצוות הן לצרף את הבריות ולזכך את נפשנו. מצוה שאין קלה ממנה — רגע אחד של רגישות לציפור — ושכרה כשכר כיבוד אב ואם: אריכות ימים. כי אצל הקב״ה, הלב שהמעשה מעצב — הוא העיקר.",
+          icon: "🕊️",
         },
-      ],
-      [
         {
-          title: "שילוח הקן",
-          source: "דברים כב",
-          text: "'שלח תשלח את האם' – מצוות שילוח הקן. לפני שלוקחים ביצים מקן – שלח את האם. 'למען ייטב לך והארכת ימים'. מצווה קטנה, שכר גדול. הרמב\"ן: מלמדת רחמים. כשמורגלים ברחמים על חיות – קל יותר להרגיל לרחמים על אנשים.",
-          icon: "🐦",
+          title: "קשה עונשן של מידות",
+          source: "בבא בתרא פח, ב",
+          text: "בפרשה: 'אבן שלמה וצדק יהיה לך... כי תועבת ה' אלהיך כל עושה אלה, כל עושה עוול'. ואמרו חכמים: קשה עונשן של מידות (משקלות מזויפים) יותר מעונשן של עריות. מדוע? שהגוזל במשקל גוזל את הרבים בלי דעתם — ואין לו למי להשיב. היושר במסחר איננו 'התנהלות עסקית' — הוא מבחן יראת השמים האמיתי: 'לזאת ייקרא צדיק — הנושא ונותן באמונה'.",
+          icon: "⚖️",
         },
       ],
     ],
     "כי תבוא": [
       [
         {
-          title: "ביכורים – הכרת הטוב",
-          source: "דברים כו",
-          text: "'ולקחת מראשית כל פרי האדמה' – מביאים ביכורים לה'. ואומרים: 'ארמי אובד אבי...' – מספרים את ההיסטוריה. ההכרה בטוב אינה מחשבה פנימית – היא אמירה בפה, בקהל, בקול. 'לפני ה' אלוהיך' – בנוכחות. הביכורים הם תרגיל בהכרת הטוב.",
-          icon: "🍇",
+          title: "שאינך כפוי טובה",
+          source: "רש\"י דברים כו, ג",
+          text: "מביא הביכורים פותח ואומר: 'הגדתי היום לה' אלהיך כי באתי אל הארץ' — פירש רש״י: 'ואמרת אליו — שאינך כפוי טובה'. כל טקס הביכורים — העלייה לירושלים, הסל, המקרא — נועד לדבר אחד: לחנך את הלב שלא לקחת שום טובה כמובנת מאליה. פרי ראשון שצומח — רצים איתו לומר תודה. זו ראשית העבודה: עין שרואה את הטוב, ופה שמודה עליו.",
+          icon: "🧺",
         },
-      ],
-      [
         {
-          title: "הברכות והקללות",
-          source: "דברים כח",
-          text: "פרשת ברכות וקללות ארוכה מאוד, הקללות ארוכות מהברכות. מדוע? כי ה' ממש רוצה שנבחר בברכה – אז הוא מפרט את הקללה בהרחבה. כהורה שמסביר לילד בפירוט מה יקרה אם לא יישמע – לא מתוך כוונה לקלל, אלא מתוך אהבה שרוצה שנבחר נכון.",
-          icon: "📜",
+          title: "והלכת בדרכיו",
+          source: "דברים כח, ט; סוטה יד",
+          text: "בברכות הפרשה: 'יקימך ה' לו לעם קדוש... כי תשמור את מצוות ה' אלהיך והלכת בדרכיו'. ומהי ההליכה בדרכיו? אמרו חכמים: מה הוא רחום — אף אתה היה רחום; מה הוא חנון — אף אתה היה חנון; הוא מלביש ערומים, מבקר חולים, מנחם אבלים — אף אתה. הדבקות בה' אינה מסתורין רחוק: היא מעשה חסד אחד ועוד אחד, בדרכו של בעל החסד.",
+          icon: "💗",
         },
       ],
     ],
     נצבים: [
       [
         {
-          title: "אתם נצבים היום",
-          source: "דברים כט",
-          text: "'אתם נצבים היום כולכם לפני ה' אלוהיכם'. 'כולכם' – ראשיכם, זקניכם, שופטיכם, טפכם, נשיכם, גר. כולם. ברית ה' כוללת את כולם – אין יוצא מן הכלל. 'גם את אשר איננו פה עמנו היום' – גם הדורות הבאים שם. אנחנו שם.",
-          icon: "🤲",
+          title: "כולכם — ערבים זה בזה",
+          source: "דברים כט, ט; סנהדרין מג",
+          text: "'אתם ניצבים היום כולכם לפני ה' אלהיכם: ראשיכם שבטיכם... מחוטב עציך עד שואב מימיך'. מראש העם ועד שואב המים — כולם נכנסים לברית אחת, ומכאן למדו חכמים: כל ישראל ערבים זה בזה. הערבות אינה סיסמה: היא המבנה של העם — שמחתו של זה תלויה בזה, ותיקונו של אחד מרים את כולם. אין יהודי שגורלו פרטי.",
+          icon: "🤝",
         },
-      ],
-      [
         {
-          title: "קרובה היא – לא בשמים",
-          source: "דברים ל",
-          text: "'כי קרוב אליך הדבר מאוד בפיך ובלבבך לעשותו'. התורה אינה רחוקה. לא בשמים, לא מעבר לים. היא בפה ובלב. המעשה – 'לעשותו'. אין תירוץ. ה' לא ביקש ממך את האפשרי-אולי – ביקש את המצוי, את מה שקרוב ממש.",
-          icon: "💛",
+          title: "לא בשמים היא",
+          source: "דברים ל, יב-יד",
+          text: "'כי המצוה הזאת... לא נפלאת היא ממך ולא רחוקה היא. לא בשמים היא... ולא מעבר לים... כי קרוב אליך הדבר מאד — בפיך ובלבבך לעשותו'. התורה עצמה מעידה על עצמה: אינה שמורה לגאונים ולמלאכים. כל תירוצי ה'זה לא בשבילי, זה גבוה ממני' — נענים בפסוק אחד: קרוב אליך הדבר מאוד. שלושה כלים ניתנו לך — פה, לב, מעשה — והם כל מה שצריך.",
+          icon: "💫",
         },
       ],
     ],
     וילך: [
       [
         {
-          title: "כתבו לכם את השירה",
-          source: "דברים לא",
-          text: "'ועתה כתבו לכם את השירה הזאת'. לפני מותו, ה' מצווה את משה לכתוב שירה. מה מתחנך דור לאחר דור? לא רק מצוות – גם שירה. הרגש, הנשמה, ה'שיר' של ישראל. עם ישראל חי לא רק כי יש לו חוקים – אלא כי יש לו שיר.",
-          icon: "🎵",
+          title: "ליתן שכר למביאיהם",
+          source: "חגיגה ג, א",
+          text: "במצוות הקהל נאמר: 'הקהל את העם — האנשים והנשים והטף'. אנשים באים ללמוד, נשים לשמוע — 'וטף למה באים? כדי ליתן שכר למביאיהם'. תינוק שאינו מבין דבר — הבאתו למעמד של תורה נרשמת כזכות. כל הבאה של ילד למקום של קדושה — לבית כנסת, לשולחן שבת, לשיעור — נחקקת, גם כשנדמה שאינו קולט: האווירה נספגת בנשמה לפני שהשכל מבין.",
+          icon: "👨‍👩‍👧‍👦",
         },
-      ],
-      [
         {
-          title: "הסתר פנים ואגנוז",
-          source: "דברים לא",
-          text: "'ואנוכי הסתר אסתיר פני' – ה' מכריז שיסתיר פניו. זה לא נטישה – זה ניסיון. כשה' 'מסתיר', הוא בודק: האם עמך ישמרו אמונתם גם בלי ראייה ברורה? ישראל שרדו גלות ארוכה גם כשה' 'הסתיר'. זה כוחנו.",
-          icon: "🌑",
+          title: "לא ירפך ולא יעזבך",
+          source: "דברים לא, ח",
+          text: "ביומו האחרון מחזק משה את יהושע לעיני כל ישראל: 'וה' הוא ההולך לפניך, הוא יהיה עמך — לא ירפך ולא יעזבך; לא תירא ולא תיחת'. זו צוואת הדורות לכל מנהיג ולכל אדם העומד בפני משימה גדולה ממנו: אינך הולך לבד. ההבטחה כפולה — 'לא ירפך' בשעת החולשה, 'ולא יעזבך' בשעת הבדידות. ומכוחה: 'חזק ואמץ'.",
+          icon: "💪",
         },
       ],
     ],
     האזינו: [
       [
         {
-          title: "שירת האזינו – עד הסוף",
-          source: "דברים לב",
-          text: "'האזינו השמים ואדברה ותשמע הארץ אמרי פי' – שמים וארץ כעדים. שירת האזינו היא שיר היסטוריה – מהתחלה ועד הסוף. ה' מספר מראש את כל מה שיקרה. ומסיים: 'ראו עתה כי אני אני הוא'. ההיסטוריה כולה – מאז ועד עתה – היא אחת.",
-          icon: "🎶",
+          title: "יערוף כמטר לקחי",
+          source: "דברים לב, ב; ספרי האזינו",
+          text: "'יערוף כמטר לקחי, תיזל כטל אמרתי' — דרשו בספרי: מה המטר יורד על האילנות ונותן בהם מטעמים לכל אחד לפי מה שהוא — הגפן לפי מה שהיא והזית לפי מה שהוא — כך דברי תורה: כולה אחת, וכל אחד מוצא בה את טעמו ואת חלקו. ומה הטל — הכל שמחים בו; ירידתו בשקט, בלי רעש — וכל העולם חי ממנו. כך התורה מחיה את לומדיה, לכל אחד כפי כליו.",
+          icon: "🌧️",
         },
-      ],
-      [
         {
-          title: "יעקב חבל נחלתו",
-          source: "דברים לב",
-          text: "'כי חלק ה' עמו, יעקב חבל נחלתו'. ישראל הם 'חבל' – חבל מדידה, נחלה. ה' 'מדד' לו את ישראל. הגויים הם 'גורלם' – גורל מזדמן. אבל ישראל הם 'חבל' – מדויק, מכוון, מתוכנן. אנחנו לא תוצאת מקרה – אנחנו חלקו המדויק של ה'.",
-          icon: "⭐",
+          title: "אין דבר ריק — ואם ריק, מכם",
+          source: "ירושלמי פאה א, א",
+          text: "'כי לא דבר ריק הוא מכם — כי הוא חייכם'. אמרו בירושלמי: 'כי לא דבר ריק הוא — ואם ריק הוא, מכם': אם נדמה לכם פסוק או עניין בתורה ריק מתוכן — הריקות בכם, בכלים שלכם, לא בו. וכשמעמיקים — 'כי הוא חייכם'. כל אות בתורה נושאת עומק אינסופי; כשהלימוד 'יבש', התרופה אינה להניח את הספר — אלא להעמיק את הכלי.",
+          icon: "💎",
         },
       ],
     ],
     "וזאת הברכה": [
       [
         {
-          title: "ברכת משה – ברכת אב",
-          source: "דברים לג",
-          text: "'וזאת הברכה אשר בירך משה' – הברכה האחרונה. כל שבט מבורך על פי ייחודו. לא ברכה אחת לכולם – ברכה מותאמת. גדולת משה: ידע את ייחוד כל שבט ובירך בהתאם. לברך אחר – צריך להכיר אותו. אהבה היא ראייה.",
-          icon: "✋",
+          title: "מורשה — מאורסה",
+          source: "פסחים מט, ב",
+          text: "'תורה ציוה לנו משה, מורשה קהילת יעקב' — הפסוק הראשון שמלמדים כל ילד יהודי. ודרשו חכמים: אל תקרי 'מורשה' אלא 'מאורסה' — התורה מאורסת לישראל ככלה לחתן. ירושה אפשר להניח בצד; ארוסה — אוהבים, מחפשים, מתגעגעים. שני הפנים אמת: התורה שייכת לכל יהודי בירושה גמורה גם אם התרחק — וממתינה לו כארוסה, באהבה שלא התיישנה.",
+          icon: "💍",
         },
-      ],
-      [
         {
-          title: "וימת שם משה",
-          source: "דברים לד",
-          text: "'וימת שם משה עבד ה' בארץ מואב על פי ה''. 'על פי ה'' – נשיקת ה'. המוות הגדול ביותר – עם קדושה. 'ולא ידע איש את קבורתו עד היום'. קבורת משה נסתרת – כי הוא שייך לנצח. הגדולה האמיתית אינה צריכה מצבה. היא חיה בתוך הלבבות.",
-          icon: "🌅",
+          title: "מסיימים — ומתחילים",
+          source: "דברים לד; מנהג ישראל בשמחת תורה",
+          text: "התורה מסתיימת במות משה — 'ולא קם נביא עוד בישראל כמשה'. אך מנהג ישראל תורה: בשמחת תורה, מיד עם 'לעיני כל ישראל', מתחילים 'בראשית ברא'. אין רגע שבו התורה 'נגמרת'. וכך נסמך סוף התורה לתחילתה — ללמדך שהיא עיגול שאין לו קץ: כל סיום הוא שער, וכל מי שסיים — נעשה מתחיל, עמוק יותר משהיה.",
+          icon: "🔄",
         },
       ],
     ],
@@ -20979,7 +21738,8 @@ document.addEventListener("keydown", (e) => {
     if (!name) return null;
     if (name.indexOf("שבועות") >= 0) return "שבועות";
     if (name.indexOf("ראש השנה") >= 0) return "ראש השנה";
-    if (name.indexOf("שמחת תורה") >= 0) return "שמחת תורה";
+    if (name.indexOf("שמחת תורה") >= 0 || name.indexOf("שמיני עצרת") >= 0)
+      return "שמחת תורה";
     if (name.indexOf("יום כיפור") >= 0 || name.indexOf("כיפור") >= 0)
       return "יום כיפור";
     if (name.indexOf("הושענא רבה") >= 0 || name.indexOf("סוכות") >= 0)
@@ -20988,6 +21748,9 @@ document.addEventListener("keydown", (e) => {
     if (name.indexOf("פורים") >= 0) return "פורים";
     if (name.indexOf("פסח") >= 0) return "פסח";
     if (name.indexOf("בעומר") >= 0) return "לג בעומר";
+    if (name.indexOf("בשבט") >= 0) return 'ט"ו בשבט';
+    if (name.indexOf("באב") >= 0 && name.indexOf("תשעה") < 0 && name.indexOf("ערב") < 0)
+      return 'ט"ו באב';
     if (name.indexOf("תשעה באב") >= 0 || name.indexOf("תשעא") >= 0)
       return "תשעה באב";
     if (name.indexOf("צום גדליה") >= 0) return "צום גדליה";
@@ -21164,6 +21927,20 @@ document.addEventListener("keydown", (e) => {
         new Date(),
       ),
     ).trim();
+    // נרמול שמות חודשים של המערכת לשמות המפתחות במאגר
+    // (Intl מחזיר "מרחשוון", "סיוון", "אדר א׳" — המפתחות: "חשון", "סיון", "אדר א")
+    var monthNorm = month.replace(/[׳'"״]/g, "").trim();
+    var MONTH_ALIASES = {
+      "מרחשוון": "חשון",
+      "מרחשון": "חשון",
+      "חשוון": "חשון",
+      "סיוון": "סיון",
+      "אדר א": "אדר א",
+      "אדר ב": "אדר ב",
+      "אדר I": "אדר א",
+      "אדר II": "אדר ב",
+    };
+    month = MONTH_ALIASES[monthNorm] || monthNorm;
     var variants = MONTH_DT[month] || null;
     var item = variants ? variants[YR] || variants[0] : null;
     if (!item)
@@ -21183,6 +21960,11 @@ document.addEventListener("keydown", (e) => {
       .trim();
     var variants = PARSHA_DT[raw] || null;
     var displayName = raw;
+    // נרמול מקפים: "כי-תצא" (מ-Hebcal) ← "כי תצא" (מפתח המאגר)
+    if (!variants) {
+      var rawSpaced = raw.replace(/[-־–]/g, " ").replace(/\s+/g, " ").trim();
+      variants = PARSHA_DT[rawSpaced] || null;
+    }
     if (!variants && raw.indexOf("-") >= 0) {
       var parts = raw.split("-");
       for (var pi = 0; pi < parts.length; pi++) {
@@ -21271,16 +22053,18 @@ function openSefarimNosafimPage(_pageMode) {
       (active ? '🔖 מסומן' : '🔖 סמן') + '</button></div>';
   }
 
-  function renderParagraphs(he, color, secIdx) {
+  function renderParagraphs(he, color, secIdx, inlineNotes) {
     if (!Array.isArray(he) || he.length === 0)
       return "<p style=\"color:#9ca3af;text-align:center;padding:2rem;\">לא נמצא טקסט לסעיף זה</p>";
     return he.map(function(v, i) {
       var txt = Array.isArray(v) ? v.join("<br>") : String(v || "");
       if (!txt.trim()) return "";
       var paraBM = (typeof secIdx === "number") ? _snParaBMHtml(secIdx, i) : "";
+      // פירושים צמודי-פסוק — מוצגים בתוך הטקסט מיד אחרי הפסוק
+      var note = (inlineNotes && inlineNotes[i]) ? inlineNotes[i] : "";
       return paraBM + "<p id=\"sn-para-" + secIdx + "-" + i + "\" data-sn-para=\"" + i + "\" style=\"margin:0 0 1.4rem;line-height:2.3;\">" +
         "<span style=\"color:" + color + ";font-size:0.73em;font-weight:700;margin-left:0.35rem;\">[" + toHN(i + 1) + "]</span>" +
-        txt + "</p>";
+        txt + "</p>" + note;
     }).filter(Boolean).join("");
   }
 
@@ -22334,6 +23118,19 @@ function openSefarimNosafimPage(_pageMode) {
         {he:"תשעה באב", ref:"Pele Yoetz 390"},
         {he:"תשועה", ref:"Pele Yoetz 391"}
       ]},
+    { id:"perek-shirah", he:"פרק שירה", subtitle:"שירת כל הברואים — ששה פרקים",
+      cat:"tefilot", color:"#059669", icon:"🦋",
+      credit:"הטקסט מ-Sefaria.org — נחלת הכלל",
+      creditUrl:"https://www.sefaria.org/Perek_Shirah",
+      type:"flat",
+      sections:[
+        {he:"פרק ראשון — שמים וארץ", ref:"Perek Shirah 1"},
+        {he:"פרק שני — יום ולילה, מאורות", ref:"Perek Shirah 2"},
+        {he:"פרק שלישי — אילנות וצמחים", ref:"Perek Shirah 3"},
+        {he:"פרק רביעי — העופות", ref:"Perek Shirah 4"},
+        {he:"פרק חמישי — הבהמות והחיות", ref:"Perek Shirah 5"},
+        {he:"פרק שישי — שרצים ובעלי חיים קטנים", ref:"Perek Shirah 6"}
+      ]},
     { id:"hafrashat-challah", he:"הפרשת חלה", subtitle:"סדר ההפרשה והברכה",
       cat:"tefilot", color:"#d97706", icon:"🍞",
       credit:"מאגר פנימי — נחלת הכלל", creditUrl:"",
@@ -23055,6 +23852,53 @@ function openSefarimNosafimPage(_pageMode) {
   // Make it available within the IIFE
   window._snFetchCommentaryDebug = _snFetchCommentary;
 
+  // ── פירושים צמודי-פסוק: שמירה על מבנה הפסוקים (פסוק ← רשימת פירושים) ──
+  var _snCMVerseCache = {};  // "{cm.id}|{ref}" → null | "loading" | array-of-arrays
+  async function _snFetchCommentaryVerses(cm, ref) {
+    var key = cm.id + "|" + ref;
+    if (_snCMVerseCache[key] !== undefined && _snCMVerseCache[key] !== "loading") return _snCMVerseCache[key];
+    _snCMVerseCache[key] = "loading";
+    try {
+      var fullRef = (cm.refPrefix || "") + ref;
+      var url = "https://www.sefaria.org/api/texts/" + encodeURIComponent(fullRef) + "?lang=he&context=0";
+      var res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+      var data = await res.json();
+      if (!data || data.error) { _snCMVerseCache[key] = null; return null; }
+      var he = data.he;
+      if (!Array.isArray(he)) he = he ? [he] : [];
+      var verses = he.map(function(v) {
+        if (typeof v === "string") return v.trim() ? [v] : [];
+        var flat = [];
+        (function push(x) {
+          if (typeof x === "string" && x.trim()) flat.push(x);
+          else if (Array.isArray(x)) x.forEach(push);
+        })(v);
+        return flat;
+      });
+      _snCMVerseCache[key] = verses.some(function(v){ return v.length; }) ? verses : null;
+      return _snCMVerseCache[key];
+    } catch(e) {
+      _snCMVerseCache[key] = null;
+      return null;
+    }
+  }
+
+  // בלוק פירוש קטן המוצג בתוך הטקסט, מיד אחרי הפסוק שעליו הוא נאמר
+  function _snInlineCMHtml(cm, texts) {
+    var col = cm.color || "#7c3aed";
+    var h = col.replace("#", "");
+    if (h.length === 3) h = h.split("").map(function(x){ return x + x; }).join("");
+    var n = parseInt(h, 16);
+    var r = (n>>16)&255, g = (n>>8)&255, b = n&255;
+    return '<div style="margin:0.3rem 0 1.1rem;padding:0.5rem 0.8rem;border-radius:0.5rem;' +
+      'background:rgba(' + r + ',' + g + ',' + b + ',0.06);' +
+      'border-right:3px solid ' + col + ';' +
+      'font-size:0.85em;line-height:1.9;text-align:right;direction:rtl;">' +
+      '<span style="color:' + col + ';font-weight:900;font-size:0.8em;display:block;margin-bottom:0.15rem;">📖 ' + cm.he + '</span>' +
+      texts.map(function(t) { return '<span style="color:' + col + ';">' + t + '</span>'; }).join('<br>') +
+      '</div>';
+  }
+
   // Render commentaries block for a section — async, returns HTML string
   async function _snRenderCommentaries(secRef) {
     var cms = _snActiveCommentaries().filter(function(c) { return _snCMGet(c.id); });
@@ -23510,53 +24354,79 @@ function openSefarimNosafimPage(_pageMode) {
     var chapterDiv = document.createElement("div");
     chapterDiv.id = "sn-chapter-" + idx;
     chapterDiv.setAttribute("data-sn-idx", String(idx));
-    chapterDiv.style.cssText = "max-width:680px;margin:0 auto;padding:1.25rem 1rem 1rem;font-family:'David Libre','Frank Ruhl Libre',serif;direction:rtl;color:#1e293b;border-bottom:1px solid rgba(0,0,0,0.08);";
+    chapterDiv.style.cssText = "max-width:680px;margin:0 auto;padding:1.25rem 1rem 1rem;font-family:'Frank Ruhl Libre','David Libre',serif;direction:rtl;color:#1e293b;border-bottom:1px solid rgba(0,0,0,0.08);";
     var heading = "<h4 style=\"color:" + _bk.color + ";font-size:1.05rem;font-weight:900;margin:0 0 0.85rem;text-align:center;\">" + (_sbk ? _sbk.he + " — " : "") + sec.he + "</h4>";
     chapterDiv.innerHTML = heading + "<p style=\"color:#94a3b8;text-align:center;\">טוען...</p>";
     if (prepend && area.firstChild) area.insertBefore(chapterDiv, area.firstChild);
     else area.appendChild(chapterDiv);
     var he = await fetchSec(sec.ref);
-    var mainHtml = heading + renderParagraphs(he, _bk.color, idx);
-    var commentariesHtml = "";
     var needMB = _snMBSupported() && _snGetMB();
     var needBH = _snBHSupported() && _snGetBH();
+    var activeCms = _snActiveCommentaries().filter(function(c) { return _snCMGet(c.id); });
     // Show loading placeholders if needed
-    if (needMB || needBH) {
+    if (needMB || needBH || activeCms.length) {
       var loadingHtml = "";
       if (needMB) loadingHtml += "<div style=\"margin-top:1rem;padding-top:0.85rem;border-top:1px dashed rgba(124,58,237,0.35);color:#7c3aed;font-size:0.78rem;font-style:italic;text-align:center;\">📖 טוען משנה ברורה...</div>";
       if (needBH) loadingHtml += "<div style=\"margin-top:1rem;padding-top:0.85rem;border-top:1px dashed rgba(217,119,6,0.35);color:#d97706;font-size:0.78rem;font-style:italic;text-align:center;\">📜 טוען באר היטב...</div>";
-      chapterDiv.innerHTML = mainHtml + loadingHtml;
+      if (activeCms.length) loadingHtml += "<div style=\"margin-top:1rem;padding-top:0.85rem;border-top:1px dashed rgba(0,0,0,0.15);color:#64748b;font-size:0.78rem;font-style:italic;text-align:center;\">📖 טוען פירושים...</div>";
+      chapterDiv.innerHTML = heading + renderParagraphs(he, _bk.color, idx) + loadingHtml;
     }
-    // Fetch Mishnah Berurah if needed
+
+    // ── פירושים צמודי-פסוק (רש\"י, מצודת דוד, ברטנורא וכו') — בתוך הטקסט ──
+    var inlineNotes = null;
+    var emptyCmNotes = "";
+    if (activeCms.length && Array.isArray(he)) {
+      inlineNotes = new Array(he.length);
+      for (var ci = 0; ci < activeCms.length; ci++) {
+        var cmVerses = await _snFetchCommentaryVerses(activeCms[ci], sec.ref);
+        if (!cmVerses) {
+          emptyCmNotes += "<div style=\"margin-top:0.8rem;padding:0.45rem 0.7rem;border-radius:0.4rem;border:1px dashed rgba(0,0,0,0.2);color:" + (activeCms[ci].color || "#64748b") + ";font-size:0.72rem;font-style:italic;text-align:center;\">📖 אין " + activeCms[ci].he + " על קטע זה</div>";
+          continue;
+        }
+        for (var vi = 0; vi < he.length; vi++) {
+          var vTexts = cmVerses[vi];
+          if (vTexts && vTexts.length) {
+            inlineNotes[vi] = (inlineNotes[vi] || "") + _snInlineCMHtml(activeCms[ci], vTexts);
+          }
+        }
+      }
+    }
+
+    var parasHtml = renderParagraphs(he, _bk.color, idx, inlineNotes);
+    var bottomNotes = emptyCmNotes;
+
+    // ── משנה ברורה — משובצת בתוך הטקסט לפי דיבור המתחיל ──
     if (needMB) {
       var mb = await _snFetchMB(sec.ref);
       if (mb && mb.length) {
-        commentariesHtml += "<div style=\"margin-top:1.2rem;padding:0.85rem 1rem;border-radius:0.6rem;background:rgba(124,58,237,0.05);border:1px solid rgba(124,58,237,0.18);text-align:right;direction:rtl;\">"+
-          "<div style=\"font-size:0.8rem;color:#7c3aed;font-weight:900;margin-bottom:0.55rem;text-align:center;\">📖 משנה ברורה</div>"+
-          mb.map(function(t,i){ return "<p style=\"margin:0 0 0.7rem;line-height:1.95;color:#4c1d95;font-size:0.92em;\"><span style=\"color:#7c3aed;font-weight:700;margin-left:0.35rem;\">(" + toHN(i+1) + ")</span>" + t + "</p>"; }).join("")+
-          "</div>";
+        parasHtml = _buildTextWithInlineComments(parasHtml, mb, {
+          label: 'משנה ברורה',
+          emoji: '📖',
+          color: '#7c3aed',
+          diburColor: '#b45309',
+          textColor: '#4c1d95',
+        });
       } else {
-        commentariesHtml += "<div style=\"margin-top:0.8rem;padding:0.45rem 0.7rem;border-radius:0.4rem;background:rgba(124,58,237,0.04);border:1px dashed rgba(124,58,237,0.25);color:#7c3aed;font-size:0.72rem;font-style:italic;text-align:center;\">📖 אין משנה ברורה על סימן זה</div>";
+        bottomNotes += "<div style=\"margin-top:0.8rem;padding:0.45rem 0.7rem;border-radius:0.4rem;background:rgba(124,58,237,0.04);border:1px dashed rgba(124,58,237,0.25);color:#7c3aed;font-size:0.72rem;font-style:italic;text-align:center;\">📖 אין משנה ברורה על סימן זה</div>";
       }
     }
-    // Fetch Be'er Hetev if needed
+    // ── באר היטב — משובץ בתוך הטקסט לפי דיבור המתחיל ──
     if (needBH) {
       var bh = await _snFetchBH(sec.ref);
       if (bh && bh.length) {
-        commentariesHtml += "<div style=\"margin-top:1.2rem;padding:0.85rem 1rem;border-radius:0.6rem;background:rgba(217,119,6,0.05);border:1px solid rgba(217,119,6,0.22);text-align:right;direction:rtl;\">"+
-          "<div style=\"font-size:0.8rem;color:#d97706;font-weight:900;margin-bottom:0.55rem;text-align:center;\">📜 באר היטב</div>"+
-          bh.map(function(t,i){ return "<p style=\"margin:0 0 0.7rem;line-height:1.95;color:#7c2d12;font-size:0.92em;\"><span style=\"color:#d97706;font-weight:700;margin-left:0.35rem;\">(" + toHN(i+1) + ")</span>" + t + "</p>"; }).join("")+
-          "</div>";
+        parasHtml = _buildTextWithInlineComments(parasHtml, bh, {
+          label: 'באר היטב',
+          emoji: '📜',
+          color: '#d97706',
+          diburColor: '#b45309',
+          textColor: '#7c2d12',
+        });
       } else {
-        commentariesHtml += "<div style=\"margin-top:0.8rem;padding:0.45rem 0.7rem;border-radius:0.4rem;background:rgba(217,119,6,0.04);border:1px dashed rgba(217,119,6,0.3);color:#d97706;font-size:0.72rem;font-style:italic;text-align:center;\">📜 אין באר היטב על סימן זה</div>";
+        bottomNotes += "<div style=\"margin-top:0.8rem;padding:0.45rem 0.7rem;border-radius:0.4rem;background:rgba(217,119,6,0.04);border:1px dashed rgba(217,119,6,0.3);color:#d97706;font-size:0.72rem;font-style:italic;text-align:center;\">📜 אין באר היטב על סימן זה</div>";
       }
     }
-    // Generic commentaries (Rashi, Metzudat David, Bartenura, Tiferet Yisrael, …)
-    var extraCmHtml = "";
-    if (typeof _snRenderCommentaries === "function") {
-      try { extraCmHtml = await _snRenderCommentaries(sec.ref); } catch(e) { extraCmHtml = ""; }
-    }
-    chapterDiv.innerHTML = mainHtml + commentariesHtml + extraCmHtml;
+
+    chapterDiv.innerHTML = heading + parasHtml + bottomNotes;
   }
 
   // ── הדגשה וגלילה למיקום מדויק של תוצאת חיפוש ──
@@ -23735,7 +24605,7 @@ function openSefarimNosafimPage(_pageMode) {
     title.textContent = book.he;
     applyFS(); updateBMBtn(); _snBuildCMToolbar();
     content.innerHTML =
-      "<div style=\"max-width:680px;margin:0 auto;padding:1.5rem 1rem 0.5rem;font-family:\'David Libre\',\'Frank Ruhl Libre\',serif;direction:rtl;color:#1e293b;\">" +
+      "<div style=\"max-width:680px;margin:0 auto;padding:1.5rem 1rem 0.5rem;font-family:\'Frank Ruhl Libre\',\'David Libre\',serif;direction:rtl;color:#1e293b;\">" +
       "<div style=\"background:#fef3c7;border:1.5px solid rgba(245,158,11,0.4);border-radius:1rem;padding:1rem 1.25rem;margin-bottom:1.75rem;line-height:1.9;font-size:0.9em;color:#78350f;\">" + book.intro + "</div>" +
       "<p style=\"line-height:2.4;text-align:center;\">" + book.content + "</p>" +
       "<div style=\"margin-top:2rem;padding-top:1rem;border-top:1px solid rgba(0,0,0,0.1);text-align:center;\"><span style=\"color:#94a3b8;font-size:0.7rem;\">" + book.credit + "</span></div>" +
@@ -24208,5 +25078,193 @@ function closeSefarimNosafimModal() {
     document.addEventListener('DOMContentLoaded', tryOpenFromUrl);
   } else {
     tryOpenFromUrl();
+  }
+})();
+
+
+// ══════════════════════════════════════════════════════════════
+// ✦ סידור אישי של כפתורי התפילות — גרירה ושחרור, נשמר במכשיר בלבד
+// ══════════════════════════════════════════════════════════════
+(function() {
+  var ORDER_KEY = "prayer_btn_order_v1";
+
+  function _mainGrid() {
+    var wrap = document.getElementById("prayer-grid-wrap");
+    return wrap ? wrap.querySelector(".grid.grid-cols-3") : null;
+  }
+  function _moreGrid() { return document.getElementById("prayer-more-grid"); }
+  function _allButtons() {
+    var btns = [];
+    var mg = _mainGrid(), xg = _moreGrid();
+    if (mg) btns = btns.concat(Array.prototype.slice.call(mg.querySelectorAll("button.prayer-btn")));
+    if (xg) btns = btns.concat(Array.prototype.slice.call(xg.querySelectorAll("button.prayer-btn")));
+    return btns;
+  }
+  function _keyOf(btn) {
+    var lbl = btn.querySelector(".prayer-label");
+    return (lbl ? lbl.textContent : btn.textContent).trim();
+  }
+  function loadOrder() { try { return JSON.parse(localStorage.getItem(ORDER_KEY) || "null"); } catch(e) { return null; } }
+  function saveOrder(arr) { try { localStorage.setItem(ORDER_KEY, JSON.stringify(arr)); } catch(e) {} }
+
+  // סידור הכפתורים בדף: שלושת הראשונים לשורה הראשית, השאר לרשת המורחבת
+  window.applyPrayerOrder = function(orderArg) {
+    var order = orderArg || loadOrder();
+    if (!order || !order.length) return;
+    var btns = _allButtons();
+    if (!btns.length) return;
+    var byKey = {};
+    btns.forEach(function(b) { byKey[_keyOf(b)] = b; });
+    var sorted = [];
+    order.forEach(function(k) { if (byKey[k]) { sorted.push(byKey[k]); delete byKey[k]; } });
+    Object.keys(byKey).forEach(function(k) { sorted.push(byKey[k]); });
+    var mg = _mainGrid(), xg = _moreGrid();
+    if (!mg || !xg) return;
+    sorted.forEach(function(b, i) {
+      if (i < 3) mg.appendChild(b);
+      else xg.appendChild(b);
+    });
+  };
+
+  // המפריד "שורה ראשית / תפילות נוספות" תמיד יושב אחרי שלושת האריחים הראשונים
+  function _poRepositionDivider(grid) {
+    var divider = grid.querySelector("#po-divider");
+    if (!divider) return;
+    var tiles = Array.prototype.slice.call(grid.querySelectorAll(".po-tile"));
+    if (tiles.length > 3) grid.insertBefore(divider, tiles[3]);
+    else grid.appendChild(divider);
+  }
+
+  // ── מנוע גרירה (Pointer Events — עובד גם במובייל וגם בעכבר) ──
+  function _poAttachDrag(grid) {
+    var dragEl = null, ghost = null, startX = 0, startY = 0, dragging = false;
+
+    function endDrag() {
+      if (ghost) { ghost.remove(); ghost = null; }
+      if (dragEl) dragEl.style.opacity = "";
+      dragEl = null; dragging = false;
+    }
+
+    grid.querySelectorAll(".po-tile").forEach(function(tile) {
+      tile.style.touchAction = "none";
+      tile.addEventListener("pointerdown", function(e) {
+        dragEl = tile; startX = e.clientX; startY = e.clientY; dragging = false;
+        try { tile.setPointerCapture(e.pointerId); } catch(err) {}
+        e.preventDefault();
+      });
+      tile.addEventListener("pointermove", function(e) {
+        if (!dragEl) return;
+        if (!dragging) {
+          if (Math.hypot(e.clientX - startX, e.clientY - startY) < 7) return;
+          dragging = true;
+          ghost = dragEl.cloneNode(true);
+          ghost.id = "";
+          ghost.style.cssText += ";position:fixed;z-index:10099;pointer-events:none;opacity:0.9;margin:0;width:" + dragEl.offsetWidth + "px;box-shadow:0 12px 30px rgba(0,0,0,0.5);transform:scale(1.05);";
+          document.body.appendChild(ghost);
+          dragEl.style.opacity = "0.25";
+        }
+        ghost.style.left = (e.clientX - ghost.offsetWidth / 2) + "px";
+        ghost.style.top = (e.clientY - ghost.offsetHeight / 2) + "px";
+        var over = document.elementFromPoint(e.clientX, e.clientY);
+        var target = over && over.closest ? over.closest(".po-tile") : null;
+        if (target && target !== dragEl && target.parentNode === grid) {
+          var tiles = Array.prototype.slice.call(grid.querySelectorAll(".po-tile"));
+          var from = tiles.indexOf(dragEl), to = tiles.indexOf(target);
+          if (from >= 0 && to >= 0) {
+            if (from < to) grid.insertBefore(dragEl, target.nextSibling);
+            else grid.insertBefore(dragEl, target);
+            _poRepositionDivider(grid);
+          }
+        }
+      });
+      tile.addEventListener("pointerup", endDrag);
+      tile.addEventListener("pointercancel", endDrag);
+    });
+  }
+
+  window._poSave = function() {
+    var grid = document.getElementById("po-grid");
+    if (!grid) return;
+    var order = Array.prototype.slice.call(grid.querySelectorAll(".po-tile")).map(function(t) { return t.getAttribute("data-key"); });
+    saveOrder(order);
+    window.applyPrayerOrder(order);
+    var m = document.getElementById("prayer-order-modal");
+    if (m) m.remove();
+    try { unlockBodyScroll(); } catch(e) {}
+    if (typeof showToast === "function") showToast("✅ סדר הכפתורים נשמר במכשיר זה", "success");
+  };
+
+  window._poReset = function() {
+    try { localStorage.removeItem(ORDER_KEY); } catch(e) {}
+    if (window._poDefaultOrder) window.applyPrayerOrder(window._poDefaultOrder);
+    var m = document.getElementById("prayer-order-modal");
+    if (m) m.remove();
+    try { unlockBodyScroll(); } catch(e) {}
+    if (typeof showToast === "function") showToast("↩️ הסדר הוחזר לברירת המחדל", "info");
+  };
+
+  window.openPrayerOrderEditor = function() {
+    var existing = document.getElementById("prayer-order-modal");
+    if (existing) existing.remove();
+    try {
+      var sm = document.getElementById("settings-modal");
+      if (sm && !sm.classList.contains("hidden") && typeof toggleSettings === "function") toggleSettings();
+    } catch(e) {}
+    var btns = _allButtons();
+    if (!btns.length) {
+      if (typeof showToast === "function") showToast("הכפתורים עדיין נטענים — נסה שוב בעוד רגע", "info");
+      return;
+    }
+
+    // אריחים שנראים בדיוק כמו כפתורי התפילות בדף הראשי
+    var tilesHtml = btns.map(function(b) {
+      var iconEl = b.querySelector(".prayer-icon");
+      var icon = iconEl ? iconEl.textContent : "🙏";
+      var key = _keyOf(b);
+      return '<div class="po-tile prayer-btn" data-key="' + key.replace(/"/g, "&quot;") + '" ' +
+        'style="cursor:grab;user-select:none;-webkit-user-select:none;">' +
+        '<span class="prayer-icon">' + icon + '</span>' +
+        '<span class="prayer-label">' + key + '</span>' +
+      '</div>';
+    });
+    var dividerHtml = '<div id="po-divider" style="grid-column:1/-1;display:flex;align-items:center;gap:0.5rem;margin:0.15rem 0;">' +
+      '<div style="flex:1;height:1px;background:rgba(251,191,36,0.4);"></div>' +
+      '<span style="color:#fbbf24;font-size:0.62rem;font-weight:800;white-space:nowrap;">▲ שורה ראשית · ▼ תפילות נוספות</span>' +
+      '<div style="flex:1;height:1px;background:rgba(251,191,36,0.4);"></div>' +
+    '</div>';
+    tilesHtml.splice(3, 0, dividerHtml);
+
+    var overlay = document.createElement("div");
+    overlay.id = "prayer-order-modal";
+    overlay.style.cssText = "position:fixed;inset:0;z-index:10090;background:linear-gradient(160deg,#0c1230,#0a0f22);display:flex;align-items:center;justify-content:center;padding:0.75rem;";
+    overlay.innerHTML =
+      '<div style="width:100%;max-width:520px;max-height:94vh;display:flex;flex-direction:column;direction:rtl;">' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.35rem;padding:0 0.25rem;">' +
+          '<h3 style="color:#f1f5f9;font-size:1.05rem;font-weight:900;margin:0;">✏️ סידור כפתורי התפילות</h3>' +
+          '<button onclick="document.getElementById(\'prayer-order-modal\').remove();" style="background:rgba(255,255,255,0.08);border:none;color:#94a3b8;width:34px;height:34px;border-radius:50%;cursor:pointer;font-size:1rem;">✕</button>' +
+        '</div>' +
+        '<p style="color:#94a3b8;font-size:0.72rem;margin:0 0 0.7rem;padding:0 0.25rem;">גרור כפתור למיקום הרצוי — בדיוק כפי שיופיע בדף הראשי. הסדר נשמר במכשיר זה בלבד.</p>' +
+        '<div id="po-grid" style="flex:1;overflow-y:auto;display:grid;grid-template-columns:repeat(3,1fr);gap:0.5rem;align-content:start;padding:0.25rem;">' + tilesHtml.join("") + '</div>' +
+        '<div style="display:flex;gap:0.6rem;margin-top:0.8rem;">' +
+          '<button onclick="window._poSave()" style="flex:1;background:linear-gradient(135deg,#2563eb,#4f46e5);border:none;color:#fff;font-weight:800;padding:0.7rem;border-radius:0.8rem;cursor:pointer;font-size:0.9rem;">💾 שמור סדר</button>' +
+          '<button onclick="window._poReset()" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:#cbd5e1;font-weight:700;padding:0.7rem 1rem;border-radius:0.8rem;cursor:pointer;font-size:0.82rem;">↩️ איפוס</button>' +
+        '</div>' +
+      '</div>';
+    overlay.addEventListener("click", function(e) { if (e.target === overlay) overlay.remove(); });
+    document.body.appendChild(overlay);
+    _poAttachDrag(document.getElementById("po-grid"));
+  };
+
+  function _init() {
+    var btns = _allButtons();
+    if (btns.length) {
+      window._poDefaultOrder = btns.map(_keyOf);
+      window.applyPrayerOrder();
+    }
+  }
+  if (document.readyState === "complete" || document.readyState === "interactive") {
+    setTimeout(_init, 50);
+  } else {
+    document.addEventListener("DOMContentLoaded", function() { setTimeout(_init, 50); });
   }
 })();

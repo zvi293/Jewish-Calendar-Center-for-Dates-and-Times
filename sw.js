@@ -1,4 +1,4 @@
-const STATIC_CACHE = "moadim-static-v19";
+const STATIC_CACHE = "moadim-static-v21";
 const STATIC_ASSETS = [
   "/",
   "/index.html",
@@ -61,6 +61,30 @@ self.addEventListener("fetch", (event) => {
     request.destination === "manifest";
 
   if (!isStaticAsset) return;
+
+  // Network-first for scripts & styles: users always get the newest code
+  // when online (fixes "stuck on old version for weeks"); cache is only a
+  // fallback for offline. Other static assets (images/fonts) stay cache-first.
+  const isCodeAsset =
+    request.destination === "script" ||
+    request.destination === "style" ||
+    request.destination === "worker";
+
+  if (isCodeAsset) {
+    // cache:"no-cache" forces revalidation against the server even when an
+    // intermediate HTTP cache holds a stale copy — the SW cache remains the
+    // offline fallback only.
+    event.respondWith(
+      fetch(request, { cache: "no-cache" })
+        .then((response) => {
+          const copy = response.clone();
+          caches.open(STATIC_CACHE).then((cache) => cache.put(request, copy));
+          return response;
+        })
+        .catch(() => caches.match(request)),
+    );
+    return;
+  }
 
   event.respondWith(
     caches.match(request).then((cached) => {

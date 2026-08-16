@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ווידג'ט — הלוח היהודי</title>
+    <meta name="robots" content="noindex" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body {
+        font-family: "Assistant", system-ui, sans-serif;
+        background: linear-gradient(160deg, #050b1a 0%, #0c1530 55%, #16233f 100%);
+        color: #e8eefc;
+        min-height: 100vh;
+      }
+      .wrap { max-width: 420px; margin: 0 auto; padding: 0.9rem; }
+      .card {
+        background: linear-gradient(165deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));
+        border: 1px solid rgba(232,193,90,0.3);
+        border-radius: 1.1rem;
+        padding: 0.9rem 1rem;
+        margin-bottom: 0.7rem;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+      }
+      h1 {
+        font-size: 1.05rem;
+        font-weight: 900;
+        color: #f2d98a;
+        text-align: center;
+        margin-bottom: 0.15rem;
+      }
+      .sub { text-align: center; color: rgba(191,219,254,0.75); font-size: 0.78rem; margin-bottom: 0.7rem; }
+      .row { display: flex; justify-content: space-between; padding: 0.28rem 0; border-bottom: 1px solid rgba(148,180,255,0.1); font-size: 0.88rem; }
+      .row:last-child { border-bottom: none; }
+      .row b { color: #f2d98a; font-variant-numeric: tabular-nums; }
+      .sec-title { font-size: 0.72rem; font-weight: 800; color: rgba(242,217,138,0.8); letter-spacing: 0.12em; margin-bottom: 0.35rem; }
+      .next { text-align: center; color: #fdf3d0; font-weight: 800; font-size: 0.85rem; }
+      .empty { text-align: center; color: rgba(191,219,254,0.7); padding: 2rem 1rem; font-size: 0.9rem; line-height: 1.7; }
+      .foot { text-align: center; color: rgba(191,219,254,0.45); font-size: 0.68rem; margin-top: 0.4rem; }
+      a { color: #93c5fd; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap" id="app">
+      <div class="empty">טוען נתונים…</div>
+    </div>
+    <script>
+      /* עמוד ווידג'ט קומפקטי — קורא את הנתונים שהאתר הראשי שומר במכשיר
+         (window.LuxWidgetData ב-lux.js). משמש בסיס לווידג'טים של האפליקציה. */
+      (function () {
+        var app = document.getElementById("app");
+        var d = null;
+        try { d = JSON.parse(localStorage.getItem("lux_widget_data") || "null"); } catch (e) {}
+        if (!d || !d.updated) {
+          app.innerHTML =
+            '<div class="empty">אין עדיין נתונים שמורים.<br>יש להיכנס פעם אחת ל<a href="/">דף הראשי</a> כדי שהנתונים יישמרו במכשיר.</div>';
+          return;
+        }
+        var html = "";
+        html += "<h1>✡ הלוח היהודי</h1>";
+        html += '<div class="sub">' + (d.hebDate || "") + (d.gregDate ? " · " + d.gregDate : "") + (d.city ? " · " + d.city : "") + "</div>";
+        if (d.nextZman) html += '<div class="card next">⏳ ' + d.nextZman + "</div>";
+        if (d.zmanim && d.zmanim.length) {
+          html += '<div class="card"><div class="sec-title">זמני היום</div>';
+          d.zmanim.forEach(function (z) {
+            html += '<div class="row"><span>' + z.l + "</span><b>" + z.v + "</b></div>";
+          });
+          html += "</div>";
+        }
+        if (d.shabbatEnter || d.parsha) {
+          html += '<div class="card"><div class="sec-title">שבת</div>';
+          if (d.parsha) html += '<div class="row"><span>פרשה</span><b>' + d.parsha + "</b></div>";
+          if (d.shabbatEnter) html += '<div class="row"><span>🕯️ כניסה</span><b>' + d.shabbatEnter + "</b></div>";
+          if (d.shabbatExit) html += '<div class="row"><span>✨ יציאה</span><b>' + d.shabbatExit + "</b></div>";
+          html += "</div>";
+        }
+        if (d.tehillimDaily) {
+          html += '<div class="card"><div class="sec-title">תהילים יומי</div><div class="row"><span>יום ' + d.tehillimDaily.day + " לחודש</span><b>פרקים " + d.tehillimDaily.range + "</b></div></div>";
+        }
+        if (d.dafYomi) {
+          html += '<div class="card"><div class="sec-title">הדף היומי</div><div class="row"><span>דף</span><b>' + d.dafYomi + "</b></div></div>";
+        }
+        html += '<div class="foot">עודכן: ' + new Date(d.updated).toLocaleString("he-IL") + "</div>";
+        app.innerHTML = html;
+      })();
+    </script>
+  </body>
+</html>

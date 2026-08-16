@@ -1,7 +1,12 @@
-const STATIC_CACHE = "moadim-static-v26";
+const STATIC_CACHE = "moadim-static-v28";
+// מטמון ריצה: תשובות API וקבצים חיצוניים (ספריא, hebcal, פונטים, ספריות CDN)
+// נשמרים אחרי הצפייה הראשונה — כך האתר, התפילות והספרים עובדים גם בלי אינטרנט.
+const RUNTIME_CACHE = "moadim-runtime-v1";
 const STATIC_ASSETS = [
   "/",
   "/index.html",
+  "/synagogues.html",
+  "/widget.html",
   "/site.webmanifest",
   "/favicon.svg",
   "/apple-touch-icon.png",
@@ -22,7 +27,7 @@ self.addEventListener("activate", (event) => {
     caches.keys().then((keys) =>
       Promise.all(
         keys
-          .filter((key) => key !== STATIC_CACHE)
+          .filter((key) => key !== STATIC_CACHE && key !== RUNTIME_CACHE)
           .map((key) => caches.delete(key)),
       ),
     ),
@@ -35,7 +40,25 @@ self.addEventListener("fetch", (event) => {
   if (request.method !== "GET") return;
 
   const url = new URL(request.url);
-  if (url.origin !== self.location.origin) return;
+
+  // ── בקשות חוצות-מקור: רשת תחילה, מטמון כגיבוי אופליין ──
+  // (טקסטים מספריא, אירועים מ-hebcal, פונטים של גוגל, kosher-zmanim מ-CDN)
+  if (url.origin !== self.location.origin) {
+    event.respondWith(
+      caches.open(RUNTIME_CACHE).then((cache) =>
+        fetch(request)
+          .then((response) => {
+            // גם תשובות opaque (no-cors: פונטים/סקריפטים) נשמרות לאופליין
+            if (response && (response.ok || response.type === "opaque")) {
+              cache.put(request, response.clone());
+            }
+            return response;
+          })
+          .catch(() => cache.match(request, { ignoreVary: true })),
+      ),
+    );
+    return;
+  }
 
   if (request.mode === "navigate") {
     event.respondWith(
@@ -60,7 +83,20 @@ self.addEventListener("fetch", (event) => {
     request.destination === "font" ||
     request.destination === "manifest";
 
-  if (!isStaticAsset) return;
+  if (!isStaticAsset) {
+    // בקשות GET אחרות מאותו המקור — רשת עם גיבוי מטמון לאופליין
+    event.respondWith(
+      caches.open(RUNTIME_CACHE).then((cache) =>
+        fetch(request)
+          .then((response) => {
+            if (response && response.ok) cache.put(request, response.clone());
+            return response;
+          })
+          .catch(() => cache.match(request)),
+      ),
+    );
+    return;
+  }
 
   // Network-first for scripts & styles: users always get the newest code
   // when online (fixes "stuck on old version for weeks"); cache is only a
@@ -81,7 +117,11 @@ self.addEventListener("fetch", (event) => {
           caches.open(STATIC_CACHE).then((cache) => cache.put(request, copy));
           return response;
         })
-        .catch(() => caches.match(request)),
+        .catch(() =>
+          caches
+            .match(request)
+            .then((cached) => cached || caches.match(request, { ignoreSearch: true })),
+        ),
     );
     return;
   }

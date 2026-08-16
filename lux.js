@@ -379,7 +379,7 @@
     /* ── העורך ── */
     function openNavEditor() {
       var existing = document.getElementById("lux-nav-editor");
-      if (existing) { existing.remove(); return; }
+      if (existing) { luxModalClose("lux-nav-editor"); return; }
       var working = getSel();
       var overlay = document.createElement("div");
       overlay.id = "lux-nav-editor";
@@ -426,19 +426,20 @@
       overlay.querySelector(".lux-ne-save").addEventListener("click", function () {
         if (working.length) saveSel(working);
         renderNav();
-        overlay.remove();
+        luxModalClose("lux-nav-editor");
       });
       overlay.querySelector(".lux-ne-reset").addEventListener("click", function () {
         working = DEFAULT_SEL.slice();
         drawChips();
       });
       overlay.querySelector(".lux-ne-cancel").addEventListener("click", function () {
-        overlay.remove();
+        luxModalClose("lux-nav-editor");
       });
       overlay.addEventListener("click", function (e) {
-        if (e.target === overlay) overlay.remove();
+        if (e.target === overlay) luxModalClose("lux-nav-editor");
       });
       document.body.appendChild(overlay);
+      luxModalOpen("lux-nav-editor");
     }
 
     // הזרקת כפתור פתיחת העורך להגדרות — מתחת ל"סידור כפתורי התפילות"
@@ -476,15 +477,22 @@
 
   /* ── 12. "הזמן הבא" — שורה קומפקטית מעל פס היום ────────────────── */
   safe("nextZman", function () {
+    // כל זמני היום — הקרוב ביותר נבחר מתוך כולם (כולל זמני לילה)
     var KEYS = [
       { k: "alotHaShachar", l: "עלות השחר" },
+      { k: "misheyakir", l: "משיכיר" },
       { k: "sunrise", l: "הנץ החמה" },
+      { k: "sofZmanShmaMGA", l: "סו\"ז ק\"ש (מג\"א)" },
       { k: "sofZmanShma", l: "סו\"ז ק\"ש" },
-      { k: "chatzot", l: "חצות" },
+      { k: "sofZmanTfilla", l: "סו\"ז תפילה" },
+      { k: "chatzot", l: "חצות היום" },
       { k: "minchaGedola", l: "מנחה גדולה" },
+      { k: "minchaKetana", l: "מנחה קטנה" },
       { k: "plagHaMincha", l: "פלג המנחה" },
       { k: "sunset", l: "שקיעה" },
-      { k: "tzeit7083deg", l: "צאת הכוכבים" }
+      { k: "beinHaShmashos", l: "בין השמשות" },
+      { k: "tzeit7083deg", l: "צאת הכוכבים" },
+      { k: "chatzotNight", l: "חצות הלילה" }
     ];
     var el = null;
     function build() {
@@ -507,11 +515,20 @@
         var ms = new Date(iso).getTime();
         if (ms > now && (!next || ms < next.ms)) next = { ms: ms, l: item.l, iso: iso };
       });
+      // אחרי 00:00 האזרחי הנתונים כבר מתייחסים ליום החדש, וחצות הלילה
+      // המדווח שייך ללילה הבא — חצות של הלילה הנוכחי הוא 24 שעות קודם
+      if (z.times.chatzotNight) {
+        var cnPrev = new Date(z.times.chatzotNight).getTime() - 86400000;
+        if (cnPrev > now && (!next || cnPrev < next.ms)) {
+          next = { ms: cnPrev, l: "חצות הלילה", iso: new Date(cnPrev).toISOString() };
+        }
+      }
       if (next) {
         var d = next.ms - now;
         var hh = Math.floor(d / 3600000), mm = Math.floor((d % 3600000) / 60000);
-        el.innerHTML = "⏳ הזמן הבא: <b>" + next.l + " · " + fmtTime(next.iso) + "</b> — בעוד " +
-          (hh > 0 ? hh + " שע' ו־" : "") + mm + " דק'";
+        // פורמט קצר בשורה אחת: "עוד 4:27 שע'" או "עוד 27 דק'"
+        var rem = hh > 0 ? hh + ":" + (mm < 10 ? "0" : "") + mm + " שע'" : mm + " דק'";
+        el.innerHTML = "⏳ <b>" + next.l + " · " + fmtTime(next.iso) + "</b> · עוד " + rem;
       } else {
         el.textContent = "";
       }
@@ -534,7 +551,7 @@
     }
     function openWheel() {
       var old = document.getElementById("lux-year-wheel");
-      if (old) { old.remove(); return; }
+      if (old) { luxModalClose("lux-year-wheel"); return; }
       var events = (getCachedEvents() || []).filter(function (e) {
         if (e.type !== "major") return false;
         var d = new Date(e.date);
@@ -619,26 +636,30 @@
             '<div style="color:rgba(191,219,254,0.8);font-size:0.8rem;">' + dateStr + (heb ? " · " + heb : "") + " · בעוד " + Math.round(diff) + ' ימים</div>' +
             '<button type="button" id="lux-yw-goto">פתח בלוח המועדים ↓</button>';
           info.querySelector("#lux-yw-goto").addEventListener("click", function () {
-            overlay.remove();
-            var cards = document.querySelectorAll("#resultsGrid .event-card h3");
-            for (var j = 0; j < cards.length; j++) {
-              if (cards[j].textContent.trim() === ev.name) {
-                var card = cards[j].closest(".event-card");
-                card.classList.add("lux-in");
-                card.scrollIntoView({ behavior: "smooth", block: "center" });
-                card.classList.remove("lux-card-flash");
-                void card.offsetWidth;
-                card.classList.add("lux-card-flash");
-                break;
+            luxModalClose("lux-year-wheel");
+            setTimeout(function () {
+              var cards = document.querySelectorAll("#resultsGrid .event-card h3");
+              for (var j = 0; j < cards.length; j++) {
+                if (cards[j].textContent.trim() === ev.name) {
+                  var card = cards[j].closest(".event-card");
+                  card.classList.add("lux-in");
+                  card.scrollIntoView({ behavior: "smooth", block: "center" });
+                  card.classList.remove("lux-card-flash");
+                  void card.offsetWidth;
+                  card.classList.add("lux-card-flash");
+                  break;
+                }
               }
-            }
+            }, 180);
           });
         });
         svg.appendChild(c);
       });
-      overlay.querySelector(".lux-yw-close").addEventListener("click", function () { overlay.remove(); });
-      overlay.addEventListener("click", function (e) { if (e.target === overlay) overlay.remove(); });
+      overlay.querySelector(".lux-yw-close").addEventListener("click", function () { luxModalClose("lux-year-wheel"); });
+      overlay.addEventListener("click", function (e) { if (e.target === overlay) luxModalClose("lux-year-wheel"); });
       document.body.appendChild(overlay);
+      // כפתור "חזור" בטלפון סוגר את הגלגל במקום לצאת מהאפליקציה
+      luxModalOpen("lux-year-wheel");
     }
     // כפתור בהירו — אחרי כפתור הלוח החודשי
     var calBtn = document.getElementById("btn-open-calendar");
@@ -690,9 +711,12 @@
     function paint() {
       var heb = luxHebDateStr();
       el.innerHTML = greet + (heb ? ' · <span class="lux-greet-date">' + heb + "</span>" : "");
+      // עיטור השם האישי מוחל אחרי כל ציור מחדש (מוגדר בפיצ'ר personalName)
+      if (window.__luxNameDecorate) window.__luxNameDecorate(el);
     }
     paint();
     h1.insertAdjacentElement("beforebegin", el);
+    window.addEventListener("lux-name-changed", paint);
     // עדכון כשנתוני הזמנים מגיעים (התאריך עשוי להתקדם ביום אחרי צאת הכוכבים)
     var tries = 0;
     var t = setInterval(function () {
@@ -1013,83 +1037,672 @@
     }, 500);
   });
 
-  /* ── 23. סיור היכרות ראשון ─────────────────────────────────────── */
-  safe("tour", function () {
-    try { if (localStorage.getItem("lux_tour_done")) return; } catch (e) {}
-    var isMobile = window.innerWidth < 768;
-    function steps() {
-      return [
-        { el: document.getElementById("dashboard-state"), t: "הכל במבט אחד", p: "התאריך העברי, זמני השבת, ברכת הלבנה והמועד הבא — מתעדכנים לפי המיקום שלך." },
-        { el: document.getElementById("prayer-grid-wrap"), t: "תפילות וספרים", p: "תפילת הדרך, ברכת המזון, תהילים ועוד — הכל בלחיצה אחת." },
-        { el: document.getElementById("lux-moon"), t: "הירח החי", p: "מציג את מולד הלבנה האמיתי — לחיצה פותחת את ברכת הלבנה." },
-        isMobile
-          ? { el: document.getElementById("lux-bottom-nav"), t: "הניווט שלך", p: "קיצורים מהירים לכל האתר. אפשר להתאים אישית בהגדרות!" }
-          : { el: document.querySelector('div[role="toolbar"] button[aria-label="הגדרות"]'), t: "הגדרות אישיות", p: "עיר, נוסח, גודל כתב ותמות — הכל מותאם אליך." }
-      ].filter(function (s) {
-        // getClientRects ולא offsetParent — אלמנטים fixed (ניווט תחתון) מוחזרים כ-null ב-offsetParent
-        return s.el && s.el.getClientRects().length > 0;
+  /* ═══════════════════════════════════════════════════════════════
+     LUX 4 — עזרי מודאל+היסטוריה, שם אישי, חיפוש-על, תזכורות, באנרים,
+     מעקב תהילים, שמות לתפילה, יארצייטים, הישגים, נתוני ווידג'טים
+     ═══════════════════════════════════════════════════════════════ */
+
+  /* עזרי מודאל: שילוב עם ניהול כפתור "חזור" של האתר */
+  function luxModalOpen(id) {
+    try { if (typeof window.pushModalState === "function") window.pushModalState(id); } catch (e) {}
+  }
+  function luxModalClose(id) {
+    try {
+      if (typeof window._closePopupViaBack === "function") { window._closePopupViaBack(id); return; }
+    } catch (e) {}
+    var el = document.getElementById(id);
+    if (el) el.remove();
+  }
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+  function jget(key, fallback) {
+    try {
+      var v = JSON.parse(localStorage.getItem(key) || "null");
+      return v === null ? fallback : v;
+    } catch (e) { return fallback; }
+  }
+  function jset(key, val) {
+    try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) {}
+  }
+  /* מודאל קלף גנרי — נסגר גם בכפתור "חזור" בטלפון */
+  function luxSheet(id, innerHtml) {
+    var old = document.getElementById(id);
+    if (old) { luxModalClose(id); return null; }
+    var overlay = document.createElement("div");
+    overlay.id = id;
+    overlay.className = "lux-sheet-overlay";
+    overlay.innerHTML = '<div class="lux-sheet">' + innerHtml + "</div>";
+    overlay.addEventListener("click", function (e) { if (e.target === overlay) luxModalClose(id); });
+    document.body.appendChild(overlay);
+    luxModalOpen(id);
+    return overlay;
+  }
+
+  /* ── 24. שם אישי בברכה ─────────────────────────────────────────── */
+  safe("personalName", function () {
+    // מעטר את שורת הברכה — נקרא מתוך paint() של הברכה אחרי כל ציור מחדש
+    window.__luxNameDecorate = function (el) {
+      if (el.querySelector(".lux-name-add, .lux-name-edit")) return;
+      var name = "";
+      try { name = localStorage.getItem("lux_user_name") || ""; } catch (e) {}
+      if (name) {
+        var html = el.innerHTML;
+        var sep = html.indexOf(" · ");
+        var withName = sep !== -1
+          ? html.slice(0, sep) + ", <b>" + esc(name) + "</b>" + html.slice(sep)
+          : html + ", <b>" + esc(name) + "</b>";
+        el.innerHTML = withName + ' <button type="button" class="lux-name-edit" title="שינוי שם">✎</button>';
+      } else {
+        el.innerHTML += ' <button type="button" class="lux-name-add">👋 מה שמך?</button>';
+      }
+      var btn = el.querySelector(".lux-name-add, .lux-name-edit");
+      if (btn) btn.addEventListener("click", askName);
+    };
+    // אם הברכה כבר צוירה לפני שהוגדרנו — מעטרים עכשיו
+    var g0 = document.getElementById("lux-greeting");
+    if (g0) window.__luxNameDecorate(g0);
+    function askName() {
+      var current = "";
+      try { current = localStorage.getItem("lux_user_name") || ""; } catch (e) {}
+      var ov = luxSheet("lux-name-modal",
+        '<h3 class="lux-sheet-title">👋 נעים להכיר</h3>' +
+        '<p class="lux-sheet-note">השם נשמר רק במכשיר שלך — לברכה אישית בכניסה</p>' +
+        '<input type="text" id="lux-name-input" class="lux-sheet-input" maxlength="20" placeholder="השם שלך..." value="' + esc(current) + '">' +
+        '<div class="lux-sheet-actions">' +
+          '<button type="button" class="lux-sheet-primary" id="lux-name-save">שמור</button>' +
+          (current ? '<button type="button" class="lux-sheet-secondary" id="lux-name-clear">הסר שם</button>' : "") +
+          '<button type="button" class="lux-sheet-cancel">ביטול</button>' +
+        "</div>");
+      if (!ov) return;
+      ov.querySelector("#lux-name-save").addEventListener("click", function () {
+        var v = (ov.querySelector("#lux-name-input").value || "").trim().slice(0, 20);
+        try { if (v) localStorage.setItem("lux_user_name", v); } catch (e) {}
+        luxModalClose("lux-name-modal");
+        setTimeout(function () { window.dispatchEvent(new Event("lux-name-changed")); }, 150);
+      });
+      var clr = ov.querySelector("#lux-name-clear");
+      if (clr) clr.addEventListener("click", function () {
+        try { localStorage.removeItem("lux_user_name"); } catch (e) {}
+        luxModalClose("lux-name-modal");
+        setTimeout(function () { window.dispatchEvent(new Event("lux-name-changed")); }, 150);
+      });
+      ov.querySelector(".lux-sheet-cancel").addEventListener("click", function () { luxModalClose("lux-name-modal"); });
+    }
+  });
+
+  /* ── 25. חיפוש-על: תוצאות חכמות מתחת לתיבת החיפוש ──────────────── */
+  safe("smartSearch", function () {
+    var input = document.getElementById("mainSearch");
+    if (!input) return;
+    var CATALOG = [
+      { t: "תפילת הדרך", i: "🚗", run: function () { window.openPrayer && window.openPrayer("tefillat-haderech", "תפילת הדרך", "Traveler's Prayer"); } },
+      { t: "ברכת המזון", i: "🍞", run: function () { window.openPrayer && window.openPrayer("birkat-hamazon", "ברכת המזון", "Birkat Hamazon"); } },
+      { t: "תיקון הכללי", i: "🔥", run: function () { window.openPrayer && window.openPrayer("tikkun-haklali", "תיקון הכללי", "Tikkun HaKlali"); } },
+      { t: "תפילת שחרית", i: "🌅", run: function () { window.openPrayer && window.openPrayer("shacharit", "תפילת שחרית", "Shacharit"); } },
+      { t: "תפילת מנחה", i: "🌤️", run: function () { window.openPrayer && window.openPrayer("mincha", "תפילת מנחה", "Mincha"); } },
+      { t: "תפילת ערבית", i: "🌙", run: function () { window.openPrayer && window.openPrayer("maariv", "תפילת ערבית", "Maariv"); } },
+      { t: "ברכות השחר", i: "☀️", run: function () { window.openPrayer && window.openPrayer("birchot-hashachar", "ברכות השחר", "Birchot HaShachar"); } },
+      { t: "קריאת שמע", i: "✡️", run: function () { window.openPrayer && window.openPrayer("shema", "שמע ישראל", "Shema"); } },
+      { t: "ברכת מעין שלוש", i: "🍇", run: function () { window.openPrayer && window.openPrayer("al-hamichya", "ברכת מעין שלוש", "Al HaMichya"); } },
+      { t: "תיקון חצות", i: "🕛", run: function () { window.openPrayer && window.openPrayer("tikkun-chatzot", "תיקון חצות", "Tikkun Chatzot"); } },
+      { t: "ברכת הלבנה", i: "🌙", run: function () { window.openPrayer && window.openPrayer("kiddush-levana", "ברכת לבנה", "Kiddush Levana"); } },
+      { t: "תהילים", i: "📖", run: function () { window.openTehillimPage && window.openTehillimPage(); } },
+      { t: "שיר השירים", i: "🌹", run: function () { window.openShirHashirimPage && window.openShirHashirimPage(); } },
+      { t: "בן איש חי", i: "📗", run: function () { window.openBenIshHaiPage && window.openBenIshHaiPage(); } },
+      { t: "ספרים נוספים", i: "📚", run: function () { window.openSefarimNosafimPage && window.openSefarimNosafimPage(); } },
+      { t: "תפילות נוספות", i: "🙏", run: function () { window.openTefilotNosafotPage && window.openTefilotNosafotPage(); } },
+      { t: "לוח שנה חודשי", i: "📅", run: function () { window.openCalendar && window.openCalendar(); } },
+      { t: "גלגל השנה", i: "🎡", run: function () { var b = document.getElementById("lux-year-wheel-btn"); b && b.click(); } },
+      { t: "סדר מוצאי שבת", i: "✨", run: function () { window.openMotzeiShabbatModal && window.openMotzeiShabbatModal(); } },
+      { t: "הילולות צדיקים", i: "🕯️", run: function () { window.openHilulotModal && window.openHilulotModal(); } },
+      { t: "בתי כנסת ומקוואות", i: "🕍", run: function () { location.href = "synagogues.html"; } },
+      { t: "מצפן לירושלים", i: "🧭", run: function () { window.openCompass && window.openCompass(); } },
+      { t: "הגדרות", i: "⚙️", run: function () { window.toggleSettings && window.toggleSettings(); } }
+    ];
+    var ZLABELS = {
+      alotHaShachar: "עלות השחר", misheyakir: "משיכיר", sunrise: "הנץ החמה",
+      sofZmanShma: 'סוף זמן ק"ש', sofZmanTfilla: "סוף זמן תפילה", chatzot: "חצות היום",
+      minchaGedola: "מנחה גדולה", minchaKetana: "מנחה קטנה", plagHaMincha: "פלג המנחה",
+      sunset: "שקיעה", tzeit7083deg: "צאת הכוכבים", chatzotNight: "חצות הלילה"
+    };
+    var panel = document.createElement("div");
+    panel.id = "lux-search-panel";
+    var wrapEl = input.closest(".relative") || input.parentElement;
+    wrapEl.insertAdjacentElement("afterend", panel);
+
+    function search(q) {
+      q = (q || "").trim();
+      if (q.length < 1) { panel.innerHTML = ""; panel.style.display = "none"; return; }
+      var out = [];
+      CATALOG.forEach(function (c) {
+        if (c.t.indexOf(q) !== -1) out.push({ i: c.i, t: c.t, sub: "", run: c.run });
+      });
+      // זמנים
+      var z = window._lastZData;
+      if (z && z.times) {
+        Object.keys(ZLABELS).forEach(function (k) {
+          if (ZLABELS[k].indexOf(q) !== -1 && z.times[k]) {
+            out.push({
+              i: "🕐", t: ZLABELS[k], sub: "היום · " + fmtTime(z.times[k]),
+              run: function () { var b = document.getElementById("halacha-banner"); b && b.scrollIntoView({ behavior: "smooth", block: "center" }); }
+            });
+          }
+        });
+      }
+      if (!out.length) { panel.innerHTML = ""; panel.style.display = "none"; return; }
+      panel.style.display = "block";
+      panel.innerHTML = out.slice(0, 6).map(function (o, i) {
+        return '<button type="button" class="lux-sp-item" data-i="' + i + '">' +
+          '<span class="lux-sp-ico">' + o.i + "</span>" +
+          '<span class="lux-sp-txt">' + esc(o.t) + (o.sub ? ' <small>' + esc(o.sub) + "</small>" : "") + "</span>" +
+          '<span class="lux-sp-go">←</span></button>';
+      }).join("");
+      panel.querySelectorAll(".lux-sp-item").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var o = out[parseInt(btn.dataset.i, 10)];
+          panel.innerHTML = "";
+          panel.style.display = "none";
+          if (o && o.run) o.run();
+        });
       });
     }
-    function begin() {
-      var list = steps();
-      if (list.length < 2) { done(); return; }
-      var i = 0;
-      var tour = document.createElement("div");
-      tour.id = "lux-tour";
-      tour.innerHTML =
-        '<div class="lux-tour-ring"></div>' +
-        '<div class="lux-tour-card">' +
-          '<div class="lux-tour-step"></div><h4></h4><p></p>' +
-          '<div class="lux-tour-actions">' +
-            '<button type="button" class="lux-tour-next">הבא ←</button>' +
-            '<button type="button" class="lux-tour-skip">דלג</button>' +
-          "</div>" +
-        "</div>";
-      document.body.appendChild(tour);
-      var ring = tour.querySelector(".lux-tour-ring");
-      var card = tour.querySelector(".lux-tour-card");
-      function show() {
-        var s = list[i];
-        if (!s || !s.el) { finish(); return; }
-        s.el.scrollIntoView({ behavior: "smooth", block: "center" });
+    var deb = null;
+    input.addEventListener("input", function () {
+      clearTimeout(deb);
+      var v = input.value;
+      deb = setTimeout(function () { search(v); }, 140);
+    });
+    input.addEventListener("search", function () { if (!input.value) { panel.innerHTML = ""; panel.style.display = "none"; } });
+  });
+
+  /* ── 26. תזכורת זמן קריטי (סוף זמן ק"ש / תפילה) ────────────────── */
+  safe("criticalZman", function () {
+    var CRIT = [
+      { k: "sofZmanShmaMGA", l: 'סוף זמן ק"ש (מג"א)' },
+      { k: "sofZmanShma", l: 'סוף זמן ק"ש (גר"א)' },
+      { k: "sofZmanTfilla", l: "סוף זמן תפילה" }
+    ];
+    function check() {
+      var z = window._lastZData;
+      if (!z || !z.times) return;
+      var now = Date.now();
+      var show = null;
+      CRIT.forEach(function (c) {
+        var iso = z.times[c.k];
+        if (!iso) return;
+        var ms = new Date(iso).getTime();
+        var left = ms - now;
+        if (left > 0 && left <= 30 * 60000 && (!show || ms < show.ms)) show = { ms: ms, l: c.l, k: c.k, iso: iso };
+      });
+      var el = document.getElementById("lux-crit-pill");
+      if (!show) { if (el) el.remove(); return; }
+      var dKey = "lux_crit_" + show.k + "_" + new Date().toISOString().slice(0, 10);
+      try { if (sessionStorage.getItem(dKey)) return; } catch (e) {}
+      var mins = Math.ceil((show.ms - now) / 60000);
+      if (!el) {
+        el = document.createElement("div");
+        el.id = "lux-crit-pill";
+        el.innerHTML = '<span class="lux-crit-txt"></span><button type="button" class="lux-crit-x" aria-label="סגור">✕</button>';
+        document.body.appendChild(el);
+        el.querySelector(".lux-crit-x").addEventListener("click", function () {
+          try { sessionStorage.setItem(dKey, "1"); } catch (e) {}
+          el.remove();
+        });
+      }
+      el.querySelector(".lux-crit-txt").textContent = "⏰ " + show.l + " בעוד " + mins + " דק' (" + fmtTime(show.iso) + ")";
+    }
+    setInterval(check, 60000);
+    setTimeout(check, 6000);
+  });
+
+  /* ── 27. באנר יום מיוחד (ראש חודש / צום / חג) ──────────────────── */
+  safe("dayBanner", function () {
+    var hero = document.querySelector("#hero-section .relative.z-10") || document.getElementById("hero-section");
+    if (!hero) return;
+    var todayKey = new Date().toISOString().slice(0, 10);
+    try { if (localStorage.getItem("lux_banner_dismiss") === todayKey) return; } catch (e) {}
+    var msg = null;
+    // ראש חודש לפי התאריך העברי
+    try {
+      var dNum = parseInt(new Intl.DateTimeFormat("en-u-ca-hebrew", { day: "numeric" }).format(new Date()), 10);
+      var mHe = new Intl.DateTimeFormat("he-u-ca-hebrew", { month: "long" }).format(new Date());
+      if (dNum === 1) msg = "🌒 ראש חודש " + mHe + " — אומרים יעלה ויבוא בתפילה";
+      else if (dNum === 30) msg = "🌒 א' דראש חודש — אומרים יעלה ויבוא בתפילה";
+    } catch (e) {}
+    // אירוע של היום מהמטמון (צום / חג)
+    if (!msg) {
+      var evs = getCachedEvents() || [];
+      var today = new Date();
+      var tStr = today.getFullYear() + "-" + String(today.getMonth() + 1).padStart(2, "0") + "-" + String(today.getDate()).padStart(2, "0");
+      for (var i = 0; i < evs.length; i++) {
+        if (evs[i].date === tStr) {
+          if (evs[i].type === "fast") { msg = "🕯️ היום: " + evs[i].name + " — צום קל ומועיל"; break; }
+          if (evs[i].type === "major") { msg = "✨ היום: " + evs[i].name + " — חג שמח!"; break; }
+        }
+      }
+    }
+    if (!msg) return;
+    var el = document.createElement("div");
+    el.id = "lux-day-banner";
+    el.innerHTML = "<span>" + esc(msg) + '</span><button type="button" aria-label="סגור">✕</button>';
+    el.querySelector("button").addEventListener("click", function () {
+      try { localStorage.setItem("lux_banner_dismiss", todayKey); } catch (e) {}
+      el.remove();
+    });
+    var greet = document.getElementById("lux-greeting");
+    if (greet) greet.insertAdjacentElement("afterend", el);
+    else hero.insertAdjacentElement("afterbegin", el);
+  });
+
+  /* ── 28. מעקב קריאת תהילים + חגיגת סיום הספר ───────────────────── */
+  safe("tehillimTracker", function () {
+    var READ_KEY = "lux_tehillim_read";
+    function readSet() { return jget(READ_KEY, []); }
+    function isRead(n) { return readSet().indexOf(n) !== -1; }
+    function toggle(n) {
+      var s = readSet();
+      var i = s.indexOf(n);
+      if (i === -1) s.push(n); else s.splice(i, 1);
+      jset(READ_KEY, s);
+      updateProgress();
+      if (s.length >= 150) celebrate();
+      return i === -1;
+    }
+    function updateProgress() {
+      var bar = document.getElementById("lux-th-progress");
+      if (!bar) return;
+      var n = readSet().length;
+      // כתיבה רק אם השתנה — כתיבה עיוורת מפעילה את ה-MutationObserver בלולאה אין-סופית
+      var txtEl = bar.querySelector(".lux-thp-txt");
+      var newTxt = "📖 נקראו " + n + " מתוך 150 פרקים";
+      if (txtEl.textContent !== newTxt) txtEl.textContent = newTxt;
+      var fill = bar.querySelector(".lux-thp-fill");
+      var newW = Math.min(100, (n / 150) * 100) + "%";
+      if (fill.style.width !== newW) fill.style.width = newW;
+    }
+    function celebrate() {
+      luxConfetti();
+      var comp = jget("lux_tehillim_completions", 0) + 1;
+      jset("lux_tehillim_completions", comp);
+      var ov = luxSheet("lux-th-siyum",
+        '<div style="font-size:2.6rem;margin-bottom:0.4rem;">🎉</div>' +
+        '<h3 class="lux-sheet-title">סיימת את ספר התהילים!</h3>' +
+        '<p class="lux-sheet-note">מזל טוב! זהו הסיום ה־' + comp + ' שלך.<br>"יְהִי רָצוֹן... שֶׁתְּהֵא אֲמִירַת תְּהִלִּים זוֹ חֲשׁוּבָה וּמְקֻבֶּלֶת לְפָנֶיךָ"</p>' +
+        '<div class="lux-sheet-actions">' +
+          '<button type="button" class="lux-sheet-primary" id="lux-th-restart">התחל ספר חדש 🌟</button>' +
+          '<button type="button" class="lux-sheet-cancel">סגור</button>' +
+        "</div>");
+      if (!ov) return;
+      ov.querySelector("#lux-th-restart").addEventListener("click", function () {
+        jset(READ_KEY, []);
+        luxModalClose("lux-th-siyum");
         setTimeout(function () {
-          var r = s.el.getBoundingClientRect();
-          ring.style.top = (r.top - 8) + "px";
-          ring.style.left = (r.left - 8) + "px";
-          ring.style.width = (r.width + 16) + "px";
-          ring.style.height = (r.height + 16) + "px";
-          tour.querySelector(".lux-tour-step").textContent = (i + 1) + " / " + list.length;
-          tour.querySelector("h4").textContent = s.t;
-          tour.querySelector("p").textContent = s.p;
-          tour.querySelector(".lux-tour-next").textContent = i === list.length - 1 ? "סיימנו ✨" : "הבא ←";
-          var below = r.bottom + 190 < window.innerHeight;
-          card.style.top = below ? (r.bottom + 16) + "px" : "";
-          card.style.bottom = below ? "" : (window.innerHeight - r.top + 16) + "px";
-          card.style.left = "50%";
-          card.style.transform = "translateX(-50%)";
-        }, 450);
-      }
-      function finish() { tour.remove(); done(); }
-      tour.querySelector(".lux-tour-next").addEventListener("click", function () {
-        i++;
-        if (i >= list.length) finish(); else show();
+          updateProgress();
+          document.querySelectorAll(".lux-th-mark.lux-on").forEach(function (b) {
+            b.classList.remove("lux-on");
+            b.textContent = "◯ סמן שנקרא";
+          });
+        }, 150);
       });
-      tour.querySelector(".lux-tour-skip").addEventListener("click", finish);
-      show();
+      ov.querySelector(".lux-sheet-cancel").addEventListener("click", function () { luxModalClose("lux-th-siyum"); });
     }
-    function done() {
-      try { localStorage.setItem("lux_tour_done", "1"); } catch (e) {}
-    }
-    // ממתינים שהדשבורד ייטען + שהפתיח ייעלם
-    var tries = 0;
-    var t = setInterval(function () {
-      tries++;
-      if (tries > 25) { clearInterval(t); return; }
-      var dash = document.getElementById("dashboard-state");
-      if (dash && !dash.classList.contains("hidden") && !document.getElementById("lux-splash")) {
-        clearInterval(t);
-        setTimeout(begin, 900);
+    function enhance(modal) {
+      // פס התקדמות מתחת לכותרת
+      if (!modal.querySelector("#lux-th-progress")) {
+        var header = modal.firstElementChild;
+        if (header) {
+          var bar = document.createElement("div");
+          bar.id = "lux-th-progress";
+          bar.innerHTML = '<div class="lux-thp-txt"></div><div class="lux-thp-track"><div class="lux-thp-fill"></div></div>';
+          header.insertAdjacentElement("afterend", bar);
+          updateProgress();
+        }
       }
-    }, 700);
+      // כפתור "סמן שנקרא" בסוף כל פרק
+      modal.querySelectorAll('[id^="psalm-chapter-"]').forEach(function (ch) {
+        if (ch.querySelector(".lux-th-mark")) return;
+        var m = ch.id.match(/psalm-chapter-(\d+)/);
+        if (!m) return;
+        var n = parseInt(m[1], 10);
+        var b = document.createElement("button");
+        b.type = "button";
+        b.className = "lux-th-mark" + (isRead(n) ? " lux-on" : "");
+        b.textContent = isRead(n) ? "✓ נקרא" : "◯ סמן שנקרא";
+        b.addEventListener("click", function () {
+          var on = toggle(n);
+          b.classList.toggle("lux-on", on);
+          b.textContent = on ? "✓ נקרא" : "◯ סמן שנקרא";
+          if (on && navigator.vibrate) { try { navigator.vibrate(8); } catch (e) {} }
+        });
+        ch.appendChild(b);
+      });
+    }
+    // debounce — מריצים את ההעשרה לכל היותר פעם ב-200ms, לא על כל מוטציה
+    var pendingEnh = null;
+    new MutationObserver(function () {
+      if (pendingEnh) return;
+      pendingEnh = setTimeout(function () {
+        pendingEnh = null;
+        var modal = document.getElementById("tehillim-modal");
+        if (modal) enhance(modal);
+      }, 200);
+    }).observe(document.body, { childList: true, subtree: true });
+  });
+
+  /* ── 29. שמות לתפילה ───────────────────────────────────────────── */
+  safe("prayerNames", function () {
+    var KEY = "lux_prayer_names";
+    var PURPOSES = ["לרפואה שלמה", "לזיווג הגון", "לפרנסה טובה", "להצלחה", 'לעילוי נשמת', "לזרע של קיימא"];
+    function names() { return jget(KEY, []); }
+    function openEditor() {
+      var ov = luxSheet("lux-names-editor",
+        '<h3 class="lux-sheet-title">🙏 שמות לתפילה</h3>' +
+        '<p class="lux-sheet-note">השמות מוצגים בפתיחת התהילים — נשמרים רק במכשיר שלך</p>' +
+        '<div id="lux-names-list"></div>' +
+        '<div class="lux-names-add">' +
+          '<input type="text" id="lux-nm-name" class="lux-sheet-input" maxlength="40" placeholder="לדוגמה: רחל בת לאה">' +
+          '<select id="lux-nm-purpose" class="lux-sheet-input">' + PURPOSES.map(function (p) { return "<option>" + p + "</option>"; }).join("") + "</select>" +
+          '<button type="button" class="lux-sheet-primary" id="lux-nm-add">➕ הוסף</button>' +
+        "</div>" +
+        '<div class="lux-sheet-actions"><button type="button" class="lux-sheet-cancel">סגור</button></div>');
+      if (!ov) return;
+      function drawList() {
+        var list = ov.querySelector("#lux-names-list");
+        var arr = names();
+        list.innerHTML = arr.length
+          ? arr.map(function (x, i) {
+              return '<div class="lux-nm-row"><span>' + esc(x.n) + ' <small>(' + esc(x.p) + ')</small></span><button type="button" data-i="' + i + '" aria-label="מחק">🗑️</button></div>';
+            }).join("")
+          : '<p class="lux-sheet-note" style="opacity:0.7;">אין עדיין שמות ברשימה</p>';
+        list.querySelectorAll("button").forEach(function (b) {
+          b.addEventListener("click", function () {
+            var arr2 = names();
+            arr2.splice(parseInt(b.dataset.i, 10), 1);
+            jset(KEY, arr2);
+            drawList();
+            renderBanner();
+          });
+        });
+      }
+      drawList();
+      ov.querySelector("#lux-nm-add").addEventListener("click", function () {
+        var n = (ov.querySelector("#lux-nm-name").value || "").trim().slice(0, 40);
+        if (!n) return;
+        var arr = names();
+        arr.push({ n: n, p: ov.querySelector("#lux-nm-purpose").value });
+        jset(KEY, arr);
+        ov.querySelector("#lux-nm-name").value = "";
+        drawList();
+        renderBanner();
+      });
+      ov.querySelector(".lux-sheet-cancel").addEventListener("click", function () { luxModalClose("lux-names-editor"); });
+    }
+    function renderBanner() {
+      var modal = document.getElementById("tehillim-modal");
+      if (!modal) return;
+      var old = modal.querySelector("#lux-names-banner");
+      var arr = names();
+      if (!arr.length) { if (old) old.remove(); return; }
+      var txt = "🙏 מתפלל עבור: " + arr.map(function (x) { return esc(x.n) + " (" + esc(x.p) + ")"; }).join(" · ");
+      // כתיבה רק אם השתנה — אחרת ה-observer נכנס ללולאה אין-סופית
+      if (old) { if (old.innerHTML !== txt) old.innerHTML = txt; return; }
+      var el = document.createElement("div");
+      el.id = "lux-names-banner";
+      el.innerHTML = txt;
+      var prog = modal.querySelector("#lux-th-progress");
+      if (prog) prog.insertAdjacentElement("afterend", el);
+      else if (modal.firstElementChild) modal.firstElementChild.insertAdjacentElement("afterend", el);
+    }
+    // כפתור בכותרת התהילים + באנר — עם debounce נגד לולאות
+    var pendingNames = null;
+    new MutationObserver(function () {
+      if (pendingNames) return;
+      pendingNames = setTimeout(function () {
+        pendingNames = null;
+        var modal = document.getElementById("tehillim-modal");
+        if (!modal) return;
+        var bmBtn = modal.querySelector("#th-bm-toggle-btn");
+        if (bmBtn && !modal.querySelector("#lux-names-btn")) {
+          var b = document.createElement("button");
+          b.id = "lux-names-btn";
+          b.type = "button";
+          b.title = "שמות לתפילה";
+          b.setAttribute("style", bmBtn.getAttribute("style") || "");
+          b.textContent = "🙏";
+          b.addEventListener("click", openEditor);
+          bmBtn.insertAdjacentElement("beforebegin", b);
+        }
+        renderBanner();
+      }, 200);
+    }).observe(document.body, { childList: true, subtree: true });
+  });
+
+  /* ── 30. יארצייטים ואזכרות ─────────────────────────────────────── */
+  safe("yahrzeits", function () {
+    var KEY = "lux_yahrzeits";
+    var MONTHS = ["תשרי", "חשוון", "כסלו", "טבת", "שבט", "אדר", "אדר א׳", "אדר ב׳", "ניסן", "אייר", "סיוון", "תמוז", "אב", "אלול"];
+    function normM(s) {
+      return String(s || "").replace(/[׳״'"]/g, "").replace("מרחשוון", "חשוון").replace("מר חשוון", "חשוון").replace("סיון", "סיוון").trim();
+    }
+    function hebDayNum(date) {
+      try { return parseInt(new Intl.DateTimeFormat("en-u-ca-hebrew", { day: "numeric" }).format(date), 10); } catch (e) { return 0; }
+    }
+    function hebMonthName(date) {
+      try { return new Intl.DateTimeFormat("he-u-ca-hebrew", { month: "long" }).format(date); } catch (e) { return ""; }
+    }
+    function toHebDayStr(n) {
+      var tbl = ["", "א'", "ב'", "ג'", "ד'", "ה'", "ו'", "ז'", "ח'", "ט'", "י'", 'י"א', 'י"ב', 'י"ג', 'י"ד', 'ט"ו', 'ט"ז', 'י"ז', 'י"ח', 'י"ט', "כ'", 'כ"א', 'כ"ב', 'כ"ג', 'כ"ד', 'כ"ה', 'כ"ו', 'כ"ז', 'כ"ח', 'כ"ט', "ל'"];
+      return tbl[n] || n;
+    }
+    // מציאת התאריך הלועזי הקרוב של יארצייט (סריקת 400 יום קדימה)
+    function nextDate(item) {
+      var exact = null, adarFallback = null;
+      for (var i = 0; i < 400; i++) {
+        var d = new Date(Date.now() + i * 86400000);
+        if (hebDayNum(d) !== item.d) continue;
+        var m = normM(hebMonthName(d));
+        var target = normM(item.m);
+        if (m === target && !exact) { exact = { date: d, days: i }; break; }
+        if (target.indexOf("אדר") === 0 && m.indexOf("אדר") === 0 && !adarFallback) adarFallback = { date: d, days: i };
+      }
+      return exact || adarFallback;
+    }
+    function items() { return jget(KEY, []); }
+    function openEditor() {
+      var ov = luxSheet("lux-yz-editor",
+        '<h3 class="lux-sheet-title">🕯️ יארצייטים ואזכרות</h3>' +
+        '<p class="lux-sheet-note">תזכורת תוצג בדף הראשי בשבוע שלפני התאריך</p>' +
+        '<div id="lux-yz-list"></div>' +
+        '<div class="lux-names-add">' +
+          '<input type="text" id="lux-yz-name" class="lux-sheet-input" maxlength="40" placeholder=\'לדוגמה: סבא יוסף ז"ל\'>' +
+          '<div style="display:flex;gap:0.4rem;">' +
+            '<select id="lux-yz-day" class="lux-sheet-input" style="flex:1;">' +
+              Array.apply(null, Array(30)).map(function (_, i) { return '<option value="' + (i + 1) + '">' + toHebDayStr(i + 1) + "</option>"; }).join("") +
+            "</select>" +
+            '<select id="lux-yz-month" class="lux-sheet-input" style="flex:1.4;">' + MONTHS.map(function (m) { return "<option>" + m + "</option>"; }).join("") + "</select>" +
+          "</div>" +
+          '<button type="button" class="lux-sheet-primary" id="lux-yz-add">➕ הוסף</button>' +
+        "</div>" +
+        '<div class="lux-sheet-actions"><button type="button" class="lux-sheet-cancel">סגור</button></div>');
+      if (!ov) return;
+      function drawList() {
+        var list = ov.querySelector("#lux-yz-list");
+        var arr = items();
+        list.innerHTML = arr.length
+          ? arr.map(function (x, i) {
+              var nd = nextDate(x);
+              var when = nd ? nd.date.toLocaleDateString("he-IL", { day: "numeric", month: "long" }) + " (בעוד " + nd.days + " ימים)" : "";
+              return '<div class="lux-nm-row"><span>' + esc(x.n) + " — " + toHebDayStr(x.d) + " ב" + esc(x.m) + (when ? " <small>" + when + "</small>" : "") + '</span><button type="button" data-i="' + i + '" aria-label="מחק">🗑️</button></div>';
+            }).join("")
+          : '<p class="lux-sheet-note" style="opacity:0.7;">אין עדיין תאריכים שמורים</p>';
+        list.querySelectorAll("button").forEach(function (b) {
+          b.addEventListener("click", function () {
+            var arr2 = items();
+            arr2.splice(parseInt(b.dataset.i, 10), 1);
+            jset(KEY, arr2);
+            drawList();
+            renderBanner();
+          });
+        });
+      }
+      drawList();
+      ov.querySelector("#lux-yz-add").addEventListener("click", function () {
+        var n = (ov.querySelector("#lux-yz-name").value || "").trim().slice(0, 40);
+        if (!n) return;
+        var arr = items();
+        arr.push({ n: n, d: parseInt(ov.querySelector("#lux-yz-day").value, 10), m: ov.querySelector("#lux-yz-month").value });
+        jset(KEY, arr);
+        ov.querySelector("#lux-yz-name").value = "";
+        drawList();
+        renderBanner();
+      });
+      ov.querySelector(".lux-sheet-cancel").addEventListener("click", function () { luxModalClose("lux-yz-editor"); });
+    }
+    function renderBanner() {
+      var old = document.getElementById("lux-yz-banner");
+      if (old) old.remove();
+      var soon = [];
+      items().forEach(function (x) {
+        var nd = nextDate(x);
+        if (nd && nd.days <= 7) soon.push({ x: x, nd: nd });
+      });
+      if (!soon.length) return;
+      var el = document.createElement("div");
+      el.id = "lux-yz-banner";
+      el.innerHTML = soon.map(function (s) {
+        var when = s.nd.days === 0 ? "היום" : s.nd.days === 1 ? "מחר" : "בעוד " + s.nd.days + " ימים";
+        return "🕯️ יארצייט: <b>" + esc(s.x.n) + "</b> — " + toHebDayStr(s.x.d) + " ב" + esc(s.x.m) + " (" + when + ")";
+      }).join("<br>");
+      var banner = document.getElementById("lux-day-banner");
+      var greet = document.getElementById("lux-greeting");
+      if (banner) banner.insertAdjacentElement("afterend", el);
+      else if (greet) greet.insertAdjacentElement("afterend", el);
+    }
+    // כפתור בהגדרות
+    var anchor = document.getElementById("lux-nav-edit-btn");
+    if (anchor && anchor.parentElement) {
+      var field = document.createElement("div");
+      field.innerHTML =
+        '<label class="block text-sm font-bold text-slate-500 dark:text-slate-400 mb-2">תזכורות אישיות</label>' +
+        '<button type="button" id="lux-yz-btn" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 transition-all flex items-center justify-between gap-3">' +
+          '<span class="font-semibold text-sm">🕯️ יארצייטים ואזכרות</span>' +
+          '<span class="text-slate-400 text-xs">תזכורת אוטומטית</span>' +
+        "</button>";
+      anchor.parentElement.insertAdjacentElement("afterend", field);
+      field.querySelector("#lux-yz-btn").addEventListener("click", openEditor);
+    }
+    setTimeout(renderBanner, 2500);
+  });
+
+  /* ── 31. הישגים ────────────────────────────────────────────────── */
+  safe("achievements", function () {
+    // מונה ימי ביקור
+    var v = jget("lux_visits", { count: 0, last: null });
+    var todayStr = new Date().toISOString().slice(0, 10);
+    if (v.last !== todayStr) { v.count++; v.last = todayStr; jset("lux_visits", v); }
+    // סימון ברכת לבנה (להישג)
+    document.addEventListener("click", function (e) {
+      if (e.target.closest && e.target.closest(".levana-blessed-btn")) jset("lux_levana_done", 1);
+    }, { passive: true });
+
+    function badges() {
+      var streak = jget("lux_streak", { count: 0 }).count || 0;
+      var read = jget("lux_tehillim_read", []).length;
+      var comps = jget("lux_tehillim_completions", 0);
+      var visits = jget("lux_visits", { count: 0 }).count;
+      var levana = !!jget("lux_levana_done", 0);
+      var namesCnt = jget("lux_prayer_names", []).length;
+      return [
+        { i: "🔥", t: "3 ימי לימוד ברצף", on: streak >= 3 },
+        { i: "🔥", t: "שבוע לימוד ברצף", on: streak >= 7 },
+        { i: "👑", t: "חודש לימוד ברצף", on: streak >= 30 },
+        { i: "📖", t: "10 פרקי תהילים", on: read >= 10 || comps > 0 },
+        { i: "📖", t: "50 פרקי תהילים", on: read >= 50 || comps > 0 },
+        { i: "🏆", t: "סיום ספר תהילים", on: comps >= 1 },
+        { i: "🌙", t: "ברכת הלבנה", on: levana },
+        { i: "🙏", t: "מתפלל למען אחרים", on: namesCnt > 0 },
+        { i: "⭐", t: "שבוע של ביקורים", on: visits >= 7 },
+        { i: "💎", t: "30 ימי ביקור", on: visits >= 30 },
+        { i: "✡️", t: "100 ימי ביקור", on: visits >= 100 }
+      ];
+    }
+    function openScreen() {
+      var list = badges();
+      var unlocked = list.filter(function (b) { return b.on; }).length;
+      var ov = luxSheet("lux-achievements",
+        '<h3 class="lux-sheet-title">🏆 ההישגים שלי</h3>' +
+        '<p class="lux-sheet-note">נפתחו ' + unlocked + " מתוך " + list.length + " הישגים</p>" +
+        '<div class="lux-ach-grid">' +
+          list.map(function (b) {
+            return '<div class="lux-ach' + (b.on ? " lux-ach-on" : "") + '"><span class="lux-ach-ico">' + b.i + '</span><span class="lux-ach-txt">' + b.t + "</span></div>";
+          }).join("") +
+        "</div>" +
+        '<div class="lux-sheet-actions"><button type="button" class="lux-sheet-cancel">סגור</button></div>');
+      if (!ov) return;
+      ov.querySelector(".lux-sheet-cancel").addEventListener("click", function () { luxModalClose("lux-achievements"); });
+    }
+    // כפתור בהגדרות + לחיצה על תג הרצף
+    var anchor = document.getElementById("lux-yz-btn") || document.getElementById("lux-nav-edit-btn");
+    if (anchor) {
+      var host = anchor.closest("div");
+      var field = document.createElement("div");
+      field.innerHTML =
+        '<button type="button" id="lux-ach-btn" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 transition-all flex items-center justify-between gap-3" style="margin-top:0.75rem;">' +
+          '<span class="font-semibold text-sm">🏆 ההישגים שלי</span>' +
+          '<span class="text-slate-400 text-xs">תגי זהב</span>' +
+        "</button>";
+      host.insertAdjacentElement("afterend", field);
+      field.querySelector("#lux-ach-btn").addEventListener("click", openScreen);
+    }
+    document.addEventListener("click", function (e) {
+      if (e.target.closest && e.target.closest("#lux-streak")) openScreen();
+    }, { passive: true });
+  });
+
+  /* ── 32. נתוני ווידג'טים — הכנה לאפליקציה ──────────────────────── */
+  safe("widgetData", function () {
+    // חלוקת תהילים חודשית (ל' ימים)
+    var TH_MONTHLY = {
+      1: "א-ט", 2: "י-יז", 3: "יח-כב", 4: "כג-כח", 5: "כט-לד", 6: "לה-לח",
+      7: "לט-מג", 8: "מד-מח", 9: "מט-נד", 10: "נה-נט", 11: "ס-סה", 12: "סו-סח",
+      13: "סט-עא", 14: "עב-עו", 15: "עז-עח", 16: "עט-פב", 17: "פג-פז", 18: "פח-פט",
+      19: "צ-צו", 20: "צז-קג", 21: "קד-קה", 22: "קו-קז", 23: "קח-קיב", 24: "קיג-קיח",
+      25: 'קיט (עד צ"ו)', 26: 'קיט (מצ"ז)', 27: "קכ-קלד", 28: "קלה-קלט", 29: "קמ-קמד", 30: "קמה-קנ"
+    };
+    function build() {
+      try {
+        var zmanim = [];
+        document.querySelectorAll("#zmanim-details > div[data-zman-key]").forEach(function (c) {
+          var l = c.querySelector("span:first-child"), vl = c.querySelector("span[dir='ltr']");
+          if (l && vl && vl.textContent.trim() !== "--:--") zmanim.push({ l: l.textContent.trim(), v: vl.textContent.trim() });
+        });
+        var hebDay = 1;
+        try { hebDay = parseInt(new Intl.DateTimeFormat("en-u-ca-hebrew", { day: "numeric" }).format(new Date()), 10) || 1; } catch (e) {}
+        var nz = document.getElementById("lux-next-zman");
+        var data = {
+          updated: Date.now(),
+          city: localStorage.getItem("moadim_city_name") || "",
+          hebDate: luxHebDateStr(),
+          gregDate: new Date().toLocaleDateString("he-IL", { day: "numeric", month: "long", year: "numeric" }),
+          parsha: (document.getElementById("stat-parasha") || {}).textContent || "",
+          dafYomi: (document.getElementById("daf-yomi-text") || {}).textContent || "",
+          shabbatEnter: ((document.getElementById("shabbat-enter") || {}).textContent || "").trim(),
+          shabbatExit: ((document.getElementById("shabbat-exit") || {}).textContent || "").trim(),
+          zmanim: zmanim.slice(0, 12),
+          nextZman: nz ? nz.textContent.replace(/^⏳\s*/, "") : "",
+          tehillimDaily: { day: hebDay, range: TH_MONTHLY[Math.min(hebDay, 30)] || "" },
+          omerDay: (window.CURRENT_OMER_DAY || 0)
+        };
+        if (data.zmanim.length || data.hebDate) jset("lux_widget_data", data);
+      } catch (e) {}
+    }
+    setTimeout(build, 6000);
+    setInterval(build, 10 * 60000);
+    // API פומבי — הווידג'טים של האפליקציה ישתמשו בו בהמשך
+    window.LuxWidgetData = {
+      get: function () { return jget("lux_widget_data", null); },
+      refresh: build
+    };
   });
 })();

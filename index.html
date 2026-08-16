@@ -241,10 +241,10 @@
       }
     </script>
     <link
-      href="https://fonts.googleapis.com/css2?family=Assistant:wght@200;400;600;700;800&family=Frank+Ruhl+Libre:wght@400;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Assistant:wght@200;400;600;700;800&family=Frank+Ruhl+Libre:wght@400;500;700;900&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="style.css?v=7" />
+    <link rel="stylesheet" href="style.css?v=8" />
 
     <!-- OneSignal Web Push SDK -->
     <script>
@@ -417,8 +417,8 @@
       <div class="pointer-events-auto">
         <button
           onclick="openDonationModal()"
-          class="backdrop-blur-md text-white py-2 px-4 rounded-full transition-all shadow-lg flex items-center gap-2"
-          style="background:rgba(251,191,36,0.14);border:1px solid rgba(251,191,36,0.32);"
+          class="nav-donate-btn backdrop-blur-md text-white py-2 px-4 rounded-full transition-all shadow-lg flex items-center gap-2"
+          style="background:linear-gradient(150deg,rgba(12,21,48,0.62),rgba(120,86,20,0.35));border:1px solid rgba(232,193,90,0.55);"
           aria-label="תרומה לאתר"
         >
           <span style="font-size:1.05rem;">💛</span>
@@ -441,9 +441,9 @@
 
       <!-- Subtle glow orbs -->
       <div class="absolute inset-0 z-0 pointer-events-none" aria-hidden="true">
-        <div style="position:absolute;top:10%;right:15%;width:300px;height:300px;background:radial-gradient(circle,rgba(59,130,246,0.12) 0%,transparent 70%);border-radius:50%;filter:blur(40px);"></div>
-        <div style="position:absolute;bottom:20%;left:10%;width:250px;height:250px;background:radial-gradient(circle,rgba(139,92,246,0.1) 0%,transparent 70%);border-radius:50%;filter:blur(40px);"></div>
-        <div style="position:absolute;top:40%;left:50%;width:200px;height:200px;background:radial-gradient(circle,rgba(96,165,250,0.07) 0%,transparent 70%);border-radius:50%;filter:blur(30px);transform:translateX(-50%);"></div>
+        <div style="position:absolute;top:8%;right:12%;width:340px;height:340px;background:radial-gradient(circle,rgba(232,193,90,0.10) 0%,transparent 70%);border-radius:50%;filter:blur(46px);"></div>
+        <div style="position:absolute;bottom:18%;left:8%;width:280px;height:280px;background:radial-gradient(circle,rgba(59,130,246,0.10) 0%,transparent 70%);border-radius:50%;filter:blur(44px);"></div>
+        <div style="position:absolute;top:38%;left:50%;width:240px;height:240px;background:radial-gradient(circle,rgba(226,183,79,0.06) 0%,transparent 70%);border-radius:50%;filter:blur(34px);transform:translateX(-50%);"></div>
       </div>
 
       <!-- Wave divider -->
@@ -458,18 +458,18 @@
           href="https://zstore-ai.co.il/"
           target="_blank"
           rel="noopener noreferrer"
-          class="inline-flex items-center gap-2 px-5 py-2 rounded-full border border-white/30 text-blue-50 text-xs md:text-sm font-bold hover:text-white transition-all mb-6 backdrop-blur-md group"
-          style="background:linear-gradient(135deg,rgba(99,102,241,0.28),rgba(168,85,247,0.28),rgba(59,130,246,0.28));box-shadow:0 0 22px rgba(99,102,241,0.45),0 0 38px rgba(168,85,247,0.22),inset 0 1px 0 rgba(255,255,255,0.15);"
-          onmouseover="this.style.background='linear-gradient(135deg,rgba(99,102,241,0.45),rgba(168,85,247,0.45),rgba(59,130,246,0.45))';this.style.boxShadow='0 0 28px rgba(99,102,241,0.65),0 0 52px rgba(168,85,247,0.35),inset 0 1px 0 rgba(255,255,255,0.25)';"
-          onmouseout="this.style.background='linear-gradient(135deg,rgba(99,102,241,0.28),rgba(168,85,247,0.28),rgba(59,130,246,0.28))';this.style.boxShadow='0 0 22px rgba(99,102,241,0.45),0 0 38px rgba(168,85,247,0.22),inset 0 1px 0 rgba(255,255,255,0.15)';"
+          class="inline-flex items-center gap-2 px-5 py-2 rounded-full text-xs md:text-sm font-bold transition-all mb-6 backdrop-blur-md group"
+          style="color:#fdf3d0;border:1px solid rgba(232,193,90,0.5);background:linear-gradient(135deg,rgba(120,86,20,0.35),rgba(30,58,138,0.4),rgba(120,86,20,0.35));box-shadow:0 0 22px rgba(232,193,90,0.28),0 0 38px rgba(59,130,246,0.18),inset 0 1px 0 rgba(255,255,255,0.15);text-shadow:0 1px 8px rgba(0,0,0,0.4);"
+          onmouseover="this.style.color='#ffffff';this.style.background='linear-gradient(135deg,rgba(150,110,30,0.5),rgba(30,58,138,0.55),rgba(150,110,30,0.5))';this.style.boxShadow='0 0 28px rgba(232,193,90,0.5),0 0 52px rgba(59,130,246,0.28),inset 0 1px 0 rgba(255,255,255,0.25)';"
+          onmouseout="this.style.color='#fdf3d0';this.style.background='linear-gradient(135deg,rgba(120,86,20,0.35),rgba(30,58,138,0.4),rgba(120,86,20,0.35))';this.style.boxShadow='0 0 22px rgba(232,193,90,0.28),0 0 38px rgba(59,130,246,0.18),inset 0 1px 0 rgba(255,255,255,0.15)';"
           aria-label="בניית אתר"
         >
           <span class="relative flex h-2.5 w-2.5">
             <span
-              class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-300 opacity-75"
+              class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style="background:#f2d98a;"
             ></span>
             <span
-              class="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-400"
+              class="relative inline-flex rounded-full h-2.5 w-2.5" style="background:#e0b74f;"
             ></span>
           </span>
           לבניית אתר פרימיום משלכם
@@ -495,6 +495,15 @@
           <span data-i18n-key="app_title_1">הלוח</span>
           <span style="background: linear-gradient(135deg,#93c5fd,#60a5fa,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;" data-i18n-key="app_title_2">היהודי</span>
         </h1>
+
+        <div class="hero-ornament" aria-hidden="true">
+          <span class="hero-ornament-line"></span>
+          <svg width="22" height="22" viewBox="0 0 512 512" fill="none" aria-hidden="true">
+            <path d="M256 112L371 312H141Z" stroke="#e0b74f" stroke-width="30" stroke-linejoin="round"/>
+            <path d="M256 400L371 200H141Z" stroke="#e0b74f" stroke-width="30" stroke-linejoin="round"/>
+          </svg>
+          <span class="hero-ornament-line"></span>
+        </div>
 
         <button
           id="btn-open-calendar"
@@ -923,7 +932,7 @@
       <section
         id="omer-container"
         class="hidden mb-10 p-7 md:p-9 rounded-[2rem] shadow-2xl text-white flex-col md:flex-row items-center justify-between gap-6"
-        style="background: linear-gradient(135deg, #1d4ed8 0%, #4338ca 50%, #6d28d9 100%); box-shadow: 0 10px 60px rgba(99,102,241,0.35);"
+        style="background: linear-gradient(135deg, #14275e 0%, #1e1b4b 45%, #3b1d6e 100%); border: 1px solid rgba(232,193,90,0.28); box-shadow: 0 10px 60px rgba(30,27,75,0.5), inset 0 1px 0 rgba(255,255,255,0.08);"
         aria-label="ספירת העומר"
       >
         <div class="text-center md:text-right flex-1">

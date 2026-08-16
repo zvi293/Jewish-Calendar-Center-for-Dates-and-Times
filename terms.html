@@ -88,7 +88,7 @@
 
     <link rel="stylesheet" href="tailwind.css?v=1" />
     <link
-      href="https://fonts.googleapis.com/css2?family=Assistant:wght@200;400;600;700;800&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Assistant:wght@200;400;600;700;800&family=Frank+Ruhl+Libre:wght@400;700;900&display=swap"
       rel="stylesheet"
     />
     <style>
@@ -100,7 +100,17 @@
       }
 
       .gradient-bg {
-        background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+        background:
+          radial-gradient(ellipse 120% 80% at 50% -10%, rgba(232, 193, 90, 0.08) 0%, transparent 55%),
+          linear-gradient(180deg, #050b1a 0%, #0c1530 60%, #16233f 100%);
+        border-bottom: 1px solid rgba(232, 193, 90, 0.18);
+      }
+      h1 {
+        font-family: "Frank Ruhl Libre", serif;
+        background: linear-gradient(160deg, #fdf0c2 0%, #f2d98a 35%, #e0b74f 70%, #c9993a 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
       }
     </style>
   </head>

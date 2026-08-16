@@ -54,33 +54,53 @@
 
       /* ── Glass Card ── */
       .glass-card {
-        background: rgba(255, 255, 255, 0.07);
+        background: linear-gradient(165deg, rgba(255, 255, 255, 0.10) 0%, rgba(255, 255, 255, 0.04) 100%);
         backdrop-filter: blur(20px);
         -webkit-backdrop-filter: blur(20px);
-        border: 1px solid rgba(255, 255, 255, 0.15);
-        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.15);
+        border: 1px solid rgba(232, 193, 90, 0.25);
+        box-shadow:
+          0 4px 30px rgba(0, 0, 0, 0.22),
+          inset 0 1px 0 rgba(255, 255, 255, 0.12);
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       }
       .glass-card:hover {
-        background: rgba(255, 255, 255, 0.12);
+        background: linear-gradient(165deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.06) 100%);
+        border-color: rgba(232, 193, 90, 0.5);
         transform: translateY(-3px);
-        box-shadow: 0 8px 40px rgba(0, 0, 0, 0.25);
+        box-shadow:
+          0 12px 44px rgba(0, 0, 0, 0.32),
+          0 0 22px rgba(232, 193, 90, 0.12),
+          inset 0 1px 0 rgba(255, 255, 255, 0.14);
+      }
+      /* Bright "sea" theme keeps neutral glass — gold hairlines are for the night hero */
+      .bg-ocean-readable .glass-card {
+        border-color: rgba(255, 255, 255, 0.28);
+      }
+      .bg-ocean-readable .glass-card:hover {
+        border-color: rgba(255, 255, 255, 0.45);
       }
 
       /* ── Filter Chips ── */
       .chip {
         transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
         border: 1px solid transparent;
+        border-radius: 999px !important;
       }
       .chip:hover:not(.active) {
-        border-color: #3b82f6;
-        color: #3b82f6;
+        border-color: rgba(200, 155, 60, 0.55);
+        color: #a16207;
+      }
+      .dark .chip:hover:not(.active) {
+        color: #f2d98a;
       }
       .chip.active {
-        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-        color: white;
-        box-shadow: 0 4px 20px rgba(37, 99, 235, 0.4);
-        border-color: #2563eb;
+        background: linear-gradient(135deg, #f2d98a 0%, #dfb254 45%, #c9993a 100%) !important;
+        color: #1a2547 !important;
+        box-shadow:
+          0 4px 20px rgba(201, 153, 58, 0.45),
+          inset 0 1px 0 rgba(255, 255, 255, 0.45);
+        border-color: rgba(161, 118, 42, 0.6);
+        text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3);
       }
 
       /* ── Event Cards ── */
@@ -97,7 +117,9 @@
       }
       .event-card:hover {
         transform: translateY(-6px);
-        box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.18);
+        box-shadow:
+          0 20px 50px -12px rgba(15, 23, 42, 0.22),
+          0 0 0 1px rgba(200, 155, 60, 0.18);
       }
       .event-card::before {
         content: '';
@@ -116,24 +138,35 @@
 
       /* ── Countdown Strip ── */
       #shabbat-countdown-bar {
-        background: linear-gradient(90deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.06) 100%);
-        border: 1px solid rgba(255,255,255,0.12);
-        border-radius: 1.5rem;
-        padding: 0.75rem 1.5rem;
+        background: linear-gradient(90deg, rgba(232,193,90,0.05) 0%, rgba(255,255,255,0.10) 50%, rgba(232,193,90,0.05) 100%);
+        border: 1px solid rgba(232, 193, 90, 0.28);
+        border-radius: 999px;
+        padding: 0.75rem 1.75rem;
         display: flex;
         align-items: center;
         justify-content: center;
         gap: 0.75rem;
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.10);
+        transition: border-color 0.3s ease, box-shadow 0.3s ease;
+      }
+      #shabbat-countdown-wrap:hover #shabbat-countdown-bar {
+        border-color: rgba(232, 193, 90, 0.5);
+        box-shadow: 0 6px 30px rgba(0, 0, 0, 0.3), 0 0 24px rgba(232, 193, 90, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+      }
+      @keyframes gold-breathe {
+        0%, 100% { text-shadow: 0 0 14px rgba(232, 193, 90, 0.25); }
+        50% { text-shadow: 0 0 28px rgba(232, 193, 90, 0.55); }
       }
       .countdown-digit {
         font-variant-numeric: tabular-nums;
         font-feature-settings: "tnum";
         letter-spacing: 0.04em;
-        color: #fff;
+        color: #fdf3d0;
         font-weight: 900;
         font-size: 1.4rem;
+        animation: gold-breathe 3.5s ease-in-out infinite;
       }
 
       /* ── Omer Ring ── */
@@ -149,11 +182,11 @@
       .omer-ring-bg { fill: none; stroke: rgba(255,255,255,0.15); stroke-width: 6; }
       .omer-ring-progress {
         fill: none;
-        stroke: #fff;
+        stroke: #f2d98a;
         stroke-width: 6;
         stroke-linecap: round;
         transition: stroke-dashoffset 1.2s cubic-bezier(0.4, 0, 0.2, 1);
-        filter: drop-shadow(0 0 6px rgba(255,255,255,0.4));
+        filter: drop-shadow(0 0 8px rgba(232, 193, 90, 0.55));
       }
       .omer-ring-text {
         position: absolute;
@@ -175,9 +208,10 @@
       }
       #zmanim-day-bar-fill {
         height: 100%;
-        background: linear-gradient(90deg, #60a5fa, #a78bfa);
+        background: linear-gradient(90deg, #60a5fa, #f2d98a);
         border-radius: 3px;
         transition: width 1s ease;
+        box-shadow: 0 0 10px rgba(232, 193, 90, 0.4);
       }
 
       /* ── Toast Notifications ── */
@@ -256,7 +290,7 @@
       }
       .loader {
         border: 4px solid rgba(255, 255, 255, 0.1);
-        border-top: 4px solid #3b82f6;
+        border-top: 4px solid #e0b74f;
         border-radius: 50%;
         width: 40px;
         height: 40px;
@@ -302,7 +336,10 @@
         padding-bottom: 0.5rem;
       }
       .gradient-bg {
-        background: linear-gradient(160deg, #060d1e 0%, #0f172a 40%, #1a2744 100%);
+        background:
+          radial-gradient(ellipse 120% 70% at 50% -10%, rgba(232, 193, 90, 0.07) 0%, transparent 55%),
+          radial-gradient(ellipse 90% 60% at 85% 100%, rgba(49, 46, 129, 0.35) 0%, transparent 60%),
+          linear-gradient(160deg, #050b1a 0%, #0c1530 45%, #16233f 100%);
       }
       /* ── Bright/Readable Hero Mode (for elderly users) ── */
       .bg-ocean-readable {
@@ -374,22 +411,31 @@
         align-items: center;
         justify-content: center;
         gap: 0.35rem;
-        background: rgba(255,255,255,0.07);
+        background: linear-gradient(165deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 100%);
         border: 1px solid rgba(255,255,255,0.12);
         border-radius: 1.25rem;
         padding: 0.75rem 0.5rem;
         cursor: pointer;
-        transition: all 0.2s ease;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
         color: white;
         min-height: 72px;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
       }
       .prayer-btn:hover {
-        background: rgba(99,102,241,0.25);
-        border-color: rgba(129,140,248,0.5);
+        background: linear-gradient(165deg, rgba(232,193,90,0.16) 0%, rgba(30,58,138,0.28) 100%);
+        border-color: rgba(232, 193, 90, 0.45);
         transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(99,102,241,0.2);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28), 0 0 18px rgba(232, 193, 90, 0.10);
       }
-      .prayer-icon { font-size: 1.4rem; line-height: 1; }
+      .prayer-btn:active {
+        transform: translateY(0) scale(0.98);
+      }
+      .prayer-icon {
+        font-size: 1.4rem;
+        line-height: 1;
+        transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+      }
+      .prayer-btn:hover .prayer-icon { transform: scale(1.18); }
       .prayer-label {
         font-size: 0.7rem;
         font-weight: 700;
@@ -667,16 +713,16 @@
         cursor: pointer;
       }
       #cal-days-grid > div:not([aria-hidden]):hover {
-        transform: scale(1.04);
-        box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+        transform: scale(1.05);
+        box-shadow: 0 6px 18px rgba(0,0,0,0.14), 0 0 0 2px rgba(224, 183, 79, 0.55);
         z-index: 2;
       }
 
       /* ── Scrollbar Styling ── */
       ::-webkit-scrollbar { width: 6px; height: 6px; }
       ::-webkit-scrollbar-track { background: transparent; }
-      ::-webkit-scrollbar-thumb { background: rgba(148,163,184,0.3); border-radius: 3px; }
-      ::-webkit-scrollbar-thumb:hover { background: rgba(148,163,184,0.5); }
+      ::-webkit-scrollbar-thumb { background: rgba(180, 150, 80, 0.35); border-radius: 3px; }
+      ::-webkit-scrollbar-thumb:hover { background: rgba(200, 165, 90, 0.55); }
 
       /* ── Theme circle (settings panel) ── */
       .theme-circle {
@@ -684,8 +730,8 @@
         position: relative;
       }
       .theme-circle.theme-circle-active {
-        border-color: #2563eb !important;
-        box-shadow: 0 0 0 3px rgba(37,99,235,0.35), 0 4px 14px rgba(37,99,235,0.25);
+        border-color: #e0b74f !important;
+        box-shadow: 0 0 0 3px rgba(224,183,79,0.4), 0 4px 14px rgba(224,183,79,0.3);
         transform: scale(1.08);
       }
 
@@ -695,17 +741,6 @@
         15%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
         85%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
         100% { opacity: 0; transform: translate(-50%, -50%) scale(0.92); }
-      }
-
-      /* ── Theme circle (settings panel) ── */
-      .theme-circle {
-        cursor: pointer;
-        position: relative;
-      }
-      .theme-circle.theme-circle-active {
-        border-color: #2563eb !important;
-        box-shadow: 0 0 0 3px rgba(37,99,235,0.35), 0 4px 14px rgba(37,99,235,0.25);
-        transform: scale(1.08);
       }
 
       /* ── Contact-modal copy toast animation ── */
@@ -907,4 +942,542 @@
 #bih-content-area small small,
 #psalm-text-area small small {
   font-size: 0.95em;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   ROYAL NIGHT & GOLD — שכבת עיצוב יוקרתית
+   שכבה ויזואלית בלבד: אינה משנה התנהגות, רק מראה.
+   ═══════════════════════════════════════════════════════════════════ */
+:root {
+  --lux-gold-100: #fdf3d0;
+  --lux-gold-200: #f7e6ab;
+  --lux-gold-300: #f2d98a;
+  --lux-gold-400: #e0b74f;
+  --lux-gold-500: #c9993a;
+  --lux-gold-600: #a1762a;
+  --lux-navy-700: #1e3a8a;
+  --lux-navy-800: #14275e;
+  --lux-navy-900: #0c1530;
+  --lux-navy-950: #050b1a;
+  --lux-paper: #faf8f3;
+  --lux-serif: "Frank Ruhl Libre", "David Libre", serif;
+  --lux-hairline: rgba(200, 155, 60, 0.28);
+  --lux-hairline-strong: rgba(212, 168, 66, 0.5);
+}
+
+/* ── בסיס: בחירת טקסט, פוקוס ── */
+::selection {
+  background: rgba(224, 183, 79, 0.35);
+  color: inherit;
+}
+:focus-visible {
+  outline: 2px solid rgba(224, 183, 79, 0.75);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ── טיפוגרפיה מלכותית ── */
+.hero-title {
+  font-family: var(--lux-serif);
+  font-weight: 900;
+  letter-spacing: -0.01em;
+}
+
+/* ── עיטור זהב מתחת לכותרת ── */
+.hero-ornament {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.9rem;
+  margin: -0.5rem auto 1.5rem;
+  max-width: 22rem;
+  opacity: 0.9;
+}
+.hero-ornament svg {
+  filter: drop-shadow(0 0 8px rgba(224, 183, 79, 0.45));
+  flex-shrink: 0;
+}
+.hero-ornament-line {
+  height: 1px;
+  flex: 1;
+  background: linear-gradient(90deg, transparent, rgba(224, 183, 79, 0.65), transparent);
+}
+
+/* ── רקע שנהב חם למצב בהיר ── */
+html:not(.dark) body {
+  background-color: #f6f3ea !important;
+  background-image:
+    radial-gradient(ellipse 90% 40% at 50% 0%, rgba(200, 155, 60, 0.055) 0%, transparent 60%);
+  background-attachment: fixed;
+}
+
+/* ── תיבת חיפוש — פינות מעודנות + זכוכית מגדלת בזהב ── */
+#mainSearch {
+  border-radius: 999px !important;
+}
+nav[aria-label="סינון וחיפוש"] > div.relative > svg {
+  color: #c9993a !important;
+}
+
+/* ── כפתור נוסח הברכה בסקשן העומר ── */
+#omer-container button {
+  border-color: rgba(232, 193, 90, 0.5) !important;
+  transition: all 0.25s ease !important;
+}
+#omer-container button:hover {
+  background: rgba(232, 193, 90, 0.2) !important;
+  border-color: rgba(242, 217, 138, 0.8) !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3), 0 0 16px rgba(232, 193, 90, 0.2) !important;
+}
+
+/* ── כפתורי סנכרון בכרטיסי אירועים ── */
+#resultsGrid .event-card button {
+  transition: all 0.22s ease !important;
+}
+#resultsGrid .event-card button:hover {
+  border-color: rgba(200, 155, 60, 0.55) !important;
+  box-shadow: 0 4px 14px rgba(200, 155, 60, 0.18);
+  transform: translateY(-1px);
+}
+
+/* ── שאלות נפוצות — פתיחה בזהב ── */
+details.group summary:hover {
+  color: #a1762a !important;
+}
+details.group summary .text-blue-500 {
+  color: #c9993a !important;
+}
+#omer-modal-title,
+#settings-modal-title,
+#sefaria-modal-title,
+#chok-israel-modal-title,
+#compass-modal-title,
+#cal-month-title,
+#omer-full-text {
+  font-family: var(--lux-serif);
+}
+
+/* ── סרגל פעולות עליון — תמיד נראה, גם בגלילה על רקע בהיר ── */
+.nav-action-btn {
+  background: rgba(12, 21, 48, 0.55) !important;
+  border: 1px solid rgba(232, 193, 90, 0.38) !important;
+  color: #fdf3d0 !important;
+  box-shadow: 0 4px 16px rgba(5, 11, 26, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+.nav-action-btn:hover {
+  background: rgba(20, 35, 78, 0.78) !important;
+  border-color: rgba(242, 217, 138, 0.7) !important;
+  box-shadow: 0 6px 22px rgba(5, 11, 26, 0.45), 0 0 18px rgba(232, 193, 90, 0.25) !important;
+  transform: translateY(-1px) scale(1.05);
+}
+.nav-donate-btn {
+  box-shadow: 0 4px 16px rgba(5, 11, 26, 0.35), 0 0 14px rgba(232, 193, 90, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
+}
+.nav-donate-btn:hover {
+  border-color: rgba(242, 217, 138, 0.8) !important;
+  box-shadow: 0 6px 22px rgba(5, 11, 26, 0.45), 0 0 22px rgba(232, 193, 90, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
+  transform: translateY(-1px);
+}
+
+/* ── כפתורי CTA בהירו — לוח שנה / בתי כנסת / מוצאי שבת ── */
+#btn-open-calendar,
+#btn-motzei-shabbat {
+  background: linear-gradient(150deg, rgba(36, 81, 184, 0.5) 0%, rgba(12, 21, 48, 0.6) 100%) !important;
+  border: 1px solid rgba(232, 193, 90, 0.45) !important;
+  box-shadow: 0 6px 24px rgba(5, 11, 26, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.14) !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+#btn-open-calendar:hover,
+#btn-motzei-shabbat:hover {
+  border-color: rgba(242, 217, 138, 0.8) !important;
+  box-shadow: 0 10px 32px rgba(5, 11, 26, 0.5), 0 0 24px rgba(232, 193, 90, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+  transform: translateY(-2px);
+}
+#btn-shul-mikve {
+  border: 1px solid rgba(94, 234, 212, 0.6) !important;
+}
+#btn-shul-mikve:hover {
+  border-color: rgba(242, 217, 138, 0.8) !important;
+}
+
+/* ── שימר זהב בכותרת הראשית ── */
+@keyframes lux-shimmer {
+  0%, 100% { background-position: 0% center; }
+  50% { background-position: 100% center; }
+}
+.hero-title span[data-i18n-key="app_title_2"] {
+  background-size: 220% auto !important;
+  animation: lux-shimmer 7s ease-in-out infinite;
+}
+
+/* ── ספירה לאחור — תוויות בזהב ── */
+#countdown-label,
+#countdown-event-type {
+  color: rgba(242, 217, 138, 0.9) !important;
+}
+
+/* ── קישורי הכרטיסיות בדשבורד — זהב ── */
+#dashboard-state article > div:last-child {
+  color: rgba(242, 217, 138, 0.92) !important;
+}
+
+/* ── כפתורי הלכה (שנים מקרא / חוק לישראל / דף יומי / דבר תורה) ── */
+#shnayim-mikra-link,
+#daf-yomi-link {
+  background: linear-gradient(150deg, #2451b8 0%, #16307a 100%) !important;
+  border-color: rgba(147, 197, 253, 0.45) !important;
+  box-shadow: 0 5px 18px rgba(22, 48, 122, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.18) !important;
+}
+#chok-israel-btn {
+  background: linear-gradient(150deg, #0d9265 0%, #065f46 100%) !important;
+  border-color: rgba(110, 231, 183, 0.45) !important;
+  box-shadow: 0 5px 18px rgba(6, 95, 70, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.18) !important;
+}
+#month-torah-btn {
+  background: linear-gradient(150deg, #8b34c9 0%, #5b21a6 100%) !important;
+  border-color: rgba(216, 180, 254, 0.45) !important;
+  box-shadow: 0 5px 18px rgba(91, 33, 166, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.18) !important;
+}
+#shnayim-mikra-link:hover,
+#daf-yomi-link:hover,
+#chok-israel-btn:hover,
+#month-torah-btn:hover {
+  border-color: rgba(242, 217, 138, 0.75) !important;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.4), 0 0 20px rgba(232, 193, 90, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.22) !important;
+  transform: translateY(-2px);
+  filter: brightness(1.08);
+}
+#shnayim-mikra-link,
+#daf-yomi-link,
+#chok-israel-btn,
+#month-torah-btn {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  border-radius: 999px !important;
+}
+
+/* ── כרטיסי זמני היום ── */
+.zman-card {
+  background: linear-gradient(160deg, rgba(30, 41, 90, 0.55) 0%, rgba(15, 23, 52, 0.4) 100%) !important;
+  border: 1px solid rgba(232, 193, 90, 0.16) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+.zman-card:hover {
+  border-color: rgba(232, 193, 90, 0.55) !important;
+  background: linear-gradient(160deg, rgba(37, 51, 108, 0.75) 0%, rgba(20, 30, 66, 0.6) 100%) !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3), 0 0 16px rgba(232, 193, 90, 0.12);
+}
+.zman-card > span:first-child {
+  color: rgba(242, 217, 138, 0.88) !important;
+}
+
+/* ── תיבת חיפוש וסינון ── */
+nav[aria-label="סינון וחיפוש"] {
+  position: relative;
+  overflow: hidden;
+  border-radius: 2rem !important;
+  box-shadow:
+    0 24px 60px -18px rgba(15, 23, 42, 0.28),
+    0 0 0 1px rgba(200, 155, 60, 0.12) !important;
+}
+nav[aria-label="סינון וחיפוש"]::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 8%;
+  right: 8%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(224, 183, 79, 0.75), transparent);
+  pointer-events: none;
+}
+#mainSearch {
+  transition: all 0.3s ease !important;
+}
+#mainSearch:focus {
+  box-shadow: 0 0 0 3px rgba(224, 183, 79, 0.28), 0 6px 20px rgba(200, 155, 60, 0.12) !important;
+  border-color: rgba(224, 183, 79, 0.6) !important;
+}
+
+/* ── כרטיסי אירועים — נייר יוקרה ── */
+#resultsGrid .event-card {
+  border-radius: 1.75rem !important;
+  box-shadow:
+    0 2px 6px rgba(15, 23, 42, 0.05),
+    0 12px 32px -14px rgba(15, 23, 42, 0.12);
+}
+#resultsGrid .event-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse 55% 120% at 100% 50%, rgba(200, 155, 60, 0.06), transparent 60%);
+}
+#resultsGrid .event-card h3 {
+  font-family: var(--lux-serif);
+  letter-spacing: 0.005em;
+}
+#resultsGrid .event-card:hover h3 {
+  color: #a1762a !important;
+}
+.dark #resultsGrid .event-card:hover h3 {
+  color: #f2d98a !important;
+}
+/* אריח האייקון בכרטיס — עומק וזהב עדין */
+#resultsGrid .event-card > div:first-child > div:first-child {
+  border-radius: 1.25rem !important;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.10), inset 0 1px 0 rgba(255, 255, 255, 0.8) !important;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.dark #resultsGrid .event-card > div:first-child > div:first-child {
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+}
+#resultsGrid .event-card:hover > div:first-child > div:first-child {
+  transform: scale(1.08) rotate(-3deg);
+}
+
+/* ── כרטיסיות הדשבורד — כותרות עדינות ── */
+#dashboard-state .dashboard-card-title-tight {
+  color: rgba(242, 217, 138, 0.85) !important;
+  letter-spacing: 0.14em;
+}
+
+/* ── זמני היום: כותרת ── */
+#halacha-banner h2[data-i18n-key="zmanim"] {
+  font-family: var(--lux-serif);
+  color: var(--lux-gold-300);
+  font-size: 1.05rem;
+  letter-spacing: 0.22em;
+}
+
+/* ── מודאל הגדרות ── */
+#settings-modal > div {
+  border: 1px solid rgba(200, 155, 60, 0.18);
+  box-shadow: 0 30px 80px -20px rgba(5, 11, 26, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.04) !important;
+}
+#settings-modal select:focus,
+#settings-modal select:hover,
+#settings-modal button[onclick="openPrayerOrderEditor()"]:hover {
+  border-color: rgba(224, 183, 79, 0.55) !important;
+  box-shadow: 0 0 0 3px rgba(224, 183, 79, 0.18);
+}
+#settings-modal button[onclick="saveSettings()"] {
+  background: linear-gradient(135deg, #1e3a8a 0%, #172554 100%) !important;
+  border: 1px solid rgba(232, 193, 90, 0.4);
+  color: #fdf3d0 !important;
+  box-shadow: 0 8px 24px rgba(23, 37, 84, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  transition: all 0.25s ease !important;
+}
+#settings-modal button[onclick="saveSettings()"]:hover {
+  box-shadow: 0 10px 30px rgba(23, 37, 84, 0.55), 0 0 18px rgba(232, 193, 90, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  transform: translateY(-1px);
+}
+#settings-modal input[type="range"] {
+  accent-color: #e0b74f !important;
+}
+#settings-modal button[onclick="showContactModal()"] {
+  background: linear-gradient(135deg, #f2d98a 0%, #dfb254 45%, #c9993a 100%) !important;
+  color: #1a2547 !important;
+  border: 1px solid rgba(161, 118, 42, 0.5);
+  box-shadow: 0 6px 20px rgba(201, 153, 58, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.45) !important;
+}
+#settings-modal button[onclick="showContactModal()"]:hover {
+  filter: brightness(1.06);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 26px rgba(201, 153, 58, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.5) !important;
+}
+#settings-modal button[onclick="useGPS()"]:hover {
+  box-shadow: 0 0 0 2px rgba(224, 183, 79, 0.35);
+}
+
+/* ── מודאל לוח שנה חודשי ── */
+#calendar-modal > div {
+  border: 1px solid rgba(200, 155, 60, 0.16);
+  box-shadow: 0 40px 100px -30px rgba(5, 11, 26, 0.7) !important;
+}
+#calendar-modal > div > div:first-child {
+  background:
+    radial-gradient(ellipse 100% 120% at 50% -20%, rgba(232, 193, 90, 0.10) 0%, transparent 55%),
+    linear-gradient(160deg, #0c1530 0%, #14275e 100%) !important;
+  border-bottom: 1px solid rgba(232, 193, 90, 0.22);
+}
+#calendar-modal button[onclick="resetMonth()"] {
+  background: linear-gradient(135deg, #b98a2e, #96691f) !important;
+  border: 1px solid rgba(253, 243, 208, 0.25);
+  color: #fffaf0 !important;
+  box-shadow: 0 3px 12px rgba(150, 105, 31, 0.4);
+}
+#calendar-modal button[onclick="resetMonth()"]:hover {
+  background: linear-gradient(135deg, #cf9c36, #a87724) !important;
+}
+#calendar-modal button[onclick="downloadBulkICS()"] {
+  background: linear-gradient(135deg, #0d9265, #06724f) !important;
+  border: 1px solid rgba(167, 243, 208, 0.35);
+  box-shadow: 0 3px 12px rgba(6, 114, 79, 0.4);
+}
+#calendar-modal button[onclick="downloadBulkICS()"]:hover {
+  filter: brightness(1.1);
+  box-shadow: 0 4px 16px rgba(13, 146, 101, 0.5), 0 0 12px rgba(232, 193, 90, 0.15);
+}
+#cal-month-heb {
+  color: var(--lux-gold-300) !important;
+}
+
+/* ── קורא ספריא / חוק לישראל — תחושת קלף ── */
+#sefaria-modal,
+#chok-israel-modal {
+  background:
+    radial-gradient(ellipse 140% 40% at 50% 0%, rgba(200, 155, 60, 0.05) 0%, transparent 60%),
+    #faf8f3 !important;
+}
+#sefaria-modal > div:first-child,
+#chok-israel-modal > div:first-child {
+  background: rgba(250, 248, 243, 0.92) !important;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-bottom: 1px solid rgba(200, 155, 60, 0.25) !important;
+}
+
+/* ── מודאל עומר ── */
+#omer-modal > div {
+  border: 1px solid rgba(200, 155, 60, 0.2);
+}
+
+/* ── פוטר ── */
+footer a {
+  transition: all 0.25s ease !important;
+}
+footer a:hover {
+  border-color: rgba(200, 155, 60, 0.5) !important;
+  color: #a1762a !important;
+  box-shadow: 0 4px 14px rgba(200, 155, 60, 0.12);
+  transform: translateY(-1px);
+}
+.dark footer a:hover {
+  color: #f2d98a !important;
+  border-color: rgba(232, 193, 90, 0.4) !important;
+}
+
+/* ── טוסטים ── */
+.toast {
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+/* ═══ פופאפים דינמיים (נבנים ב-JS) — ליטוש יוקרתי ═══ */
+
+/* תפילות — מודאל כהה */
+#prayer-modal .modal-inner {
+  border-color: rgba(232, 193, 90, 0.30) !important;
+  box-shadow:
+    0 30px 80px rgba(0, 0, 0, 0.65),
+    0 0 0 1px rgba(255, 255, 255, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07) !important;
+}
+#prayer-modal .modal-title {
+  font-family: var(--lux-serif) !important;
+}
+
+/* שבת/חג — פרטים */
+#shabbat-info-modal > div,
+#motzei-shabbat-modal > div {
+  background:
+    radial-gradient(ellipse 130% 60% at 50% -10%, rgba(232, 193, 90, 0.10) 0%, transparent 55%),
+    linear-gradient(150deg, #14275e 0%, #0c1530 100%) !important;
+  border: 1px solid rgba(232, 193, 90, 0.30) !important;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+}
+
+/* דעות בזמנים */
+#zman-opinions-modal > div {
+  background:
+    radial-gradient(ellipse 130% 60% at 50% -10%, rgba(232, 193, 90, 0.08) 0%, transparent 55%),
+    linear-gradient(150deg, #16224a 0%, #0c1530 100%) !important;
+  border: 1px solid rgba(232, 193, 90, 0.28) !important;
+}
+
+/* תרומה */
+#donation-modal > div {
+  background:
+    radial-gradient(ellipse 130% 60% at 50% -10%, rgba(232, 193, 90, 0.12) 0%, transparent 55%),
+    linear-gradient(160deg, #171d3d 0%, #0c1226 100%) !important;
+  border: 1.5px solid rgba(232, 193, 90, 0.45) !important;
+}
+
+/* מודאלים על נייר קלף (נוסח/שפה/יצירת קשר/פרטי יום) */
+#nusach-selection-modal > div,
+#language-selection-modal > div,
+#contact-modal > div,
+#calendar-day-modal > div {
+  background:
+    radial-gradient(ellipse 140% 50% at 50% 0%, rgba(200, 155, 60, 0.06) 0%, transparent 60%),
+    #faf8f3 !important;
+  border: 1px solid rgba(200, 155, 60, 0.25) !important;
+  box-shadow: 0 30px 80px rgba(5, 11, 26, 0.35) !important;
+}
+
+/* קוראי ספרים במסך מלא — כותרות בגופן ספר */
+#tehillim-modal h2,
+#sn-modal h2,
+#ben-ish-hai-modal h2,
+#prayer-modal h2,
+#prayer-modal h3.modal-title,
+#hilulot-modal h3,
+#moad-torah-modal h3 {
+  font-family: var(--lux-serif) !important;
+}
+
+/* ── ספרים נוספים / תפילות נוספות — ספריית קודש ── */
+#sn-modal [id$="-view"] > div:first-child {
+  border-bottom-color: rgba(232, 193, 90, 0.20) !important;
+}
+#sn-books-grid button,
+#sn-subbook-grid button,
+#sn-sections-grid button {
+  border-color: rgba(232, 193, 90, 0.16) !important;
+  transition: all 0.2s ease !important;
+}
+#sn-books-grid button:hover,
+#sn-subbook-grid button:hover,
+#sn-sections-grid button:hover {
+  border-color: rgba(232, 193, 90, 0.45) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35), 0 0 12px rgba(232, 193, 90, 0.10);
+}
+
+/* ── מודאל מצפן ── */
+#compass-modal > div {
+  border-color: rgba(232, 193, 90, 0.22) !important;
+  background:
+    radial-gradient(ellipse 130% 60% at 50% -10%, rgba(232, 193, 90, 0.07) 0%, transparent 55%),
+    linear-gradient(160deg, #16224a 0%, #0c1530 100%) !important;
+}
+
+/* ── כפתור חזרה למעלה (דסקטופ) ── */
+#fab-top {
+  background: linear-gradient(135deg, #1e3a8a, #14275e) !important;
+  border: 1px solid rgba(232, 193, 90, 0.4) !important;
+  box-shadow: 0 4px 20px rgba(12, 21, 48, 0.55), 0 0 14px rgba(232, 193, 90, 0.12) !important;
+}
+
+/* ── באנר התקנת אפליקציה ── */
+#pwa-install-banner > div {
+  background:
+    radial-gradient(ellipse 130% 70% at 50% -10%, rgba(232, 193, 90, 0.12) 0%, transparent 55%),
+    linear-gradient(150deg, #14275e 0%, #0c1530 100%) !important;
+  border: 1px solid rgba(232, 193, 90, 0.35) !important;
+  box-shadow: 0 12px 44px rgba(5, 11, 26, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+}
+
+/* ── כפתור "בתי כנסת מקוואות" — ליטוש ── */
+#btn-shul-mikve {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* ── תנועה מופחתת ── */
+@media (prefers-reduced-motion: reduce) {
+  .prayer-btn.prayer-cta-highlight,
+  #prayer-more-btn.chevron-cta-pulse,
+  .levana-blinking {
+    animation: none !important;
+  }
 }

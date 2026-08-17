@@ -1,5 +1,5 @@
 # הלוח היהודי — robots.txt
-# https://jewishcalendar.netlify.app/
+# https://jewishcalendar.co.il/
 
 User-agent: *
 Allow: /
@@ -7,7 +7,7 @@ Disallow: /api/
 Disallow: /*.json$
 
 # Sitemap
-Sitemap: https://jewishcalendar.netlify.app/sitemap.xml
+Sitemap: https://jewishcalendar.co.il/sitemap.xml
 
 # Search engine crawl rate
 Crawl-delay: 1

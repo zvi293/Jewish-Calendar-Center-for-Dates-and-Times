@@ -13,7 +13,7 @@
     />
     <meta name="theme-color" content="#0f172a" />
     <meta name="robots" content="index, follow" />
-    <link rel="canonical" href="https://jewishcalendar.netlify.app/synagogues.html" />
+    <link rel="canonical" href="https://jewishcalendar.co.il/synagogues.html" />
 
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
     <link rel="apple-touch-icon" href="apple-touch-icon.png" />
@@ -346,7 +346,34 @@
             <button class="radius-chip" data-r="150" type="button">150 ק"מ</button>
           </div>
         </div>
+
+        <!-- View toggle: list / map -->
+        <div class="mt-4">
+          <div class="text-xs text-slate-400 mb-2">תצוגה:</div>
+          <div class="flex gap-2" id="view-toggle">
+            <button id="view-list-btn" class="radius-chip active" type="button" onclick="setViewMode('list')">📃 רשימה</button>
+            <button id="view-map-btn" class="radius-chip" type="button" onclick="setViewMode('map')">🗺️ מפה</button>
+          </div>
+        </div>
       </div>
+
+      <style>
+        #osm-map {
+          height: 62vh;
+          min-height: 340px;
+          border-radius: 1rem;
+          border: 1.5px solid rgba(224, 183, 79, 0.45);
+          box-shadow: 0 12px 34px rgba(0, 0, 0, 0.35);
+          z-index: 0;
+        }
+        #map-hint {
+          text-align: center;
+          color: rgba(148, 163, 184, 0.9);
+          font-size: 0.72rem;
+          margin-top: 0.5rem;
+        }
+        .leaflet-popup-content { margin: 10px 12px; }
+      </style>
 
 
       <!-- ══════ Tzaddik Prayers Button (visible only on tzaddik tab) ══════ -->
@@ -369,6 +396,11 @@
       <div id="status-area" class="flex flex-col items-center justify-center py-12 text-center">
         <div class="spinner mb-4"></div>
         <div class="text-slate-300/90 text-sm" id="status-text">מאתר מיקום…</div>
+      </div>
+
+      <div id="map-wrap" style="display:none;">
+        <div id="osm-map"></div>
+        <div id="map-hint">לחיצה על סימון מציגה פרטים וכפתור ניווט · הנתונים מ-OpenStreetMap</div>
       </div>
 
       <div id="results" class="space-y-3"></div>
@@ -1119,6 +1151,8 @@
           card.appendChild(right);
           out.appendChild(card);
         });
+        // תצוגת מפה פעילה — לסנכרן את הסימונים עם התוצאות החדשות
+        if (typeof viewMode !== "undefined" && viewMode === "map") renderMap(items);
       }// ── Open in Waze ──────────────────────────────────
       function openInWaze(lat, lon) {
         const url = "https://waze.com/ul?ll=" + encodeURIComponent(lat + "," + lon) + "&navigate=yes";
@@ -1367,6 +1401,99 @@
           }).catch(() => {});
         } catch (e) {}
       }
+
+      // ── Map view (Leaflet — lazy loaded on first use) ──────────────
+      const LS_VIEW_KEY = "shulMikve_viewMode";
+      let viewMode = "list";
+      try { if (localStorage.getItem(LS_VIEW_KEY) === "map") viewMode = "map"; } catch (e) {}
+      let _leafletReady = false, _leafletLoading = false, _map = null, _markersLayer = null;
+
+      function ensureLeaflet(cb) {
+        if (_leafletReady) { cb(); return; }
+        if (_leafletLoading) { setTimeout(() => ensureLeaflet(cb), 150); return; }
+        _leafletLoading = true;
+        const css = document.createElement("link");
+        css.rel = "stylesheet";
+        css.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+        document.head.appendChild(css);
+        const s = document.createElement("script");
+        s.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+        s.onload = () => { _leafletReady = true; _leafletLoading = false; cb(); };
+        s.onerror = () => {
+          _leafletLoading = false;
+          const hint = document.getElementById("map-hint");
+          if (hint) hint.textContent = "לא הצלחנו לטעון את המפה — בדקו את חיבור האינטרנט ונסו שוב.";
+        };
+        document.head.appendChild(s);
+      }
+
+      function setViewMode(mode) {
+        viewMode = mode === "map" ? "map" : "list";
+        try { localStorage.setItem(LS_VIEW_KEY, viewMode); } catch (e) {}
+        const lb = document.getElementById("view-list-btn");
+        const mb = document.getElementById("view-map-btn");
+        if (lb) lb.classList.toggle("active", viewMode === "list");
+        if (mb) mb.classList.toggle("active", viewMode === "map");
+        const res = document.getElementById("results");
+        const wrap = document.getElementById("map-wrap");
+        if (res) res.style.display = viewMode === "map" ? "none" : "";
+        if (wrap) wrap.style.display = viewMode === "map" ? "block" : "none";
+        if (viewMode === "map") renderMap(lastResults);
+      }
+
+      function renderMap(items) {
+        ensureLeaflet(() => {
+          const wrap = document.getElementById("map-wrap");
+          if (!wrap || wrap.style.display === "none") return;
+          const center = userLat != null ? [userLat, userLon]
+            : (items && items.length ? [items[0].lat, items[0].lon] : [31.778, 35.235]);
+          if (!_map) {
+            _map = L.map("osm-map", { zoomControl: true });
+            L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+              maxZoom: 19,
+              attribution: "&copy; OpenStreetMap"
+            }).addTo(_map);
+            _markersLayer = L.layerGroup().addTo(_map);
+            _map.setView(center, 13);
+          }
+          setTimeout(() => { try { _map.invalidateSize(); } catch (e) {} }, 80);
+          _markersLayer.clearLayers();
+          const bounds = [];
+          if (userLat != null) {
+            L.circleMarker([userLat, userLon], {
+              radius: 8, color: "#0284c7", fillColor: "#38bdf8", fillOpacity: 0.9, weight: 2.5
+            }).bindPopup('<div style="direction:rtl;font-weight:800;">📍 המיקום שלך</div>').addTo(_markersLayer);
+            bounds.push([userLat, userLon]);
+          }
+          const icon = currentTab === "shul" ? "🕍" : currentTab === "mikvah" ? "💧" : "🕯️";
+          (items || []).forEach((it) => {
+            if (typeof it.lat !== "number" || typeof it.lon !== "number") return;
+            const m = L.circleMarker([it.lat, it.lon], {
+              radius: 9, color: "#a1762a", fillColor: "#e0b74f", fillOpacity: 0.92, weight: 2
+            });
+            const html =
+              '<div style="direction:rtl;text-align:right;min-width:170px;">' +
+                '<div style="font-weight:800;font-size:0.95rem;margin-bottom:2px;">' + icon + " " + escapeHtml(it.name || "") + "</div>" +
+                (it.address ? '<div style="color:#475569;font-size:0.78rem;margin-bottom:2px;">' + escapeHtml(it.address) + "</div>" : "") +
+                (typeof it.distanceKm === "number" ? '<div style="color:#64748b;font-size:0.78rem;margin-bottom:6px;">מרחק: ' + formatDistance(it.distanceKm) + "</div>" : "") +
+                '<a href="https://waze.com/ul?ll=' + encodeURIComponent(it.lat + "," + it.lon) + '&navigate=yes" target="_blank" rel="noopener" ' +
+                  'style="display:inline-block;background:#0ea5e9;color:#fff;font-weight:800;font-size:0.8rem;padding:5px 12px;border-radius:8px;text-decoration:none;">🚗 ניווט בוויז</a>' +
+              "</div>";
+            m.bindPopup(html);
+            m.addTo(_markersLayer);
+            bounds.push([it.lat, it.lon]);
+          });
+          if (bounds.length > 1) {
+            try { _map.fitBounds(bounds, { padding: [34, 34], maxZoom: 15 }); } catch (e) {}
+          } else if (bounds.length === 1) {
+            _map.setView(bounds[0], 14);
+          }
+        });
+      }
+      // מונגש גם ל-onclick בכפתורי התצוגה
+      window.setViewMode = setViewMode;
+      // מצב פתיחה שמור
+      setViewMode(viewMode);
 
       async function startFlow(forceFresh = false) {
         const cached = !forceFresh ? loadCachedLocation() : null;

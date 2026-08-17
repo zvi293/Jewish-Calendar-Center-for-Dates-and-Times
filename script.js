@@ -662,7 +662,7 @@ history.replaceState({ page: "home" }, "");
 history.pushState({ page: "app" }, "");
 
 // --- Core Variables & Setup ---
-const SITE_URL = "https://jewishcalendar.netlify.app/";
+const SITE_URL = "https://jewishcalendar.co.il/";
 const SITE_NAME = "הלוח היהודי";
 const SITE_SHARE_TEXT =
   "מערכת חכמה לניהול זמן יהודי, זמני הלכה וסנכרון ליומן. כנס לראות:";
@@ -25196,46 +25196,124 @@ function closeSefarimNosafimModal() {
   }
 
   // ── מנוע גרירה (Pointer Events — עובד גם במובייל וגם בעכבר) ──
+  // ביצועים: תזוזת הרוחש ב-transform בלבד (ללא layout), חישובי יעד לפי
+  // מלבנים מוטמנים (בלי elementFromPoint בכל תזוזה), עדכון אחד לפריים (rAF),
+  // אנימציית FLIP לאריחים שזזים, וגלילת קצה אוטומטית בתוך הרשת.
   function _poAttachDrag(grid) {
     var dragEl = null, ghost = null, startX = 0, startY = 0, dragging = false;
+    var rects = [], tilesList = [], rafId = 0, lastX = 0, lastY = 0, pending = false;
+    var scrollRaf = 0, scrollVel = 0;
+
+    function measure() {
+      tilesList = Array.prototype.slice.call(grid.querySelectorAll(".po-tile"));
+      rects = tilesList.map(function(t) { return t.getBoundingClientRect(); });
+    }
+
+    function reorderTo(targetIdx) {
+      var from = tilesList.indexOf(dragEl);
+      if (from === -1 || targetIdx === -1 || from === targetIdx) return;
+      // לפני השינוי — צילום מיקומים לאנימציית FLIP ("החלקה" למקום החדש)
+      var firstRects = tilesList.map(function(t) { return t.getBoundingClientRect(); });
+      var target = tilesList[targetIdx];
+      if (from < targetIdx) grid.insertBefore(dragEl, target.nextSibling);
+      else grid.insertBefore(dragEl, target);
+      _poRepositionDivider(grid);
+      var prevList = tilesList.slice();
+      measure();
+      // FLIP לפי הרשימה הישנה (לפני המדידה החדשה)
+      prevList.forEach(function(t, i) {
+        if (t === dragEl) return;
+        var last = t.getBoundingClientRect();
+        var dx = firstRects[i].left - last.left, dy = firstRects[i].top - last.top;
+        if (!dx && !dy) return;
+        t.style.transition = "none";
+        t.style.transform = "translate(" + dx + "px," + dy + "px)";
+        requestAnimationFrame(function() {
+          t.style.transition = "transform 0.18s ease";
+          t.style.transform = "";
+          setTimeout(function() { t.style.transition = ""; }, 220);
+        });
+      });
+    }
+
+    // מציאת האריח שמתחת לסמן לפי המלבנים המוטמנים + אזור היסטרזיס מרכזי
+    function hitIndex(x, y) {
+      for (var i = 0; i < rects.length; i++) {
+        if (tilesList[i] === dragEl) continue;
+        var r = rects[i];
+        // אזור פגיעה מוקטן (60% מרכזי) — מונע ריצודי החלפה הלוך-ושוב
+        var mx = r.width * 0.2, my = r.height * 0.2;
+        if (x >= r.left + mx && x <= r.right - mx && y >= r.top + my && y <= r.bottom - my) return i;
+      }
+      return -1;
+    }
+
+    // גלילת קצה — כשגוררים קרוב לשולי הרשת היא נגללת מעצמה
+    function edgeScroll() {
+      scrollRaf = 0;
+      if (!dragging) return;
+      var gr = grid.getBoundingClientRect();
+      var zone = 56;
+      scrollVel = 0;
+      if (lastY < gr.top + zone) scrollVel = -Math.ceil((gr.top + zone - lastY) / 6);
+      else if (lastY > gr.bottom - zone) scrollVel = Math.ceil((lastY - (gr.bottom - zone)) / 6);
+      if (scrollVel) {
+        var before = grid.scrollTop;
+        grid.scrollTop = before + scrollVel;
+        if (grid.scrollTop !== before) measure();
+        scrollRaf = requestAnimationFrame(edgeScroll);
+      }
+    }
+
+    function frame() {
+      rafId = 0;
+      if (!dragging || !ghost) return;
+      ghost.style.transform = "translate3d(" + (lastX - ghost._halfW) + "px," + (lastY - ghost._halfH) + "px,0) scale(1.06)";
+      var idx = hitIndex(lastX, lastY);
+      if (idx !== -1) reorderTo(idx);
+      if (!scrollRaf) {
+        var gr = grid.getBoundingClientRect();
+        if (lastY < gr.top + 56 || lastY > gr.bottom - 56) scrollRaf = requestAnimationFrame(edgeScroll);
+      }
+    }
 
     function endDrag() {
+      if (scrollRaf) { cancelAnimationFrame(scrollRaf); scrollRaf = 0; }
+      if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
       if (ghost) { ghost.remove(); ghost = null; }
-      if (dragEl) dragEl.style.opacity = "";
+      if (dragEl) {
+        dragEl.style.opacity = "";
+        dragEl.classList.remove("po-dragging");
+      }
       dragEl = null; dragging = false;
     }
 
     grid.querySelectorAll(".po-tile").forEach(function(tile) {
       tile.style.touchAction = "none";
       tile.addEventListener("pointerdown", function(e) {
-        dragEl = tile; startX = e.clientX; startY = e.clientY; dragging = false;
+        dragEl = tile; startX = lastX = e.clientX; startY = lastY = e.clientY; dragging = false;
         try { tile.setPointerCapture(e.pointerId); } catch(err) {}
         e.preventDefault();
       });
       tile.addEventListener("pointermove", function(e) {
         if (!dragEl) return;
+        lastX = e.clientX; lastY = e.clientY;
         if (!dragging) {
           if (Math.hypot(e.clientX - startX, e.clientY - startY) < 7) return;
           dragging = true;
+          measure();
+          var r = dragEl.getBoundingClientRect();
           ghost = dragEl.cloneNode(true);
           ghost.id = "";
-          ghost.style.cssText += ";position:fixed;z-index:10099;pointer-events:none;opacity:0.9;margin:0;width:" + dragEl.offsetWidth + "px;box-shadow:0 12px 30px rgba(0,0,0,0.5);transform:scale(1.05);";
+          ghost.style.cssText += ";position:fixed;left:0;top:0;z-index:10099;pointer-events:none;opacity:0.92;margin:0;width:" + r.width + "px;height:" + r.height + "px;box-shadow:0 12px 30px rgba(0,0,0,0.5);will-change:transform;";
+          ghost._halfW = r.width / 2;
+          ghost._halfH = r.height / 2;
           document.body.appendChild(ghost);
           dragEl.style.opacity = "0.25";
+          dragEl.classList.add("po-dragging");
         }
-        ghost.style.left = (e.clientX - ghost.offsetWidth / 2) + "px";
-        ghost.style.top = (e.clientY - ghost.offsetHeight / 2) + "px";
-        var over = document.elementFromPoint(e.clientX, e.clientY);
-        var target = over && over.closest ? over.closest(".po-tile") : null;
-        if (target && target !== dragEl && target.parentNode === grid) {
-          var tiles = Array.prototype.slice.call(grid.querySelectorAll(".po-tile"));
-          var from = tiles.indexOf(dragEl), to = tiles.indexOf(target);
-          if (from >= 0 && to >= 0) {
-            if (from < to) grid.insertBefore(dragEl, target.nextSibling);
-            else grid.insertBefore(dragEl, target);
-            _poRepositionDivider(grid);
-          }
-        }
+        // עדכון אחד לפריים — הגרירה נשארת חלקה גם בתזוזות מהירות
+        if (!rafId) rafId = requestAnimationFrame(frame);
       });
       tile.addEventListener("pointerup", endDrag);
       tile.addEventListener("pointercancel", endDrag);

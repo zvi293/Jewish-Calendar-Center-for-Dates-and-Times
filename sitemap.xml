@@ -5,34 +5,34 @@
   xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"
 >
   <url>
-    <loc>https://jewishcalendar.netlify.app/</loc>
+    <loc>https://jewishcalendar.co.il/</loc>
     <lastmod>2026-04-14</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
-    <xhtml:link rel="alternate" hreflang="he-IL" href="https://jewishcalendar.netlify.app/"/>
-    <xhtml:link rel="alternate" hreflang="en-US" href="https://jewishcalendar.netlify.app/"/>
-    <xhtml:link rel="alternate" hreflang="fr-FR" href="https://jewishcalendar.netlify.app/"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://jewishcalendar.netlify.app/"/>
+    <xhtml:link rel="alternate" hreflang="he-IL" href="https://jewishcalendar.co.il/"/>
+    <xhtml:link rel="alternate" hreflang="en-US" href="https://jewishcalendar.co.il/"/>
+    <xhtml:link rel="alternate" hreflang="fr-FR" href="https://jewishcalendar.co.il/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://jewishcalendar.co.il/"/>
     <image:image>
-      <image:loc>https://jewishcalendar.netlify.app/og-image.png</image:loc>
+      <image:loc>https://jewishcalendar.co.il/og-image.png</image:loc>
       <image:title>הלוח היהודי — לוח שנה עברי לועזי תשפ"ו 2026</image:title>
       <image:caption>לוח שנה יהודי עברי לועזי עם זמני שבת, מועדים, ספירת העומר וזמני הלכה</image:caption>
     </image:image>
   </url>
   <url>
-    <loc>https://jewishcalendar.netlify.app/credits.html</loc>
+    <loc>https://jewishcalendar.co.il/credits.html</loc>
     <lastmod>2026-04-19</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.2</priority>
   </url>
   <url>
-    <loc>https://jewishcalendar.netlify.app/privacy.html</loc>
+    <loc>https://jewishcalendar.co.il/privacy.html</loc>
     <lastmod>2026-04-19</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.3</priority>
   </url>
   <url>
-    <loc>https://jewishcalendar.netlify.app/terms.html</loc>
+    <loc>https://jewishcalendar.co.il/terms.html</loc>
     <lastmod>2026-04-19</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.3</priority>

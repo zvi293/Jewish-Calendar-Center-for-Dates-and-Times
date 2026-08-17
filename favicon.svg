@@ -1,12 +1,20 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="הלוח היהודי">
   <defs>
     <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#050b1a" />
-      <stop offset="100%" stop-color="#16233f" />
+      <stop offset="0%" stop-color="#0a1228" />
+      <stop offset="100%" stop-color="#040814" />
+    </linearGradient>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#96aad0" />
     </linearGradient>
   </defs>
   <rect width="512" height="512" rx="120" fill="url(#bg)" />
-  <path d="M256 112L371 312H141Z" fill="none" stroke="#e0b74f" stroke-width="32" stroke-linejoin="round" />
-  <path d="M256 400L371 200H141Z" fill="none" stroke="#e0b74f" stroke-width="32" stroke-linejoin="round" />
-  <circle cx="256" cy="256" r="16" fill="#f2d98a" />
+  <circle cx="256" cy="256" r="198" fill="none" stroke="#c9993a" stroke-width="6" opacity="0.8" />
+  <circle cx="256" cy="256" r="184" fill="none" stroke="#f2d98a" stroke-width="2" opacity="0.3" />
+  <path d="M256 118L368 310H144Z" fill="none" stroke="url(#gold)" stroke-width="19" stroke-linejoin="round" />
+  <path d="M256 398L368 206H144Z" fill="none" stroke="url(#gold)" stroke-width="19" stroke-linejoin="round" />
+  <path d="M256 118L368 310H144Z" fill="none" stroke="#fff6d6" stroke-width="5" stroke-linejoin="round" opacity="0.75" />
+  <path d="M256 398L368 206H144Z" fill="none" stroke="#fff6d6" stroke-width="5" stroke-linejoin="round" opacity="0.75" />
+  <circle cx="256" cy="256" r="9" fill="#f2d98a" />
 </svg>

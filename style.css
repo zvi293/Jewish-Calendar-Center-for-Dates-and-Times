@@ -3332,10 +3332,25 @@ body.lux-shabbat #shabbat-countdown-bar {
 .lux-sel-para {
   max-width: 44rem;
   margin: 0 auto 1.05em;
-  font-size: 1.18rem;
+  /* em ולא rem — כך כפתורי ההקטנה/הגדלה (שמשנים % על המיכל) עובדים */
+  font-size: 1.3em;
   line-height: 2.05;
 }
 .lux-sel-para b, .lux-sel-para strong { color: #7c2d12; }
+/* קרדיט ספריא — בתחתית הטקסט, אחרי סיום הקריאה */
+.lux-sel-credit {
+  text-align: center;
+  margin: 2.2rem auto 0.5rem;
+  padding-top: 1.1rem;
+  border-top: 1px solid rgba(161, 118, 42, 0.3);
+  max-width: 22rem;
+  font-family: Assistant, sans-serif;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #a1762a;
+  line-height: 1.9;
+}
+html.dark .lux-sel-credit { color: #d9c48a; border-top-color: rgba(224, 183, 79, 0.3); }
 html.dark #lux-selichot-reader { background: #0f172a; }
 html.dark .lux-sel-area { color: #e2e8f0; }
 html.dark .lux-sel-para b, html.dark .lux-sel-para strong { color: #f2d98a; }
@@ -3375,3 +3390,1029 @@ html.dark .lux-sel-chip { color: #d9c48a; border-color: rgba(224, 183, 79, 0.35)
   box-shadow: 0 3px 10px rgba(224, 183, 79, 0.4);
 }
 .lux-th-readchip:active { transform: scale(0.95); }
+
+/* ── לוח שנה במובייל: כפתור ה-✕ נשאר בפנים, בלי לבלגן את הכפתורים ── */
+@media (max-width: 560px) {
+  #calendar-modal > div > div:first-child {
+    padding: 0.7rem 0.5rem;
+    gap: 0.25rem;
+  }
+  #calendar-modal > div > div:first-child > div:first-child {
+    gap: 0.25rem !important;
+    flex: 1;
+    min-width: 0;
+  }
+  #calendar-modal > div > div:first-child > div:first-child > .text-center {
+    min-width: 0 !important;
+    flex-shrink: 1;
+  }
+  #cal-month-title { font-size: 1.02rem !important; }
+  #cal-month-heb { font-size: 0.66rem !important; }
+  #calendar-modal > div > div:first-child button[onclick="changeMonth(-1)"],
+  #calendar-modal > div > div:first-child button[onclick="changeMonth(1)"] {
+    padding: 0.4rem !important;
+    flex-shrink: 0;
+  }
+  #calendar-modal button[onclick="resetMonth()"],
+  #calendar-modal button[onclick="downloadBulkICS()"] {
+    padding: 0.35rem 0.5rem !important;
+    font-size: 0.68rem !important;
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+  /* מירכוז "היום"+"סנכרן" ברווח שבין חיצי החודשים לכפתור ה-✕ */
+  #calendar-modal button[onclick="resetMonth()"] {
+    margin-left: 0 !important;
+    margin-right: auto !important;
+  }
+  #calendar-modal button[onclick="downloadBulkICS()"] {
+    margin-left: auto !important;
+  }
+  #calendar-modal > div > div:first-child > button[aria-label="סגור"] {
+    padding: 0.45rem !important;
+    flex-shrink: 0;
+  }
+  #calendar-modal > div > div:first-child > button[aria-label="סגור"] svg {
+    width: 1.15rem;
+    height: 1.15rem;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   LUX 6 — עונתיות, מצב שבת, סטוריז, שעון הלכתי, שנה טובה, מסלולים
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── תחתית קורא הסליחות/מסלולים: גלילה אוטומטית ── */
+.lux-sel-foot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 0.55rem 1rem;
+  background: #f3efe4;
+  border-top: 1px solid rgba(0, 0, 0, 0.07);
+  flex-shrink: 0;
+}
+html.dark .lux-sel-foot { background: #111c33; border-top-color: rgba(255, 255, 255, 0.08); }
+.lux-sel-scroll-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(16, 185, 129, 0.4);
+  background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+  color: #047857;
+  font-size: 0.95rem;
+  font-weight: 900;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.2);
+}
+.lux-sel-speed {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: #047857;
+  min-width: 2.5rem;
+  text-align: center;
+  background: rgba(209, 250, 229, 0.9);
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  cursor: pointer;
+}
+.lux-sel-foot-hint {
+  font-size: 0.72rem;
+  color: #8a7434;
+  font-weight: 600;
+}
+html.dark .lux-sel-foot-hint { color: #94a3b8; }
+/* כפתורי גופן בתחתית הקורא — ליד הגלילה האוטומטית */
+.lux-sel-fbtn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(99, 102, 241, 0.35);
+  background: linear-gradient(135deg, #eef2ff, #e0e7ff);
+  color: #4338ca;
+  font-size: 1.25rem;
+  font-weight: 900;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(99, 102, 241, 0.18);
+}
+.lux-sel-foot-sep {
+  width: 1px;
+  height: 26px;
+  background: rgba(0, 0, 0, 0.12);
+  margin: 0 0.15rem;
+}
+html.dark .lux-sel-foot-sep { background: rgba(255, 255, 255, 0.15); }
+.lux-tr-done {
+  margin-right: auto;
+  border: 1.5px solid rgba(201, 153, 58, 0.5);
+  background: linear-gradient(135deg, #fdf9ec, #f6eed7);
+  color: #7a5c1a;
+  font-weight: 800;
+  font-size: 0.82rem;
+  padding: 0.55rem 1rem;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.lux-tr-done-on {
+  background: linear-gradient(135deg, #e0b74f, #c9993a);
+  color: #211603;
+  box-shadow: 0 3px 12px rgba(224, 183, 79, 0.45);
+}
+#lux-track-reader {
+  position: fixed;
+  inset: 0;
+  z-index: 240;
+  display: flex;
+  flex-direction: column;
+  background: #faf9f6;
+  direction: rtl;
+}
+html.dark #lux-track-reader { background: #0f172a; }
+
+/* אנימציית ריחוף עדינה (בשימוש בסטוריז) */
+@keyframes lux-season-float {
+  from { transform: translateY(0) rotate(-6deg); }
+  to { transform: translateY(-16px) rotate(8deg); }
+}
+
+/* ── מניעת "זליגת" גלילה מהפופאפים אל הרקע ── */
+.lux-sheet-overlay,
+.lux-sheet,
+#lux-stories,
+#lux-year-wheel,
+#lux-nav-editor,
+#lux-selichot-reader .lux-sel-area,
+#lux-track-reader .lux-sel-area,
+.lux-sel-chips {
+  overscroll-behavior: contain;
+}
+
+/* ── מצב שבת — סצנת נרות ── */
+#lux-shabbat-scene {
+  position: relative;
+  max-width: 560px;
+  margin: 0 auto 1.2rem;
+  padding: 1.6rem 1.2rem 1.3rem;
+  border-radius: 1.8rem;
+  background:
+    radial-gradient(ellipse 90% 60% at 50% 0%, rgba(232, 193, 90, 0.14) 0%, transparent 60%),
+    linear-gradient(165deg, rgba(8, 14, 33, 0.92), rgba(16, 26, 53, 0.94));
+  border: 1.5px solid rgba(224, 183, 79, 0.5);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  animation: lux-selc-in 0.8s ease;
+}
+.lux-sbs-x {
+  position: absolute;
+  top: 0.7rem;
+  left: 0.7rem;
+  z-index: 3;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 50%;
+  width: 1.9rem;
+  height: 1.9rem;
+  color: rgba(226, 232, 240, 0.8);
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+.lux-sbs-dust { position: absolute; inset: 0; pointer-events: none; }
+.lux-sbs-dust i {
+  position: absolute;
+  bottom: -6px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: rgba(242, 217, 138, 0.8);
+  box-shadow: 0 0 8px rgba(242, 217, 138, 0.8);
+  animation: lux-sbs-rise linear infinite;
+  opacity: 0;
+}
+@keyframes lux-sbs-rise {
+  0% { transform: translateY(0) scale(1); opacity: 0; }
+  12% { opacity: 0.9; }
+  100% { transform: translateY(-190px) scale(0.4); opacity: 0; }
+}
+.lux-sbs-candles {
+  display: flex;
+  justify-content: center;
+  gap: 3rem;
+  margin-bottom: 0.9rem;
+}
+.lux-sbs-candle { position: relative; width: 26px; height: 96px; }
+.lux-sbs-body {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  height: 62px;
+  border-radius: 6px 6px 8px 8px;
+  background: linear-gradient(180deg, #fdf6e3, #e8d9b8);
+  box-shadow: inset -4px 0 8px rgba(161, 118, 42, 0.25);
+}
+.lux-sbs-wick {
+  position: absolute;
+  bottom: 60px;
+  left: 50%;
+  width: 2px;
+  height: 7px;
+  background: #3f2d10;
+  transform: translateX(-50%);
+}
+.lux-sbs-flame {
+  position: absolute;
+  bottom: 65px;
+  left: 50%;
+  width: 16px;
+  height: 30px;
+  transform: translateX(-50%);
+  background: radial-gradient(circle at 50% 78%, #fff7d6 0%, #ffd35c 42%, #ff9d2e 68%, rgba(255, 110, 40, 0) 100%);
+  border-radius: 50% 50% 48% 52% / 62% 62% 38% 38%;
+  animation: lux-flame 0.9s ease-in-out infinite alternate;
+  transform-origin: 50% 100%;
+}
+.lux-sbs-glow {
+  position: absolute;
+  bottom: 46px;
+  left: 50%;
+  width: 78px;
+  height: 78px;
+  transform: translate(-50%, 0);
+  background: radial-gradient(circle, rgba(255, 190, 90, 0.35) 0%, transparent 70%);
+  border-radius: 50%;
+  animation: lux-flame-glow 1.8s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+@keyframes lux-flame {
+  from { transform: translateX(-50%) scale(1) rotate(-2.5deg); }
+  40% { transform: translateX(-52%) scale(1.06, 0.96) rotate(2deg); }
+  to { transform: translateX(-48%) scale(0.95, 1.08) rotate(-1.5deg); }
+}
+@keyframes lux-flame-glow {
+  from { opacity: 0.75; transform: translate(-50%, 0) scale(1); }
+  to { opacity: 1; transform: translate(-50%, -4px) scale(1.12); }
+}
+.lux-sbs-title {
+  text-align: center;
+  color: #f2d98a;
+  font-family: var(--lux-serif);
+  font-weight: 900;
+  font-size: clamp(1.7rem, 7vw, 2.3rem);
+  text-shadow: 0 0 26px rgba(232, 193, 90, 0.45);
+  margin-bottom: 0.2rem;
+}
+.lux-sbs-parsha {
+  text-align: center;
+  color: rgba(191, 219, 254, 0.9);
+  font-weight: 700;
+  font-size: 0.95rem;
+  margin-bottom: 0.45rem;
+}
+.lux-sbs-times {
+  text-align: center;
+  color: rgba(226, 232, 240, 0.85);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.lux-sbs-times b { color: #f2d98a; }
+/* הספירה לאחור מקבלת הדגשה כשמצב שבת פעיל */
+body.lux-shabbat-scene-on #shabbat-countdown-wrap {
+  background: rgba(232, 193, 90, 0.1);
+  border: 1px solid rgba(224, 183, 79, 0.45);
+  border-radius: 1.2rem;
+  padding: 0.55rem 1.2rem;
+  box-shadow: 0 0 24px rgba(224, 183, 79, 0.22);
+}
+body.lux-shabbat-scene-on #countdown-display {
+  color: #f2d98a !important;
+  text-shadow: 0 0 18px rgba(232, 193, 90, 0.5);
+}
+
+/* ── כפתור הסטוריז — בסרגל העליון, ליד השיתוף והמצפן ── */
+#lux-story-ring {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+.lux-sr-ring {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  padding: 3px;
+  background: conic-gradient(#e0b74f, #f2d98a, #c9993a, #fdf3d0, #e0b74f);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: lux-sr-pulse 2.4s ease-in-out infinite;
+  box-shadow: 0 0 16px rgba(224, 183, 79, 0.45);
+}
+@keyframes lux-sr-pulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 12px rgba(224, 183, 79, 0.4); }
+  50% { transform: scale(1.07); box-shadow: 0 0 22px rgba(224, 183, 79, 0.7); }
+}
+.lux-sr-inner {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: linear-gradient(160deg, #0c1530, #16233f);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.05rem;
+}
+@media (prefers-reduced-motion: reduce) {
+  .lux-sr-ring { animation: none; }
+}
+
+/* ── הסטוריז עצמם ── */
+#lux-stories {
+  position: fixed;
+  inset: 0;
+  z-index: 14000;
+  background: #04070f;
+  direction: rtl;
+  overflow: hidden;
+  animation: lux-st-in 0.28s ease;
+  touch-action: pan-y;
+}
+@keyframes lux-st-in {
+  from { opacity: 0; transform: scale(1.04); }
+  to { opacity: 1; transform: none; }
+}
+.lux-st-bars {
+  position: absolute;
+  top: calc(0.6rem + env(safe-area-inset-top));
+  left: 0.7rem;
+  right: 0.7rem;
+  display: flex;
+  gap: 4px;
+  z-index: 5;
+}
+.lux-st-bar {
+  flex: 1;
+  height: 3.5px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.22);
+  overflow: hidden;
+  direction: ltr;
+}
+.lux-st-bar i {
+  display: block;
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #e0b74f, #f2d98a);
+  border-radius: 2px;
+}
+.lux-st-bar.lux-st-done i { width: 100%; }
+@keyframes lux-st-fill { from { width: 0%; } to { width: 100%; } }
+.lux-st-x {
+  position: absolute;
+  top: calc(1.4rem + env(safe-area-inset-top));
+  left: 1rem;
+  z-index: 6;
+  background: rgba(255, 255, 255, 0.12);
+  border: none;
+  border-radius: 50%;
+  width: 2.3rem;
+  height: 2.3rem;
+  color: #fff;
+  font-size: 1rem;
+  cursor: pointer;
+}
+.lux-st-tap {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 38%;
+  z-index: 4;
+}
+.lux-st-tap-next { left: 0; }
+.lux-st-tap-prev { right: 0; }
+.lux-st-slide {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 3.5rem 1.6rem;
+  animation: lux-st-slide-in 0.4s ease;
+  background:
+    radial-gradient(ellipse 120% 60% at 50% -5%, rgba(232, 193, 90, 0.14) 0%, transparent 55%),
+    linear-gradient(165deg, #050b1a 0%, #0c1530 55%, #16233f 100%);
+}
+@keyframes lux-st-slide-in {
+  from { opacity: 0; transform: translateX(-14px); }
+  to { opacity: 1; transform: none; }
+}
+.lux-st-slide.lux-st-pearl {
+  background:
+    radial-gradient(ellipse 120% 60% at 50% -5%, rgba(167, 139, 250, 0.16) 0%, transparent 55%),
+    linear-gradient(165deg, #0c0a1f 0%, #1e1b4b 60%, #0c0a1f 100%);
+}
+.lux-st-slide.lux-st-selichot {
+  background:
+    radial-gradient(ellipse 120% 60% at 50% -5%, rgba(232, 193, 90, 0.2) 0%, transparent 55%),
+    linear-gradient(165deg, #1a1205 0%, #2b1d08 55%, #16233f 100%);
+}
+.lux-st-big {
+  font-size: 3.4rem;
+  margin-bottom: 0.8rem;
+  filter: drop-shadow(0 0 18px rgba(232, 193, 90, 0.4));
+  animation: lux-season-float 3.5s ease-in-out infinite alternate;
+}
+.lux-st-slide h2 {
+  color: #f2d98a;
+  font-family: var(--lux-serif);
+  font-weight: 900;
+  font-size: clamp(1.7rem, 7.5vw, 2.4rem);
+  margin: 0 0 0.7rem;
+  text-shadow: 0 0 30px rgba(232, 193, 90, 0.35);
+}
+.lux-st-heb {
+  color: #fff;
+  font-size: 1.25rem;
+  font-weight: 800;
+  margin: 0 0 0.3rem;
+}
+.lux-st-sub {
+  color: rgba(191, 219, 254, 0.75);
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 0.3rem 0 0;
+}
+.lux-st-line {
+  color: #e8eefc;
+  font-size: 1.12rem;
+  line-height: 1.9;
+  font-weight: 600;
+  margin: 0.3rem 0;
+}
+.lux-st-line b, .lux-st-range { color: #f2d98a; }
+.lux-st-range { font-size: 1.5rem; display: inline-block; margin-top: 0.4rem; }
+.lux-st-next {
+  color: #f2d98a;
+  font-weight: 800;
+  font-size: 1.05rem;
+  background: rgba(232, 193, 90, 0.12);
+  border: 1px solid rgba(224, 183, 79, 0.4);
+  padding: 0.5rem 1.1rem;
+  border-radius: 999px;
+  margin: 0 0 1rem;
+}
+.lux-st-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+  max-width: 330px;
+}
+.lux-st-chip {
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(148, 180, 255, 0.25);
+  color: #dbe7ff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 0.45rem 0.85rem;
+  border-radius: 999px;
+}
+.lux-st-chip b { color: #f2d98a; }
+.lux-st-quote {
+  color: #fff;
+  font-family: var(--lux-serif);
+  font-size: clamp(1.15rem, 5vw, 1.5rem);
+  line-height: 2;
+  font-weight: 700;
+  max-width: 340px;
+  margin: 0 0 0.8rem;
+}
+.lux-st-src { color: rgba(196, 181, 253, 0.85); font-size: 0.85rem; font-weight: 700; }
+.lux-st-ctas {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  margin-top: 1.4rem;
+  z-index: 6;
+  position: relative;
+  width: min(88vw, 300px);
+}
+.lux-st-cta {
+  border: none;
+  cursor: pointer;
+  background: linear-gradient(135deg, #e0b74f, #c9993a);
+  color: #211603;
+  font-weight: 900;
+  font-size: 0.95rem;
+  padding: 0.75rem 1.4rem;
+  border-radius: 1rem;
+  box-shadow: 0 8px 24px rgba(224, 183, 79, 0.45);
+  width: 100%;
+}
+.lux-st-cta:active { transform: scale(0.97); }
+
+/* ── מתג הגדרות (סוויץ') ── */
+.lux-sw {
+  width: 42px;
+  height: 24px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.4);
+  position: relative;
+  transition: background 0.25s ease;
+  flex-shrink: 0;
+  display: inline-block;
+}
+.lux-sw-dot {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.25s ease;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+.lux-sw-on { background: linear-gradient(135deg, #e0b74f, #c9993a); }
+.lux-sw-on .lux-sw-dot { transform: translateX(-18px); }
+
+/* ── שעון הלכתי ── */
+#lux-hc-btn {
+  border: 1px solid rgba(224, 183, 79, 0.5);
+  background: rgba(232, 193, 90, 0.1);
+  color: #c9993a;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  cursor: pointer;
+  margin-inline-end: 0.4rem;
+}
+.lux-hc-num { fill: #7a5c1a; font-size: 16px; font-weight: 800; font-family: 'Frank Ruhl Libre', serif; }
+.lux-hc-num-n { fill: #d9c48a; }
+.lux-hc-tick { stroke: rgba(161, 118, 42, 0.6); stroke-width: 2; }
+.lux-hc-hand {
+  stroke: url(#lux-hch);
+  stroke-width: 5;
+  stroke-linecap: round;
+}
+.lux-hc-mark {
+  fill: #e0b74f;
+  stroke: #a1762a;
+  stroke-width: 1;
+}
+.lux-hc-mark-past { fill: rgba(148, 163, 184, 0.45); }
+.lux-hc-mklbl { fill: rgba(122, 92, 26, 0.85); font-size: 8.5px; font-weight: 800; }
+.lux-hc-mklbl-n { fill: rgba(217, 196, 138, 0.85); }
+.lux-hc-mklbl-past { opacity: 0.45; }
+.lux-hc-dig {
+  fill: #7a3c09;
+  font-size: 16px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+.lux-hc-dig-n { fill: #f2d98a; }
+.lux-hc-sub2 { fill: #a1762a; font-size: 10px; font-weight: 800; }
+.lux-hc-mode { fill: #a1762a; font-size: 13px; font-weight: 900; }
+.lux-hc-mode-n { fill: #d9c48a; }
+.lux-hc-spin { animation: lux-hc-rot 60s linear infinite; }
+@keyframes lux-hc-rot { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .lux-hc-spin { animation: none; } }
+/* תגית מצב השעון — מעל לשעון, לא מתנגשת בציור */
+.lux-hc-badge {
+  width: fit-content;
+  margin: 0 auto 0.6rem;
+  font-size: 0.82rem;
+  font-weight: 900;
+  color: #7a5c1a;
+  background: rgba(232, 193, 90, 0.16);
+  border: 1px solid rgba(201, 153, 58, 0.45);
+  border-radius: 999px;
+  padding: 0.3rem 1rem;
+}
+.lux-hc-badge-n {
+  color: #dbe7ff;
+  background: rgba(16, 26, 53, 0.75);
+  border-color: rgba(148, 180, 255, 0.35);
+}
+.lux-hc-next {
+  text-align: center;
+  font-weight: 800;
+  font-size: 0.92rem;
+  color: #a1762a;
+  background: rgba(232, 193, 90, 0.12);
+  border: 1px solid rgba(201, 153, 58, 0.35);
+  border-radius: 999px;
+  padding: 0.45rem 1rem;
+  margin-bottom: 0.6rem;
+}
+html.dark .lux-hc-next { color: #f2d98a; }
+.lux-hc-next b { color: #b45309; }
+html.dark .lux-hc-next b { color: #fdf3d0; }
+.lux-hc-pbar {
+  height: 7px;
+  border-radius: 4px;
+  background: rgba(201, 153, 58, 0.18);
+  overflow: hidden;
+}
+.lux-hc-pfill {
+  height: 100%;
+  background: linear-gradient(90deg, #c9993a, #f2d98a);
+  border-radius: 4px;
+  box-shadow: 0 0 8px rgba(224, 183, 79, 0.6);
+  transition: width 1s linear;
+}
+.lux-hc-pct {
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  opacity: 0.75;
+  margin: 0.25rem 0 0.5rem;
+}
+#lux-hc-info { margin-top: 0.8rem; }
+.lux-hc-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.45rem 0.2rem;
+  border-bottom: 1px dashed rgba(161, 118, 42, 0.25);
+  font-size: 0.9rem;
+  color: inherit;
+}
+.lux-hc-row b { color: #b45309; }
+html.dark .lux-hc-row b { color: #f2d98a; }
+.lux-hc-note {
+  margin-top: 0.6rem;
+  font-size: 0.75rem;
+  line-height: 1.7;
+  opacity: 0.75;
+}
+
+/* ── כרטיס שנה טובה ── */
+.lux-sn-designs {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.45rem;
+  margin-bottom: 0.6rem;
+}
+.lux-sn-d {
+  border: 2px solid transparent;
+  border-radius: 0.8rem;
+  padding: 0.7rem 0.3rem;
+  font-weight: 800;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.lux-sn-d-on {
+  border-color: #e0b74f;
+  box-shadow: 0 0 0 2px rgba(224, 183, 79, 0.35), 0 4px 14px rgba(224, 183, 79, 0.3);
+  transform: scale(1.04);
+}
+#lux-shana-entry {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  width: 100%;
+  margin: 0 0 1.5rem;
+  padding: 0.95rem 1.2rem;
+  border-radius: 1.4rem;
+  cursor: pointer;
+  direction: rtl;
+  text-align: right;
+  border: 1.5px dashed rgba(224, 183, 79, 0.6);
+  background: linear-gradient(135deg, rgba(232, 193, 90, 0.1), rgba(232, 193, 90, 0.04));
+  transition: all 0.2s ease;
+}
+#lux-shana-entry:hover { background: rgba(232, 193, 90, 0.16); }
+.lux-se-emo { font-size: 1.7rem; flex-shrink: 0; }
+.lux-se-txt { flex: 1; display: flex; flex-direction: column; }
+.lux-se-txt b { color: #a1762a; font-size: 0.98rem; }
+html.dark .lux-se-txt b { color: #f2d98a; }
+.lux-se-txt small { color: #94a3b8; font-size: 0.75rem; margin-top: 0.1rem; }
+.lux-se-go { color: #c9993a; font-weight: 900; font-size: 1.1rem; }
+
+/* ── ממיר תאריכים ── */
+.lux-dt-sec { margin-bottom: 1rem; text-align: right; }
+.lux-dt-sec h4 {
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: #a1762a;
+  margin: 0 0 0.45rem;
+}
+html.dark .lux-dt-sec h4 { color: #f2d98a; }
+.lux-dt-out {
+  margin-top: 0.45rem;
+  padding: 0.6rem 0.8rem;
+  border-radius: 0.8rem;
+  background: rgba(232, 193, 90, 0.1);
+  border: 1px solid rgba(201, 153, 58, 0.3);
+  font-size: 0.88rem;
+  line-height: 1.7;
+  min-height: 1.4rem;
+}
+.lux-dt-out b { color: #b45309; }
+html.dark .lux-dt-out b { color: #f2d98a; }
+
+/* ── מסלולי הלימוד היומיים ── */
+#lux-tracks-row { margin: 0 0 1.6rem; }
+.lux-tracks-title {
+  font-size: 1.02rem;
+  font-weight: 900;
+  color: #a1762a;
+  margin: 0 0 0.6rem;
+  text-align: right;
+}
+html.dark .lux-tracks-title { color: #f2d98a; }
+.lux-tracks-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.6rem;
+}
+.lux-track-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.85rem 0.5rem 0.7rem;
+  border-radius: 1.2rem;
+  cursor: pointer;
+  border: 1.5px solid rgba(201, 153, 58, 0.35);
+  background: linear-gradient(165deg, #fffdf6, #faf3df);
+  box-shadow: 0 4px 14px rgba(161, 118, 42, 0.12);
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+  text-align: center;
+}
+.lux-track-card:hover { transform: translateY(-3px); box-shadow: 0 8px 22px rgba(161, 118, 42, 0.22); }
+.lux-track-card:active { transform: scale(0.97); }
+html.dark .lux-track-card {
+  background: linear-gradient(165deg, #101a35, #0c1530);
+  border-color: rgba(224, 183, 79, 0.3);
+}
+.lux-tc-icon { font-size: 1.6rem; }
+.lux-tc-name { font-weight: 900; font-size: 0.9rem; color: var(--tc, #1d4ed8); }
+html.dark .lux-tc-name { color: #f2d98a; }
+.lux-tc-ref {
+  font-size: 0.68rem;
+  color: #94a3b8;
+  font-weight: 600;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lux-tc-badge {
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: #a1762a;
+  background: rgba(232, 193, 90, 0.15);
+  border: 1px solid rgba(201, 153, 58, 0.3);
+  padding: 0.18rem 0.6rem;
+  border-radius: 999px;
+  margin-top: 0.15rem;
+}
+.lux-tc-badge.lux-tc-done {
+  background: linear-gradient(135deg, #e0b74f, #c9993a);
+  color: #211603;
+  border-color: #a1762a;
+}
+@media (max-width: 480px) {
+  .lux-tc-ref { display: none; }
+  .lux-tracks-grid { gap: 0.45rem; }
+  .lux-tc-name { font-size: 0.82rem; }
+}
+/* ═══════════════════════════════════════════════════════════════════
+   LUX 7 — שעון הלכתי מלא, כרטיסי ברכה משודרגים, המרת תאריכים,
+   גרירת כפתורי תפילה חלקה
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── השעון ההלכתי: לוח כל זמני היום ── */
+#lux-hc-modal .lux-sheet { max-width: 600px; }
+.lux-hc-sched {
+  margin-top: 1.1rem;
+  text-align: right;
+}
+.lux-hc-sched-title {
+  font-family: 'Frank Ruhl Libre', serif;
+  font-size: 1rem;
+  font-weight: 900;
+  color: #7a5c1a;
+  margin: 0 0 0.55rem;
+  text-align: center;
+}
+html.dark .lux-hc-sched-title { color: #f2d98a; }
+.lux-hc-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.32rem;
+}
+@media (min-width: 540px) {
+  .lux-hc-grid { grid-template-columns: 1fr 1fr; }
+}
+.lux-hc-zrow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.45rem;
+  padding: 0.42rem 0.7rem;
+  border-radius: 0.7rem;
+  background: linear-gradient(135deg, #fdf9ec, #f7efdb);
+  border: 1px solid rgba(201, 153, 58, 0.28);
+  font-size: 0.83rem;
+  font-weight: 700;
+  color: #3d2f0e;
+  min-width: 0;
+}
+.lux-hc-zname {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lux-hc-zemo { flex-shrink: 0; }
+.lux-hc-ztime {
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  color: #7a5c1a;
+  flex-shrink: 0;
+  direction: ltr;
+}
+.lux-hc-zpast { opacity: 0.55; }
+.lux-hc-zpast .lux-hc-ztime { color: #059669; }
+.lux-hc-znext {
+  background: linear-gradient(135deg, #f9edc8, #f2dfa4);
+  border-color: #c9993a;
+  box-shadow: 0 3px 12px rgba(224, 183, 79, 0.35);
+}
+.lux-hc-zin {
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: #92400e;
+  background: rgba(255, 255, 255, 0.65);
+  border: 1px solid rgba(201, 153, 58, 0.4);
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+html.dark .lux-hc-zrow {
+  background: linear-gradient(135deg, #16233f, #101a35);
+  border-color: rgba(224, 183, 79, 0.22);
+  color: #e2e8f0;
+}
+html.dark .lux-hc-ztime { color: #f2d98a; }
+html.dark .lux-hc-znext {
+  background: linear-gradient(135deg, #2a2410, #3a3012);
+  border-color: #c9993a;
+}
+html.dark .lux-hc-zin {
+  background: rgba(0, 0, 0, 0.35);
+  color: #f2d98a;
+}
+
+/* ── מחולל כרטיסי הברכה: בחירת פונט ── */
+.lux-sn-fonts {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin: 0.15rem 0 0.5rem;
+}
+.lux-sn-f {
+  border: 1.5px solid rgba(201, 153, 58, 0.4);
+  background: #fdfaf1;
+  color: #3d2f0e;
+  font-size: 1rem;
+  font-weight: 700;
+  padding: 0.3rem 0.85rem;
+  border-radius: 0.7rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.lux-sn-f-on {
+  background: linear-gradient(135deg, #e0b74f, #c9993a);
+  color: #211603;
+  border-color: #a1762a;
+  box-shadow: 0 3px 10px rgba(224, 183, 79, 0.4);
+}
+html.dark .lux-sn-f { background: #16233f; color: #e2e8f0; }
+html.dark .lux-sn-f-on {
+  background: linear-gradient(135deg, #e0b74f, #c9993a);
+  color: #211603;
+}
+
+/* ── המרת תאריכים: תוצאות מעוצבות ── */
+.lux-dt-big {
+  font-family: 'Frank Ruhl Libre', serif;
+  font-size: 1.08rem;
+  font-weight: 900;
+  color: #3d2f0e;
+  margin-bottom: 0.2rem;
+}
+html.dark .lux-dt-big { color: #f2d98a; }
+.lux-dt-chip {
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: #1e40af;
+  background: rgba(191, 219, 254, 0.5);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  padding: 0.1rem 0.55rem;
+  border-radius: 999px;
+  margin-inline-start: 0.3rem;
+  white-space: nowrap;
+}
+.lux-dt-chip-today {
+  color: #166534;
+  background: rgba(187, 247, 208, 0.6);
+  border-color: rgba(22, 163, 74, 0.4);
+}
+.lux-dt-chip-past {
+  color: #6b7280;
+  background: rgba(229, 231, 235, 0.6);
+  border-color: rgba(107, 114, 128, 0.3);
+}
+html.dark .lux-dt-chip { background: rgba(30, 58, 138, 0.4); color: #93c5fd; }
+html.dark .lux-dt-chip-today { background: rgba(20, 83, 45, 0.5); color: #86efac; }
+html.dark .lux-dt-chip-past { background: rgba(55, 65, 81, 0.5); color: #9ca3af; }
+.lux-dt-evs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.4rem;
+}
+.lux-dt-ev {
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: #7a5c1a;
+  background: rgba(232, 193, 90, 0.18);
+  border: 1px solid rgba(201, 153, 58, 0.35);
+  padding: 0.14rem 0.6rem;
+  border-radius: 999px;
+}
+html.dark .lux-dt-ev { color: #f2d98a; background: rgba(232, 193, 90, 0.12); }
+.lux-dt-actions {
+  display: flex;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+.lux-dt-mini {
+  border: 1px solid rgba(201, 153, 58, 0.45);
+  background: rgba(253, 249, 236, 0.9);
+  color: #7a5c1a;
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 0.28rem 0.7rem;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.lux-dt-mini:active { transform: scale(0.95); }
+html.dark .lux-dt-mini { background: #16233f; color: #f2d98a; border-color: rgba(224, 183, 79, 0.35); }
+.lux-dt-occ-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.lux-dt-occ {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  padding: 0.35rem 0.6rem;
+  border-radius: 0.6rem;
+  background: rgba(253, 249, 236, 0.75);
+  border: 1px solid rgba(201, 153, 58, 0.22);
+  color: #3d2f0e;
+}
+.lux-dt-occ-first {
+  background: linear-gradient(135deg, #f9edc8, #f2dfa4);
+  border-color: #c9993a;
+  font-weight: 800;
+}
+html.dark .lux-dt-occ { background: #16233f; color: #e2e8f0; border-color: rgba(224, 183, 79, 0.2); }
+html.dark .lux-dt-occ-first { background: linear-gradient(135deg, #2a2410, #3a3012); border-color: #c9993a; }
+
+/* ── סידור כפתורי התפילות: גרירה חלקה ── */
+.po-tile { transition: none; }
+.po-tile.po-dragging { box-shadow: inset 0 0 0 2px rgba(251, 191, 36, 0.6); border-radius: 0.8rem; }
+
+/* ── תחתית קוראי הסליחות/מסלולים — לא נשברת במסכים צרים ── */
+.lux-sel-foot { flex-wrap: wrap; }

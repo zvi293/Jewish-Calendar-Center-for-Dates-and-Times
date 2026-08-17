@@ -653,7 +653,8 @@
           if (!raw) return null;
           const obj = JSON.parse(raw);
           if (!obj || typeof obj.lat !== "number" || typeof obj.lon !== "number") return null;
-          if (!obj.ts || (Date.now() - obj.ts) > LS_LOC_TTL_MS) return null;
+          // מיקום שמור משמש תמיד — גם ישן — כדי לא לבקש אישור מחדש.
+          // רענון אמיתי מתבצע ברקע (startFlow) רק כשההרשאה כבר קיימת.
           return obj;
         } catch(e) { return null; }
       }
@@ -1344,6 +1345,29 @@
       }
 
       // ── Startup flow ──────────────────────────────────
+      // רענון מיקום שקט ברקע — רק כשהרשאת המיקום כבר מאושרת (בלי חלון קופץ).
+      // אם המשתמש זז יותר מק"מ — מעדכנים את התוצאות אוטומטית.
+      function silentLocationRefresh(prevLat, prevLon) {
+        try {
+          if (!navigator.permissions || !navigator.permissions.query) return;
+          navigator.permissions.query({ name: "geolocation" }).then((st) => {
+            if (st.state !== "granted") return;
+            requestGeolocation().then(({ lat, lon }) => {
+              saveLocationCache(lat, lon, null);
+              const movedKm = haversineKm(lat, lon, prevLat, prevLon);
+              if (movedKm > 1) {
+                userLat = lat; userLon = lon;
+                updateLocationLabel(lat, lon, null);
+                reverseGeocode(lat, lon).then(addr => {
+                  if (addr) { updateLocationLabel(lat, lon, addr); saveLocationCache(lat, lon, addr); }
+                }).catch(() => {});
+                fetchAndRender();
+              }
+            }).catch(() => {});
+          }).catch(() => {});
+        } catch (e) {}
+      }
+
       async function startFlow(forceFresh = false) {
         const cached = !forceFresh ? loadCachedLocation() : null;
         if (cached) {
@@ -1358,6 +1382,7 @@
               }
             }).catch(() => {});
           }
+          silentLocationRefresh(cached.lat, cached.lon);
           await fetchAndRender();
           return;
         }

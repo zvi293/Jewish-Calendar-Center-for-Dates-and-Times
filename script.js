@@ -3039,6 +3039,7 @@ async function fetchLiveCalendarData() {
         else if (ev.title.includes("Lag B'Omer")) icon = "🔥";
         else if (ev.title.includes("Tu B'Av")) icon = "💖";
         else if (ev.title.includes("Tu BiShvat")) icon = "🌳";
+        else if (ev.title.includes("Leil Selichot")) icon = "🕊️";
       } else if (ev.category === "modern" || ev.category === "israel") {
         // ימי זיכרון ואירועים לאומיים
         type = "minor";
@@ -3068,7 +3069,10 @@ async function fetchLiveCalendarData() {
         icon = "📖";
       } else return;
 
-      const evName = CURRENT_LANG === "he" ? ev.hebrew : ev.title;
+      const evName = normalizeEventName(
+        CURRENT_LANG === "he" ? ev.hebrew : ev.title,
+        ev.title,
+      );
       if (!newEvents.some((x) => x.name === evName && x.date === ev.date)) {
         newEvents.push({
           name: evName,
@@ -3080,6 +3084,9 @@ async function fetchLiveCalendarData() {
         });
       }
     });
+
+    // ── סליחות לפי עדות המזרח — מתחילות בא' באלול (29 יום לפני ר"ה) ──
+    injectSephardicSelichot(newEvents);
 
     ALL_EVENTS = newEvents
       .filter((e) => {
@@ -3173,6 +3180,57 @@ async function fetchLiveCalendarData() {
       document.getElementById("loading-state").innerHTML =
         '<p class="text-red-400 font-bold">לא ניתן למשוך נתונים כעת. בדוק חיבור אינטרנט.</p>';
   }
+}
+
+// ── אחידות שמות אירועים: ראש השנה א'/ב' וסליחות לפי נוסח ──────
+function normalizeEventName(name, title) {
+  var n = String(name || "");
+  var t = String(title || "");
+  if (/^Erev Rosh Hashana$/i.test(t)) return "ערב ראש השנה";
+  if (/^Rosh Hashana II$/i.test(t)) return "ראש השנה ב'";
+  if (/^Rosh Hashana \d{4}$/i.test(t)) return "ראש השנה א'";
+  if (/^Leil Selichot$/i.test(t)) return "סליחות לפי אשכנז";
+  // גיבוי לפי השם העברי — למקרה שאין title (מטמון ישן)
+  if (/^ראש השנה \d{4}$/.test(n)) return "ראש השנה א'";
+  return n;
+}
+
+// ── הוספת אירוע "סליחות לפי עדות המזרח" בא' באלול לכל שנה ──────
+// אלול הוא תמיד בן 29 יום, לכן א' באלול = 29 יום לפני א' בתשרי (ר"ה).
+function injectSephardicSelichot(list) {
+  try {
+    var seen = {};
+    list
+      .filter(function (x) {
+        return /^Rosh Hashana \d{4}$/i.test(x.titleStr || "") || x.name === "ראש השנה א'";
+      })
+      .forEach(function (rh) {
+        var d = new Date(rh.date);
+        if (isNaN(d)) return;
+        d.setDate(d.getDate() - 29);
+        var iso =
+          d.getFullYear() +
+          "-" +
+          String(d.getMonth() + 1).padStart(2, "0") +
+          "-" +
+          String(d.getDate()).padStart(2, "0");
+        if (seen[iso]) return;
+        seen[iso] = true;
+        var exists = list.some(function (x) {
+          return x.name === "סליחות לפי עדות המזרח" && x.date === iso;
+        });
+        if (!exists) {
+          list.push({
+            name: "סליחות לפי עדות המזרח",
+            date: iso,
+            type: "minor",
+            heb: "סליחות לפי עדות המזרח",
+            icon: "🕊️",
+            titleStr: "Selichot Edot HaMizrach",
+          });
+        }
+      });
+  } catch (e) {}
 }
 
 function showDashboard() {
@@ -5481,13 +5539,15 @@ async function ensureYearFetched(year) {
         }
       }
       parsed.push({
-        name: name,
+        name: normalizeEventName(name, ev.title),
         date: ev.date,
         type: type,
         heb: ev.hebrew || "",
         icon: icon,
+        titleStr: ev.title || "",
       });
     });
+    injectSephardicSelichot(parsed);
     if (!window.ALL_EVENTS_FULL) window.ALL_EVENTS_FULL = [];
     window.ALL_EVENTS_FULL = window.ALL_EVENTS_FULL.filter(function (e) {
       return !e.date.startsWith(year + "-");

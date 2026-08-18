@@ -293,7 +293,7 @@
     }, { passive: true });
   });
 
-  /* ── 7. פס התקדמות קריאה + כפתורי מצב לימוד/לילה בקוראי הספרים ── */
+  /* ── 7. פס התקדמות קריאה בקוראי הספרים ── */
   var READER_IDS = [
     "sefaria-modal", "chok-israel-modal", "tehillim-modal", "sn-modal",
     "ben-ish-hai-modal", "shir-hashirim-modal",
@@ -322,69 +322,20 @@
       if (!modal.contains(bar)) { modal.appendChild(bar); fill = bar.firstChild; }
       fill.style.width = Math.min(100, (t.scrollTop / max) * 100) + "%";
     }, true);
-    // כפתורי לימוד/לילה — מוזרקים לסרגל הגופן אם קיים
-    // (כולל "ספרים נוספים" — #sn-fs-label, בן איש חי — #bih-font-label,
-    //  וקוראי הסליחות/מסלולים — .lux-sel-foot)
+    // סרגל הגופן מקבל קלאס אחיד — משמש לגלישת שורות במובייל ולחישובי גובה
     var label = modal.querySelector(".font-size-label") ||
                 modal.querySelector("#sn-fs-label") ||
                 modal.querySelector("#bih-font-label");
     var hostBar = label ? label.parentElement : modal.querySelector(".lux-sel-foot");
-    if (hostBar) {
-      hostBar.classList.add("lux-font-bar");
-      var mk = function (icon, title, cls, storeKey) {
-        var b = document.createElement("button");
-        b.type = "button";
-        b.className = "lux-reader-toggle";
-        b.title = title;
-        b.setAttribute("aria-label", title);
-        b.textContent = icon;
-        b.addEventListener("click", function () {
-          var on = modal.classList.toggle(cls);
-          b.classList.toggle("lux-on", on);
-          try { localStorage.setItem(storeKey, on ? "1" : "0"); } catch (_) {}
-        });
-        hostBar.appendChild(b);
-        return b;
-      };
-      var bStudy = mk("📜", "מצב לימוד — תצוגת לימוד מוגדלת, ממורכזת ומרווחת", "lux-study", "lux_reader_study");
-      var bNight = mk("🌙", "קריאת לילה — קלף כהה", "lux-night", "lux_reader_night");
-      // פופאפ הסבר קצר בהפעלה הראשונה של מצב לימוד + חיווי בכל הפעלה
-      // הסבר על מצב הלימוד — מופיע בכל הפעלה של הכפתור
-      bStudy.addEventListener("click", function () {
-        var on = modal.classList.contains("lux-study");
-        if (on) {
-          showStudyInfoSheet();
-        } else if (typeof window.showToast === "function") {
-          window.showToast("מצב לימוד כובה", "info", 1800);
-        }
-      });
-      try {
-        if (localStorage.getItem("lux_reader_study") === "1") { modal.classList.add("lux-study"); bStudy.classList.add("lux-on"); }
-        if (localStorage.getItem("lux_reader_night") === "1") { modal.classList.add("lux-night"); bNight.classList.add("lux-on"); }
-      } catch (_) {}
-    }
-  }
-
-  /* הסבר "מצב לימוד" — מוצג פעם אחת בהפעלה הראשונה */
-  function showStudyInfoSheet() {
-    var ov = luxSheet("lux-study-info",
-      '<div style="font-size:2.4rem;margin-bottom:0.4rem;">📜</div>' +
-      '<h3 class="lux-sheet-title">מצב לימוד</h3>' +
-      '<p class="lux-sheet-note" style="text-align:right;line-height:1.9;">' +
-        'תצוגה מיוחדת שנועדה ללימוד וקריאה רצופה ונינוחה:<br>' +
-        '✦ <b>הטקסט מוגדל</b> וממורכז בשורות נוחות לעין<br>' +
-        '✦ <b>ריווח שורות מוגבר</b> — קל יותר לעקוב אחרי הקריאה<br>' +
-        '✦ <b>עימוד רגוע</b> שמסתיר הסחות דעת מסביב לטקסט<br><br>' +
-        'לחיצה נוספת על הכפתור 📜 מחזירה לתצוגה הרגילה.' +
-      '</p>' +
-      '<div class="lux-sheet-actions">' +
-        '<button type="button" class="lux-sheet-primary" id="lux-study-ok">הבנתי, ללימוד נעים 🙌</button>' +
-      "</div>");
-    if (!ov) return;
-    ov.querySelector("#lux-study-ok").addEventListener("click", function () { luxModalClose("lux-study-info"); });
+    if (hostBar) hostBar.classList.add("lux-font-bar");
   }
 
   safe("readers", function () {
+    // ניקוי מפתחות של מצבי לימוד/לילה שהוסרו מהאתר
+    try {
+      localStorage.removeItem("lux_reader_study");
+      localStorage.removeItem("lux_reader_night");
+    } catch (_) {}
     READER_IDS.forEach(function (id) {
       var el = document.getElementById(id);
       if (el) enhanceReader(el);
@@ -914,7 +865,7 @@
         if (yNum) {
           // גימטריה ללא האלפים: 5786 → תשפ"ו
           var n = yNum % 1000;
-          var tbl = [[400, "ת"], [300, "ש"], [200, "ר"], [100, "ק"], [90, "צ"], [80, "פ"], [70, "ע"], [60, "ס"], [50, "נ"], [40, "מ"], [30, "ל"], [20, "כ"], [16, "טז"], [15, "טו"], [10, "י"], [9, "ט"], [8, "ח"], [7, "ז"], [6, "ו"], [5, "ה"], [4, "ד"], [3, "ג"], [2, "ב"], [1, "א"]];
+          var tbl = [[400, "ת"], [300, "ש"], [200, "ר"], [100, "ק"], [90, "צ"], [80, "פ"], [70, "ע"], [60, "ס"], [50, "נ"], [40, "מ"], [30, "ל"], [20, "כ"], [19, "יט"], [18, "יח"], [17, "יז"], [16, "טז"], [15, "טו"], [10, "י"], [9, "ט"], [8, "ח"], [7, "ז"], [6, "ו"], [5, "ה"], [4, "ד"], [3, "ג"], [2, "ב"], [1, "א"]];
           var out = "";
           tbl.forEach(function (p) { while (n >= p[0]) { out += p[1]; n -= p[0]; } });
           hebYear = out.length > 1 ? out.slice(0, -1) + '"' + out.slice(-1) : out;
@@ -2747,11 +2698,13 @@
 
       var area = ov.querySelector(".lux-sel-area");
       // גודל גופן
-      var fs = parseInt(jget("lux_sel_font", 100), 10) || 100;
-      function applyFs() { area.style.setProperty("font-size", fs + "%", "important"); jset("lux_sel_font", fs); }
+      // גודל אחיד לכל האתר — אותו מפתח ואותו בסיס (25px ב-100%) כמו בכל הקוראים
+      var fs = parseInt(localStorage.getItem("moadim_prayer_font_size") || "100", 10) || 100;
+      if (fs < 60 || fs > 200) fs = 100;
+      function applyFs() { area.style.setProperty("font-size", (fs / 100) * 25 + "px", "important"); try { localStorage.setItem("moadim_prayer_font_size", fs); } catch (_) {} if (window._btnToastVal && applyFs._user) window._btnToastVal("גודל כתב: " + fs + "%"); applyFs._user = false; }
       applyFs();
-      ov.querySelector("#lux-sel-fplus").addEventListener("click", function () { fs = Math.min(180, fs + 10); applyFs(); });
-      ov.querySelector("#lux-sel-fminus").addEventListener("click", function () { fs = Math.max(70, fs - 10); applyFs(); });
+      ov.querySelector("#lux-sel-fplus").addEventListener("click", function () { fs = Math.min(200, fs + 10); applyFs._user = true; applyFs(); });
+      ov.querySelector("#lux-sel-fminus").addEventListener("click", function () { fs = Math.max(60, fs - 10); applyFs._user = true; applyFs(); });
       ov.querySelector(".lux-sel-close").addEventListener("click", function () { luxModalClose("lux-selichot-reader"); });
 
       if (nus.byDay) {
@@ -3704,7 +3657,7 @@
       // שנת היעד: השנה העברית הבאה (בגימטריה, בלי האלפים)
       var y = luxHebYear(new Date()) + 1;
       var n = y % 1000;
-      var tbl = [[400, "ת"], [300, "ש"], [200, "ר"], [100, "ק"], [90, "צ"], [80, "פ"], [70, "ע"], [60, "ס"], [50, "נ"], [40, "מ"], [30, "ל"], [20, "כ"], [16, "טז"], [15, "טו"], [10, "י"], [9, "ט"], [8, "ח"], [7, "ז"], [6, "ו"], [5, "ה"], [4, "ד"], [3, "ג"], [2, "ב"], [1, "א"]];
+      var tbl = [[400, "ת"], [300, "ש"], [200, "ר"], [100, "ק"], [90, "צ"], [80, "פ"], [70, "ע"], [60, "ס"], [50, "נ"], [40, "מ"], [30, "ל"], [20, "כ"], [19, "יט"], [18, "יח"], [17, "יז"], [16, "טז"], [15, "טו"], [10, "י"], [9, "ט"], [8, "ח"], [7, "ז"], [6, "ו"], [5, "ה"], [4, "ד"], [3, "ג"], [2, "ב"], [1, "א"]];
       var out = "";
       tbl.forEach(function (p) { while (n >= p[0]) { out += p[1]; n -= p[0]; } });
       return out.length > 1 ? out.slice(0, -1) + '"' + out.slice(-1) : out;
@@ -4441,11 +4394,13 @@
       luxModalOpen("lux-track-reader");
 
       var area = ov.querySelector("#lux-tr-area");
-      var fs = parseInt(jget("lux_sel_font", 100), 10) || 100;
-      function applyFs() { area.style.setProperty("font-size", fs + "%", "important"); jset("lux_sel_font", fs); }
+      // גודל אחיד לכל האתר — אותו מפתח ואותו בסיס (25px ב-100%) כמו בכל הקוראים
+      var fs = parseInt(localStorage.getItem("moadim_prayer_font_size") || "100", 10) || 100;
+      if (fs < 60 || fs > 200) fs = 100;
+      function applyFs() { area.style.setProperty("font-size", (fs / 100) * 25 + "px", "important"); try { localStorage.setItem("moadim_prayer_font_size", fs); } catch (_) {} if (window._btnToastVal && applyFs._user) window._btnToastVal("גודל כתב: " + fs + "%"); applyFs._user = false; }
       applyFs();
-      ov.querySelector("#lux-tr-fplus").addEventListener("click", function () { fs = Math.min(180, fs + 10); applyFs(); });
-      ov.querySelector("#lux-tr-fminus").addEventListener("click", function () { fs = Math.max(70, fs - 10); applyFs(); });
+      ov.querySelector("#lux-tr-fplus").addEventListener("click", function () { fs = Math.min(200, fs + 10); applyFs._user = true; applyFs(); });
+      ov.querySelector("#lux-tr-fminus").addEventListener("click", function () { fs = Math.max(60, fs - 10); applyFs._user = true; applyFs(); });
       ov.querySelector(".lux-sel-close").addEventListener("click", function () { luxModalClose("lux-track-reader"); });
       var doneBtn = ov.querySelector("#lux-tr-done");
       if (trackState(key).last === todayStr()) { doneBtn.classList.add("lux-tr-done-on"); doneBtn.textContent = "✓ הושלם היום"; }
@@ -4730,11 +4685,13 @@
       document.body.appendChild(ov);
       luxModalOpen("lux-plan-reader");
       var area = ov.querySelector("#lux-pl-area");
-      var fs = parseInt(jget("lux_sel_font", 100), 10) || 100;
-      function applyFs() { area.style.setProperty("font-size", fs + "%", "important"); jset("lux_sel_font", fs); }
+      // גודל אחיד לכל האתר — אותו מפתח ואותו בסיס (25px ב-100%) כמו בכל הקוראים
+      var fs = parseInt(localStorage.getItem("moadim_prayer_font_size") || "100", 10) || 100;
+      if (fs < 60 || fs > 200) fs = 100;
+      function applyFs() { area.style.setProperty("font-size", (fs / 100) * 25 + "px", "important"); try { localStorage.setItem("moadim_prayer_font_size", fs); } catch (_) {} if (window._btnToastVal && applyFs._user) window._btnToastVal("גודל כתב: " + fs + "%"); applyFs._user = false; }
       applyFs();
-      ov.querySelector("#lux-pl-fplus").addEventListener("click", function () { fs = Math.min(200, fs + 10); applyFs(); });
-      ov.querySelector("#lux-pl-fminus").addEventListener("click", function () { fs = Math.max(70, fs - 10); applyFs(); });
+      ov.querySelector("#lux-pl-fplus").addEventListener("click", function () { fs = Math.min(200, fs + 10); applyFs._user = true; applyFs(); });
+      ov.querySelector("#lux-pl-fminus").addEventListener("click", function () { fs = Math.max(60, fs - 10); applyFs._user = true; applyFs(); });
       ov.querySelector(".lux-sel-close").addEventListener("click", function () { luxModalClose("lux-plan-reader"); });
       var doneBtn = ov.querySelector("#lux-pl-done");
       if (doneToday) doneBtn.classList.add("lux-tr-done-on");
@@ -5145,7 +5102,7 @@
       else nav.insertAdjacentElement("beforebegin", row);
       renderRow();
     }
-    // הקורא החדש מקבל גם פס התקדמות ומצב לימוד/לילה
+    // הקורא החדש מקבל גם פס התקדמות
     try { READER_IDS.push("lux-plan-reader"); } catch (e) {}
     injectRow2();
     setTimeout(injectRow2, 2600);

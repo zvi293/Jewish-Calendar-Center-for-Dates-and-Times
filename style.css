@@ -838,9 +838,6 @@
   border-radius: 5px;
   box-shadow: 0 0 0 3px rgba(254, 240, 138, 0.2);
 }
-.lux-night .lux-mark-hl {
-  background: linear-gradient(to bottom, transparent 6%, rgba(202, 138, 4, 0.4) 6%, rgba(202, 138, 4, 0.4) 90%, transparent 90%) !important;
-}
 /* ── אחידות גדלי אותיות בטקסטים (תפילות, ספרים, דף יומי, חוק לישראל) ──
    טקסטים מ-Sefaria מגיעים עם תגי big/small מקוננים שיוצרים אותיות ענק/זעירות.
    כאן מנרמלים: big קבוע ועדין, ומניעת הצטברות בקינון. ── */
@@ -1880,117 +1877,37 @@ html.lux-js #resultsGrid .event-card.lux-in:hover {
   }
 }
 
-/* ── כפתורי מצב לימוד / קריאת לילה ── */
-.lux-reader-toggle {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  border: 1.5px solid rgba(200, 155, 60, 0.35);
-  background: linear-gradient(135deg, #fdf9ec 0%, #f6eed7 100%);
-  color: #96691f;
-  font-size: 1rem;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 2px 6px rgba(200, 155, 60, 0.2);
-  transition: transform 0.15s ease, box-shadow 0.2s ease;
-  flex-shrink: 0;
-}
-.lux-reader-toggle:hover { transform: scale(1.08); }
-.lux-reader-toggle.lux-on {
-  background: linear-gradient(135deg, #f2d98a, #dfb254);
-  border-color: rgba(161, 118, 42, 0.7);
-  box-shadow: 0 0 0 2px rgba(224, 183, 79, 0.35), 0 2px 8px rgba(200, 155, 60, 0.35);
-}
-
-/* ── מצב לימוד — טקסט ספר ממורכז ומרווח ── */
-.lux-study .holy-text-style,
-.lux-study #sn-reader-content,
-.lux-study #psalm-text-area,
-.lux-study #shir-scroll-area > div,
-.lux-study #bih-content-area {
-  max-width: 44rem;
-  margin-inline: auto;
-  line-height: 2.25 !important;
-}
-.lux-study #sefaria-modal-content,
-.lux-study #chok-israel-modal-content {
-  padding-top: 1.5rem !important;
-}
-.lux-study .holy-text-style::before {
-  content: '✦';
-  display: block;
-  text-align: center;
-  color: #c9993a;
-  font-size: 0.8rem;
-  letter-spacing: 0.5em;
-  margin-bottom: 1.1rem;
-  opacity: 0.75;
-}
-@media (min-width: 768px) and (hover: hover) {
-  .lux-study > div:first-child {
-    opacity: 0.6;
-    transition: opacity 0.3s ease;
+/* ── תצוגת קריאה מסודרת — קבועה במובייל בכל הקוראים והתפילות ── */
+@media (max-width: 640px) {
+  .holy-text-style,
+  #sn-reader-content,
+  #psalm-text-area,
+  #shir-scroll-area > div,
+  #bih-content-area,
+  .lux-sel-area {
+    max-width: 44rem;
+    margin-inline: auto;
+    line-height: 2.45 !important;
+    letter-spacing: 0.012em;
   }
-  .lux-study > div:first-child:hover { opacity: 1; }
-}
-
-/* ── קריאת לילה — קלף כהה חם ── */
-.lux-night,
-#sefaria-modal.lux-night,
-#chok-israel-modal.lux-night,
-#tehillim-modal.lux-night,
-#sn-modal.lux-night,
-#ben-ish-hai-modal.lux-night,
-#shir-hashirim-modal.lux-night {
-  background: #181008 !important;
-}
-.lux-night > div,
-#sefaria-modal.lux-night > div:first-child,
-#chok-israel-modal.lux-night > div:first-child {
-  background-color: #181008 !important;
-  background-image: none !important;
-  border-color: rgba(232, 193, 90, 0.16) !important;
-}
-#sefaria-modal.lux-night #sefaria-modal-title,
-#chok-israel-modal.lux-night #chok-israel-modal-title {
-  color: #f2d98a !important;
-}
-.lux-night div {
-  background-color: transparent;
-}
-.lux-night .holy-text-style,
-.lux-night .holy-text-style p,
-.lux-night .holy-text-style span,
-.lux-night .holy-text-style div,
-.lux-night .holy-text-style strong,
-.lux-night .holy-text-style b,
-.lux-night .holy-text-style big,
-.lux-night .holy-text-style small,
-.lux-night #sn-reader-content,
-.lux-night #sn-reader-content p,
-.lux-night #sn-reader-content span,
-.lux-night #psalm-text-area p,
-.lux-night #psalm-text-area span,
-.lux-night #shir-scroll-area p,
-.lux-night #shir-scroll-area span,
-.lux-night #bih-content-area p,
-.lux-night #bih-content-area span {
-  color: #eaddc0 !important;
-}
-.lux-night h2, .lux-night h3, .lux-night h4 {
-  color: #f2d98a !important;
-}
-.lux-night .prayer-richtext p,
-.lux-night .prayer-richtext li,
-.lux-night .prayer-richtext h2,
-.lux-night .prayer-richtext h3 {
-  color: #eaddc0 !important;
-}
-.lux-night [id$="-content"],
-.lux-night [id$="-area"] {
-  background-color: #181008 !important;
+  #sefaria-modal-content,
+  #chok-israel-modal-content {
+    padding-top: 1.5rem !important;
+  }
+  .holy-text-style p,
+  #psalm-text-area p {
+    margin-bottom: 0.55em;
+  }
+  .holy-text-style::before {
+    content: '✦';
+    display: block;
+    text-align: center;
+    color: #c9993a;
+    font-size: 0.8rem;
+    letter-spacing: 0.5em;
+    margin-bottom: 1.1rem;
+    opacity: 0.75;
+  }
 }
 
 /* ── תמה מלכותית — זהב על בורדו-לילה ── */
@@ -2923,39 +2840,18 @@ body.lux-shabbat #shabbat-countdown-bar {
   .lux-progress { height: 7px; }
 }
 
-/* ── מצב לימוד — חוויה מורגשת ומשמעותית, בעיקר במובייל ── */
-.lux-study .holy-text-style,
-.lux-study #sn-reader-content,
-.lux-study #psalm-text-area,
-.lux-study #shir-scroll-area > div,
-.lux-study #bih-content-area {
-  font-size: 1.12em !important;
-  letter-spacing: 0.012em;
-}
-.lux-study .holy-text-style p,
-.lux-study #psalm-text-area p {
-  margin-bottom: 0.55em;
-}
+/* ── מסגרת "דף לימוד" עדינה — קבועה במובייל ── */
 @media (max-width: 640px) {
-  .lux-study .holy-text-style,
-  .lux-study #sn-reader-content,
-  .lux-study #psalm-text-area,
-  .lux-study #shir-scroll-area > div,
-  .lux-study #bih-content-area {
-    font-size: 1.2em !important;
-    line-height: 2.45 !important;
+  .holy-text-style,
+  #psalm-text-area,
+  #sn-reader-content,
+  #bih-content-area {
     padding-left: 0.35rem;
     padding-right: 0.35rem;
+    background:
+      linear-gradient(180deg, rgba(224, 183, 79, 0.06), transparent 120px);
+    border-top: 2px solid rgba(201, 153, 58, 0.35);
   }
-}
-/* מסגרת זהב עדינה סביב הטקסט במצב לימוד — תחושת "דף לימוד" */
-.lux-study .holy-text-style,
-.lux-study #psalm-text-area,
-.lux-study #sn-reader-content,
-.lux-study #bih-content-area {
-  background:
-    linear-gradient(180deg, rgba(224, 183, 79, 0.06), transparent 120px);
-  border-top: 2px solid rgba(201, 153, 58, 0.35);
 }
 
 /* ── סיור מודרך ── */
@@ -3212,8 +3108,9 @@ body.lux-shabbat #shabbat-countdown-bar {
 .lux-sel-para {
   max-width: 44rem;
   margin: 0 auto 1.05em;
-  /* em ולא rem — כך כפתורי ההקטנה/הגדלה (שמשנים % על המיכל) עובדים */
-  font-size: 1.3em;
+  /* em ולא rem — כך כפתורי ההקטנה/הגדלה (שמשנים גודל על המיכל) עובדים.
+     1em = הבסיס האחיד של האתר (25px ב-100%) שנקבע על המיכל ב-JS */
+  font-size: 1em;
   line-height: 2.05;
 }
 .lux-sel-para b, .lux-sel-para strong { color: #7c2d12; }

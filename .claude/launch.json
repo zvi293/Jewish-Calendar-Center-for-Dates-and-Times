@@ -4,38 +4,93 @@
     {
       "name": "site",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["-y", "http-server", "-p", "8123", "-c-1", "."],
+      "runtimeArgs": [
+        "-y",
+        "http-server",
+        "-p",
+        "8123",
+        "-c-1",
+        "."
+      ],
       "port": 8123
     },
     {
       "name": "site-alt",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["-y", "http-server", "-p", "8124", "-c-1", "."],
+      "runtimeArgs": [
+        "-y",
+        "http-server",
+        "-p",
+        "8124",
+        "-c-1",
+        "."
+      ],
       "port": 8124
     },
     {
       "name": "site-wheel",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["-y", "http-server", "-p", "8127", "-c-1", "."],
+      "runtimeArgs": [
+        "-y",
+        "http-server",
+        "-p",
+        "8127",
+        "-c-1",
+        "."
+      ],
       "port": 8127
     },
     {
       "name": "site-audit",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["-y", "http-server", "-p", "8131", "-c-1", "."],
+      "runtimeArgs": [
+        "-y",
+        "http-server",
+        "-p",
+        "8131",
+        "-c-1",
+        "."
+      ],
       "port": 8131
     },
     {
       "name": "site-crit",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["-y", "http-server", "-p", "8135", "-c-1", "."],
+      "runtimeArgs": [
+        "-y",
+        "http-server",
+        "-p",
+        "8135",
+        "-c-1",
+        "."
+      ],
       "port": 8135
     },
     {
       "name": "site-fix",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["-y", "http-server", "-p", "8141", "-c-1", "."],
+      "runtimeArgs": [
+        "-y",
+        "http-server",
+        "-p",
+        "8141",
+        "-c-1",
+        "."
+      ],
       "port": 8141
+    },
+    {
+      "name": "site-perfect",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "-y",
+        "http-server",
+        "-p",
+        "8147",
+        "-c-1",
+        "."
+      ],
+      "port": 8147
     }
   ]
 }

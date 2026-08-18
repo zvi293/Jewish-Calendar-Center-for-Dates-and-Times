@@ -153,6 +153,8 @@
       scrollTick = true;
       setTimeout(function () {
         scrollTick = false;
+        // אירוע הגלילה שנורה כשפופאפ נועל את הרקע (scrollY קורס ל-0) — לא סורקים מאחורי שכבה
+        if (document.body.style.position === "fixed") return;
         grid.querySelectorAll(".event-card:not(.lux-in)").forEach(function (c) {
           if (c.getBoundingClientRect().top < window.innerHeight * 0.95)
             c.classList.add("lux-in");
@@ -3510,16 +3512,33 @@
       { id: "secular", l: "מודרני", fam: "'Secular One', sans-serif" },
       { id: "amatic", l: "כתב יד", fam: "'Amatic SC', cursive" }
     ];
-    var fontsInjected = false;
+    var fontsInjected = false, cardFontsLoaded = false, cardFontsPromise = null;
     function injectCardFonts() {
-      if (fontsInjected) return;
+      if (fontsInjected) return cardFontsPromise;
       fontsInjected = true;
-      try {
-        var link = document.createElement("link");
-        link.rel = "stylesheet";
-        link.href = "https://fonts.googleapis.com/css2?family=David+Libre:wght@500;700&family=Suez+One&family=Secular+One&family=Amatic+SC:wght@700&display=swap";
-        document.head.appendChild(link);
-      } catch (e) {}
+      cardFontsPromise = new Promise(function (resolve) {
+        var done = function () { cardFontsLoaded = true; resolve(); };
+        try {
+          var link = document.createElement("link");
+          link.rel = "stylesheet";
+          link.href = "https://fonts.googleapis.com/css2?family=David+Libre:wght@500;700&family=Suez+One&family=Secular+One&family=Amatic+SC:wght@700&display=swap";
+          // מחכים שהגופנים באמת ייטענו (ה-link ואז הפונטים עצמם) — כדי לצייר מחדש פעם אחת בלבד
+          link.onload = function () {
+            try {
+              Promise.all([
+                document.fonts.load('700 56px "David Libre"'),
+                document.fonts.load('56px "Suez One"'),
+                document.fonts.load('56px "Secular One"'),
+                document.fonts.load('700 56px "Amatic SC"'),
+              ]).then(done, done);
+            } catch (e) { done(); }
+          };
+          link.onerror = function () { resolve(); };
+          document.head.appendChild(link);
+          setTimeout(resolve, 4000); // רשת איטית — לא מחכים לנצח
+        } catch (e) { resolve(); }
+      });
+      return cardFontsPromise;
     }
     /* מספרים "אקראיים" יציבים — כדי שהנצנוצים לא יקפצו בכל ציור מחדש */
     function seededRand(seed) {
@@ -3726,7 +3745,7 @@
     }
     var selFont = 0;
     function openMaker() {
-      injectCardFonts();
+      var fontsP = injectCardFonts();
       var theme = activeTheme() || THEMES[0];
       var name = "";
       try { name = localStorage.getItem("lux_user_name") || ""; } catch (e) {}
@@ -3822,11 +3841,14 @@
         }, "image/png");
       });
       ov.querySelector(".lux-sheet-cancel").addEventListener("click", function () { luxModalClose("lux-shana-maker"); });
-      // גופנים נטענים — ציור ראשון מיד, ושוב כשהפונטים מוכנים
+      // ציור ראשון מיד; ציור נוסף יחיד רק אם הגופנים נטענו אחרי הציור הראשון.
+      // (ארבעה ציורי-קנבס בכל פתיחה — מיידי, fonts.ready ושני טיימרים — נראו כהבהוב בנייד)
       repaint();
-      try { document.fonts.ready.then(repaint); } catch (e) {}
-      setTimeout(repaint, 900);
-      setTimeout(repaint, 2200);
+      if (!cardFontsLoaded && fontsP) {
+        fontsP.then(function () {
+          if (document.getElementById("lux-shana-maker")) repaint();
+        });
+      }
     }
     window.luxOpenShanaTova = openMaker;
     // כניסה עונתית בדף הראשי — שבוע לפני כל חג ועד סופו, בעיצוב של אותו החג

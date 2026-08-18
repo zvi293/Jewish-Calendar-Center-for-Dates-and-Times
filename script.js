@@ -17260,6 +17260,8 @@ window.render = function (filter, search) {
   window.addEventListener(
     "scroll",
     () => {
+      // פופאפ נועל את הרקע → scrollY קורס ל-0; הסתרת הכפתור אז נראית כהבהוב
+      if (document.body.style.position === "fixed") return;
       if (window.scrollY > 400) {
         fab.style.opacity = "1";
         fab.style.transform = "translateY(0) scale(1)";

@@ -24003,7 +24003,7 @@ function openSefarimNosafimPage(_pageMode) {
     if (needMB || needBH || activeCms.length) {
       var loadingHtml = "";
       if (needMB) loadingHtml += "<div style=\"margin-top:1rem;padding-top:0.85rem;border-top:1px dashed rgba(124,58,237,0.35);color:#7c3aed;font-size:0.78rem;font-style:italic;text-align:center;\">📖 טוען משנה ברורה...</div>";
-      if (needBH) loadingHtml += "<div style=\"margin-top:1rem;padding-top:0.85rem;border-top:1px dashed rgba(217,119,6,0.35);color:#d97706;font-size:0.78rem;font-style:italic;text-align:center;\">📜 טוען באר היטב...</div>";
+      if (needBH) loadingHtml += "<div style=\"margin-top:1rem;padding-top:0.85rem;border-top:1px dashed rgba(217,119,6,0.35);color:#d97706;font-size:0.78rem;font-style:italic;text-align:center;\">🖋️ טוען באר היטב...</div>";
       if (activeCms.length) loadingHtml += "<div style=\"margin-top:1rem;padding-top:0.85rem;border-top:1px dashed rgba(0,0,0,0.15);color:#64748b;font-size:0.78rem;font-style:italic;text-align:center;\">📖 טוען פירושים...</div>";
       chapterDiv.innerHTML = heading + renderParagraphs(he, _bk.color, idx) + loadingHtml;
     }
@@ -24052,13 +24052,13 @@ function openSefarimNosafimPage(_pageMode) {
       if (bh && bh.length) {
         parasHtml = _buildTextWithInlineComments(parasHtml, bh, {
           label: 'באר היטב',
-          emoji: '📜',
+          emoji: '🖋️',
           color: '#d97706',
           diburColor: '#b45309',
           textColor: '#7c2d12',
         });
       } else {
-        bottomNotes += "<div style=\"margin-top:0.8rem;padding:0.45rem 0.7rem;border-radius:0.4rem;background:rgba(217,119,6,0.04);border:1px dashed rgba(217,119,6,0.3);color:#d97706;font-size:0.72rem;font-style:italic;text-align:center;\">📜 אין באר היטב על סימן זה</div>";
+        bottomNotes += "<div style=\"margin-top:0.8rem;padding:0.45rem 0.7rem;border-radius:0.4rem;background:rgba(217,119,6,0.04);border:1px dashed rgba(217,119,6,0.3);color:#d97706;font-size:0.72rem;font-style:italic;text-align:center;\">🖋️ אין באר היטב על סימן זה</div>";
       }
     }
 
@@ -24630,7 +24630,7 @@ function openSefarimNosafimPage(_pageMode) {
         "<button onclick=\"window._toggleAutoScroll('#sn-reader-content', this)\" style=\"width:38px;height:38px;border-radius:50%;border:1.5px solid rgba(16,185,129,0.35);background:linear-gradient(135deg,#ecfdf5 0%,#d1fae5 100%);color:#047857;font-size:0.95rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(16,185,129,0.18);transition:transform 0.15s ease;\" onmouseover=\"this.style.transform='scale(1.08)'\" onmouseout=\"this.style.transform=''\" aria-label=\"התחל גלילה אוטומטית\">▶</button>",
         "<button class=\"auto-scroll-speed-btn\" onclick=\"window._cycleAutoScrollSpeed(this)\" style=\"font-size:0.78rem;font-weight:800;color:#047857;min-width:2.4rem;text-align:center;background:rgba(209,250,229,0.85);padding:5px 10px;border-radius:999px;border:1px solid rgba(16,185,129,0.3);cursor:pointer;\" aria-label=\"מהירות גלילה\">1x</button>",
         "<button id=\"sn-mb-toggle\" onclick=\"window._snToggleMB();\" style=\"display:none;width:38px;height:38px;border-radius:50%;border:1.5px solid rgba(124,58,237,0.25);background:rgba(124,58,237,0.06);color:#7c3aed;font-size:0.95rem;font-weight:900;cursor:pointer;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(124,58,237,0.15);transition:all 0.15s ease;\" onmouseover=\"this.style.transform='scale(1.08)'\" onmouseout=\"this.style.transform=''\" title=\"משנה ברורה\">📖</button>",
-        "<button id=\"sn-bh-toggle\" onclick=\"window._snToggleBH();\" style=\"display:none;width:38px;height:38px;border-radius:50%;border:1.5px solid rgba(217,119,6,0.25);background:rgba(217,119,6,0.06);color:#d97706;font-size:0.95rem;font-weight:900;cursor:pointer;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(217,119,6,0.15);transition:all 0.15s ease;\" onmouseover=\"this.style.transform='scale(1.08)'\" onmouseout=\"this.style.transform=''\" title=\"באר היטב\">📜</button>",
+        "<button id=\"sn-bh-toggle\" onclick=\"window._snToggleBH();\" style=\"display:none;width:38px;height:38px;border-radius:50%;border:1.5px solid rgba(217,119,6,0.25);background:rgba(217,119,6,0.06);color:#d97706;font-size:0.95rem;font-weight:900;cursor:pointer;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(217,119,6,0.15);transition:all 0.15s ease;\" onmouseover=\"this.style.transform='scale(1.08)'\" onmouseout=\"this.style.transform=''\" title=\"באר היטב\">🖋️</button>",
         "<span id=\"sn-cm-toolbar\" style=\"display:flex;align-items:center;gap:0.4rem;\"></span>",
       "</div>",
     "</div>",
@@ -24753,7 +24753,7 @@ function closeSefarimNosafimModal() {
       else if (reader === "tehillim" && window._thSaveLastPosition) { ok = window._thSaveLastPosition(); label = "תהילים"; }
     } catch(e) { console.warn("LP save failed:", e); }
     if (ok) {
-      if (typeof window.showToast === "function") window.showToast("📌 סימניית מיקום אחרון נשמרה ב" + label, "success", 2500);
+      if (typeof window.showToast === "function") window.showToast("📌 נשמר מיקום אחרון", "success", 2500);
       flashButtonGreen();
     }
   };

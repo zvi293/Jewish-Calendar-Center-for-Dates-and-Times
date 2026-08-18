@@ -46,6 +46,10 @@
         heroOnScreen = entries[entries.length - 1].isIntersecting;
       }).observe(hero);
     } catch (e) {}
+    // אלמנט קבוע אחד לכל חיי הדף — הוספה/הסרה של div בכל יריה בנתה מחדש את
+    // עץ השכבות של ההירו (שמרכיב קנבס כוכבים + עיגולי blur) פעמיים בכל ~30ש',
+    // מה שנראה בנייד כהבהוב של כל המסך. עכשיו רק מאתחלים את האנימציה מחדש.
+    var star = null;
     function shoot() {
       if (!hero.classList.contains("gradient-bg")) return schedule();
       // מאחורי פופאפ/טאב מוסתר הכוכב רק מייצר repaint מתחת לשכבה — מדלגים
@@ -53,12 +57,20 @@
       if (!heroOnScreen) return schedule();
       // reduced-motion: ה-CSS ממילא מבטל את האנימציה — אין טעם גם ב-DOM churn
       if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return schedule();
-      var star = document.createElement("div");
-      star.className = "lux-shooting-star";
-      star.style.top = (5 + Math.random() * 35) + "%";
-      star.style.right = (Math.random() * 40) + "%";
-      hero.appendChild(star);
-      setTimeout(function () { star.remove(); }, 1400);
+      if (!star || !star.isConnected) {
+        star = document.createElement("div");
+        star.className = "lux-shooting-star";
+        star.style.top = (5 + Math.random() * 35) + "%";
+        star.style.right = (Math.random() * 40) + "%";
+        hero.appendChild(star); // האנימציה (forwards, נגמרת ב-opacity:0) רצה פעם אחת עם ההוספה
+      } else {
+        star.style.top = (5 + Math.random() * 35) + "%";
+        star.style.right = (Math.random() * 40) + "%";
+        // איתחול האנימציה בלי לגעת בעץ ה-DOM: ביטול, reflow נקודתי, והפעלה מחדש
+        star.style.animation = "none";
+        void star.offsetWidth;
+        star.style.animation = "";
+      }
       schedule();
     }
     function schedule() { setTimeout(shoot, 18000 + Math.random() * 26000); }
@@ -382,7 +394,8 @@
   safe("universalMarker", function () {
     var KEY = "lux_marks_v1";
     var ON_KEY = "lux_marker_on";
-    function enabled() { try { return localStorage.getItem(ON_KEY) !== "0"; } catch (e) { return true; } }
+    // כבוי כברירת מחדל — מופעל רק אם המשתמש הדליק במפורש בהגדרות
+    function enabled() { try { return localStorage.getItem(ON_KEY) === "1"; } catch (e) { return false; } }
     // מטמון בזיכרון — JSON.parse כל 1.2 שניות בלולאת השחזור מיותר ומרצד בנייד
     var _marksCache = null;
     function loadAll() {
@@ -483,7 +496,7 @@
       });
     }
     setInterval(restore, 1200);
-    // מתג בהגדרות — דולק כברירת מחדל
+    // מתג בהגדרות — כבוי כברירת מחדל, עם הסבר קצר מה המרקר עושה
     function injectToggle() {
       var anchor = document.getElementById("lux-dt-btn") || document.getElementById("lux-stories-auto-toggle") || document.getElementById("lux-tour-btn");
       if (!anchor || document.getElementById("lux-marker-toggle")) return;
@@ -492,7 +505,10 @@
       var field = document.createElement("div");
       field.innerHTML =
         '<button type="button" id="lux-marker-toggle" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 transition-all flex items-center justify-between gap-3" style="margin-top:0.75rem;">' +
-          '<span class="font-semibold text-sm">🖍️ מרקר סימון שורה בספרים</span>' +
+          '<span style="text-align:right;flex:1;min-width:0;">' +
+            '<span class="font-semibold text-sm" style="display:block;">🖍️ מרקר סימון שורה בספרים</span>' +
+            '<small style="display:block;color:#94a3b8;font-size:0.72rem;font-weight:400;line-height:1.4;margin-top:2px;">כשהמרקר דולק, לחיצה על שורה בספרים ובתפילות צובעת אותה בצהוב — כמו מרקר על דף. הסימון נשמר לפעם הבאה; לחיצה נוספת מוחקת אותו.</small>' +
+          "</span>" +
           '<span class="lux-sw' + (on ? " lux-sw-on" : "") + '"><span class="lux-sw-dot"></span></span>' +
         "</button>";
       host.insertAdjacentElement("afterend", field);
@@ -3590,48 +3606,75 @@
       if (s <= 0) s += 2147483646;
       return function () { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; };
     }
-    /* ערכות ברכה לכל חג — הכרטיס מופיע שבוע לפני החג ועד סופו */
+    /* ערכות ברכה לכל חג — הכרטיס מופיע חודש לפני החג ועד סופו.
+       ברכה היא מחרוזת (זהה לכל נוסח) או אובייקט {m,f,p} — זכר/נקבה/רבים */
     var THEMES = [
       { match: /ראש השנה/, dur: 2, title: "שנה טובה", yearLine: true, emo: "🍎🍯", entry: "כרטיס שנה טובה מעוצב", entrySub: "צרו ושתפו ברכה אישית לשנה החדשה",
-        blessings: ["שנה טובה ומתוקה 🍎🍯", "כתיבה וחתימה טובה", "שנת בריאות, שמחה ופרנסה טובה", "תכלה שנה וקללותיה, תחל שנה וברכותיה"] },
+        blessings: ["שנה טובה ומתוקה 🍎🍯", "כתיבה וחתימה טובה",
+          { m: "תיכתב ותיחתם לשנה טובה ומתוקה", f: "תיכתבי ותיחתמי לשנה טובה ומתוקה", p: "תיכתבו ותיחתמו לשנה טובה ומתוקה" },
+          "שנת בריאות, שמחה ופרנסה טובה", "תכלה שנה וקללותיה, תחל שנה וברכותיה"] },
       { match: /יום כיפור|יום הכיפורים/, dur: 1, title: "גמר חתימה טובה", emo: "🕊️", entry: "כרטיס גמר חתימה טובה", entrySub: "ברכה מעוצבת ליום הקדוש",
-        blessings: ["גמר חתימה טובה!", "צום קל ומועיל וגמר חתימה טובה", "שתיחתמו בספר החיים, הבריאות והשמחה"] },
+        blessings: ["גמר חתימה טובה!", "צום קל ומועיל וגמר חתימה טובה",
+          { m: "שתיחתם בספר החיים, הבריאות והשמחה", f: "שתיחתמי בספר החיים, הבריאות והשמחה", p: "שתיחתמו בספר החיים, הבריאות והשמחה" }] },
       { match: /סוכות/, dur: 8, title: "חג סוכות שמח", emo: "🌿🍋", entry: "כרטיס ברכה לחג הסוכות", entrySub: "ברכה מעוצבת לחג",
-        blessings: ["חג סוכות שמח!", "מועדים לשמחה!", "ישיבה נעימה בסוכה וחג שמח"] },
+        blessings: ["חג סוכות שמח!", "מועדים לשמחה!", "ישיבה נעימה בסוכה וחג שמח",
+          { m: "שתזכה לשבת בצל האמונה — חג שמח", f: "שתזכי לשבת בצל האמונה — חג שמח", p: "שתזכו לשבת בצל האמונה — חג שמח" }] },
       { match: /שמחת תורה|שמיני עצרת/, dur: 1, title: "חג שמח", emo: "📜🎶", entry: "כרטיס ברכה לשמחת תורה", entrySub: "ברכה מעוצבת לחג",
-        blessings: ["חג שמחת תורה שמח!", "מועדים לשמחה!", "שמחה גדולה עם התורה הקדושה"] },
+        blessings: ["חג שמחת תורה שמח!", "מועדים לשמחה!", "שמחה גדולה עם התורה הקדושה",
+          { m: "שתזכה לשמוח בתורה כל השנה", f: "שתזכי לשמוח בתורה כל השנה", p: "שתזכו לשמוח בתורה כל השנה" }] },
       { match: /חנוכה/, dur: 8, title: "חנוכה שמח", emo: "🕎✨", entry: "כרטיס ברכה לחנוכה", entrySub: "ברכה מעוצבת לחג האורים",
-        blessings: ["חג אורים שמח!", "חנוכה שמח ומואר!", "נסים גדולים ואור גדול בכל הבית"] },
+        blessings: ["חג אורים שמח!", "חנוכה שמח ומואר!", "נסים גדולים ואור גדול בכל הבית",
+          { m: "שתזכה לנסים גדולים ואור גדול", f: "שתזכי לנסים גדולים ואור גדול", p: "שתזכו לנסים גדולים ואור גדול" }] },
       { match: /ט"ו בשבט|טו בשבט/, dur: 1, title: 'ט"ו בשבט שמח', emo: "🌳🌸", entry: 'כרטיס ברכה לט"ו בשבט', entrySub: "ברכה מעוצבת לראש השנה לאילנות",
-        blessings: ['חג ט"ו בשבט שמח!', "שנה של צמיחה ופריחה"] },
+        blessings: ['חג ט"ו בשבט שמח!', "שנה של צמיחה ופריחה",
+          { m: "שתצמח ותפרח כמו אילן רענן", f: "שתצמחי ותפרחי כמו אילן רענן", p: "שתצמחו ותפרחו כמו אילן רענן" }] },
       { match: /פורים/, dur: 2, title: "פורים שמח", emo: "🎭🎉", entry: "כרטיס ברכה לפורים", entrySub: "ברכה מעוצבת ומשמחת",
-        blessings: ["פורים שמח!", "ליהודים הייתה אורה ושמחה וששון ויקר", "פורים שמח ומשלוח מנות מתוק"] },
+        blessings: ["פורים שמח!", "ליהודים הייתה אורה ושמחה וששון ויקר", "פורים שמח ומשלוח מנות מתוק",
+          { m: "שתהיה תמיד בשמחה — פורים שמח", f: "שתהיי תמיד בשמחה — פורים שמח", p: "שתהיו תמיד בשמחה — פורים שמח" }] },
       { match: /פסח/, dur: 7, title: "חג פסח שמח", emo: "🍷🌸", entry: "כרטיס ברכה לפסח", entrySub: "ברכה מעוצבת לחג החירות",
-        blessings: ["חג פסח כשר ושמח!", "מועדים לשמחה!", "חג של חירות, משפחה ושמחה"] },
+        blessings: ["חג פסח כשר ושמח!", "מועדים לשמחה!", "חג של חירות, משפחה ושמחה",
+          { m: "שתזכה לחירות אמיתית — חג שמח", f: "שתזכי לחירות אמיתית — חג שמח", p: "שתזכו לחירות אמיתית — חג שמח" }] },
+      { match: /ל"ג בעומר|לג בעומר/, dur: 1, title: 'ל"ג בעומר שמח', emo: "🔥🏹", entry: 'כרטיס ברכה לל"ג בעומר', entrySub: 'ברכה מעוצבת להילולת רשב"י',
+        blessings: ['ל"ג בעומר שמח!', 'אור ההילולא של רבי שמעון בר יוחאי יאיר לכל השנה',
+          { m: 'שתזכה לאורו הגדול של רשב"י', f: 'שתזכי לאורו הגדול של רשב"י', p: 'שתזכו לאורו הגדול של רשב"י' }] },
       { match: /שבועות/, dur: 2, title: "חג שבועות שמח", emo: "🌾📜", entry: "כרטיס ברכה לשבועות", entrySub: "ברכה מעוצבת לחג מתן תורה",
-        blessings: ["חג שבועות שמח!", "חג מתן תורה שמח ומבורך", "מועדים לשמחה!"] }
+        blessings: ["חג שבועות שמח!", "חג מתן תורה שמח ומבורך", "מועדים לשמחה!",
+          { m: "שתזכה לקבל את התורה בשמחה", f: "שתזכי לקבל את התורה בשמחה", p: "שתזכו לקבל את התורה בשמחה" }] }
     ];
-    function activeTheme() {
+    /* טקסט ברכה לפי נוסח נבחר */
+    function blessTxt(b, form) {
+      return typeof b === "string" ? b : (b[form] || b.p);
+    }
+    /* כל החגים שבחלון (חודש לפני ועד סוף החג) — ממוינים מהקרוב לרחוק */
+    function activeThemes() {
       var evs = getCachedEvents() || [];
-      var best = null;
+      var found = [];
       evs.forEach(function (e) {
         if (e.type !== "major" && e.type !== "minor" && e.type !== "fast") return;
-        // רק אירועי חג אמיתיים (לא "ראש השנה למעשר בהמה" וכד' — הם באלול ממילא)
+        // Hebcal כותב גרשיים טיפוגרפיים (ל״ג) — מנרמלים כדי שההתאמות יתפסו
+        var nm = String(e.name || "").replace(/[״]/g, '"').replace(/[׳’]/g, "'");
+        // "ראש השנה למעשר בהמה" נתפס ברגקס של ראש השנה — לא חג לכרטיס
+        if (nm.indexOf("למעשר") !== -1) return;
         var th = null;
         for (var i = 0; i < THEMES.length; i++) {
-          if (THEMES[i].match.test(e.name || "")) { th = THEMES[i]; break; }
+          if (THEMES[i].match.test(nm)) { th = THEMES[i]; break; }
         }
         if (!th) return;
         var days = Math.floor((new Date(e.date) - new Date()) / 86400000) + 1;
-        if (days <= 7 && days > -(th.dur || 1)) {
-          if (!best || Math.abs(days) < Math.abs(best.days)) best = { theme: th, days: days };
-        }
+        if (days > 30 || days <= -(th.dur || 1)) return;
+        var ex = null;
+        for (var j = 0; j < found.length; j++) { if (found[j].theme === th) { ex = found[j]; break; } }
+        if (!ex) found.push({ theme: th, days: days });
+        else if (Math.abs(days) < Math.abs(ex.days)) ex.days = days;
       });
-      if (best) return best.theme;
+      found.sort(function (a, b) { return Math.abs(a.days) - Math.abs(b.days); });
+      var list = found.map(function (x) { return x.theme; });
+      // אלול — כרטיס שנה טובה זמין תמיד, גם אם מטמון האירועים ריק
       var m = luxHebMonth(new Date()), d = luxHebDay(new Date());
-      if (m === "אלול" || (m === "תשרי" && d <= 2)) return THEMES[0];
-      return null;
+      if ((m === "אלול" || (m === "תשרי" && d <= 2)) && list.indexOf(THEMES[0]) === -1) list.unshift(THEMES[0]);
+      return list;
     }
+    function activeTheme() { return activeThemes()[0] || null; }
     var sel = 0;
     function hebNewYear() {
       // שנת היעד: השנה העברית הבאה (בגימטריה, בלי האלפים)
@@ -3665,7 +3708,7 @@
       ctx.closePath(); ctx.fill();
       ctx.restore();
     }
-    function draw(cv, design, blessing, from, theme, fontFam, toName, dIdx) {
+    function draw(cv, design, blessing, from, theme, fontFam, toName, dIdx, form) {
       var W = 1080, H = 1350;
       cv.width = W; cv.height = H;
       var ctx = cv.getContext("2d");
@@ -3755,7 +3798,8 @@
       if (toName) {
         ctx.font = "700 " + Math.round(46 * fScale) + "px " + FONT;
         ctx.fillStyle = design.sub;
-        ctx.fillText("לכבוד " + toName + " היקרים ✨", W / 2, y);
+        var hon = form === "m" ? "היקר" : form === "f" ? "היקרה" : "היקרים";
+        ctx.fillText("לכבוד " + toName + " " + hon + " ✨", W / 2, y);
         y += 85;
       }
       // ברכה — שבירת שורות
@@ -3790,21 +3834,37 @@
     var selFont = 0;
     function openMaker() {
       var fontsP = injectCardFonts();
-      var theme = activeTheme() || THEMES[0];
+      var actives = activeThemes();
+      if (!actives.length) actives = [THEMES[0]];
+      var theme = actives[0];
+      var selForm = "p"; // נוסח ברירת מחדל — משפחה/רבים
       var name = "";
       try { name = localStorage.getItem("lux_user_name") || ""; } catch (e) {}
       var ov = luxSheet("lux-shana-maker",
-        '<h3 class="lux-sheet-title">💌 ' + esc(theme.entry) + "</h3>" +
+        '<h3 class="lux-sheet-title" id="lux-sn-title">💌 ' + esc(theme.entry) + "</h3>" +
         '<p class="lux-sheet-note">בחרו עיצוב ופונט, הוסיפו שמות וברכה — ושתפו עם מי שאוהבים</p>' +
+        (actives.length > 1
+          ? '<div class="lux-sn-lbl">🎉 כמה חגים קרובים — למי מהם הכרטיס?</div>' +
+            '<div class="lux-sn-fonts">' + actives.map(function (t, i) {
+              var em = Array.from(String(t.emo || "✨").replace(/️/g, ""))[0] || "✨";
+              return '<button type="button" class="lux-sn-h' + (i === 0 ? " lux-sn-f-on" : "") + '" data-i="' + i + '">' + em + " " + esc(t.title) + "</button>";
+            }).join("") + "</div>"
+          : "") +
         '<div class="lux-sn-designs">' + DESIGNS.map(function (d, i) {
           return '<button type="button" class="lux-sn-d' + (i === 0 ? " lux-sn-d-on" : "") + '" data-i="' + i + '" style="background:linear-gradient(160deg,' + d.bg[0] + "," + d.bg[2] + ');color:' + d.ink + ';">' + d.l + "</button>";
         }).join("") + "</div>" +
         '<div class="lux-sn-fonts">' + CARD_FONTS.map(function (f, i) {
           return '<button type="button" class="lux-sn-f' + (i === 0 ? " lux-sn-f-on" : "") + '" data-i="' + i + '" style="font-family:' + f.fam + ';">' + f.l + "</button>";
         }).join("") + "</div>" +
+        '<div class="lux-sn-lbl">✍️ נוסח הברכה — למי היא מיועדת?</div>' +
+        '<div class="lux-sn-fonts">' +
+          '<button type="button" class="lux-sn-g lux-sn-f-on" data-g="p">👨‍👩‍👧 משפחה / רבים</button>' +
+          '<button type="button" class="lux-sn-g" data-g="m">👨 לגבר</button>' +
+          '<button type="button" class="lux-sn-g" data-g="f">👩 לאישה</button>' +
+        "</div>" +
         '<input type="text" id="lux-sn-to" class="lux-sheet-input" maxlength="30" placeholder="לכבוד... (למשל: משפחת לוי — אופציונלי)">' +
         '<input type="text" id="lux-sn-from" class="lux-sheet-input" maxlength="30" placeholder="השם שלכם (יופיע בכרטיס)" value="' + esc(name) + '">' +
-        '<select id="lux-sn-bless" class="lux-sheet-input">' + theme.blessings.map(function (b) { return "<option>" + b + "</option>"; }).join("") + "</select>" +
+        '<select id="lux-sn-bless" class="lux-sheet-input">' + theme.blessings.map(function (b) { return "<option>" + esc(blessTxt(b, selForm)) + "</option>"; }).join("") + "</select>" +
         '<input type="text" id="lux-sn-custom" class="lux-sheet-input" maxlength="120" placeholder="✍️ או כתבו ברכה אישית משלכם...">' +
         '<canvas id="lux-sn-canvas" style="width:100%;border-radius:1rem;box-shadow:0 10px 30px rgba(0,0,0,0.35);margin:0.6rem 0;"></canvas>' +
         '<div class="lux-sheet-actions">' +
@@ -3815,9 +3875,10 @@
         "</div>");
       if (!ov) return;
       var cv = ov.querySelector("#lux-sn-canvas");
+      var blessSel = ov.querySelector("#lux-sn-bless");
       function currentBlessing() {
         var custom = (ov.querySelector("#lux-sn-custom").value || "").trim();
-        return custom || ov.querySelector("#lux-sn-bless").value;
+        return custom || blessSel.value;
       }
       function repaint() {
         draw(cv, DESIGNS[sel],
@@ -3826,8 +3887,34 @@
           theme,
           CARD_FONTS[selFont].fam,
           (ov.querySelector("#lux-sn-to").value || "").trim().slice(0, 30),
-          sel);
+          sel,
+          selForm);
       }
+      // בניית רשימת הברכות מחדש — אחרי החלפת חג או נוסח (שומר על הבחירה)
+      function fillBless() {
+        var idx = blessSel.selectedIndex;
+        blessSel.innerHTML = theme.blessings.map(function (b) { return "<option>" + esc(blessTxt(b, selForm)) + "</option>"; }).join("");
+        if (idx > 0 && idx < blessSel.options.length) blessSel.selectedIndex = idx;
+      }
+      ov.querySelectorAll(".lux-sn-h").forEach(function (b) {
+        b.addEventListener("click", function () {
+          var i = parseInt(b.dataset.i, 10);
+          theme = actives[i] || theme;
+          ov.querySelectorAll(".lux-sn-h").forEach(function (x, j) { x.classList.toggle("lux-sn-f-on", j === i); });
+          var ti = ov.querySelector("#lux-sn-title");
+          if (ti) ti.innerHTML = "💌 " + esc(theme.entry);
+          fillBless();
+          repaint();
+        });
+      });
+      ov.querySelectorAll(".lux-sn-g").forEach(function (b) {
+        b.addEventListener("click", function () {
+          selForm = b.dataset.g || "p";
+          ov.querySelectorAll(".lux-sn-g").forEach(function (x) { x.classList.toggle("lux-sn-f-on", x === b); });
+          fillBless();
+          repaint();
+        });
+      });
       ov.querySelectorAll(".lux-sn-d").forEach(function (b) {
         b.addEventListener("click", function () {
           sel = parseInt(b.dataset.i, 10);
@@ -3895,7 +3982,7 @@
       }
     }
     window.luxOpenShanaTova = openMaker;
-    // כניסה עונתית בדף הראשי — שבוע לפני כל חג ועד סופו, בעיצוב של אותו החג
+    // כניסה עונתית בדף הראשי — חודש לפני כל חג ועד סופו, בעיצוב של אותו החג
     function injectEntry() {
       if (document.getElementById("lux-shana-entry")) return;
       var theme = activeTheme();
@@ -4997,9 +5084,28 @@
       row.querySelectorAll("[data-del]").forEach(function (b) {
         b.addEventListener("click", function (ev) {
           ev.stopPropagation();
-          if (!confirm("למחוק את סדר הלימוד הזה? ההתקדמות תימחק.")) return;
-          savePlans(plans().filter(function (p) { return p.id !== b.getAttribute("data-del"); }));
-          renderRow();
+          var id = b.getAttribute("data-del");
+          var pl = null;
+          plans().forEach(function (p) { if (p.id === id) pl = p; });
+          var bk = pl ? bookOf(pl.bookId) : null;
+          var ov = luxSheet("lux-plan-delconfirm",
+            '<h3 class="lux-sheet-title">🗑️ מחיקת סדר לימוד</h3>' +
+            '<p class="lux-sheet-note">האם למחוק את הסדר <b>' + esc(bk ? bk.he : "הזה") + "</b>?" +
+              (pl && pl.done
+                ? "<br>ההתקדמות שנצברה (" + pl.done + " " + esc(bk ? unitsOf(bk) : "") + ") תימחק לצמיתות."
+                : "<br>הפעולה אינה ניתנת לביטול.") + "</p>" +
+            '<div class="lux-sheet-actions">' +
+              '<button type="button" class="lux-plan-del-yes">🗑️ כן, למחוק</button>' +
+              '<button type="button" class="lux-sheet-cancel">ביטול</button>' +
+            "</div>");
+          if (!ov) return;
+          ov.querySelector(".lux-plan-del-yes").addEventListener("click", function () {
+            savePlans(plans().filter(function (p) { return p.id !== id; }));
+            luxModalClose("lux-plan-delconfirm");
+            renderRow();
+            if (typeof window.showToast === "function") window.showToast("🗑️ סדר הלימוד נמחק", "info", 2200);
+          });
+          ov.querySelector(".lux-sheet-cancel").addEventListener("click", function () { luxModalClose("lux-plan-delconfirm"); });
         });
       });
     }

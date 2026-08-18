@@ -1,4 +1,4 @@
-const STATIC_CACHE = "moadim-static-v49";
+const STATIC_CACHE = "moadim-static-v50";
 // מטמון ריצה: תשובות API וקבצים חיצוניים (ספריא, hebcal, פונטים, ספריות CDN)
 // נשמרים אחרי הצפייה הראשונה — כך האתר, התפילות והספרים עובדים גם בלי אינטרנט.
 const RUNTIME_CACHE = "moadim-runtime-v1";
@@ -16,9 +16,9 @@ const STATIC_ASSETS = [
   // חשוב: ה-?v= כאן חייב להיות זהה לזה שב-index.html — כך ההתקנה נענית
   // מ-HTTP cache (בלי הורדה כפולה של ~3MB) והבקשות מהדף פוגעות במטמון
   // בדיוק; סטייה עתידית מכוסה ע"י ה-fallback עם ignoreSearch.
-  "/script.js?v=31",
-  "/lux.js?v=27",
-  "/style.css?v=32",
+  "/script.js?v=32",
+  "/lux.js?v=28",
+  "/style.css?v=33",
   "/tailwind.css?v=2",
 ];
 
@@ -169,7 +169,15 @@ self.addEventListener("fetch", (event) => {
           caches.open(STATIC_CACHE).then((cache) => cache.put(request, copy));
           return response;
         })
-        .catch(() => cached);
+        // רשת נפלה: fallback עם ignoreSearch — "/icon-192.png?v=3" נענה מהרשומה
+        // "/icon-192.png" שבהתקנה. בלי Response תקין respondWith(undefined)
+        // מתפוצץ כ-net::ERR_FAILED בקונסול — לכן תמיד מחזירים Response.
+        .catch(() =>
+          cached ||
+          caches
+            .match(request, { ignoreSearch: true })
+            .then((alt) => alt || Response.error()),
+        );
 
       return cached || networkFetch;
     }),

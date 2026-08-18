@@ -80,6 +80,19 @@
       "port": 8141
     },
     {
+      "name": "site-fixes9",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "-y",
+        "http-server",
+        "-p",
+        "8153",
+        "-c-1",
+        "."
+      ],
+      "port": 8153
+    },
+    {
       "name": "site-perfect",
       "runtimeExecutable": "npx",
       "runtimeArgs": [

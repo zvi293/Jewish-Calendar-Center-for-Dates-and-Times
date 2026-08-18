@@ -323,7 +323,8 @@
       fill.style.width = Math.min(100, (t.scrollTop / max) * 100) + "%";
     }, true);
     // סרגל הגופן מקבל קלאס אחיד — משמש לגלישת שורות במובייל ולחישובי גובה
-    var label = modal.querySelector(".font-size-label") ||
+    var label = modal.querySelector(".font-btn-group") ||
+                modal.querySelector(".font-size-label") ||
                 modal.querySelector("#sn-fs-label") ||
                 modal.querySelector("#bih-font-label");
     var hostBar = label ? label.parentElement : modal.querySelector(".lux-sel-foot");
@@ -5239,7 +5240,29 @@
       // הופכים fixed ל-absolute וה-X היה נגלל עם התוכן. ב-body הוא חסין.
       btn.__luxFor = modal;
       document.body.appendChild(btn);
+      avoidOverlap(btn, modal);
       return btn;
+    }
+    // ה-X המוזרק אסור שידרוס כפתורים אמיתיים של הפופאפ (חיפוש, ניווט וכו').
+    // בודקים חפיפה מול כל אלמנט לחיץ נראה; אם יש — מורידים את ה-X אל מתחת
+    // לנמוך שבהם, כך שהוא נשאר באותו צד אך לא מכסה שום כפתור.
+    function avoidOverlap(btn, modal) {
+      if (!btn || !btn.isConnected || !modal || !modal.isConnected) return;
+      btn.style.top = "";
+      var br = btn.getBoundingClientRect();
+      var maxBottom = 0;
+      try {
+        modal.querySelectorAll("button, a, input, select").forEach(function (el) {
+          if (el === btn || el.classList.contains("lux-ux") || !isVisible(el)) return;
+          var r = el.getBoundingClientRect();
+          // בודקים רק את רצועת הראש — אלמנטים שנגללים למטה אינם רלוונטיים
+          if (r.top > innerHeight * 0.4) return;
+          var overlap = !(r.right < br.left - 4 || r.left > br.right + 4 ||
+                          r.bottom < br.top - 4 || r.top > br.bottom + 4);
+          if (overlap) maxBottom = Math.max(maxBottom, r.bottom);
+        });
+      } catch (e) {}
+      if (maxBottom > 0) btn.style.top = (maxBottom + 8) + "px";
     }
     function tick() {
       if (document.hidden) return;
@@ -5256,7 +5279,11 @@
         var r = modal.getBoundingClientRect();
         if (r.width < innerWidth * 0.55 || r.height < innerHeight * 0.55) return;
         // X קיים — מוזרק על body (משויך למודאל הזה) או מובנה בתוך יריעת luxSheet
-        if (modal.__luxUx && modal.__luxUx.isConnected && modal.__luxUx.__luxFor === modal) return;
+        if (modal.__luxUx && modal.__luxUx.isConnected && modal.__luxUx.__luxFor === modal) {
+          // בכל סבב מוודאים שה-X עדיין לא דורס כפתור (התוכן/הכותרת השתנו)
+          avoidOverlap(modal.__luxUx, modal);
+          return;
+        }
         var builtin = modal.querySelector(".lux-ux");
         if (builtin) { modal.__luxUx = builtin; return; }
         // לפופאפ יש כפתור X/חזור עליון מובהק משלו — מאומת בכל סבב שהוא עדיין

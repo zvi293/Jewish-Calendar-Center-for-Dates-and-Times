@@ -37,6 +37,8 @@
     if (!hero) return;
     function shoot() {
       if (!hero.classList.contains("gradient-bg")) return schedule();
+      // מאחורי פופאפ/טאב מוסתר הכוכב רק מייצר repaint מתחת לשכבה — מדלגים
+      if (document.hidden || document.documentElement.classList.contains("lux-modal-open")) return schedule();
       var star = document.createElement("div");
       star.className = "lux-shooting-star";
       star.style.top = (5 + Math.random() * 35) + "%";
@@ -163,7 +165,7 @@
       // הטאב ברקע — אין מה לסרוק; פופאפ פתוח (הגוף נעול בגלילה) — הכרטיסים
       // מוסתרים מאחוריו, וסריקות getBoundingClientRect/getComputedStyle כל
       // שנייה רק גורמות לריצוד בנייד. הסריקה מתחדשת מיד עם סגירת הפופאפ.
-      if (document.hidden || document.body.style.position === "fixed") return;
+      if (document.hidden || document.documentElement.classList.contains("lux-modal-open")) return;
       grid.querySelectorAll(".event-card:not(.lux-in)").forEach(function (c) {
         var r = c.getBoundingClientRect();
         // כל כרטיס שנמצא בתחום המסך או מעליו — נחשף מיד
@@ -245,7 +247,8 @@
       var orig = window.openOmerModal;
       window.openOmerModal = function () {
         var out = orig.apply(this, arguments);
-        luxConfetti();
+        // הקונפטי רק אחרי שמעבר הפתיחה (300ms) הסתיים — ביחד הם גרמו לריצוד פתיחה בנייד
+        setTimeout(luxConfetti, 420);
         return out;
       };
     }
@@ -529,7 +532,7 @@
       setRoyal(!document.documentElement.classList.contains("lux-royal"));
     });
     // בחירת תמה רגילה מבטלת את המצב המלכותי
-    ["light", "dark", "blue"].forEach(function (t) {
+    ["light", "dark"].forEach(function (t) {
       var el = document.getElementById("theme-circle-" + t);
       if (el) el.addEventListener("click", function () {
         document.documentElement.classList.remove("lux-royal");
@@ -774,9 +777,11 @@
         var hh = Math.floor(d / 3600000), mm = Math.floor((d % 3600000) / 60000);
         // פורמט קצר בשורה אחת: "עוד 4:27 שע'" או "עוד 27 דק'"
         var rem = hh > 0 ? hh + ":" + (mm < 10 ? "0" : "") + mm + " שע'" : mm + " דק'";
-        el.innerHTML = "⏳ <b>" + next.l + " · " + fmtTime(next.iso) + "</b> · עוד " + rem;
+        var zHtml = "⏳ <b>" + next.l + " · " + fmtTime(next.iso) + "</b> · עוד " + rem;
+        // כתיבה רק בשינוי — כתיבה זהה מעירה את ה-observers וגוררת re-blur מאחורי פופאפים
+        if (el.innerHTML !== zHtml) el.innerHTML = zHtml;
       } else {
-        el.textContent = "";
+        if (el.textContent !== "") el.textContent = "";
       }
     }
     setInterval(update, 30000);
@@ -1504,7 +1509,7 @@
   safe("personalName", function () {
     // מעטר את שורת הברכה — נקרא מתוך paint() של הברכה אחרי כל ציור מחדש
     window.__luxNameDecorate = function (el) {
-      if (el.querySelector(".lux-name-add, .lux-name-edit")) return;
+      if (el.querySelector(".lux-name-add")) return;
       var name = "";
       try { name = localStorage.getItem("lux_user_name") || ""; } catch (e) {}
       if (name) {
@@ -1828,10 +1833,12 @@
         var n = parseInt(m[1], 10);
         var existing = ch.querySelector(".lux-th-mark");
         if (existing) {
-          // סנכרון מצב תצוגה אם הפרק צויר מחדש
+          // סנכרון מצב תצוגה אם הפרק צויר מחדש. כתיבה רק בשינוי! כתיבת textContent
+          // זהה מחליפה את צומת הטקסט ומעירה שוב את ה-MutationObserver — לולאה אינסופית שריצדה את הפופאפ
           var on0 = isRead(n);
           existing.classList.toggle("lux-on", on0);
-          existing.textContent = on0 ? "✓ נקרא" : "◯ סמן שנקרא";
+          var want0 = on0 ? "✓ נקרא" : "◯ סמן שנקרא";
+          if (existing.textContent !== want0) existing.textContent = want0;
           return;
         }
         // לא מוסיפים כפתור לפרק שעדיין בטעינה — הטקסט יחליף אותו מיד
@@ -3867,19 +3874,6 @@
       }
       return null;
     }
-    // המופע הבא של תאריך עברי (יארצייט / יום הולדת)
-    function nextOccurrence(hMonth, hDay) {
-      var target = normM(hMonth);
-      var adarFb = null;
-      for (var i = 0; i < 400; i++) {
-        var d = new Date(Date.now() + i * 86400000);
-        if (luxHebDay(d) !== hDay) continue;
-        var m = normM(luxHebMonth(d));
-        if (m === target) return { date: d, days: i };
-        if (target.indexOf("אדר") === 0 && m.indexOf("אדר") === 0 && !adarFb) adarFb = { date: d, days: i };
-      }
-      return adarFb;
-    }
     function fmtG(d) {
       return d.toLocaleDateString("he-IL", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
     }
@@ -4963,6 +4957,7 @@
       if (!ds || ds.classList.contains("hidden")) return;
       if (typeof window.luxStartTour !== "function") return;
       if (document.body.style.position === "fixed") return;
+      if (document.documentElement.classList.contains("lux-modal-open")) return;
       if (document.querySelector(".lux-sheet-overlay")) return;
       clearInterval(t);
       // מסומן כ"הוצג" ברגע ההצגה — הפופאפ לעולם לא יקפוץ שוב

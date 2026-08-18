@@ -18,6 +18,12 @@
       "runtimeExecutable": "npx",
       "runtimeArgs": ["-y", "http-server", "-p", "8127", "-c-1", "."],
       "port": 8127
+    },
+    {
+      "name": "site-audit",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["-y", "http-server", "-p", "8131", "-c-1", "."],
+      "port": 8131
     }
   ]
 }

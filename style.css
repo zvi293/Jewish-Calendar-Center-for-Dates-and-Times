@@ -72,14 +72,6 @@
           0 0 22px rgba(232, 193, 90, 0.12),
           inset 0 1px 0 rgba(255, 255, 255, 0.14);
       }
-      /* Bright "sea" theme keeps neutral glass — gold hairlines are for the night hero */
-      .bg-ocean-readable .glass-card {
-        border-color: rgba(255, 255, 255, 0.28);
-      }
-      .bg-ocean-readable .glass-card:hover {
-        border-color: rgba(255, 255, 255, 0.45);
-      }
-
       /* ── Filter Chips ── */
       .chip {
         transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
@@ -344,21 +336,6 @@
           radial-gradient(ellipse 90% 60% at 85% 100%, rgba(49, 46, 129, 0.35) 0%, transparent 60%),
           linear-gradient(160deg, #050b1a 0%, #0c1530 45%, #16233f 100%);
       }
-      /* ── Bright/Readable Hero Mode (for elderly users) ── */
-      .bg-ocean-readable {
-        background: linear-gradient(160deg,
-          #1e3a8a 0%,
-          #1d4ed8 30%,
-          #2563eb 60%,
-          #0ea5e9 85%,
-          #38bdf8 100%
-        );
-      }
-      /* Readable mode: hide stars canvas */
-      .bg-ocean-readable #stars-canvas {
-        opacity: 0 !important;
-        pointer-events: none;
-      }
       .compass-ring {
         background: radial-gradient(
           circle,
@@ -460,25 +437,6 @@
       #sefaria-modal-content .text-left {
         text-align: left;
         direction: ltr;
-      }
-
-      /* ── Blue (Sea) Theme – Search Bar Fix ── */
-      .theme-blue nav[aria-label="סינון וחיפוש"] {
-        background: #ffffff !important;
-        border-color: #e2e8f0 !important;
-      }
-      .theme-blue #mainSearch {
-        background: #f1f5f9;
-        color: #1e293b;
-        border-color: #cbd5e1;
-        transition: all 0.3s ease;
-      }
-      .theme-blue #mainSearch::placeholder {
-        color: #94a3b8;
-      }
-      .theme-blue #mainSearch:focus {
-        border-color: #38bdf8;
-        box-shadow: 0 0 0 3px rgba(56,189,248,0.25), 0 4px 15px rgba(56,189,248,0.1);
       }
 
       /* ── Zmanim Card Hover ── */
@@ -652,24 +610,6 @@
         border-top: 1px solid rgba(148, 163, 184, 0.35);
         margin: 1.35rem 0;
       }
-      /* Inline prayer additions/supplements styling */
-      .prayer-richtext .prayer-addition,
-      .prayer-richtext [data-addition] {
-        color: #1d4ed8;
-        font-size: 0.88em;
-        border-right: 3px solid rgba(59,130,246,0.3);
-        padding-right: 0.6rem;
-        margin: 0.5rem 0;
-        display: block;
-      }
-      .prayer-source-credit {
-        color: #94a3b8;
-        font-size: 0.76rem;
-        line-height: 1.65;
-      }
-      .prayer-source-credit strong {
-        color: #cbd5e1;
-      }
       @media (max-width: 767px) {
         #dashboard-state article {
           min-height: 114px;
@@ -697,12 +637,6 @@
         #shnayim-mikra-link .shnayim-parsha-suffix {
           display: none;
         }
-      }
-
-      /* ── Sync button pulse ── */
-      @keyframes pulse-glow {
-        0%,100% { box-shadow: 0 0 0 0 rgba(37,99,235,0.4); }
-        50%      { box-shadow: 0 0 0 8px rgba(37,99,235,0); }
       }
 
       /* ── Footer credits ── */
@@ -736,14 +670,6 @@
         border-color: #e0b74f !important;
         box-shadow: 0 0 0 3px rgba(224,183,79,0.4), 0 4px 14px rgba(224,183,79,0.3);
         transform: scale(1.08);
-      }
-
-      /* ── Contact-modal copy toast animation ── */
-      @keyframes fadeInOut {
-        0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.92); }
-        15%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-        85%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-        100% { opacity: 0; transform: translate(-50%, -50%) scale(0.92); }
       }
 
       /* ── Contact-modal copy toast animation ── */
@@ -988,13 +914,6 @@
   border-radius: 4px;
 }
 
-/* ── טיפוגרפיה מלכותית ── */
-.hero-title {
-  font-family: var(--lux-serif);
-  font-weight: 900;
-  letter-spacing: -0.01em;
-}
-
 /* ── עיטור זהב מתחת לכותרת ── */
 .hero-ornament {
   display: flex;
@@ -1020,7 +939,7 @@ html:not(.dark) body {
   background-color: #f6f3ea !important;
   background-image:
     radial-gradient(ellipse 90% 40% at 50% 0%, rgba(200, 155, 60, 0.055) 0%, transparent 60%);
-  background-attachment: fixed;
+  /* בלי background-attachment: fixed — בנייד זה גרר repaint של כל הרקע בכל נעילת פופאפ */
 }
 
 /* ── תיבת חיפוש — פינות מעודנות + זכוכית מגדלת בזהב ── */
@@ -1117,16 +1036,6 @@ details.group summary .text-blue-500 {
 #btn-shul-mikve:hover {
   border-color: rgba(242, 217, 138, 0.85) !important;
   box-shadow: 0 10px 32px rgba(5, 11, 26, 0.5), 0 0 26px rgba(232, 193, 90, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
-}
-
-/* ── שימר זהב בכותרת הראשית ── */
-@keyframes lux-shimmer {
-  0%, 100% { background-position: 0% center; }
-  50% { background-position: 100% center; }
-}
-.hero-title span[data-i18n-key="app_title_2"] {
-  background-size: 220% auto !important;
-  animation: lux-shimmer 7s ease-in-out infinite;
 }
 
 /* ── ספירה לאחור — תוויות בזהב ── */
@@ -2464,22 +2373,6 @@ body.lux-shabbat #shabbat-countdown-bar {
   margin: 0 0 0.6rem;
 }
 .dark #lux-pearl .lux-pearl-src { color: #e0b74f; }
-#lux-pearl .lux-pearl-share {
-  background: none;
-  border: 1px solid rgba(200, 155, 60, 0.4);
-  color: #a1762a;
-  font-size: 0.72rem;
-  font-weight: 800;
-  padding: 0.3rem 0.9rem;
-  border-radius: 999px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-.dark #lux-pearl .lux-pearl-share { color: #f2d98a; border-color: rgba(232, 193, 90, 0.4); }
-#lux-pearl .lux-pearl-share:hover {
-  background: rgba(224, 183, 79, 0.12);
-}
-
 /* ── שלדי טעינה זהובים ── */
 .lux-skeleton-grid {
   display: grid;
@@ -3014,8 +2907,7 @@ body.lux-shabbat #shabbat-countdown-bar {
   #cal-days-grid > div.border-blue-500,
   .lux-skeleton-card,
   #zmanim-details > div.animate-pulse,
-  #lux-shabbat-banner .lux-sb-candles,
-  .hero-title span[data-i18n-key="app_title_2"] {
+  #lux-shabbat-banner .lux-sb-candles {
     animation: none !important;
   }
 }
@@ -3284,21 +3176,6 @@ body.lux-shabbat #shabbat-countdown-bar {
   font-size: 0.72rem;
   margin: 0.1rem 0 0;
 }
-.lux-sel-font { display: flex; gap: 0.4rem; flex-shrink: 0; }
-.lux-sel-font button {
-  width: 2.2rem;
-  height: 2.2rem;
-  border-radius: 50%;
-  border: 1.5px solid rgba(224, 183, 79, 0.5);
-  background: rgba(224, 183, 79, 0.12);
-  color: #f2d98a;
-  font-size: 1.2rem;
-  font-weight: 900;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
 .lux-sel-chips {
   display: flex;
   gap: 0.4rem;
@@ -3492,12 +3369,6 @@ html.dark .lux-sel-foot { background: #111c33; border-top-color: rgba(255, 255, 
   border: 1px solid rgba(16, 185, 129, 0.3);
   cursor: pointer;
 }
-.lux-sel-foot-hint {
-  font-size: 0.72rem;
-  color: #8a7434;
-  font-weight: 600;
-}
-html.dark .lux-sel-foot-hint { color: #94a3b8; }
 /* כפתורי גופן בתחתית הקורא — ליד הגלילה האוטומטית */
 .lux-sel-fbtn {
   width: 40px;
@@ -4010,8 +3881,6 @@ body.lux-shabbat-scene-on #countdown-display {
 }
 .lux-hc-dig-n { fill: #f2d98a; }
 .lux-hc-sub2 { fill: #a1762a; font-size: 10px; font-weight: 800; }
-.lux-hc-mode { fill: #a1762a; font-size: 13px; font-weight: 900; }
-.lux-hc-mode-n { fill: #d9c48a; }
 .lux-hc-spin { animation: lux-hc-rot 60s linear infinite; }
 @keyframes lux-hc-rot { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .lux-hc-spin { animation: none; } }
@@ -4585,7 +4454,6 @@ html.dark .lux-pl-cm-p { color: #ddd6fe; }
   filter: drop-shadow(0 0 18px rgba(226, 232, 240, 0.45));
 }
 .lux-moon-pop-in h3 { color: #dbeafe; font-size: 0.95rem; font-weight: 800; margin: 0 0 0.2rem; }
-.lux-moon-pop-phase { color: #93c5fd; font-size: 1.05rem; font-weight: 900; margin: 0 0 0.5rem; }
 .lux-moon-pop-day { color: #e2e8f0; font-size: 0.9rem; margin: 0 0 0.8rem; }
 .lux-moon-pop-day b { color: #fde68a; font-size: 1.05rem; }
 .lux-moon-pop-track {
@@ -4999,3 +4867,36 @@ html.dark .lux-pl-unit { color: #f2d98a; }
 }
 html.dark #lux-plan-reader { background: #0f172a; }
 #lux-plan-reader .lux-sel-area { overscroll-behavior: contain; }
+
+
+/* ═══════════════════════════════════════════════════════
+   ✦ הקפאת רקע בזמן פופאפ פתוח (html.lux-modal-open)
+   כל שכבות הפופאפ הן backdrop-filter על כל המסך; כל אנימציה שרצה
+   מתחתיהן מכריחה את ה-GPU לחשב מחדש את הטשטוש בכל פריים — זה היה
+   מקור הריצוד בנייד. כשפופאפ פתוח משהים את אנימציות הרקע (הן ממילא
+   מוסתרות) ומורידים את הטשטוש מסרגל הניווט התחתון. הכול חוזר לחיים
+   מיד עם הסגירה. אין לגעת בתוכן הפופאפים עצמם — הם אחים ישירים של
+   body ולכן לא נתפסים בסלקטורים האלה.
+   ═══════════════════════════════════════════════════════ */
+html.lux-modal-open #hero-section *,
+html.lux-modal-open #main-content *,
+html.lux-modal-open body > section *,
+html.lux-modal-open body > footer *,
+html.lux-modal-open #lux-bottom-nav *,
+html.lux-modal-open #lux-shabbat-scene *,
+html.lux-modal-open #pwa-install-banner * {
+  animation-play-state: paused !important;
+}
+html.lux-modal-open #lux-bottom-nav {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background: rgba(9, 16, 36, 0.96) !important;
+}
+
+/* אחרי הניגון הראשון של כניסת הדשבורד — קריאות חוזרות ל-showDashboard
+   לא מריצות שוב את fadeSlideUp מאפס (זה הבהב את ארבעת הכרטיסים) */
+#dashboard-state.lux-anim-done article {
+  animation: none !important;
+  opacity: 1 !important;
+  transform: none !important;
+}

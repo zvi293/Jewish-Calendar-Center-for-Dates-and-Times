@@ -6,12 +6,10 @@
 >
   <url>
     <loc>https://jewishcalendar.co.il/</loc>
-    <lastmod>2026-04-14</lastmod>
+    <lastmod>2026-08-18</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
     <xhtml:link rel="alternate" hreflang="he-IL" href="https://jewishcalendar.co.il/"/>
-    <xhtml:link rel="alternate" hreflang="en-US" href="https://jewishcalendar.co.il/"/>
-    <xhtml:link rel="alternate" hreflang="fr-FR" href="https://jewishcalendar.co.il/"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://jewishcalendar.co.il/"/>
     <image:image>
       <image:loc>https://jewishcalendar.co.il/og-image.png</image:loc>
@@ -20,20 +18,26 @@
     </image:image>
   </url>
   <url>
+    <loc>https://jewishcalendar.co.il/synagogues.html</loc>
+    <lastmod>2026-08-18</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
     <loc>https://jewishcalendar.co.il/credits.html</loc>
-    <lastmod>2026-04-19</lastmod>
+    <lastmod>2026-08-18</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.2</priority>
   </url>
   <url>
     <loc>https://jewishcalendar.co.il/privacy.html</loc>
-    <lastmod>2026-04-19</lastmod>
+    <lastmod>2026-08-18</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.3</priority>
   </url>
   <url>
     <loc>https://jewishcalendar.co.il/terms.html</loc>
-    <lastmod>2026-04-19</lastmod>
+    <lastmod>2026-08-18</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.3</priority>
   </url>

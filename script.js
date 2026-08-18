@@ -87,74 +87,6 @@ const i18nDict = {
     notif_daf: "הדף היומי (תזכורת בוקר 08:00)",
     notif_tefillin: "תזכורת להניח תפילין (08:30)",
   },
-  en: {
-    app_title_1: "Jewish",
-    app_title_2: "Calendar",
-    loading: "Syncing data...",
-    today_date: "Today's Date",
-    moon_close: "Upcoming Kiddush Levana",
-    next_event: "Next Event",
-    upcoming_shab: "Upcoming Shabbat",
-    zmanim: "Daily Zmanim",
-    cal_btn: "Open Monthly Calendar",
-    search_place: "Search holiday, fast...",
-    filter_all: "All",
-    filter_holidays: "Holidays",
-    filter_fasts: "Fasts",
-    filter_rosh: "Rosh Chodesh",
-    filter_moon: "Levana",
-    omer_title: "Omer Count",
-    omer_btn: "Full Blessing Text",
-    sync_all: "Sync Calendar to Device",
-    sync_mobile: "Sync Cal",
-    settings_title: "Settings",
-    compass: "Prayer Direction Compass",
-    settings_language: "Language",
-    language_switch: "Change Language",
-    notif_settings_title: "Push Notifications",
-    notif_enable: "Enable",
-    notif_shab: "Shabbat (30 mins before)",
-    notif_hol: "Holiday (30 mins before)",
-    notif_fast: "Fast Ends (30 mins before)",
-    notif_omer: "Omer Count (At Nightfall)",
-    notif_levana: "Kiddush Levana (Start/End)",
-    notif_daf: "Daf Yomi (Morning at 08:00)",
-    notif_tefillin: "Put on Tefillin Reminder (08:30)",
-  },
-  fr: {
-    app_title_1: "Calendrier",
-    app_title_2: "Juif",
-    loading: "Synchronisation...",
-    today_date: "Date du Jour",
-    moon_close: "Prochain Kiddouch Levana",
-    next_event: "Prochain Événement",
-    upcoming_shab: "Prochain Chabbat",
-    zmanim: "Zmanim du Jour",
-    cal_btn: "Ouvrir le Calendrier",
-    search_place: "Rechercher une fête...",
-    filter_all: "Tout",
-    filter_holidays: "Fêtes",
-    filter_fasts: "Jeûnes",
-    filter_rosh: "Roch Hodech",
-    filter_moon: "Levana",
-    omer_title: "Compte du Omer",
-    omer_btn: "Texte Complet",
-    sync_all: "Synchroniser avec l'agenda",
-    sync_mobile: "Sync",
-    settings_title: "Paramètres",
-    compass: "Boussole de Prière",
-    settings_language: "Langue",
-    language_switch: "Changer de langue",
-    notif_settings_title: "Notifications Push",
-    notif_enable: "Activer",
-    notif_shab: "Chabbat (30 min avant)",
-    notif_hol: "Fête (30 min avant)",
-    notif_fast: "Fin du Jeûne (30 min avant)",
-    notif_omer: "Compte du Omer (À la nuit)",
-    notif_levana: "Kiddouch Levana (Début/Fin)",
-    notif_daf: "Daf Yomi (Matin à 08:00)",
-    notif_tefillin: "Rappel pour mettre les Téfilines (08:30)",
-  },
 };
 
 Object.assign(i18nDict.he, {
@@ -165,24 +97,6 @@ Object.assign(i18nDict.he, {
   settings_method_label: "שיטת חישוב זמני היום",
   calendar_today_btn: "היום",
   footer_credits: "קרדיטים",
-});
-Object.assign(i18nDict.en, {
-  settings_city_label: "City for zmanim and Shabbat",
-  settings_city_placeholder: "Type a city name (English or Hebrew)...",
-  settings_current_city_label: "Current city:",
-  settings_use_gps: "Use my location (GPS)",
-  settings_method_label: "Daily zmanim calculation method",
-  calendar_today_btn: "Today",
-  footer_credits: "Credits",
-});
-Object.assign(i18nDict.fr, {
-  settings_city_label: "Ville pour les zmanim et le Chabbat",
-  settings_city_placeholder: "Tapez un nom de ville (anglais ou hébreu)...",
-  settings_current_city_label: "Ville actuelle :",
-  settings_use_gps: "Utiliser ma position (GPS)",
-  settings_method_label: "Méthode de calcul des zmanim",
-  calendar_today_btn: "Aujourd'hui",
-  footer_credits: "Crédits",
 });
 
 const dynamicUiDict = {
@@ -231,122 +145,6 @@ const dynamicUiDict = {
       "פלג המנחה",
       "שקיעה",
       "צאת הכוכבים",
-    ],
-  },
-  en: {
-    locale: "en-US",
-    calendarLocale: "en-US",
-    hebrewCalendarLocale: "en-US-u-ca-hebrew",
-    weekdayHeaders: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-    weekdayNames: [
-      "Sunday",
-      "Monday",
-      "Tuesday",
-      "Wednesday",
-      "Thursday",
-      "Friday",
-      "Shabbat",
-    ],
-    today: "Today",
-    inDays: (days) => `In ${days} Days`,
-    noResults: "No matching events found.",
-    shabbatEnter: "Shabbat begins",
-    shabbatExit: "Shabbat ends",
-    holidayEnter: "Holiday begins",
-    holidayExit: "Holiday ends",
-    fastStart: "Fast begins",
-    fastEnd: "Fast ends",
-    currentCityLabel: "Current city:",
-    gpsCity: "Current location (GPS)",
-    gpsError: "Unable to detect location. Restoring the previous setting.",
-    loadingFastTimes: "Calculating fast times...",
-    loadingHolidayTimes: "Calculating holiday times...",
-    noDataError:
-      "Unable to load data right now. Check your internet connection.",
-    syncEmpty: "No events available to sync.",
-    compassPermission: "Sensor permission is required",
-    compassLocating: "Finding prayer direction...",
-    compassRotate: "Rotate the device...",
-    compassButton: "Grant compass sensor access",
-    compassTargetJerusalem: "Jerusalem",
-    compassTargetWall: "Western Wall",
-    compassTargetIsrael: "Land of Israel",
-    compassAligned: (label) => `Aligned to ${label}!`,
-    sefariaLoading: "Loading text from the database...",
-    sefariaMissing: "No text was found for this item in the open database.",
-    sefariaError:
-      "Failed to load the text. Please check your internet connection.",
-    sefariaCredit: "Text courtesy of Sefaria.org (open license)",
-    zmanimLabels: [
-      "Alot HaShachar",
-      "Sunrise",
-      "Latest Shema",
-      "Latest Tefillah",
-      "Chatzot",
-      "Mincha Gedola",
-      "Mincha Ketana",
-      "Plag HaMincha",
-      "Sunset",
-      "Tzeit HaKochavim",
-    ],
-  },
-  fr: {
-    locale: "fr-FR",
-    calendarLocale: "fr-FR",
-    hebrewCalendarLocale: "fr-FR-u-ca-hebrew",
-    weekdayHeaders: ["dim.", "lun.", "mar.", "mer.", "jeu.", "ven.", "sam."],
-    weekdayNames: [
-      "dimanche",
-      "lundi",
-      "mardi",
-      "mercredi",
-      "jeudi",
-      "vendredi",
-      "Chabbat",
-    ],
-    today: "Aujourd'hui",
-    inDays: (days) => `Dans ${days} jours`,
-    noResults: "Aucun événement correspondant.",
-    shabbatEnter: "Entrée de Chabbat",
-    shabbatExit: "Sortie de Chabbat",
-    holidayEnter: "Entrée de la fête",
-    holidayExit: "Sortie de la fête",
-    fastStart: "Début du jeûne",
-    fastEnd: "Fin du jeûne",
-    currentCityLabel: "Ville actuelle :",
-    gpsCity: "Position actuelle (GPS)",
-    gpsError:
-      "Impossible de détecter la position. Retour au réglage précédent.",
-    loadingFastTimes: "Calcul des horaires du jeûne...",
-    loadingHolidayTimes: "Calcul des horaires de la fête...",
-    noDataError:
-      "Impossible de charger les données pour le moment. Vérifiez votre connexion Internet.",
-    syncEmpty: "Aucun événement à synchroniser.",
-    compassPermission: "L'autorisation des capteurs est requise",
-    compassLocating: "Recherche de la direction de prière...",
-    compassRotate: "Tournez l'appareil...",
-    compassButton: "Autoriser l'accès aux capteurs",
-    compassTargetJerusalem: "Jérusalem",
-    compassTargetWall: "Mur occidental",
-    compassTargetIsrael: "Terre d'Israël",
-    compassAligned: (label) => `Aligné vers ${label} !`,
-    sefariaLoading: "Chargement du texte depuis la base de données...",
-    sefariaMissing:
-      "Aucun texte n'a été trouvé pour cet élément dans la base ouverte.",
-    sefariaError:
-      "Le chargement du texte a échoué. Veuillez vérifier votre connexion Internet.",
-    sefariaCredit: "Texte fourni par Sefaria.org (licence ouverte)",
-    zmanimLabels: [
-      "Alot HaShachar",
-      "Lever du soleil",
-      "Fin du Chema",
-      "Fin de la Tefila",
-      "Hatsot",
-      "Minha Gedola",
-      "Minha Ketana",
-      "Plag HaMinha",
-      "Coucher du soleil",
-      "Sortie des étoiles",
     ],
   },
 };
@@ -485,11 +283,12 @@ function setupModalBackdropClose() {
 // מחליפים מחלקות רק כשחוצים את הסף — עבודה על כל אירוע גלילה גורמת לריצודים בנייד
 let _navScrolledState = null;
 window.addEventListener("scroll", () => {
+  // בזמן שפופאפ נועל את הרקע scrollY קורס ל-0 — עדכון הניווט אז מהבהב מתחת לשכבה
+  if (document.body.style.position === "fixed") return;
   const scrolledNow = window.scrollY > 50;
   if (scrolledNow === _navScrolledState) return;
   _navScrolledState = scrolledNow;
   const navButtons = document.querySelectorAll(".nav-action-btn");
-  const isBlueTheme = document.documentElement.classList.contains("theme-blue");
   if (window.scrollY > 50) {
     navButtons.forEach((btn) => {
       btn.classList.remove(
@@ -498,37 +297,16 @@ window.addEventListener("scroll", () => {
         "border-white/20",
         "hover:bg-white/20",
       );
-      if (isBlueTheme) {
-        // Blue theme scrolled: dark blue buttons visible on light content
-        btn.classList.remove(
-          "bg-white/90",
-          "text-slate-800",
-          "border-slate-200",
-          "hover:bg-slate-100",
-        );
-        btn.classList.add(
-          "bg-blue-700/90",
-          "text-white",
-          "border-blue-600",
-          "hover:bg-blue-800",
-        );
-      } else {
-        btn.classList.remove(
-          "bg-blue-700/90",
-          "border-blue-600",
-          "hover:bg-blue-800",
-        );
-        btn.classList.add(
-          "bg-white/90",
-          "text-slate-800",
-          "border-slate-200",
-          "hover:bg-slate-100",
-          "dark:bg-slate-800",
-          "dark:text-white",
-          "dark:border-slate-700",
-          "dark:hover:bg-slate-700",
-        );
-      }
+      btn.classList.add(
+        "bg-white/90",
+        "text-slate-800",
+        "border-slate-200",
+        "hover:bg-slate-100",
+        "dark:bg-slate-800",
+        "dark:text-white",
+        "dark:border-slate-700",
+        "dark:hover:bg-slate-700",
+      );
     });
   } else {
     navButtons.forEach((btn) => {
@@ -547,9 +325,6 @@ window.addEventListener("scroll", () => {
         "dark:text-white",
         "dark:border-slate-700",
         "dark:hover:bg-slate-700",
-        "bg-blue-700/90",
-        "border-blue-600",
-        "hover:bg-blue-800",
       );
     });
   }
@@ -567,9 +342,12 @@ function lockBodyScroll() {
     document.body.style.top = `-${window.scrollY}px`;
     document.body.dataset.scrollY = window.scrollY;
   }
+  _syncModalOpenClass();
 }
 function unlockBodyScroll() {
-  _modalScrollLockCount = Math.max(0, _modalScrollLockCount - 1);
+  // שחרור עודף (סגירה כפולה / רשומה יתומה) — אין נעילה לשחרר, לא מזיזים את הגלילה
+  if (_modalScrollLockCount === 0) return;
+  _modalScrollLockCount--;
   if (_modalScrollLockCount === 0) {
     const scrollY = parseInt(document.body.dataset.scrollY || "0", 10);
     document.body.style.overflow = "";
@@ -579,7 +357,26 @@ function unlockBodyScroll() {
     document.body.style.top = "";
     window.scrollTo(0, scrollY);
   }
+  _syncModalOpenClass();
 }
+// html.lux-modal-open — סימון מרכזי "פופאפ כלשהו פתוח": משהה את קנבס הכוכבים,
+// את שעוני-הכפייה ואת האנימציות האינסופיות שברקע (כללי CSS בסוף style.css).
+// הבדיקה משקפת את ה-DOM עצמו ולכן עמידה גם מול פופאפים שלא נועלים גלילה.
+const _OVERLAY_OPEN_SELECTOR =
+  'body > [id$="-modal"]:not(.hidden), body > .lux-sheet-overlay, ' +
+  "body > #lux-stories, body > #lux-year-wheel, body > #lux-nav-editor, " +
+  "body > #lux-moon-pop, body > .lux-badge-pop, body > #lux-tour-overlay, " +
+  "body > #chapter-nav-popup, body > #cal-month-year-picker";
+function _isAnyOverlayOpen() {
+  return (
+    document.body.style.position === "fixed" ||
+    !!document.querySelector(_OVERLAY_OPEN_SELECTOR)
+  );
+}
+function _syncModalOpenClass() {
+  document.documentElement.classList.toggle("lux-modal-open", _isAnyOverlayOpen());
+}
+setInterval(_syncModalOpenClass, 300);
 // History-based back button: push state when modal opens, pop to close
 let _activeModals = [];
 function pushModalState(modalId) {
@@ -588,11 +385,11 @@ function pushModalState(modalId) {
 }
 function removeModalById(modalId) {
   const el = document.getElementById(modalId);
-  if (el) {
-    if (el.classList.contains("hidden")) return;
-    if (el.remove) el.remove();
-    else el.classList.add("hidden");
-  }
+  // רשומה יתומה (האלמנט כבר הוסר בדרך אחרת) — אין מה לסגור ואין נעילה לשחרר
+  if (!el) return;
+  if (el.classList.contains("hidden")) return;
+  if (el.remove) el.remove();
+  else el.classList.add("hidden");
   unlockBodyScroll();
 }
 window.addEventListener("popstate", function (e) {
@@ -617,23 +414,21 @@ window.addEventListener("popstate", function (e) {
       unlockBodyScroll();
     } else if (modalId === "sefaria-modal") {
       closeSefariaModal();
-      unlockBodyScroll();
     } else if (modalId === "chok-israel-modal") {
       closeChokLeIsraelModal();
     } else if (modalId === "calendar-modal") {
       closeCalendar();
-      unlockBodyScroll();
     } else if (modalId === "settings-modal") {
       toggleSettings();
     } else if (modalId === "compass-modal") {
       closeCompass();
-      unlockBodyScroll();
     } else if (modalId === "omer-modal") {
       const el = document.getElementById(modalId);
       if (el) {
         el.classList.add("opacity-0");
         setTimeout(() => el.classList.add("hidden"), 300);
       }
+      _stopOmerCountdown();
       unlockBodyScroll();
     } else if (modalId === "motzei-shabbat-modal") {
       const el = document.getElementById(modalId);
@@ -657,9 +452,14 @@ window.addEventListener("popstate", function (e) {
       removeModalById(modalId);
     }
   } else {
-    // אין מודלים פתוחים — מונע יציאה מהאפליקציה, חוזר לדף הבית
+    // אין מודלים פתוחים — מונע יציאה מהאפליקציה, חוזר לדף הבית.
+    // אחרי history.back() תכנותי (סגירת X) אין לגלול — זה נלחם בשחזור הגלילה של unlockBodyScroll
     history.pushState(null, "");
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    if (window._suppressHomeScroll) {
+      window._suppressHomeScroll = false;
+    } else {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
   }
 });
 // ערך בסיס בהיסטוריה בטעינה: מבטיח שכפתור חזור תמיד יישאר בתוך האפליקציה
@@ -680,7 +480,7 @@ let ZMANIM_METHOD = localStorage.getItem("moadim_method") || "MGA";
 let GPS_COORDS = JSON.parse(localStorage.getItem("moadim_gps")) || null;
 let compassListener = null;
 let CALENDAR_DISPLAY_DATE = new Date();
-let CURRENT_THEME = ["light", "dark", "blue"].includes(
+let CURRENT_THEME = ["light", "dark"].includes(
   localStorage.getItem("moadim_theme"),
 )
   ? localStorage.getItem("moadim_theme")
@@ -846,20 +646,6 @@ function applyTranslations() {
   updateCompassDirectionLabels();
 }
 
-async function cycleLanguage() {
-  if (CURRENT_LANG === "he") CURRENT_LANG = "en";
-  else if (CURRENT_LANG === "en") CURRENT_LANG = "fr";
-  else CURRENT_LANG = "he";
-
-  localStorage.setItem("moadim_lang", CURRENT_LANG);
-  refreshLiveLanguageUI();
-  render(
-    document.querySelector(".chip.active")?.id?.replace("btn-", "") || "all",
-    document.getElementById("mainSearch").value,
-  );
-  buildMonthCalendar();
-  await fetchLiveCalendarData();
-}
 
 function updateCompassDirectionLabels() {
   const labels =
@@ -887,27 +673,14 @@ function applyTheme(theme) {
     : null;
   const wavePath = document.querySelector(".wave-divider path");
   const themeMetaTag = document.querySelector('meta[name="theme-color"]');
-  let nextTheme;
-  if (theme === "blue") nextTheme = "blue";
-  else if (theme === "dark") nextTheme = "dark";
-  else nextTheme = "light";
+  const nextTheme = theme === "dark" ? "dark" : "light";
 
   CURRENT_THEME = nextTheme;
   localStorage.setItem("moadim_theme", nextTheme);
   html.classList.remove("dark");
   html.classList.remove("theme-blue");
 
-  if (nextTheme === "blue") {
-    html.classList.add("theme-blue");
-    if (header) {
-      header.classList.remove("gradient-bg");
-      header.classList.add("bg-ocean-readable");
-    }
-    // CSS rule `.bg-ocean-readable #stars-canvas { opacity:0 }` hides stars automatically
-    if (glowWrap) glowWrap.style.opacity = "0";
-    if (wavePath) wavePath.style.fill = "rgb(248 250 252)";
-    if (themeMetaTag) themeMetaTag.content = "#0284c7";
-  } else if (nextTheme === "dark") {
+  if (nextTheme === "dark") {
     html.classList.add("dark");
     if (header) {
       header.classList.remove("bg-ocean-readable");
@@ -928,7 +701,7 @@ function applyTheme(theme) {
   }
 
   // Highlight the active theme circle in the settings panel
-  ["light", "dark", "blue"].forEach((t) => {
+  ["light", "dark"].forEach((t) => {
     const el = document.getElementById("theme-circle-" + t);
     if (!el) return;
     if (t === nextTheme) {
@@ -937,15 +710,6 @@ function applyTheme(theme) {
       el.classList.remove("theme-circle-active");
     }
   });
-}
-
-function toggleTheme() {
-  // Cycle: light -> dark -> blue -> light
-  let next;
-  if (CURRENT_THEME === "light") next = "dark";
-  else if (CURRENT_THEME === "dark") next = "blue";
-  else next = "light";
-  applyTheme(next);
 }
 
 function initApp() {
@@ -1220,20 +984,30 @@ window._markLevanaBlessed = function (btn) {
 };
 
 function openOmerModal() {
+  const m = document.getElementById("omer-modal");
+  // כבר פתוח (ghost-tap בנייד) — פתיחה שנייה הייתה מוסיפה נעילה ורשומה כפולות
+  if (!m.classList.contains("hidden")) return;
   document.getElementById("omer-modal-text").textContent =
     generateOmerText(CURRENT_OMER_DAY);
-  const m = document.getElementById("omer-modal");
   m.classList.remove("hidden");
   setTimeout(() => m.classList.remove("opacity-0"), 10);
+  lockBodyScroll();
   pushModalState("omer-modal");
   _startOmerCountdown();
 }
 
 function closeOmerModal() {
   const m = document.getElementById("omer-modal");
+  if (!m || m.classList.contains("hidden")) return;
+  // לחיצת X/רקע: יוצאים דרך history.back כדי לסנכרן את המחסנית — popstate יסגור בפועל
+  if (_activeModals[_activeModals.length - 1] === "omer-modal") {
+    history.back();
+    return;
+  }
   m.classList.add("opacity-0");
   setTimeout(() => m.classList.add("hidden"), 300);
   _stopOmerCountdown();
+  unlockBodyScroll();
 }
 
 // --- Sefaria Modal Logic ---
@@ -1777,14 +1551,15 @@ async function openShnayimMikraModal(hebTitle, enRef) {
 
 function closeSefariaModal() {
   const m = document.getElementById("sefaria-modal");
-  if (!m) return;
+  if (!m || m.classList.contains("hidden")) return;
+  // לחיצת X/רקע: יוצאים דרך history.back כדי לסנכרן את המחסנית — popstate יקרא לנו שוב
+  if (_activeModals[_activeModals.length - 1] === "sefaria-modal") {
+    history.back();
+    return;
+  }
   m.classList.add("opacity-0");
   setTimeout(() => m.classList.add("hidden"), 300);
   unlockBodyScroll();
-  if (_activeModals[_activeModals.length - 1] === "sefaria-modal") {
-    _activeModals.pop();
-    history.back();
-  }
 }
 
 /* ── חוק לישראל ─────────────────────────────────────────── */
@@ -1965,24 +1740,6 @@ const _CHOK_SECTION_STYLES = {
 };
 const _CHOK_RASHI_SECTIONS = new Set(['תורה', 'נביאים', 'כתובים', 'גמרא']);
 const _CHOK_VERSE_LABEL_SECTIONS = new Set(['תורה', 'נביאים', 'כתובים']); // sections that get פסוק א/ב/ג labels
-const _CHOK_HEB_NUMS = ['א','ב','ג','ד','ה','ו','ז','ח','ט','י','יא','יב','יג','יד','טו','טז','יז','יח','יט','כ'];
-function _chokHebNum(n) { return _CHOK_HEB_NUMS[n - 1] || String(n); }
-
-// Converts a number to Hebrew verse numeral (e.g. 13 → י״ג)
-function _numToHebVerseNum(n) {
-  if (n <= 0 || n > 999) return String(n);
-  const s = ['','א','ב','ג','ד','ה','ו','ז','ח','ט'];
-  const t = ['','י','כ','ל','מ','נ','ס','ע','פ','צ'];
-  const h = ['','ק','ר','ש','ת','תק','תר','תש','תת','תתק'];
-  let r = '', nn = n;
-  if (nn >= 100) { r += h[Math.floor(nn/100)]; nn %= 100; }
-  if (nn === 15) { r += 'ט"ו'; return r; }
-  if (nn === 16) { r += 'ט"ז'; return r; }
-  if (nn >= 10) { r += t[Math.floor(nn/10)]; nn %= 10; }
-  r += s[nn];
-  if (r.length === 1) return r + "'";
-  return r.slice(0, -1) + '"' + r.slice(-1);
-}
 
 // ── שיבוץ פירושים בתוך הטקסט עצמו ──
 // מזהה את הדיבור-המתחיל של כל פירוש ומשבץ את הפירוש מיד אחרי המילים
@@ -2317,14 +2074,15 @@ async function fetchChokCommentaries() {
 
 function closeChokLeIsraelModal() {
   const m = document.getElementById('chok-israel-modal');
-  if (!m) return;
+  if (!m || m.classList.contains('hidden')) return;
+  // לחיצת X/רקע: יוצאים דרך history.back כדי לסנכרן את המחסנית — popstate יקרא לנו שוב
+  if (_activeModals[_activeModals.length - 1] === 'chok-israel-modal') {
+    history.back();
+    return;
+  }
   m.classList.add('opacity-0');
   setTimeout(() => m.classList.add('hidden'), 300);
   unlockBodyScroll();
-  if (_activeModals[_activeModals.length - 1] === 'chok-israel-modal') {
-    _activeModals.pop();
-    history.back();
-  }
 }
 window.openChokLeIsraelModal = openChokLeIsraelModal;
 window.closeChokLeIsraelModal = closeChokLeIsraelModal;
@@ -2635,7 +2393,6 @@ async function fetchLiveCalendarData() {
         ),
       ]);
     }
-    window._zmanimSource = zmanimSource;
     const srcBadge = document.getElementById("zmanim-source-badge");
     if (srcBadge)
       srcBadge.textContent =
@@ -2845,7 +2602,6 @@ async function fetchLiveCalendarData() {
         `https://www.hebcal.com/hebcal?v=1&cfg=json&c=on&${getGeoParams()}&start=${_hcIso(_hcBase)}&end=${_hcIso(_hcEnd)}&maj=on&i=on`,
       );
       window.HOLIDAY_CANDLES_TIME = null;
-      window.HOLIDAY_HAVDALAH_TIME = null;
       window.HOLIDAY_CANDLES_STR = "";
       window.HOLIDAY_HAVDALAH_STR = "";
       window.HOLIDAY_NAME_HE = "";
@@ -2885,7 +2641,6 @@ async function fetchLiveCalendarData() {
             (i) => i.category === "havdalah" && new Date(i.date) > candleDate,
           );
           if (havItem) {
-            window.HOLIDAY_HAVDALAH_TIME = new Date(havItem.date);
             window.HOLIDAY_HAVDALAH_STR = formatTimeStr(havItem.date);
           }
         }
@@ -3084,30 +2839,6 @@ async function fetchLiveCalendarData() {
         else if (/Tu BiShvat|Tu B'Shvat/.test(evTitle)) icon = "🌳";
         else if (evTitle.includes("Leil Selichot")) icon = "🕊️";
         else if (evTitle.includes("Shmini Atzeret") || evTitle.includes("Simchat Torah")) icon = "🎉";
-      } else if (ev.category === "modern" || ev.category === "israel") {
-        // ימי זיכרון ואירועים לאומיים
-        type = "minor";
-        if (
-          ev.title.includes("Shoah") ||
-          (ev.hebrew && ev.hebrew.includes("שואה"))
-        ) {
-          icon = "🕯️";
-          type = "fast";
-        } else if (
-          ev.title.includes("Zikaron") ||
-          (ev.hebrew && ev.hebrew.includes("זיכרון"))
-        ) {
-          icon = "🪖";
-          type = "fast";
-        } else if (
-          ev.title.includes("Atzmaut") ||
-          (ev.hebrew && ev.hebrew.includes("עצמאות"))
-        ) {
-          icon = "🇮🇱";
-          type = "major";
-        } else {
-          icon = "📅";
-        }
       } else if (ev.category === "parashat") {
         type = "parashat";
         icon = "📖";
@@ -3315,6 +3046,8 @@ function showDashboard() {
   // ביטחון: אם מעבר ה-opacity קפא (לשונית ברקע / PWA מוקפא בנייד) האלמנטים
   // נשארים שקופים לנצח — כופים חשיפה מלאה אחרי שחלון האנימציה הסתיים
   setTimeout(_forceRevealHeroEls, 900);
+  // אחרי הניגון הראשון — מקבעים את כרטיסי הדשבורד כדי שקריאה חוזרת לא תרצד אותם מאפס
+  setTimeout(() => dash.classList.add("lux-anim-done"), 950);
 }
 
 // חשיפה כפויה של אלמנטי הבית שנחשפים במעבר opacity חד-פעמי.
@@ -3354,7 +3087,11 @@ window.addEventListener("pageshow", () => setTimeout(_forceRevealHeroEls, 700));
 // סריקה מחזורית זולה — אף אלמנט בית לא נשאר תקוע שקוף, לא משנה מתי קפא המעבר.
 // מדלגים כשהטאב ברקע או כשפופאפ פתוח (visibilitychange והטיק שאחרי הסגירה משלימים)
 setInterval(() => {
-  if (document.hidden || document.body.style.position === "fixed") return;
+  if (
+    document.hidden ||
+    document.documentElement.classList.contains("lux-modal-open")
+  )
+    return;
   _forceRevealHeroEls();
 }, 2500);
 
@@ -3362,60 +3099,6 @@ setInterval(() => {
 // ✦  PRAYER GRID — EMBEDDED TEXTS + SEASON AWARE
 // ══════════════════════════════════════════════════
 
-// ── Detect current Hebrew season ──────────────────
-function getHebrewSeasonInfo() {
-  const now = new Date();
-  const heb = new Intl.DateTimeFormat("he-IL-u-ca-hebrew", {
-    month: "long",
-    day: "numeric",
-  }).format(now);
-  const month = new Intl.DateTimeFormat("he-IL-u-ca-hebrew", {
-    month: "long",
-  }).format(now);
-  const day = parseInt(
-    new Intl.DateTimeFormat("he-IL-u-ca-hebrew", { day: "numeric" }).format(
-      now,
-    ),
-  );
-  const dow = now.getDay(); // 0=Sun … 6=Sat
-
-  // Detect season flags
-  const isShabbat = dow === 6;
-  const isRoshChodesh =
-    heb.includes("א׳") || heb.includes("ב׳") || day === 1 || day === 30;
-  const isChanukah =
-    (month.includes("כסלו") && day >= 25) ||
-    (month.includes("טבת") && day <= 3);
-  const isPurim =
-    month.includes("אדר") && (day === 13 || day === 14 || day === 15);
-  const isPesach = month.includes("ניסן") && day >= 15 && day <= 22;
-  const isShavuot = month.includes("סיון") && (day === 6 || day === 7);
-  const isSukkot = month.includes("תשרי") && day >= 15 && day <= 23;
-  const isYomKippur = month.includes("תשרי") && day === 10;
-  const isRoshHaShana = month.includes("תשרי") && (day === 1 || day === 2);
-  const isOmer =
-    (month.includes("ניסן") && day >= 16) ||
-    month.includes("אייר") ||
-    (month.includes("סיון") && day < 6);
-  const isYamimNoraim = month.includes("תשרי") && day >= 1 && day <= 10;
-
-  return {
-    isShabbat,
-    isRoshChodesh,
-    isChanukah,
-    isPurim,
-    isPesach,
-    isShavuot,
-    isSukkot,
-    isYomKippur,
-    isRoshHaShana,
-    isOmer,
-    isYamimNoraim,
-    month,
-    day,
-    dow,
-  };
-}
 
 // ── Prayer texts database ─────────────────────────
 const PRAYER_DB = {
@@ -3690,269 +3373,7 @@ PRAYER_DB["tikkun-haklali"] = {
   seasonal: () => "",
 };
 
-// ── Build prayer modal HTML ───────────────────────
-function openPrayer(key, heLabel, enLabel) {
-  const entry = PRAYER_DB[key];
 
-  // Fallback: open Sefaria if prayer not in local DB
-  if (!entry) {
-    const refs = {
-      tehillim: "https://www.sefaria.org/Psalms?lang=bi",
-      "birkat-hamazon": "https://www.sefaria.org/Birkat_Hamazon?lang=bi",
-    };
-    const url =
-      refs[key] ||
-      `https://www.sefaria.org/search?q=${encodeURIComponent(heLabel)}&lang=he`;
-    window.open(url, "_blank");
-    return;
-  }
-
-  const season = getHebrewSeasonInfo();
-  const seasonNote = entry.seasonal ? entry.seasonal(season) : "";
-
-  // Pick nusach-specific text
-  const nusachTexts = entry.nusach;
-  let text =
-    nusachTexts[CURRENT_NUSACH] || nusachTexts.mizrahi || nusachTexts.all || "";
-
-  // Format text: bold headers, line breaks
-  const formatText = (t) =>
-    t
-      .replace(
-        /\*\*([^*]+)\*\*/g,
-        '<strong style="color:#93c5fd;display:block;margin:1rem 0 0.3rem;">$1</strong>',
-      )
-      .replace(/\n/g, "<br>");
-
-  const nusachNames = {
-    mizrahi: "עדות המזרח",
-    sfard: "ספרד",
-    ashkenaz: "אשכנז",
-  };
-
-  let existing = document.getElementById("prayer-modal");
-  if (existing) existing.remove();
-
-  const modal = document.createElement("div");
-  modal.id = "prayer-modal";
-  modal.style.cssText =
-    "position:fixed;inset:0;z-index:200;background:rgba(2,6,23,0.92);backdrop-filter:blur(8px);display:flex;align-items:flex-start;justify-content:center;padding:1rem;overflow-y:auto;";
-  modal.innerHTML = `
-          <div class="modal-inner" style="background:linear-gradient(145deg,#1e293b,#0f172a);border:1px solid rgba(99,102,241,0.3);border-radius:2rem;padding:2rem;width:100%;max-width:600px;margin:auto;box-shadow:0 25px 60px rgba(0,0,0,0.6);text-align:center;direction:rtl;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
-              <h3 class="modal-title" style="color:#f1f5f9;font-size:1.4rem;font-weight:900;margin:0;">${entry.title}</h3>
-              <button class="modal-close" onclick="closePrayerModal()" style="background:rgba(255,255,255,0.08);border:none;color:#94a3b8;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.2rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✕</button>
-            </div>
-            <div class="modal-nusach" style="color:#64748b;font-size:0.75rem;margin-bottom:1.2rem;">נוסח: <strong style="color:#818cf8;">${nusachNames[CURRENT_NUSACH] || CURRENT_NUSACH}</strong> &nbsp;|&nbsp; ניתן לשנות בהגדרות</div>
-            ${seasonNote ? `<div class="modal-season" style="background:rgba(234,179,8,0.12);border:1px solid rgba(234,179,8,0.3);border-radius:1rem;padding:0.85rem 1rem;margin-bottom:1rem;font-size:0.82rem;color:#fde047;line-height:1.7;">${seasonNote.replace(/\n/g, "<br>")}</div>` : ""}
-            <div class="modal-body" style="background:rgba(255,255,255,0.04);border-radius:1rem;padding:1.25rem;font-size:1rem;line-height:2;color:#e2e8f0;font-family:'Frank Ruhl Libre','David Libre',serif;max-height:60vh;overflow-y:auto;">
-              ${formatText(text)}
-              ${entry.extraLink ? `<br><br><a href="${entry.extraLink}" target="_blank" style="color:#60a5fa;font-size:0.85rem;">📖 פתח טקסט מלא ב-Sefaria.org ←</a>` : ""}
-            </div>
-            <p class="modal-credit" style="color:#334155;font-size:0.68rem;margin-top:1rem;text-align:center;">המקור: נוסחי תפילה מסורתיים | ספריית ספריא.org (CC-BY-SA) | מחבר: הלוח היהודי</p>
-          </div>`;
-  modal.addEventListener("click", (e) => {
-    if (e.target === modal) modal.remove();
-  });
-  document.body.appendChild(modal);
-}
-
-// ── Dedicated Tehillim Page ───────────────────────────────
-function openTehillimPage() {
-  const DAY_NAMES = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"];
-  const DAY_PSALMS = [
-    {
-      day: "ראשון",
-      range: [1, 29],
-      chapters: Array.from({ length: 29 }, (_, i) => i + 1),
-    },
-    {
-      day: "שני",
-      range: [30, 50],
-      chapters: Array.from({ length: 21 }, (_, i) => i + 30),
-    },
-    {
-      day: "שלישי",
-      range: [51, 72],
-      chapters: Array.from({ length: 22 }, (_, i) => i + 51),
-    },
-    {
-      day: "רביעי",
-      range: [73, 89],
-      chapters: Array.from({ length: 17 }, (_, i) => i + 73),
-    },
-    {
-      day: "חמישי",
-      range: [90, 106],
-      chapters: Array.from({ length: 17 }, (_, i) => i + 90),
-    },
-    {
-      day: "שישי",
-      range: [107, 119],
-      chapters: Array.from({ length: 13 }, (_, i) => i + 107),
-    },
-    {
-      day: "שבת",
-      range: [120, 150],
-      chapters: Array.from({ length: 31 }, (_, i) => i + 120),
-    },
-  ];
-
-  // Today's day (0=Sun … 6=Sat)
-  const todayDow = new Date().getDay();
-  let activeDayIdx = todayDow; // 0=ראשון, 6=שבת
-
-  const colors = [
-    "#6366f1",
-    "#3b82f6",
-    "#10b981",
-    "#f59e0b",
-    "#ef4444",
-    "#8b5cf6",
-    "#ec4899",
-  ];
-
-  let existing = document.getElementById("tehillim-modal");
-  if (existing) existing.remove();
-
-  const modal = document.createElement("div");
-  modal.id = "tehillim-modal";
-  modal.style.cssText =
-    "position:fixed;inset:0;z-index:200;background:rgba(2,6,23,0.95);backdrop-filter:blur(8px);display:flex;flex-direction:column;overflow:hidden;";
-
-  function buildPage(dayIdx) {
-    activeDayIdx = dayIdx;
-    const dayData = DAY_PSALMS[dayIdx];
-    const color = colors[dayIdx];
-
-    const tabsHTML = DAY_PSALMS.map(
-      (d, i) => `
-            <button onclick="window._tehillimSwitchDay(${i})"
-              style="padding:0.35rem 0.7rem;border-radius:999px;font-size:0.75rem;font-weight:700;border:1px solid ${i === dayIdx ? color : "rgba(255,255,255,0.12)"};
-                     background:${i === dayIdx ? color : "transparent"};color:${i === dayIdx ? "#fff" : "#94a3b8"};cursor:pointer;white-space:nowrap;transition:all 0.15s;">
-              ${d.day}
-            </button>`,
-    ).join("");
-
-    const chaptersHTML = dayData.chapters
-      .map(
-        (n) => `
-            <button onclick="window._tehillimOpenPsalm(${n})"
-              style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:0.75rem;
-                     padding:0.55rem;font-size:0.85rem;font-weight:700;color:#e2e8f0;cursor:pointer;
-                     transition:all 0.15s;text-align:center;"
-              onmouseover="this.style.background='${color}33';this.style.borderColor='${color}66';"
-              onmouseout="this.style.background='rgba(255,255,255,0.05)';this.style.borderColor='rgba(255,255,255,0.1)';">
-              ${n}
-            </button>`,
-      )
-      .join("");
-
-    modal.innerHTML = `
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;">
-              <div>
-                <h2 style="color:#f1f5f9;font-size:1.3rem;font-weight:900;margin:0;">ספר תהילים</h2>
-                <p style="color:${color};font-size:0.78rem;font-weight:700;margin:0.15rem 0 0;">יום ${dayData.day} — תהלים ${dayData.range[0]}–${dayData.range[1]}</p>
-              </div>
-              <button onclick="closeTehillimModal()"
-                style="background:rgba(255,255,255,0.08);border:none;color:#94a3b8;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.1rem;flex-shrink:0;">✕</button>
-            </div>
-
-            <!-- Day tabs -->
-            <div style="display:flex;gap:0.4rem;padding:0.75rem 1.25rem;overflow-x:auto;flex-shrink:0;scrollbar-width:none;">
-              ${tabsHTML}
-            </div>
-
-            <!-- Psalm grid -->
-            <div style="padding:0 1.25rem;overflow-y:auto;flex:1;">
-              <p style="color:#64748b;font-size:0.72rem;margin:0 0 0.75rem;">לחץ על מספר פרק לקריאת הטקסט המלא</p>
-              <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(52px,1fr));gap:0.5rem;padding-bottom:1.5rem;">
-                ${chaptersHTML}
-              </div>
-            </div>
-
-            <!-- Psalm content pane (hidden initially) -->
-            <div id="psalm-content-pane" style="display:none;position:absolute;inset:0;background:rgba(2,6,23,0.98);z-index:10;flex-direction:column;overflow:hidden;">
-              <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border-bottom:1px solid rgba(255,255,255,0.08);">
-                <button id="psalm-back-btn" onclick="document.getElementById('psalm-content-pane').style.display='none';"
-                  style="background:rgba(255,255,255,0.08);border:none;color:#94a3b8;padding:0.4rem 0.8rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;">
-                  ← חזרה
-                </button>
-                <h3 id="psalm-title" style="color:#f1f5f9;font-size:1rem;font-weight:900;margin:0;">תהלים א</h3>
-                <div style="width:60px;"></div>
-              </div>
-              <div id="psalm-text-area" style="padding:1.25rem;overflow-y:auto;flex:1;font-family:'Frank Ruhl Libre','David Libre',serif;font-size:1.05rem;line-height:2;color:#e2e8f0;text-align:center;direction:rtl;">
-                <div style="text-align:center;padding:2rem;">
-                  <div style="width:36px;height:36px;border:3px solid ${color};border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 1rem;"></div>
-                  <p style="color:#64748b;">טוען...</p>
-                </div>
-              </div>
-              <p style="color:#1e293b;font-size:0.65rem;text-align:center;padding:0.5rem;flex-shrink:0;">מקור: Sefaria.org (CC-BY-SA) | תנ"ך על-פי כתב יד אלפי"א</p>
-            </div>`;
-  }
-
-  window._tehillimSwitchDay = (idx) => buildPage(idx);
-
-  window._tehillimOpenPsalm = async (num) => {
-    const pane = document.getElementById("psalm-content-pane");
-    const title = document.getElementById("psalm-title");
-    const area = document.getElementById("psalm-text-area");
-    const color = colors[activeDayIdx];
-
-    if (!pane || !title || !area) return;
-    pane.style.display = "flex";
-    pane.style.flexDirection = "column";
-    title.textContent = `תהלים פרק ${num}`;
-    area.innerHTML = `<div style="text-align:center;padding:2rem;"><div style="width:36px;height:36px;border:3px solid ${color};border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 1rem;"></div><p style="color:#64748b;">טוען פרק ${num}...</p></div>`;
-
-    try {
-      const url = `https://www.sefaria.org/api/texts/Psalms.${num}?lang=he&context=0`;
-      const res = await fetch(url);
-      if (!res.ok) throw new Error("fetch failed");
-      const data = await res.json();
-      const heTexts = data.he || [];
-      if (!heTexts.length) throw new Error("no text");
-
-      const verses = heTexts
-        .map((v, i) => {
-          const clean =
-            typeof v === "string"
-              ? v
-              : Array.isArray(v)
-                ? v.join("")
-                : String(v);
-          return `<span style="color:${color};font-size:0.75rem;font-weight:700;margin-left:0.3rem;">(${i + 1})</span>${clean}`;
-        })
-        .join(" &nbsp;");
-
-      area.innerHTML = `
-              <p style="color:#64748b;font-size:0.72rem;margin-bottom:1rem;">תהלים פרק ${num} | ${heTexts.length} פסוקים</p>
-              <div style="line-height:2.2;">${verses}</div>
-              <br>
-              <a href="https://www.sefaria.org/Psalms.${num}?lang=bi" target="_blank"
-                style="color:#60a5fa;font-size:0.8rem;display:block;text-align:center;margin-top:1rem;">
-                📖 פתח ב-Sefaria ←
-              </a>`;
-    } catch (err) {
-      area.innerHTML = `
-              <p style="color:#ef4444;text-align:center;margin-bottom:1rem;">לא ניתן לטעון את הטקסט כעת.</p>
-              <div style="text-align:center;">
-                <a href="https://www.sefaria.org/Psalms.${num}?lang=bi" target="_blank"
-                  style="background:${color};color:#fff;padding:0.6rem 1.5rem;border-radius:999px;text-decoration:none;font-weight:700;font-size:0.9rem;">
-                  📖 פתח פרק ${num} ב-Sefaria
-                </a>
-              </div>`;
-    }
-  };
-
-  buildPage(activeDayIdx);
-  modal.addEventListener("click", (e) => {
-    if (e.target === modal) closeTehillimModal();
-  });
-  document.body.appendChild(modal);
-  lockBodyScroll();
-  pushModalState("tehillim-modal");
-}
 
 function toggleMorePrayers() {
   const grid = document.getElementById("prayer-more-grid");
@@ -3967,451 +3388,7 @@ function toggleMorePrayers() {
 // Store last zData globally for opinions popup
 window._lastZData = null;
 
-function renderZmanimGrid(zData) {
-  window._lastZData = zData;
-  const ft = (iso) =>
-    iso
-      ? new Date(iso).toLocaleTimeString(getCurrentLocale(), {
-          hour: "2-digit",
-          minute: "2-digit",
-        })
-      : "--:--";
 
-  // Save Tzeit for Omer Push Notifications
-  if (zData.times.tzeit7083deg)
-    window.TZEIT_TIME = new Date(zData.times.tzeit7083deg);
-
-  // ── Build zmanim array with all opinions ──────────────────
-  const now = new Date();
-
-  // ── Compute night-watch times ─────────────────────────────
-  const _sunMs = zData.times.sunset
-    ? new Date(zData.times.sunset).getTime()
-    : null;
-  const _chnMs = zData.times.chatzotNight
-    ? new Date(zData.times.chatzotNight).getTime()
-    : null;
-  // Night = sunset → alot (tomorrow); midpoint = chatzotNight
-  // Full night ≈ 2*(chatzotNight − sunset)
-  // 1/3 of night = 2*(chn−sun)/3; 2/3 = 4*(chn−sun)/3
-  // אשמורת התיכונה starts at sunset + 2*(chn−sun)/3
-  // אשמורת הבוקר  starts at sunset + 4*(chn−sun)/3 = chn + (chn−sun)/3
-  const _ashTMs =
-    _sunMs && _chnMs ? Math.round(_sunMs + (2 * (_chnMs - _sunMs)) / 3) : null;
-  const _ashBMs =
-    _sunMs && _chnMs ? Math.round(_chnMs + (_chnMs - _sunMs) / 3) : null;
-  const _ashTIso = _ashTMs ? new Date(_ashTMs).toISOString() : null;
-  const _ashBIso = _ashBMs ? new Date(_ashBMs).toISOString() : null;
-
-  // ── Bein HaShmashos: API or calculated (sunset + 13.5 min) ─
-  const _beinRaw =
-    zData.times.beinHaShmashos || zData.times.beinHashmashos || null;
-  const _beinIso =
-    _beinRaw || (_sunMs ? new Date(_sunMs + 13.5 * 60000).toISOString() : null);
-
-  const zmanimList = [
-    {
-      key: "alot",
-      label: "עלות השחר",
-      iso: zData.times.alotHaShachar,
-      opinions: [
-        { name: 'מגן אברהם / גר"א', val: ft(zData.times.alotHaShachar) },
-      ],
-    },
-    {
-      key: "talit",
-      label: "זמן טלית ותפילין",
-      iso: zData.times.misheyakir || zData.times.misheyakirMachmir,
-      opinions: [
-        { name: "משיכיר (11.5° מתחת לאופק)", val: ft(zData.times.misheyakir) },
-        {
-          name: "משיכיר 11° מתחת לאופק",
-          val: ft(zData.times.misheyakirMachmir),
-        },
-        ...(zData.times.misheyakir10_2
-          ? [
-              {
-                name: "משיכיר 10.2° מתחת לאופק",
-                val: ft(zData.times.misheyakir10_2),
-              },
-            ]
-          : []),
-      ],
-    },
-    {
-      key: "netz",
-      label: "הנץ החמה",
-      iso: zData.times.sunrise,
-      opinions: [
-        { name: "מותאם לגובה", val: ft(zData.times.sunrise) },
-        ...(zData.times.seaLevelSunrise
-          ? [{ name: "גובה פני הים", val: ft(zData.times.seaLevelSunrise) }]
-          : []),
-      ],
-    },
-    {
-      key: "shma",
-      label: 'סוף ק"ש',
-      iso:
-        ZMANIM_METHOD === "MGA"
-          ? zData.times.sofZmanShmaMGA
-          : zData.times.sofZmanShma,
-      opinions: [
-        { name: "מגן אברהם (עלות–צאת)", val: ft(zData.times.sofZmanShmaMGA) },
-        {
-          name: 'גר"א / בעל התניא (הנץ–שקיעה)',
-          val: ft(zData.times.sofZmanShma),
-        },
-      ],
-    },
-    {
-      key: "tfilla",
-      label: "סוף זמן תפילה",
-      iso:
-        ZMANIM_METHOD === "MGA"
-          ? zData.times.sofZmanTfillaMGA
-          : zData.times.sofZmanTfilla,
-      opinions: [
-        { name: "מגן אברהם", val: ft(zData.times.sofZmanTfillaMGA) },
-        { name: 'גר"א / בעל התניא', val: ft(zData.times.sofZmanTfilla) },
-      ],
-    },
-    {
-      key: "chatzot",
-      label: "חצות היום",
-      iso: zData.times.chatzot,
-      opinions: [
-        { name: "חצות היום (מחצית היום ההלכתי)", val: ft(zData.times.chatzot) },
-      ],
-    },
-    {
-      key: "mincha_g",
-      label: "מנחה גדולה",
-      iso: zData.times.minchaGedola,
-      opinions: [
-        {
-          name: 'מגן אברהם / גר"א (חצי שעה אחר חצות)',
-          val: ft(zData.times.minchaGedola),
-        },
-        {
-          name: 'רפ"ב (30 דק׳ שעות זמניות)',
-          val: ft(zData.times.minchaGedola72Min),
-        },
-      ],
-    },
-    {
-      key: "mincha_k",
-      label: "מנחה קטנה",
-      iso: zData.times.minchaKetana,
-      opinions: [
-        {
-          name: "כל השיטות (9.5 שעות זמניות)",
-          val: ft(zData.times.minchaKetana),
-        },
-      ],
-    },
-    {
-      key: "plag",
-      label: "פלג המנחה",
-      iso: zData.times.plagHaMincha,
-      opinions: [
-        { name: "מגן אברהם", val: ft(zData.times.plagHaMincha) },
-        { name: 'גר"א / שו"ע הרב', val: ft(zData.times.plagHaMinchaGRA) },
-      ],
-    },
-    {
-      key: "shkia",
-      label: "שקיעה",
-      iso: zData.times.sunset,
-      opinions: [{ name: "מותאם לגובה", val: ft(zData.times.sunset) }],
-    },
-    {
-      key: "bein_hashmashot",
-      label: "בין השמשות",
-      iso: zData.times.beinHaShmashos || _beinIso,
-      opinions: [
-        { name: "רבנו תם — 2 כוכבים", val: ft(zData.times.beinHaShmashos) },
-        { name: 'שו"ע (כ-13.5 דק׳ אחר שקיעה)', val: ft(_beinIso) },
-      ],
-    },
-    {
-      key: "tzeit",
-      label: "צאת הכוכבים",
-      iso: zData.times.tzeit7083deg,
-      opinions: [
-        {
-          name: 'תצ"ה — 7.083° (שלוש כוכבים בינוניים)',
-          val: ft(zData.times.tzeit7083deg),
-        },
-        { name: "לילה — 8.5° מתחת לאופק", val: ft(zData.times.tzeit8_5deg) },
-        { name: "בעל התניא — 50 דקות", val: ft(zData.times.tzeit50min) },
-        {
-          name: "ג׳ כוכבים קטנים (13.5 דק׳ זמניות)",
-          val: ft(zData.times.tzeit13Point5MinutesZmanis),
-        },
-      ],
-    },
-    {
-      key: "ashmeret_tkona",
-      label: "אשמורת התיכונה",
-      iso: _ashTIso,
-      opinions: [
-        { name: "תחילת משמרת שנייה של הלילה", val: ft(_ashTIso) },
-        { name: "שליש שני (= שני שלישים מהשקיעה)", val: ft(_ashTIso) },
-      ],
-    },
-    {
-      key: "ashmeret_boker",
-      label: "אשמורת הבוקר",
-      iso: _ashBIso,
-      opinions: [
-        { name: "תחילת אשמורת הבוקר (לפני עלות השחר)", val: ft(_ashBIso) },
-        { name: "שני שלישים מהלילה (4/6 מהשקיעה)", val: ft(_ashBIso) },
-      ],
-    },
-  ];
-
-  // ── FIFO: next upcoming first, past times at end ──────────
-  zmanimList.forEach((z) => {
-    z._ms = z.iso ? new Date(z.iso).getTime() : null;
-  });
-  const nowMs = now.getTime();
-  const future = zmanimList
-    .filter((z) => z._ms && z._ms >= nowMs)
-    .sort((a, b) => a._ms - b._ms);
-  const past = zmanimList
-    .filter((z) => z._ms && z._ms < nowMs)
-    .sort((a, b) => a._ms - b._ms);
-  const noTime = zmanimList.filter((z) => !z._ms);
-  const sorted = [...future, ...past, ...noTime];
-
-  // ── Render ────────────────────────────────────────────────
-  const cardClass =
-    "zman-card bg-gradient-to-br from-indigo-900/50 to-blue-900/30 border border-blue-400/15 rounded-2xl p-3 hover:border-blue-400/35 hover:from-indigo-900/70 transition-all cursor-pointer zman-clickable";
-  const isPast = (z) => z._ms && z._ms < nowMs;
-
-  document.getElementById("zmanim-details").innerHTML = sorted
-    .map(
-      (z) => `
-          <div class="${cardClass}${isPast(z) ? " opacity-50" : ""}" data-zman-key="${z.key}" onclick="showZmanOpinions('${z.key}')">
-            <span class="text-blue-300/80 text-xs md:text-sm block mb-1.5 font-semibold">${z.label}</span>
-            <span class="font-black text-lg md:text-xl text-white tracking-tight" dir="ltr">${z._displayVal !== undefined ? z._displayVal : ft(z.iso)}</span>
-          </div>`,
-    )
-    .join("");
-
-  // Apply i18n labels
-  const ui = getDynamicUiText();
-  const labels = ui.zmanimLabels || [];
-  // Keep labels synced if i18n has overrides (legacy support)
-  const rendered = document.querySelectorAll("#zmanim-details > div");
-  rendered.forEach((card, i) => {
-    const key = card.dataset.zmanKey;
-    const zItem = zmanimList.find((z) => z.key === key);
-    // i18n override by position only if label matches
-    const firstSpan = card.querySelector("span");
-    if (labels[i] && firstSpan) firstSpan.textContent = labels[i];
-  });
-}
-
-// ── Zman Opinions Popup ───────────────────────────────────
-function showZmanOpinions(key) {
-  const zData = window._lastZData;
-  if (!zData) return;
-
-  const ft = (iso) =>
-    iso
-      ? new Date(iso).toLocaleTimeString(getCurrentLocale(), {
-          hour: "2-digit",
-          minute: "2-digit",
-        })
-      : "—";
-
-  // Re-compute night-watch ISO for opinions popup (mirrors renderZmanimGrid logic)
-  const _opSunMs = zData.times.sunset
-    ? new Date(zData.times.sunset).getTime()
-    : null;
-  const _opChnMs = zData.times.chatzotNight
-    ? new Date(zData.times.chatzotNight).getTime()
-    : null;
-  const _opAshTMs =
-    _opSunMs && _opChnMs
-      ? Math.round(_opSunMs + (2 * (_opChnMs - _opSunMs)) / 3)
-      : null;
-  const _opAshBMs =
-    _opSunMs && _opChnMs
-      ? Math.round(_opChnMs + (_opChnMs - _opSunMs) / 3)
-      : null;
-  const _opBeinRaw =
-    zData.times.beinHaShmashos || zData.times.beinHashmashos || null;
-  const _opBeinIso =
-    _opBeinRaw ||
-    (_opSunMs ? new Date(_opSunMs + 13.5 * 60000).toISOString() : null);
-
-  const opinionsMap = {
-    alot: {
-      label: "עלות השחר",
-      rows: [{ name: 'מגן אברהם / גר"א', val: ft(zData.times.alotHaShachar) }],
-    },
-    talit: {
-      label: "זמן טלית ותפילין",
-      rows: [
-        { name: "משיכיר (50 דק׳ לפני הנץ)", val: ft(zData.times.misheyakir) },
-        {
-          name: "משיכיר מחמיר (60 דק׳ לפני הנץ)",
-          val: ft(zData.times.misheyakirMachmir),
-        },
-      ],
-    },
-    netz: {
-      label: "הנץ החמה",
-      rows: [{ name: "כל השיטות", val: ft(zData.times.sunrise) }],
-    },
-    shma: {
-      label: "סוף זמן קריאת שמע",
-      rows: [
-        { name: "מגן אברהם (עלות–צאת)", val: ft(zData.times.sofZmanShmaMGA) },
-        {
-          name: 'גר"א / בעל התניא (הנץ–שקיעה)',
-          val: ft(zData.times.sofZmanShma),
-        },
-      ],
-    },
-    tfilla: {
-      label: "סוף זמן תפילה",
-      rows: [
-        { name: "מגן אברהם", val: ft(zData.times.sofZmanTfillaMGA) },
-        { name: 'גר"א / בעל התניא', val: ft(zData.times.sofZmanTfilla) },
-      ],
-    },
-    chatzot: {
-      label: "חצות היום",
-      rows: [
-        { name: "חצות היום (מחצית היום ההלכתי)", val: ft(zData.times.chatzot) },
-        { name: "חצות הלילה (לעיון)", val: ft(zData.times.chatzotNight) },
-      ],
-    },
-    mincha_g: {
-      label: "מנחה גדולה",
-      rows: [
-        {
-          name: 'מגן אברהם / גר"א (חצי שעה אחר חצות)',
-          val: ft(zData.times.minchaGedola),
-        },
-        {
-          name: 'רפ"ב (30 דק׳ שעות זמניות)',
-          val: ft(zData.times.minchaGedola72Min),
-        },
-      ],
-    },
-    mincha_k: {
-      label: "מנחה קטנה",
-      rows: [
-        {
-          name: "כל השיטות (9.5 שעות זמניות)",
-          val: ft(zData.times.minchaKetana),
-        },
-      ],
-    },
-    plag: {
-      label: "פלג המנחה",
-      rows: [
-        { name: "מגן אברהם (שעות זמניות)", val: ft(zData.times.plagHaMincha) },
-        { name: 'גר"א / שו"ע הרב', val: ft(zData.times.plagHaMinchaGRA) },
-      ],
-    },
-    shkia: {
-      label: "שקיעה",
-      rows: [{ name: "כל השיטות", val: ft(zData.times.sunset) }],
-    },
-    bein_hashmashot: {
-      label: "בין השמשות",
-      rows: [
-        { name: 'שו"ע (כ-13.5 דק׳ אחר שקיעה)', val: ft(_opBeinIso) },
-        { name: "הגדרה: ספק יום ספק לילה (ר׳ יוסף קארו)", val: "—" },
-      ],
-    },
-    tzeit: {
-      label: "צאת הכוכבים",
-      rows: [
-        {
-          name: 'תצ"ה — 7.083° (שלושה כוכבים בינוניים)',
-          val: ft(zData.times.tzeit7083deg),
-        },
-        {
-          name: "בעל התניא — 50 דקות אחר שקיעה",
-          val: ft(zData.times.tzeit50min),
-        },
-        {
-          name: "שלושה כוכבים קטנים — 13.5 דק׳ זמניות",
-          val: ft(zData.times.tzeit13Point5MinutesZmanis),
-        },
-      ],
-    },
-    ashmeret_tkona: {
-      label: "אשמורת התיכונה",
-      rows: [
-        {
-          name: "תחילת משמרת שנייה של הלילה",
-          val: ft(_opAshTMs ? new Date(_opAshTMs).toISOString() : null),
-        },
-        {
-          name: "חישוב: 2/3 מהשקיעה עד עלות השחר",
-          val: ft(_opAshTMs ? new Date(_opAshTMs).toISOString() : null),
-        },
-      ],
-    },
-    ashmeret_boker: {
-      label: "אשמורת הבוקר",
-      rows: [
-        {
-          name: "תחילת אשמורת הבוקר (לפני עלות)",
-          val: ft(_opAshBMs ? new Date(_opAshBMs).toISOString() : null),
-        },
-        {
-          name: "חישוב: 4/3 מהשקיעה (= חצות + 1/3 לילה)",
-          val: ft(_opAshBMs ? new Date(_opAshBMs).toISOString() : null),
-        },
-      ],
-    },
-  };
-
-  const entry = opinionsMap[key];
-  if (!entry) return;
-
-  // Build and show modal
-  let existing = document.getElementById("zman-opinions-modal");
-  if (existing) existing.remove();
-
-  const modal = document.createElement("div");
-  modal.id = "zman-opinions-modal";
-  modal.style.cssText =
-    "position:fixed;inset:0;z-index:200;background:rgba(15,23,42,0.85);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:1rem;";
-  modal.innerHTML = `
-          <div style="background:linear-gradient(145deg,#1e293b,#0f172a);border:1px solid rgba(99,102,241,0.3);border-radius:2rem;padding:2rem;width:100%;max-width:360px;box-shadow:0 25px 60px rgba(0,0,0,0.5);text-align:right;direction:rtl;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
-              <h3 style="color:#e2e8f0;font-size:1.25rem;font-weight:900;margin:0;">${entry.label}</h3>
-              <button onclick="document.getElementById('zman-opinions-modal').remove()" style="background:rgba(255,255,255,0.08);border:none;color:#94a3b8;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center;">✕</button>
-            </div>
-            <p style="color:#64748b;font-size:0.75rem;margin-bottom:1rem;">כל הדעות וחישובי השיטות</p>
-            <div style="display:flex;flex-direction:column;gap:0.75rem;">
-              ${entry.rows
-                .map(
-                  (r) => `
-                <div style="display:flex;justify-content:space-between;align-items:center;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.2);border-radius:1rem;padding:0.75rem 1rem;">
-                  <span style="color:#93c5fd;font-size:0.8rem;font-weight:600;">${r.name}</span>
-                  <span style="color:#f8fafc;font-size:1.1rem;font-weight:900;direction:ltr;">${r.val}</span>
-                </div>`,
-                )
-                .join("")}
-            </div>
-          </div>`;
-  modal.addEventListener("click", (e) => {
-    if (e.target === modal) modal.remove();
-  });
-  document.body.appendChild(modal);
-  pushModalState("zman-opinions-modal");
-}
 
 /* ── חישוב חלון צום: כניסה ויציאה כאובייקטי Date ──
    צום גדול (ת"ב / יוה"כ): נכנס בערב — ת"ב בשקיעה, יוה"כ בהדלקת נרות.
@@ -4491,6 +3468,8 @@ async function computeFastWindow(name, dateStr) {
 function _ensureFastCountdownTicker() {
   if (window._fastCountdownInterval) return;
   const tick = () => {
+    // מאחורי פופאפ פתוח אין לכתוב לדף — כל שינוי מכריח re-blur של שכבת הפופאפ
+    if (document.hidden || document.documentElement.classList.contains("lux-modal-open")) return;
     const els = document.querySelectorAll(".fast-live-countdown");
     if (!els.length) {
       clearInterval(window._fastCountdownInterval);
@@ -4522,6 +3501,8 @@ function _ensureFastCountdownTicker() {
 function _ensureLevanaBadgeTicker() {
   if (window._levanaBadgeInterval) return;
   const tick = () => {
+    // מאחורי פופאפ פתוח אין לכתוב לדף — כל שינוי מכריח re-blur של שכבת הפופאפ
+    if (document.hidden || document.documentElement.classList.contains("lux-modal-open")) return;
     const els = document.querySelectorAll(".levana-badge-countdown");
     if (!els.length) {
       clearInterval(window._levanaBadgeInterval);
@@ -4694,82 +3675,6 @@ async function renderNextMoedTimes(e) {
   }
 }
 
-// --- Global City Search ---
-let citySearchTimeout;
-async function handleCitySearch(e) {
-  const q = e.target.value;
-  const ul = document.getElementById("city-search-results");
-  if (q.length < 2) {
-    ul.classList.add("hidden");
-    return;
-  }
-  clearTimeout(citySearchTimeout);
-  citySearchTimeout = setTimeout(async () => {
-    try {
-      const res = await fetch(
-        `https://www.hebcal.com/complete?q=${encodeURIComponent(q)}`,
-      );
-      const data = await res.json();
-      ul.innerHTML = "";
-      data.forEach((item) => {
-        const li = document.createElement("li");
-        li.className =
-          "p-3 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer border-b border-slate-100 dark:border-slate-700 text-sm transition-colors text-right";
-        li.textContent = item.value;
-        li.onclick = () => {
-          GEO_LOCATION = item.id;
-          localStorage.setItem("moadim_city", GEO_LOCATION);
-          localStorage.setItem("moadim_city_name", item.value);
-          // Store coordinates for kosher-zmanim
-          if (item.latitude !== undefined && item.longitude !== undefined) {
-            const cityCoords = {
-              lat: item.latitude,
-              lon: item.longitude,
-              tzid: item.timezone || "Asia/Jerusalem",
-              elevation: item.elevation || 0,
-            };
-            localStorage.setItem(
-              "moadim_city_coords",
-              JSON.stringify(cityCoords),
-            );
-            window._cityCoords = cityCoords;
-          }
-          document.getElementById("current-city-name").textContent = item.value;
-          ul.classList.add("hidden");
-          e.target.value = "";
-        };
-        ul.appendChild(li);
-      });
-      ul.classList.remove("hidden");
-    } catch (err) {
-      console.error(err);
-    }
-  }, 400);
-}
-
-async function _gpsReverseGeocode(lat, lon) {
-  try {
-    const res = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&accept-language=he&zoom=14`,
-      { headers: { "Accept": "application/json" } },
-    );
-    if (!res.ok) return null;
-    const data = await res.json();
-    const a = data.address || {};
-    const cityName =
-      a.city ||
-      a.town ||
-      a.village ||
-      a.suburb ||
-      a.municipality ||
-      a.county ||
-      a.state ||
-      null;
-    return cityName;
-  } catch (e) {
-    return null;
-  }
-}
 
 function useGPS() {
   if (!("geolocation" in navigator)) {
@@ -4791,8 +3696,6 @@ function useGPS() {
       // הצג שם זמני בזמן שמתבצע reverse geocoding
       if (cityNameEl) cityNameEl.textContent = "מיקום נוכחי (GPS)";
       localStorage.setItem("moadim_city_name", "מיקום נוכחי (GPS)");
-      const sr = document.getElementById("city-search-results");
-      if (sr) sr.classList.add("hidden");
       // נסה למצוא שם עיר אמיתי
       const cityName = await _gpsReverseGeocode(GPS_COORDS.lat, GPS_COORDS.lon);
       if (cityName) {
@@ -4981,20 +3884,25 @@ function getCompassTarget(lat, lon) {
 
 function openCompass() {
   const m = document.getElementById("compass-modal");
+  // כבר פתוח (ghost-tap בנייד) — פתיחה שנייה הייתה מוסיפה נעילה ורשומה כפולות
+  if (!m.classList.contains("hidden")) return;
   m.classList.remove("hidden");
   setTimeout(() => m.classList.remove("opacity-0"), 10);
   startCompass();
+  lockBodyScroll();
   pushModalState("compass-modal");
 }
 
 function closeCompass() {
   const m = document.getElementById("compass-modal");
+  if (!m || m.classList.contains("hidden")) return;
   m.classList.add("opacity-0");
   setTimeout(() => m.classList.add("hidden"), 300);
   if (compassListener) {
     window.removeEventListener("deviceorientationabsolute", compassListener);
     window.removeEventListener("deviceorientation", compassListener);
   }
+  unlockBodyScroll();
 }
 
 function startCompass() {
@@ -5105,48 +4013,6 @@ function escapeIcsText(value) {
     .replace(/;/g, "\\;");
 }
 
-function buildIcsContent(events) {
-  let lines = [
-    "BEGIN:VCALENDAR",
-    "VERSION:2.0",
-    "PRODID:-//Jewish Moadim App//HE",
-    "CALSCALE:GREGORIAN",
-  ];
-  events.forEach((e) => {
-    const d = new Date(e.date);
-    const dateStr = d
-      .toISOString()
-      .replace(/-|:|\.\d+/g, "")
-      .slice(0, 8);
-    const nextDay = new Date(d);
-    nextDay.setDate(nextDay.getDate() + 1);
-    const nextDateStr = nextDay
-      .toISOString()
-      .replace(/-|:|\.\d+/g, "")
-      .slice(0, 8);
-    const summary = escapeIcsText(e.name);
-    const description = escapeIcsText(
-      e.description || "Synced from the Jewish Moadim calendar",
-    );
-    lines.push(
-      "BEGIN:VEVENT",
-      `UID:${Date.now()}_${Math.random().toString(36).substring(2)}@moadim.app`,
-      `DTSTAMP:${dateStr}T000000Z`,
-      `DTSTART;VALUE=DATE:${dateStr}`,
-      `DTEND;VALUE=DATE:${nextDateStr}`,
-      `SUMMARY:${summary}`,
-      `DESCRIPTION:סונכרן ממרכז המועדים והזמנים`,
-      "BEGIN:VALARM",
-      "TRIGGER:-PT24H",
-      "ACTION:DISPLAY",
-      `DESCRIPTION:תזכורת: מחר ${e.name}`,
-      "END:VALARM",
-      "END:VEVENT",
-    );
-  });
-  lines.push("END:VCALENDAR");
-  return lines.join("\r\n");
-}
 
 function downloadBulkICS() {
   const toSync = ALL_EVENTS.filter(
@@ -5560,10 +4426,12 @@ document.getElementById("mainSearch").addEventListener("input", (e) => {
 });
 
 function openCalendar() {
+  const m = document.getElementById("calendar-modal");
+  // כבר פתוח (ghost-tap בנייד) — פתיחה שנייה הייתה מוסיפה נעילה ורשומה כפולות
+  if (!m.classList.contains("hidden")) return;
   if (navigator.vibrate) navigator.vibrate(20);
   CALENDAR_DISPLAY_DATE = new Date();
   buildMonthCalendar();
-  const m = document.getElementById("calendar-modal");
   m.classList.remove("hidden");
   setTimeout(() => {
     m.classList.remove("opacity-0");
@@ -5573,18 +4441,20 @@ function openCalendar() {
   pushModalState("calendar-modal");
 }
 function closeCalendar() {
-  closeCalendarDay();
   const m = document.getElementById("calendar-modal");
+  if (!m || m.classList.contains("hidden")) return;
+  // לחיצת X/רקע: יוצאים דרך history.back כדי לסנכרן את המחסנית — popstate יקרא לנו שוב
+  if (_activeModals[_activeModals.length - 1] === "calendar-modal") {
+    history.back();
+    return;
+  }
+  closeCalendarDay();
   m.classList.add("opacity-0");
   m.querySelector("div").classList.add("scale-95");
   setTimeout(() => {
     m.classList.add("hidden");
   }, 300);
   unlockBodyScroll();
-  if (_activeModals[_activeModals.length - 1] === "calendar-modal") {
-    _activeModals.pop();
-    history.back();
-  }
 }
 
 async function changeMonth(offset) {
@@ -6264,8 +5134,10 @@ initApp();
 
   let t = 0;
   function draw() {
-    // Skip drawing when tab hidden (saves CPU), CSS handles visibility per theme
-    if (!document.hidden) {
+    // Skip drawing when tab hidden (saves CPU), CSS handles visibility per theme.
+    // מדלגים גם כשפופאפ פתוח (html.lux-modal-open): ציור מאחורי שכבת backdrop-filter
+    // מכריח re-blur של כל המסך בכל פריים — זה היה מקור הריצוד בנייד.
+    if (!document.hidden && !document.documentElement.classList.contains("lux-modal-open")) {
       ctx.clearRect(0, 0, W, H);
       t += 0.016;
 
@@ -6400,8 +5272,20 @@ function setupCardObserver() {
 // ═══════════════════════════════════════════════════════
 // ✦  SHABBAT INFO POPUP (opened by clicking the countdown bar)
 // ═══════════════════════════════════════════════════════
+/* סגירת פופאפ השבת/חג עם ניקוי המחסנית, ואז מעבר ליעד (פרשה/דבר תורה) */
+window._shabbatInfoGoTo = function (fn) {
+  const m = document.getElementById("shabbat-info-modal");
+  if (m) {
+    m.remove();
+    unlockBodyScroll();
+    if (_activeModals[_activeModals.length - 1] === "shabbat-info-modal")
+      _activeModals.pop();
+  }
+  if (typeof fn === "function") fn();
+};
+
 function openShabbatInfoModal() {
-  document.getElementById("shabbat-info-modal")?.remove();
+  window._shabbatInfoGoTo(null);
 
   // כשהטיימר סופר לכניסת חג — מציגים את פרטי החג במקום פרטי שבת
   if (window._countdownMode === "holiday" && window.HOLIDAY_CANDLES_TIME) {
@@ -6431,7 +5315,7 @@ function openShabbatInfoModal() {
     ? `
             <div style="border-top:1px solid rgba(255,255,255,0.1);padding-top:16px;">
               <div style="font-size:0.78rem;color:rgba(255,255,255,0.5);margin-bottom:8px;">פרשת השבוע</div>
-              <button onclick="document.getElementById('shabbat-info-modal').remove();${eTitle ? `openSefariaModal('${parasha.replace(/'/g, "\'")}','${eTitle.replace(/'/g, "\'")}')` : `(window._openShabbatParasha||function(){})();`}"
+              <button onclick="window._shabbatInfoGoTo(function(){${eTitle ? `openSefariaModal('${parasha.replace(/'/g, "\'")}','${eTitle.replace(/'/g, "\'")}')` : `(window._openShabbatParasha||function(){})();`}})"
                 style="background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;border-radius:12px;padding:10px 20px;color:#fff;font-size:1rem;font-weight:700;cursor:pointer;width:100%;display:flex;align-items:center;justify-content:center;gap:8px;">
                 <span>📖</span><span>${parasha}</span>
               </button>
@@ -6440,7 +5324,7 @@ function openShabbatInfoModal() {
 
   overlay.innerHTML = `
           <div style="background:linear-gradient(145deg,#1e3a5f,#0f2742);border:1px solid rgba(255,255,255,0.12);border-radius:20px;padding:28px 32px 24px;min-width:260px;max-width:340px;width:90vw;text-align:center;color:#fff;box-shadow:0 20px 60px rgba(0,0,0,0.5);position:relative;">
-            <button onclick="document.getElementById('shabbat-info-modal').remove();unlockBodyScroll();"
+            <button onclick="window._closePopupViaBack('shabbat-info-modal')"
               style="position:absolute;top:12px;left:14px;background:none;border:none;color:rgba(255,255,255,0.5);font-size:1.4rem;cursor:pointer;line-height:1;" aria-label="סגור">×</button>
             <div style="font-size:1.6rem;margin-bottom:6px;">🕯️</div>
             <div style="font-size:1.15rem;font-weight:800;letter-spacing:.5px;margin-bottom:20px;color:#fde68a;">שבת שלום</div>
@@ -6458,10 +5342,7 @@ function openShabbatInfoModal() {
           </div>`;
 
   overlay.addEventListener("click", (e) => {
-    if (e.target === overlay) {
-      overlay.remove();
-      unlockBodyScroll();
-    }
+    if (e.target === overlay) window._closePopupViaBack("shabbat-info-modal");
   });
   document.body.appendChild(overlay);
   pushModalState("shabbat-info-modal");
@@ -6470,7 +5351,7 @@ function openShabbatInfoModal() {
 
 /* ── מודאל פרטי חג (נפתח בלחיצה על טיימר כניסת החג) ── */
 function openHolidayInfoModal() {
-  document.getElementById("shabbat-info-modal")?.remove();
+  window._shabbatInfoGoTo(null);
 
   const candles = window.HOLIDAY_CANDLES_STR || "--:--";
   const havdalah = window.HOLIDAY_HAVDALAH_STR || "--:--";
@@ -6498,7 +5379,7 @@ function openHolidayInfoModal() {
   const dvarTorahBtn = hasDvarTorah
     ? `
             <div style="border-top:1px solid rgba(255,255,255,0.1);padding-top:16px;">
-              <button onclick="document.getElementById('shabbat-info-modal').remove();unlockBodyScroll();window._openMoadByName('${holName.replace(/'/g, "\\'")}');"
+              <button onclick="window._shabbatInfoGoTo(function(){window._openMoadByName('${holName.replace(/'/g, "\\'")}');})"
                 style="background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;border-radius:12px;padding:10px 20px;color:#fff;font-size:1rem;font-weight:700;cursor:pointer;width:100%;display:flex;align-items:center;justify-content:center;gap:8px;">
                 <span>📖</span><span>דבר תורה ל${holName}</span>
               </button>
@@ -6507,7 +5388,7 @@ function openHolidayInfoModal() {
 
   overlay.innerHTML = `
           <div style="background:linear-gradient(145deg,#1e3a5f,#0f2742);border:1px solid rgba(255,255,255,0.12);border-radius:20px;padding:28px 32px 24px;min-width:260px;max-width:340px;width:90vw;text-align:center;color:#fff;box-shadow:0 20px 60px rgba(0,0,0,0.5);position:relative;">
-            <button onclick="document.getElementById('shabbat-info-modal').remove();unlockBodyScroll();"
+            <button onclick="window._closePopupViaBack('shabbat-info-modal')"
               style="position:absolute;top:12px;left:14px;background:none;border:none;color:rgba(255,255,255,0.5);font-size:1.4rem;cursor:pointer;line-height:1;" aria-label="סגור">×</button>
             <div style="font-size:1.6rem;margin-bottom:6px;">🕯️</div>
             <div style="font-size:1.15rem;font-weight:800;letter-spacing:.5px;margin-bottom:20px;color:#fde68a;">${holName}</div>
@@ -6525,10 +5406,7 @@ function openHolidayInfoModal() {
           </div>`;
 
   overlay.addEventListener("click", (e) => {
-    if (e.target === overlay) {
-      overlay.remove();
-      unlockBodyScroll();
-    }
+    if (e.target === overlay) window._closePopupViaBack("shabbat-info-modal");
   });
   document.body.appendChild(overlay);
   pushModalState("shabbat-info-modal");
@@ -6577,6 +5455,8 @@ function startShabbatCountdown() {
     window._countdownMode === "holiday" ? "לחץ לפרטי החג" : "לחץ לפרטי שבת";
 
   function tick() {
+    // מאחורי פופאפ/טאב מוסתר אין טעם לצייר כל שנייה — הערך מחושב משעון הקיר ולכן ההשהיה חסרת-הפסד
+    if (document.hidden || document.documentElement.classList.contains("lux-modal-open")) return;
     const diff = target - new Date();
     if (diff <= 0) {
       clearInterval(countdownInterval);
@@ -6612,6 +5492,18 @@ const _MOTZEI_DEMO_MODE = false;
 
 // Tracks whether modal is open — prevents scroll-lock accumulation on tab switches
 let _motzeiShabbatModalOpen = false;
+/* סגירת מודאל מוצאי־שבת עם ניקוי המחסנית, ואז מעבר ליעד (תפילה) */
+window._motzeiGoTo = function (fn) {
+  const m = document.getElementById("motzei-shabbat-modal");
+  if (m) {
+    m.remove();
+    _motzeiShabbatModalOpen = false;
+    unlockBodyScroll();
+    if (_activeModals[_activeModals.length - 1] === "motzei-shabbat-modal")
+      _activeModals.pop();
+  }
+  if (typeof fn === "function") fn();
+};
 
 const BESHT_STORIES = [
   {
@@ -7028,11 +5920,11 @@ function openMotzeiShabbatModal(activeTab) {
       <p style="font-size:0.85rem;line-height:2.1;color:rgba(255,255,255,0.95);">אֵלִיָּהוּ הַנָּבִיא, אֵלִיָּהוּ הַתִּשְׁבִּי,<br>אֵלִיָּהוּ הַגִּלְעָדִי —<br>בִּמְהֵרָה בְּיָמֵינוּ יָבֹא אֵלֵינוּ,<br>עִם מָשִׁיחַ בֶּן דָּוִד. 🕊️</p>
     </div>
     <div style="display:flex;gap:10px;margin-bottom:10px;">
-      <button onclick="_motzeiShabbatModalOpen=false;document.getElementById('motzei-shabbat-modal').remove();unlockBodyScroll();openPrayer('birkat-hamazon','ברכת המזון','Birkat Hamazon')"
+      <button onclick="window._motzeiGoTo(function(){openPrayer('birkat-hamazon','ברכת המזון','Birkat Hamazon')})"
         style="flex:1;padding:12px 8px;border:none;border-radius:14px;background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;font-size:0.82rem;font-weight:800;cursor:pointer;">
         🍞 ברכת המזון
       </button>
-      <button onclick="_motzeiShabbatModalOpen=false;document.getElementById('motzei-shabbat-modal').remove();unlockBodyScroll();openPrayer('al-hamichya','ברכת מעין שלוש','Al HaMichya')"
+      <button onclick="window._motzeiGoTo(function(){openPrayer('al-hamichya','ברכת מעין שלוש','Al HaMichya')})"
         style="flex:1;padding:12px 8px;border:none;border-radius:14px;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;font-size:0.82rem;font-weight:800;cursor:pointer;">
         🍇 ברכת מעין שלוש
       </button>
@@ -7155,7 +6047,7 @@ function openMotzeiShabbatModal(activeTab) {
 
   overlay.innerHTML = `
     <div style="background:linear-gradient(160deg,#1a1f3a,#0f1628);border:1px solid rgba(255,255,255,0.1);border-radius:24px 24px 0 0;padding:20px 20px 36px;width:100%;max-width:480px;max-height:82vh;overflow-y:auto;color:#fff;box-shadow:0 -20px 60px rgba(0,0,0,0.5);position:relative;">
-      <button onclick="_motzeiShabbatModalOpen=false;document.getElementById('motzei-shabbat-modal').remove();unlockBodyScroll();"
+      <button onclick="window._closePopupViaBack('motzei-shabbat-modal')"
         style="position:absolute;top:14px;left:16px;background:rgba(255,255,255,0.1);border:none;color:rgba(255,255,255,0.7);font-size:1.2rem;cursor:pointer;border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;" aria-label="סגור">×</button>
       <div style="text-align:center;margin-bottom:16px;padding-top:4px;">
         <div style="font-size:1.4rem;margin-bottom:4px;">✨</div>
@@ -7170,11 +6062,7 @@ function openMotzeiShabbatModal(activeTab) {
     </div>`;
 
   overlay.addEventListener("click", (e) => {
-    if (e.target === overlay) {
-      _motzeiShabbatModalOpen = false;
-      overlay.remove();
-      unlockBodyScroll();
-    }
+    if (e.target === overlay) window._closePopupViaBack("motzei-shabbat-modal");
   });
 
   document.body.appendChild(overlay);
@@ -7886,7 +6774,13 @@ showZmanOpinions = function (key) {
   if (!payload) return;
 
   let existing = document.getElementById("zman-opinions-modal");
-  if (existing) existing.remove();
+  if (existing) {
+    // פתיחה-כפולה: ניקוי הישן משחרר גם את הנעילה ואת רשומת המחסנית שלו
+    existing.remove();
+    unlockBodyScroll();
+    if (_activeModals[_activeModals.length - 1] === "zman-opinions-modal")
+      _activeModals.pop();
+  }
 
   const modal = document.createElement("div");
   modal.id = "zman-opinions-modal";
@@ -7913,9 +6807,10 @@ showZmanOpinions = function (key) {
             </div>
           </div>`;
   modal.addEventListener("click", (event) => {
-    if (event.target === modal) modal.remove();
+    if (event.target === modal) window._closePopupViaBack("zman-opinions-modal");
   });
   document.body.appendChild(modal);
+  lockBodyScroll();
   pushModalState("zman-opinions-modal");
 };
 
@@ -16029,9 +14924,15 @@ window._closePopupViaBack = function(modalId) {
 };
 window.openDonationModal = function() {
   var existing = document.getElementById('donation-modal');
-  if (existing) { window._closePopupViaBack('donation-modal'); return; }
+  if (existing) {
+    // ghost-tap בנייד: מתעלמים מנגיעה כפולה מיד אחרי הפתיחה — אחרת הפופאפ מהבהב ונסגר
+    if (Date.now() - (existing.__openedAt || 0) < 600) return;
+    window._closePopupViaBack('donation-modal');
+    return;
+  }
   var overlay = document.createElement('div');
   overlay.id = 'donation-modal';
+  overlay.__openedAt = Date.now();
   overlay.style.cssText = 'position:fixed;inset:0;z-index:10080;background:rgba(2,6,23,0.7);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:1rem;overflow-y:auto;overscroll-behavior:contain;';
   overlay.addEventListener('click', function(e){ if (e.target === overlay) window._closePopupViaBack('donation-modal'); });
   overlay.innerHTML = '<div style="background:linear-gradient(160deg,#1a1f3a,#0f1628);border:1.5px solid rgba(251,191,36,0.4);border-radius:1.5rem;padding:1.75rem 1.5rem;max-width:440px;width:100%;text-align:center;direction:rtl;box-shadow:0 25px 60px rgba(0,0,0,0.6);position:relative;">'+
@@ -16258,10 +15159,17 @@ window.openDonationModal = function() {
 window._openChapterNavPopup = function(opts) {
   // opts: { title:string, subtitle?:string, items: [{label, onClick, isActive?}], color?:string }
   var prev = document.getElementById('chapter-nav-popup');
-  if (prev) prev.remove();
+  if (prev) {
+    // ghost-tap בנייד: מתעלמים מפתיחה כפולה מיידית; אחרת סוגרים נקי כולל רשומת המחסנית
+    if (Date.now() - (prev.__openedAt || 0) < 600) return;
+    prev.remove();
+    if (_activeModals[_activeModals.length - 1] === 'chapter-nav-popup')
+      _activeModals.pop();
+  }
   var color = opts.color || '#6366f1';
   var overlay = document.createElement('div');
   overlay.id = 'chapter-nav-popup';
+  overlay.__openedAt = Date.now();
   overlay.style.cssText = 'position:fixed;inset:0;z-index:10050;background:rgba(2,6,23,0.65);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:1rem;';
   overlay.addEventListener('click', function(e) { if (e.target === overlay) window._closePopupViaBack('chapter-nav-popup'); });
   var card = document.createElement('div');
@@ -16346,12 +15254,14 @@ function applyPrayerFontSize(targetSelector) {
 
 function closePrayerModal() {
   const el = document.getElementById("prayer-modal");
-  if (el) el.remove();
-  unlockBodyScroll();
+  if (!el) return;
+  // לחיצת X/רקע: יוצאים דרך history.back כדי לסנכרן את המחסנית — popstate יסגור בפועל
   if (_activeModals[_activeModals.length - 1] === "prayer-modal") {
-    _activeModals.pop();
     history.back();
+    return;
   }
+  el.remove();
+  unlockBodyScroll();
 }
 function closeTehillimModal() {
   const el = document.getElementById("tehillim-modal");
@@ -16365,7 +15275,11 @@ function closeTehillimModal() {
     _activeModals.pop();
     steps++;
   }
-  if (steps > 0) history.go(-steps);
+  if (steps > 0) {
+    // ניווט תכנותי אחורה — בלי גלילת "חזרה הביתה" שנלחמת בשחזור הגלילה
+    window._suppressHomeScroll = true;
+    history.go(-steps);
+  }
 }
 
 // ── Dedicated Shir HaShirim Page ─────────────────────────
@@ -16460,12 +15374,14 @@ function openShirHashirimPage() {
 
 function closeShirHashirimModal() {
   const el = document.getElementById('shir-hashirim-modal');
-  if (el) el.remove();
-  unlockBodyScroll();
+  if (!el) return;
+  // לחיצת X/רקע: יוצאים דרך history.back כדי לסנכרן את המחסנית — popstate יסגור בפועל
   if (_activeModals[_activeModals.length - 1] === 'shir-hashirim-modal') {
-    _activeModals.pop();
     history.back();
+    return;
   }
+  el.remove();
+  unlockBodyScroll();
 }
 
 // ── Dedicated Ben Ish Hai Page ────────────────────────────
@@ -17059,7 +15975,12 @@ function openBenIshHaiPage() {
       }
     };
 
+    let _titleLastT = 0;
     _titleListener = () => {
+      // מרוסן ל-10Hz + כתיבה רק בשינוי — ריצת 60Hz עם כתיבת טקסט בכל אירוע גרמה לריצוד בגלילה
+      const _now = performance.now();
+      if (_now - _titleLastT < 100) return;
+      _titleLastT = _now;
       const sections = contentArea.querySelectorAll("[data-pidx]");
       const mid = contentArea.getBoundingClientRect().top + contentArea.clientHeight/3;
       let best = null;
@@ -17069,7 +15990,7 @@ function openBenIshHaiPage() {
         const pIdx = parseInt(best.getAttribute("data-pidx"));
         const p = getParshiyot()[pIdx];
         const el = document.getElementById("bih-reading-title");
-        if (el && p) el.textContent = p.he;
+        if (el && p && el.textContent !== p.he) el.textContent = p.he;
       }
     };
 
@@ -17577,62 +16498,19 @@ function ensureNusachChosen(callback) {
   }
 }
 
-// --- Language Selection Popup (similar to Nusach popup) ---
-const LANG_LABELS = {
-  he: { native: "עברית", flag: "🇮🇱" },
-  en: { native: "English", flag: "🇺🇸" },
-  fr: { native: "Français", flag: "🇫🇷" },
-};
-async function setLanguage(lang) {
-  if (!LANG_LABELS[lang] || lang === CURRENT_LANG) return;
-  CURRENT_LANG = lang;
-  localStorage.setItem("moadim_lang", CURRENT_LANG);
-  refreshLiveLanguageUI();
-  render(
-    document.querySelector(".chip.active")?.id?.replace("btn-", "") || "all",
-    document.getElementById("mainSearch").value,
-  );
-  buildMonthCalendar();
-  await fetchLiveCalendarData();
-}
-window.showLanguageSelectionPopup = function () {
-  let existing = document.getElementById("language-selection-modal");
-  if (existing) existing.remove();
-  const overlay = document.createElement("div");
-  overlay.id = "language-selection-modal";
-  overlay.style.cssText =
-    "position:fixed;inset:0;z-index:250;background:rgba(0,0,0,0.55);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:1rem;";
-  const langOptions = Object.entries(LANG_LABELS)
-    .map(
-      ([k, v]) =>
-        `<button onclick="window._selectLanguageFromPopup('${k}')" style="width:100%;padding:0.85rem 1rem;border-radius:0.9rem;border:2px solid ${k === CURRENT_LANG ? "#2563eb" : "rgba(0,0,0,0.1)"};background:${k === CURRENT_LANG ? "rgba(37,99,235,0.08)" : "rgba(0,0,0,0.02)"};color:#1a1a1a;font-size:1.05rem;font-weight:800;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;justify-content:center;gap:0.5rem;"><span style="font-size:1.2rem;">${v.flag}</span><span>${v.native}</span></button>`,
-    )
-    .join("");
-  overlay.innerHTML = `
-          <div style="background:#faf9f6;border-radius:1.5rem;padding:1.8rem 1.5rem;width:100%;max-width:380px;box-shadow:0 25px 60px rgba(0,0,0,0.25);text-align:center;direction:rtl;">
-            <div style="font-size:2rem;margin-bottom:0.5rem;">🌐</div>
-            <h3 style="color:#1a1a1a;font-size:1.25rem;font-weight:900;margin:0 0 0.4rem;">בחירת שפה</h3>
-            <p style="color:#64748b;font-size:0.85rem;margin:0 0 1.2rem;line-height:1.5;">בחר את שפת התצוגה. ניתן לשנות בכל עת.</p>
-            <div style="display:flex;flex-direction:column;gap:0.5rem;">${langOptions}</div>
-            <button onclick="window._closePopupViaBack('language-selection-modal')" style="margin-top:1rem;background:rgba(0,0,0,0.05);border:none;border-radius:0.75rem;padding:0.55rem 1.4rem;color:#64748b;font-size:0.85rem;font-weight:700;cursor:pointer;">ביטול</button>
-          </div>`;
-  overlay.addEventListener("click", (event) => {
-    if (event.target === overlay) window._closePopupViaBack("language-selection-modal");
-  });
-  window._selectLanguageFromPopup = async (lang) => {
-    window._closePopupViaBack("language-selection-modal");
-    await setLanguage(lang);
-  };
-  document.body.appendChild(overlay);
-  pushModalState("language-selection-modal");
-};
 
 // --- Contact Modal ---
 window.showContactModal = function () {
   let existing = document.getElementById("contact-modal");
-  if (existing) { window._closePopupViaBack('contact-modal'); return; }
+  if (existing) {
+    // ghost-tap בנייד: מתעלמים מנגיעה כפולה מיד אחרי הפתיחה — אחרת הפופאפ מהבהב ונסגר
+    if (Date.now() - (existing.__openedAt || 0) < 600) return;
+    window._closePopupViaBack('contact-modal');
+    return;
+  }
   const overlay = document.createElement("div");
   overlay.id = "contact-modal";
+  overlay.__openedAt = Date.now();
   overlay.style.cssText =
     "position:fixed;inset:0;z-index:260;background:rgba(0,0,0,0.55);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:1rem;";
   overlay.innerHTML = `
@@ -17934,7 +16812,6 @@ openTehillimPage = function () {
   };
   window._tehillimLoadedChapters = new Set();
   window._tehillimCurrentChapter = 1;
-  window._tehillimPsalmInHistory = false;
 
   // Bookmarks
   const TH_BM_KEY = "tehillim_bookmarks_v1";
@@ -18087,7 +16964,6 @@ openTehillimPage = function () {
   window._tehillimOnPsalmClose = () => {
     const pane = document.getElementById("psalm-content-pane");
     if (pane) pane.style.display = "none";
-    window._tehillimPsalmInHistory = false;
   };
 
   window._tehillimClosePsalm = () => {
@@ -18200,8 +17076,11 @@ openTehillimPage = function () {
         const areaRect = area.getBoundingClientRect();
         if (rect.top >= areaRect.top - 50 && rect.top < areaRect.top + 150) {
           const num = parseInt(ch.id.replace("psalm-chapter-", ""));
-          if (num && title)
-            title.textContent = `תהילים פרק ${toHebrewPsalmNumber(num)}`;
+          if (num && title) {
+            const _thTitleTxt = `תהילים פרק ${toHebrewPsalmNumber(num)}`;
+            // כתיבה רק בשינוי — כתיבת טקסט זהה בכל אירוע גלילה מייצרת ריצוד
+            if (title.textContent !== _thTitleTxt) title.textContent = _thTitleTxt;
+          }
           break;
         }
       }
@@ -18315,7 +17194,6 @@ function updateOmerSefirot(day) {
 }
 
 // Patch the omer display to include sefirot
-const _origFetchLive = fetchLiveCalendarData;
 // We hook into the DOM update instead — after omer-day-num is set
 const _origUpdateOmerRing = updateOmerRing;
 window.updateOmerRing = function (day) {
@@ -19857,7 +18735,12 @@ document.addEventListener("keydown", (e) => {
     var tzaddikim = HD[info.key] || [];
 
     var old = document.getElementById("hilulot-modal");
-    if (old) old.remove();
+    if (old) {
+      old.remove();
+      unlockBodyScroll();
+      if (_activeModals[_activeModals.length - 1] === "hilulot-modal")
+        _activeModals.pop();
+    }
 
     var modal = document.createElement("div");
     modal.id = "hilulot-modal";
@@ -19938,6 +18821,7 @@ document.addEventListener("keydown", (e) => {
       "</div>";
 
     document.body.appendChild(modal);
+    lockBodyScroll();
     pushModalState("hilulot-modal");
 
     function navTo(newOffset) {
@@ -19957,24 +18841,28 @@ document.addEventListener("keydown", (e) => {
         navTo(0);
       });
     modal.querySelector("#hil-cal-btn").addEventListener("click", function () {
+      // מעבר ללוח החודשי: סוגרים ידנית ומנקים את הרשומה שלנו כדי שהמחסנית תישאר מסונכרנת
       modal.remove();
+      unlockBodyScroll();
+      if (_activeModals[_activeModals.length - 1] === "hilulot-modal")
+        _activeModals.pop();
       window.openHilulotCalendar();
     });
     modal
       .querySelector("#hilulot-close")
       .addEventListener("click", function () {
-        modal.remove();
+        window._closePopupViaBack("hilulot-modal");
       });
     modal.addEventListener("click", function (e) {
-      if (e.target === modal) modal.remove();
+      if (e.target === modal) window._closePopupViaBack("hilulot-modal");
     });
     document.addEventListener("keydown", function esc(e) {
       if (e.key === "Escape") {
-        modal.remove();
+        window._closePopupViaBack("hilulot-modal");
         document.removeEventListener("keydown", esc);
       }
     });
-    modal.querySelector("#hilulot-close").focus();
+    modal.querySelector("#hilulot-close").focus({ preventScroll: true });
   };
 
   // ── Calendar popup ──
@@ -20143,7 +19031,12 @@ document.addEventListener("keydown", (e) => {
 
   window.openHilulotCalendar = function () {
     var old = document.getElementById("hilulot-cal-modal");
-    if (old) old.remove();
+    if (old) {
+      old.remove();
+      unlockBodyScroll();
+      if (_activeModals[_activeModals.length - 1] === "hilulot-cal-modal")
+        _activeModals.pop();
+    }
 
     if (!_calRefDate) _calRefDate = new Date();
 
@@ -20231,6 +19124,7 @@ document.addEventListener("keydown", (e) => {
       "</div>";
 
     document.body.appendChild(modal);
+    lockBodyScroll();
     pushModalState("hilulot-cal-modal");
     renderCalendarBody(_calRefDate);
 
@@ -20259,22 +19153,26 @@ document.addEventListener("keydown", (e) => {
     modal
       .querySelector("#hil-cal-close")
       .addEventListener("click", function () {
-        modal.remove();
+        window._closePopupViaBack("hilulot-cal-modal");
       });
     modal.querySelector("#hil-cal-back").addEventListener("click", function () {
+      // חזרה להילולות: סוגרים ידנית ומנקים את הרשומה שלנו כדי שהמחסנית תישאר מסונכרנת
       modal.remove();
+      unlockBodyScroll();
+      if (_activeModals[_activeModals.length - 1] === "hilulot-cal-modal")
+        _activeModals.pop();
       window.openHilulotModal(_dayOffset);
     });
     modal.addEventListener("click", function (e) {
-      if (e.target === modal) modal.remove();
+      if (e.target === modal) window._closePopupViaBack("hilulot-cal-modal");
     });
     document.addEventListener("keydown", function esc(e) {
       if (e.key === "Escape") {
-        modal.remove();
+        window._closePopupViaBack("hilulot-cal-modal");
         document.removeEventListener("keydown", esc);
       }
     });
-    modal.querySelector("#hil-cal-close").focus();
+    modal.querySelector("#hil-cal-close").focus({ preventScroll: true });
   };
 })();
 
@@ -21934,7 +20832,12 @@ document.addEventListener("keydown", (e) => {
   function openTorahPopup(items, displayName, prefixLabel, opts) {
     var idx = 0;
     var old = document.getElementById("moad-torah-modal");
-    if (old) old.remove();
+    if (old) {
+      old.remove();
+      unlockBodyScroll();
+      if (_activeModals[_activeModals.length - 1] === "moad-torah-modal")
+        _activeModals.pop();
+    }
     if (!items || !items.length)
       items = [
         {
@@ -22019,12 +20922,16 @@ document.addEventListener("keydown", (e) => {
     function render(i) {
       modal.innerHTML = buildCard(i);
       modal.querySelector("#moad-close").addEventListener("click", function () {
-        modal.remove();
+        window._closePopupViaBack("moad-torah-modal");
       });
       var _ctaBtn = modal.querySelector("#moad-parsha-cta");
       if (_ctaBtn && opts && opts.parshaCTAHandler) {
         _ctaBtn.addEventListener("click", function() {
+          // מעבר לפרשה: סגירה ידנית + ניקוי הרשומה שלנו כדי שהמחסנית תישאר מסונכרנת
           modal.remove();
+          unlockBodyScroll();
+          if (_activeModals[_activeModals.length - 1] === "moad-torah-modal")
+            _activeModals.pop();
           opts.parshaCTAHandler();
         });
       }
@@ -22047,16 +20954,17 @@ document.addEventListener("keydown", (e) => {
           });
       }
       modal.addEventListener("click", function (e) {
-        if (e.target === modal) modal.remove();
+        if (e.target === modal) window._closePopupViaBack("moad-torah-modal");
       });
     }
     document.body.appendChild(modal);
+    lockBodyScroll();
     pushModalState("moad-torah-modal");
     modal.setAttribute("tabindex", "-1");
-    modal.focus();
+    modal.focus({ preventScroll: true });
     render(idx);
     modal.addEventListener("keydown", function (e) {
-      if (e.key === "Escape") modal.remove();
+      if (e.key === "Escape") window._closePopupViaBack("moad-torah-modal");
       if (e.key === "ArrowLeft" && idx < items.length - 1) {
         idx++;
         render(idx);
@@ -24297,7 +23205,6 @@ function openSefarimNosafimPage(_pageMode) {
     }
   }
   // Make it available within the IIFE
-  window._snFetchCommentaryDebug = _snFetchCommentary;
 
   // ── פירושים צמודי-פסוק: שמירה על מבנה הפסוקים (פסוק ← רשימת פירושים) ──
   var _snCMVerseCache = {};  // "{cm.id}|{ref}" → null | "loading" | array-of-arrays
@@ -24975,7 +23882,8 @@ function openSefarimNosafimPage(_pageMode) {
     content.onscroll = null;
     content.innerHTML = "<div style=\"text-align:center;padding:3rem 1rem;\"><div style=\"width:36px;height:36px;border:3px solid " + _bk.color + ";border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 1rem;\"></div><p style=\"color:#94a3b8;\">טוען...</p></div>";
     showView("sn-reader-view");
-    pushModalState("sn-reader-pane");
+    if (_activeModals[_activeModals.length - 1] !== "sn-reader-pane")
+      pushModalState("sn-reader-pane");
 
     // Build skeleton: chapters area + credit footer
     content.innerHTML = "";
@@ -25124,7 +24032,8 @@ function openSefarimNosafimPage(_pageMode) {
     } catch (eToc) {}
     content.scrollTop = 0;
     showView("sn-reader-view");
-    pushModalState("sn-reader-pane");
+    if (_activeModals[_activeModals.length - 1] !== "sn-reader-pane")
+      pushModalState("sn-reader-pane");
     // אם הגיע מחיפוש — קפיצה למיקום של המילים בטקסט
     var hlW = window._snPendingHighlight;
     window._snPendingHighlight = null;
@@ -25517,7 +24426,11 @@ function closeSefarimNosafimModal() {
   while (_activeModals.length > 0 && snStates.includes(_activeModals[_activeModals.length-1])) {
     _activeModals.pop(); steps++;
   }
-  if (steps > 0) history.go(-steps);
+  if (steps > 0) {
+    // ניווט תכנותי אחורה — בלי גלילת "חזרה הביתה" שנלחמת בשחזור הגלילה
+    window._suppressHomeScroll = true;
+    history.go(-steps);
+  }
 }
 
 // ═══════════════════════════════════════════════════════
@@ -25585,7 +24498,6 @@ function closeSefarimNosafimModal() {
     if (!btn) return;
     btn.style.display = getActiveReader() ? "flex" : "none";
   }
-  window._lpUpdateButton = updateButtonVisibility;
 
   // Hook into navigation events
   window.addEventListener("popstate", function(){ setTimeout(updateButtonVisibility, 30); });

@@ -362,6 +362,35 @@ function unlockBodyScroll() {
   }
   _syncModalOpenClass();
 }
+// ── עזרי אבטחה גלובליים ──
+// escaping למחרוזת בודדת (שם אירוע, הערת משתמש, כותרת) לפני שילוב ב-innerHTML
+function escapeHtml(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+// חיטוי HTML שמקורו חיצוני שאינו בשליטתנו (דפי מקור של ספריא, ויקיטקסט וכד')
+// לפני innerHTML: מסירים תגי הרצה ומאפייני on*/javascript: — עיצוב לגיטימי
+// (b/i/span/br וכו') נשמר. אותה מדיניות כמו מסלול בן-יהודה ב-fetchSec.
+function sanitizeExternalHtml(html) {
+  try {
+    const doc = new DOMParser().parseFromString(String(html == null ? "" : html), "text/html");
+    doc.querySelectorAll("script,style,iframe,object,embed,link,meta,form").forEach((n) => n.remove());
+    doc.querySelectorAll("*").forEach((n) => {
+      Array.prototype.slice.call(n.attributes).forEach((a) => {
+        const nm = a.name.toLowerCase();
+        if (nm.indexOf("on") === 0) n.removeAttribute(a.name);
+        else if ((nm === "href" || nm === "src" || nm === "xlink:href") && /^\s*(javascript|data):/i.test(a.value)) n.removeAttribute(a.name);
+      });
+    });
+    return doc.body.innerHTML;
+  } catch (e) {
+    return escapeHtml(html);
+  }
+}
 // html.lux-modal-open — סימון מרכזי "פופאפ כלשהו פתוח": משהה את קנבס הכוכבים,
 // את שעוני-הכפייה ואת האנימציות האינסופיות שברקע (כללי CSS בסוף style.css).
 // הבדיקה משקפת את ה-DOM עצמו ולכן עמידה גם מול פופאפים שלא נועלים גלילה.
@@ -379,7 +408,11 @@ function _isAnyOverlayOpen() {
 function _syncModalOpenClass() {
   document.documentElement.classList.toggle("lux-modal-open", _isAnyOverlayOpen());
 }
-setInterval(_syncModalOpenClass, 300);
+setInterval(function () {
+  // בלשונית מוסתרת אין מה לסנכרן (אין רינדור) — חוסך CPU/סוללה
+  if (document.hidden) return;
+  _syncModalOpenClass();
+}, 300);
 // History-based back button: push state when modal opens, pop to close
 let _activeModals = [];
 function pushModalState(modalId) {
@@ -1923,18 +1956,21 @@ function renderChokContent() {
         const c = _CHOK_SECTION_STYLES[currentSection] || { bg: '#f8fafc', border: '#94a3b8', text: '#334155', emoji: '📄' };
         html += `<div style="margin:1.8rem auto 0.8rem;text-align:center;">
           <div style="display:inline-block;padding:0.35rem 1.8rem;background:${c.bg};border-radius:2rem;border:2.5px solid ${c.border};">
-            <span style="font-size:1.1rem;font-weight:900;color:${c.text};">${c.emoji} ${currentSection}</span>
+            <span style="font-size:1.1rem;font-weight:900;color:${c.text};">${c.emoji} ${escapeHtml(currentSection)}</span>
           </div>
         </div>`;
       } else {
         // Small instructional text — show dimmed
-        const cleaned = src.outsideText.replace(/<\/?small>/g, '').replace(/<\/?h[1-6]>/g, '');
+        // תוכן ה-sheet נכתב ע"י משתמשי ספריא — עובר חיטוי לפני innerHTML
+        const cleaned = sanitizeExternalHtml(src.outsideText.replace(/<\/?small>/g, '').replace(/<\/?h[1-6]>/g, ''));
         html += `<div style="margin:0.4rem auto 0.6rem;color:#94a3b8;font-size:0.78rem;max-width:32rem;">${cleaned}</div>`;
       }
     } else if (src.text && src.text.he) {
+      // הטקסט מגיע מ-sheet של ספריא (תוכן שנערך ע"י משתמשים) — חיטוי לפני הצגה
+      const heHtml = sanitizeExternalHtml(src.text.he);
       html += `<div style="margin-bottom:1.4rem;padding:0.9rem 1rem;border-radius:0.75rem;border:1px solid rgba(0,0,0,0.06);background:rgba(0,0,0,0.01);">`;
       if (src.heRef) {
-        html += `<div style="font-size:0.68rem;color:#94a3b8;font-weight:600;margin-bottom:0.4rem;">${src.heRef}</div>`;
+        html += `<div style="font-size:0.68rem;color:#94a3b8;font-weight:600;margin-bottom:0.4rem;">${escapeHtml(src.heRef)}</div>`;
       }
 
       // רש״י משובץ בתוך הטקסט — גמרא, תורה, נביאים וכתובים
@@ -1948,13 +1984,13 @@ function renderChokContent() {
         if (rashiVal && rashiVal.verses) {
           const allComments = rashiVal.verses.flat().filter(Boolean);
           if (allComments.length) {
-            html += _buildGemaraWithInlineRashi(src.text.he, allComments);
+            html += _buildGemaraWithInlineRashi(heHtml, allComments);
           } else {
-            html += src.text.he;
+            html += heHtml;
             html += `<div style="margin-top:0.6rem;padding:0.45rem 0.7rem;border-radius:0.4rem;background:rgba(124,58,237,0.04);border:1px dashed rgba(124,58,237,0.25);color:#7c3aed;font-size:0.72rem;font-style:italic;text-align:center;">📝 אין פירוש רש״י על קטע זה</div>`;
           }
         } else {
-          html += src.text.he;
+          html += heHtml;
           if (rashiVal === 'loading') {
             html += `<div style="margin-top:0.4rem;font-size:0.75rem;color:#7c3aed;font-style:italic;opacity:0.7;">טוען פירוש רש״י...</div>`;
           } else if (rashiVal === null) {
@@ -1965,7 +2001,7 @@ function renderChokContent() {
         // ברטנורא משובץ בתוך טקסט המשנה
         const bartVal = _chokBartenuraCache[src.ref];
         if (Array.isArray(bartVal) && bartVal.length > 0) {
-          html += _buildTextWithInlineComments(src.text.he, bartVal, {
+          html += _buildTextWithInlineComments(heHtml, bartVal, {
             label: 'ברטנורא',
             emoji: '📖',
             color: '#0891b2',
@@ -1973,13 +2009,13 @@ function renderChokContent() {
             textColor: '#164e63',
           });
         } else {
-          html += src.text.he;
+          html += heHtml;
           if (bartVal === 'loading') {
             html += `<div style="margin-top:0.4rem;font-size:0.75rem;color:#0891b2;font-style:italic;opacity:0.7;">טוען פירוש ברטנורא...</div>`;
           }
         }
       } else {
-        html += src.text.he;
+        html += heHtml;
       }
 
       html += `</div>`;
@@ -4448,7 +4484,7 @@ function render(filter = "all", search = "") {
                         <div class="flex items-center gap-4 md:gap-6 w-full md:w-auto">
                             <div class="w-14 h-14 md:w-16 md:h-16 shrink-0 bg-white dark:bg-slate-700/50 text-2xl md:text-3xl flex items-center justify-center rounded-2xl md:rounded-3xl shadow-md border border-${color}-100 dark:border-${color}-500/20" style="box-shadow:0 4px 15px rgba(0,0,0,0.06);" aria-hidden="true">${e.icon}</div>
                             <div class="flex-1 min-w-0">
-                                <h3 class="font-black text-slate-900 dark:text-white text-xl md:text-2xl mb-1 cursor-pointer hover:text-${color}-600 dark:hover:text-${color}-400 transition-colors truncate" onclick="openSefariaModal('${e.name}', '${e.titleStr || e.name}')">${e.name}</h3>
+                                <h3 class="font-black text-slate-900 dark:text-white text-xl md:text-2xl mb-1 cursor-pointer hover:text-${color}-600 dark:hover:text-${color}-400 transition-colors truncate" data-ev-name="${escapeHtml(e.name)}" data-ev-title="${escapeHtml(e.titleStr || e.name)}" onclick="openSefariaModal(this.dataset.evName, this.dataset.evTitle)">${escapeHtml(e.name)}</h3>
                                 <div class="text-slate-500 dark:text-slate-400 font-medium text-sm">${dateDisplay}</div>
                                 ${extraTimesHtml}
                                 ${e.levanaString ? `${e.levanaString}` : ""}
@@ -4793,7 +4829,7 @@ function buildMonthCalendar() {
     // Show parsha on Shabbat cells
     const parshaEv = evs.find((e) => e.type === "parashat");
     if (parshaEv) {
-      evHtml += `<div class="bg-amber-600 text-white text-[9px] md:text-xs px-1 py-0.5 rounded-md shadow-sm w-full font-bold leading-tight break-words" title="${parshaEv.name}">📖 ${parshaEv.name.replace("Parashat ", "")}</div>`;
+      evHtml += `<div class="bg-amber-600 text-white text-[9px] md:text-xs px-1 py-0.5 rounded-md shadow-sm w-full font-bold leading-tight break-words" title="${escapeHtml(parshaEv.name)}">📖 ${escapeHtml(parshaEv.name.replace("Parashat ", ""))}</div>`;
     }
     evs.forEach((e) => {
       if (e.type === "parashat") return; // already shown above
@@ -4805,12 +4841,12 @@ function buildMonthCalendar() {
           "rosh-chodesh": "bg-emerald-500",
           minor: "bg-slate-500",
         }[e.type] || "bg-slate-500";
-      evHtml += `<div class="${c} text-white text-[9px] md:text-xs px-1 py-0.5 rounded-md shadow-sm w-full font-medium leading-tight break-words" title="${e.name}">${e.name.replace("קידוש לבנה - ", "")}</div>`;
+      evHtml += `<div class="${c} text-white text-[9px] md:text-xs px-1 py-0.5 rounded-md shadow-sm w-full font-medium leading-tight break-words" title="${escapeHtml(e.name)}">${escapeHtml(e.name.replace("קידוש לבנה - ", ""))}</div>`;
     });
     // Show note indicator if there's a saved note for this day
     const dayNote = getDayNotes(dStr);
     if (dayNote) {
-      evHtml += `<div class="bg-yellow-400 text-yellow-900 text-[9px] md:text-xs px-1 py-0.5 rounded-md shadow-sm w-full font-bold leading-tight break-words" title="${dayNote.substring(0, 80)}">📝 ${dayNote.substring(0, 14)}${dayNote.length > 14 ? "…" : ""}</div>`;
+      evHtml += `<div class="bg-yellow-400 text-yellow-900 text-[9px] md:text-xs px-1 py-0.5 rounded-md shadow-sm w-full font-bold leading-tight break-words" title="${escapeHtml(dayNote.substring(0, 80))}">📝 ${escapeHtml(dayNote.substring(0, 14))}${dayNote.length > 14 ? "…" : ""}</div>`;
     }
     const ariaLabel = `${formatLocalizedDate(cDate, { day: "2-digit", month: "long", year: "numeric" })}${hebrewDate ? ` | ${hebrewDate}` : ""}`;
 
@@ -7401,7 +7437,8 @@ function cleanWikisourceHtml(rawHtml) {
     anchor.replaceWith(span);
   });
   const body = doc.body;
-  return `<div class="prayer-richtext">${body.innerHTML}</div>`;
+  // ויקיטקסט ניתן לעריכה ציבורית — אותו חיטוי on*/javascript: כמו שאר המקורות החיצוניים
+  return `<div class="prayer-richtext">${sanitizeExternalHtml(body.innerHTML)}</div>`;
 }
 
 async function fetchWikisourcePrayer(query) {

@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>העמוד לא נמצא | הלוח היהודי</title>
+    <meta name="robots" content="noindex" />
+    <meta name="theme-color" content="#0f172a" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=3" />
+    <!-- דף שגיאה עצמאי לחלוטין — בלי CSS/JS חיצוניים, כדי שיעבוד תמיד -->
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body {
+        min-height: 100vh;
+        font-family: "Assistant", system-ui, -apple-system, "Segoe UI", sans-serif;
+        background: linear-gradient(160deg, #050b1a 0%, #0c1530 55%, #16233f 100%);
+        color: #e8eefc;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 1.5rem;
+      }
+      .card {
+        max-width: 30rem;
+        background: linear-gradient(165deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));
+        border: 1px solid rgba(232,193,90,0.3);
+        border-radius: 1.5rem;
+        padding: 2.5rem 2rem;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 10px 40px rgba(0,0,0,0.4);
+      }
+      .star { font-size: 3rem; line-height: 1; margin-bottom: 1rem; }
+      .code { font-size: 0.85rem; font-weight: 800; letter-spacing: 0.25em; color: rgba(242,217,138,0.7); margin-bottom: 0.5rem; }
+      h1 { font-size: 1.6rem; font-weight: 900; color: #f2d98a; margin-bottom: 0.75rem; }
+      p { color: rgba(191,219,254,0.85); font-size: 0.95rem; line-height: 1.7; margin-bottom: 1.75rem; }
+      .home {
+        display: inline-block;
+        background: linear-gradient(135deg, #e8c15a, #f2d98a);
+        color: #1e293b;
+        font-weight: 900;
+        font-size: 1rem;
+        padding: 0.7rem 2.2rem;
+        border-radius: 999px;
+        text-decoration: none;
+        box-shadow: 0 4px 18px rgba(232,193,90,0.35);
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+      }
+      .home:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(232,193,90,0.5); }
+      nav { margin-top: 1.75rem; padding-top: 1.25rem; border-top: 1px solid rgba(148,180,255,0.15); display: flex; flex-wrap: wrap; gap: 0.4rem 1.1rem; justify-content: center; }
+      nav a { color: #93c5fd; text-decoration: none; font-size: 0.82rem; font-weight: 600; }
+      nav a:hover { color: #bfdbfe; text-decoration: underline; }
+    </style>
+  </head>
+  <body>
+    <main class="card">
+      <div class="star" aria-hidden="true">✡</div>
+      <div class="code">404</div>
+      <h1>העמוד שחיפשתם לא נמצא</h1>
+      <p>ייתכן שהקישור השתנה או שהכתובת הוקלדה בטעות.<br />הלוח, הזמנים והתפילות מחכים לכם בדף הראשי.</p>
+      <a class="home" href="/">חזרה ללוח היהודי</a>
+      <nav aria-label="ניווט">
+        <a href="/synagogues.html">בתי כנסת ומקוואות</a>
+        <a href="/credits.html">קרדיטים</a>
+        <a href="/privacy.html">מדיניות פרטיות</a>
+        <a href="/terms.html">תנאי שימוש</a>
+      </nav>
+    </main>
+  </body>
+</html>

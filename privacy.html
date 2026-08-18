@@ -37,9 +37,9 @@
       hreflang="x-default"
       href="https://jewishcalendar.co.il/privacy.html"
     />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="shortcut icon" href="/favicon.svg" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=3" />
+    <link rel="shortcut icon" href="/favicon.svg?v=3" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=3" />
     <link rel="manifest" href="/site.webmanifest" />
 
     <meta property="og:type" content="website" />
@@ -219,7 +219,9 @@
                 לשימוש חוזר. איננו מפעילים שרת משלנו והקואורדינטות אינן נשמרות
                 אצלנו; עם זאת, לצורך אספקת השירות הקואורדינטות נשלחות לשירותי
                 צד שלישי: ל-Hebcal (חישוב זמני היום), ל-Nominatim מבית
-                OpenStreetMap (זיהוי שם היישוב לפי המיקום) ול-Overpass API
+                OpenStreetMap (זיהוי שם היישוב לפי המיקום; בעמוד בתי הכנסת
+                הקואורדינטות מומרות לכתובת משוערת ברמת רחוב לצורך תצוגה,
+                והכתובת נשמרת מקומית במכשירך לצד הקואורדינטות) ול-Overpass API
                 (איתור בתי כנסת בקרבתך בעמוד בתי הכנסת). פירוט בסעיף "שירותי
                 צד שלישי".
               </p>
@@ -235,7 +237,11 @@
                 האתר משתמש בטכנולוגיית Service Worker כדי לאפשר גלישה מהירה יותר
                 ותמיכה בשימוש לא מקוון (offline). ה-Service Worker שומר עותקים
                 של קבצי האתר (HTML, CSS, JavaScript, תמונות) במטמון המקומי של
-                הדפדפן. מידע זה נשמר על מכשירך בלבד ומשמש לשיפור הביצועים.
+                הדפדפן, וכן תשובות משירותי התוכן והזמנים שבהם האתר משתמש
+                (ספריא, Hebcal, Nominatim, אריחי מפה של OpenStreetMap וטקסטים
+                מוויקיטקסט) — כדי שהתכנים והזמנים יעבדו גם ללא חיבור לאינטרנט.
+                מידע זה נשמר על מכשירך בלבד, משמש לשיפור הביצועים, ונמחק
+                בעת ניקוי נתוני האתר בדפדפן.
               </p>
             </div>
 
@@ -412,7 +418,7 @@
               <p class="mt-2 leading-7 text-slate-700 dark:text-slate-300">
                 טקסטים תורניים המוצגים באתר (תנ"ך, תפילות, תהילים, דף יומי,
                 משנה ופירושים) נטענים ישירות מהדפדפן שלך משרתי צד שלישי:
-                ה-API של ספריא (sefaria.org, שרתים בארה"ב), ויקיטקסט העברי
+                ה-API של ספריא (sefaria.org / sefaria.org.il, שרתים בארה"ב), ויקיטקסט העברי
                 (he.wikisource.org, מבית קרן ויקימדיה), פרויקט בן-יהודה
                 (benyehuda.org) ואתר תורת אמת. בקשות אלו כוללות את כתובת ה-IP
                 שלך ואת שם הטקסט המבוקש. חלק מהבקשות לפרויקט בן-יהודה מנותבות
@@ -544,6 +550,15 @@
         </section>
       </div>
     </main>
+
+    <footer class="max-w-3xl mx-auto px-4 pb-10 text-center">
+      <nav aria-label="קישורים באתר" class="flex flex-wrap justify-center gap-x-5 gap-y-2 text-sm text-slate-500 dark:text-slate-400 border-t border-slate-200 dark:border-slate-800 pt-6">
+        <a href="/" class="font-semibold hover:text-blue-600 dark:hover:text-blue-400">הלוח היהודי — דף הבית</a>
+        <a href="/synagogues.html" class="hover:text-blue-600 dark:hover:text-blue-400">בתי כנסת ומקוואות</a>
+        <a href="/credits.html" class="hover:text-blue-600 dark:hover:text-blue-400">קרדיטים</a>
+        <a href="/terms.html" class="hover:text-blue-600 dark:hover:text-blue-400">תנאי שימוש</a>
+      </nav>
+    </footer>
 
     <script>
       const savedTheme = localStorage.getItem("moadim_theme") || localStorage.getItem("theme");

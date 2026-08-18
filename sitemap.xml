@@ -10,6 +10,7 @@
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
     <xhtml:link rel="alternate" hreflang="he-IL" href="https://jewishcalendar.co.il/"/>
+    <xhtml:link rel="alternate" hreflang="he" href="https://jewishcalendar.co.il/"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://jewishcalendar.co.il/"/>
     <image:image>
       <image:loc>https://jewishcalendar.co.il/og-image.png</image:loc>

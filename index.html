@@ -49,6 +49,11 @@
     />
     <link
       rel="alternate"
+      hreflang="he"
+      href="https://jewishcalendar.co.il/"
+    />
+    <link
+      rel="alternate"
       hreflang="x-default"
       href="https://jewishcalendar.co.il/"
     />
@@ -104,7 +109,16 @@
           "alternateName": ["לוח שנה עברי לועזי", "לוח שנה יהודי", "לוח שנה עברי", "לוח שנה לועזי", "Jewish Calendar", "Hebrew Calendar", "Hebrew Jewish Calendar"],
           "description": "לוח שנה יהודי עברי לועזי תשפ\"ו 2026 – זמני שבת, הדלקת נרות, מועדי ישראל, ספירת העומר, ברכת הלבנה, הנץ החמה, שקיעה וייצוא ליומן.",
           "inLanguage": "he-IL",
-          "publisher": { "@id": "https://jewishcalendar.co.il/#org" },
+          "publisher": { "@id": "https://jewishcalendar.co.il/#org" }
+        },
+        {
+          "@type": "WebPage",
+          "@id": "https://jewishcalendar.co.il/#webpage",
+          "url": "https://jewishcalendar.co.il/",
+          "name": "לוח שנה עברי לועזי תשפ\"ו 2026 | זמני שבת, מועדים וזמני הלכה",
+          "isPartOf": { "@id": "https://jewishcalendar.co.il/#website" },
+          "about": { "@id": "https://jewishcalendar.co.il/#app" },
+          "inLanguage": "he-IL",
           "speakable": {
             "@type": "SpeakableSpecification",
             "cssSelector": ["#about-title", "#about-lead"]
@@ -131,7 +145,13 @@
             "מועדי ישראל: ראש השנה, יום כיפור, סוכות, חנוכה, פורים, פסח, שבועות",
             "ייצוא מהיר ליומן Google, Apple, Outlook",
             "פרשת השבוע",
-            "הדף היומי (דף יומי)"
+            "הדף היומי (דף יומי)",
+            "תהילים ותפילות: תפילת הדרך, ברכת המזון, תיקון הכללי ועוד",
+            "שעון הלכתי אנלוגי — שעות זמניות בזמן אמת",
+            "סדר לימוד אישי — חלוקת ספרי קודש ליחידות יומיות",
+            "לוח ברכות הנהנין וסדר התרת נדרים",
+            "חיפוש חכם בכל הספרים והתפילות",
+            "איתור בתי כנסת, מקוואות וציוני צדיקים לפי מיקום"
           ],
           "screenshot": "https://jewishcalendar.co.il/og-image.png",
           "publisher": { "@id": "https://jewishcalendar.co.il/#org" }
@@ -243,10 +263,11 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preconnect" href="https://unpkg.com" crossorigin>
-    <link rel="preconnect" href="https://hebcal.com" crossorigin>
+    <link rel="preconnect" href="https://www.hebcal.com" crossorigin>
     <link rel="preconnect" href="https://www.sefaria.org" crossorigin>
-    <link rel="dns-prefetch" href="https://hebcal.com">
+    <link rel="dns-prefetch" href="https://www.hebcal.com">
     <link rel="dns-prefetch" href="https://www.sefaria.org">
+    <link rel="dns-prefetch" href="https://cdn.onesignal.com">
 
     <link rel="stylesheet" href="tailwind.css?v=2" />
     <!-- KosherZmanim: defer (לא חוסם רינדור); בכשל — נפילה ל-jsDelivr עם אותו hash.
@@ -1060,7 +1081,7 @@
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
           <div>
             <h3 class="font-bold text-slate-600 dark:text-slate-300 mb-2">⏰ זמני שבת וזמני הלכה</h3>
-            <p>הלוח היהודי מציג <strong>זמני שבת והדלקת נרות</strong> מדויקים לפי מיקומך, עם ספירה לאחור חיה. בנוסף, מוצגים כל <strong>זמני ההלכה</strong> ליום: הנץ החמה, סוף זמן קריאת שמע (מגן אברהם ורב עמרם גאון), זמן תפילת שחרית, חצות היום, מנחה גדולה, מנחה קטנה, פלג המנחה, שקיעה וצאת הכוכבים (תצ"ה).</p>
+            <p>הלוח היהודי מציג <strong>זמני שבת והדלקת נרות</strong> מדויקים לפי מיקומך, עם ספירה לאחור חיה. בנוסף, מוצגים כל <strong>זמני ההלכה</strong> ליום: הנץ החמה, סוף זמן קריאת שמע (מגן אברהם והגר"א), זמן תפילת שחרית, חצות היום, מנחה גדולה, מנחה קטנה, פלג המנחה, שקיעה וצאת הכוכבים (תצ"ה).</p>
           </div>
           <div>
             <h3 class="font-bold text-slate-600 dark:text-slate-300 mb-2">🗓️ מועדי ישראל תשפ"ו 2026</h3>
@@ -1089,6 +1110,10 @@
           <div>
             <h3 class="font-bold text-slate-600 dark:text-slate-300 mb-2">🕯️ מהי הדלקת נרות ומתי מדליקים?</h3>
             <p>הדלקת נרות שבת נעשית בערב שבת לפני השקיעה — ברוב ערי ישראל כ-20 דקות לפני השקיעה, ובירושלים 40 דקות. הזמן המדויק משתנה לפי מיקום ועונה, והלוח מחשב אותו אוטומטית לפי העיר שלך.</p>
+          </div>
+          <div>
+            <h3 class="font-bold text-slate-600 dark:text-slate-300 mb-2">🕰️ שעון הלכתי וסדר לימוד אישי</h3>
+            <p>הלוח כולל <strong>שעון הלכתי אנלוגי</strong> המציג שעות זמניות וזמני היום בזמן אמת, ו<strong>סדר לימוד אישי</strong> המחלק ספרים כמו משנה, חובות הלבבות ופלא יועץ ליחידות יומיות לפי הקצב שלכם — עם מעקב התקדמות ותגי התמדה. בנוסף: <strong>לוח ברכות הנהנין</strong>, סדר התרת נדרים וחיפוש חכם בכל הספרים והתפילות.</p>
           </div>
         </div>
 
@@ -2133,8 +2158,8 @@
       </section>
     </noscript>
 
-    <script src="script.js?v=29" defer></script>
-    <script src="lux.js?v=26" defer></script>
+    <script src="script.js?v=30" defer></script>
+    <script src="lux.js?v=27" defer></script>
 
     <!-- Service Worker registration — enables offline caching (PWA) -->
     <script>

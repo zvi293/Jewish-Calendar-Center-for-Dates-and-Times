@@ -2,11 +2,12 @@
   "name": "jewish-calendar",
   "version": "1.0.0",
   "private": true,
-  "description": "Build pipeline: auto-rolls the Hebrew-year content, then compiles tailwind.css.",
+  "description": "Build pipeline: auto-rolls the Hebrew-year content, compiles tailwind.css, then minifies the JS for production (repo stays readable).",
   "scripts": {
-    "build": "node build-year.mjs && tailwindcss -c tailwind.config.js -i tailwind.input.css -o tailwind.css --minify"
+    "build": "node build-year.mjs && tailwindcss -c tailwind.config.js -i tailwind.input.css -o tailwind.css --minify && node minify.mjs"
   },
   "devDependencies": {
+    "esbuild": "^0.28.2",
     "tailwindcss": "^3.4.19"
   }
 }

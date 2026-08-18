@@ -39,6 +39,10 @@
       if (!hero.classList.contains("gradient-bg")) return schedule();
       // מאחורי פופאפ/טאב מוסתר הכוכב רק מייצר repaint מתחת לשכבה — מדלגים
       if (document.hidden || document.documentElement.classList.contains("lux-modal-open")) return schedule();
+      // בנייד/PWA אין כוכב נופל: הוספת אלמנט עם filter מעל ההירו פותחת
+      // render-surface חדש ומכריחה רה-רסטריזציה של כל השכבה כל ~30 שניות —
+      // נראה על הטלפון כהבהוב/קפיצה של המסך כולו. בדסקטופ זה זניח ונשאר.
+      if (window.matchMedia("(max-width: 768px), (pointer: coarse), (display-mode: standalone), (prefers-reduced-motion: reduce)").matches) return schedule();
       var star = document.createElement("div");
       star.className = "lux-shooting-star";
       star.style.top = (5 + Math.random() * 35) + "%";
@@ -731,6 +735,16 @@
     } catch (e) {}
     return null;
   }
+  function isGraMethod() {
+    try { return String(localStorage.getItem("moadim_method") || "MGA").toUpperCase() === "GRA"; } catch (e) { return false; }
+  }
+  // מדלגים על זמני השיטה שלא נבחרה בהגדרות; במג"א נופלים לגר"א רק אם אין נתון מג"א
+  function skipByMethod(key, times) {
+    if (isGraMethod()) return key === "sofZmanShmaMGA" || key === "sofZmanTfillaMGA";
+    if (key === "sofZmanShma") return !!times.sofZmanShmaMGA;
+    if (key === "sofZmanTfilla") return !!times.sofZmanTfillaMGA;
+    return false;
+  }
 
   /* ── 12. "הזמן הבא" — שורה קומפקטית מעל פס היום ────────────────── */
   safe("nextZman", function () {
@@ -740,7 +754,8 @@
       { k: "misheyakir", l: "משיכיר" },
       { k: "sunrise", l: "הנץ החמה" },
       { k: "sofZmanShmaMGA", l: "סו\"ז ק\"ש (מג\"א)" },
-      { k: "sofZmanShma", l: "סו\"ז ק\"ש" },
+      { k: "sofZmanShma", l: "סו\"ז ק\"ש (גר\"א)" },
+      { k: "sofZmanTfillaMGA", l: "סו\"ז תפילה (מג\"א)" },
       { k: "sofZmanTfilla", l: "סו\"ז תפילה" },
       { k: "chatzot", l: "חצות היום" },
       { k: "minchaGedola", l: "מנחה גדולה" },
@@ -767,6 +782,7 @@
       var now = Date.now();
       var next = null;
       KEYS.forEach(function (item) {
+        if (skipByMethod(item.k, z.times)) return;
         var iso = z.times[item.k];
         if (!iso) return;
         var ms = new Date(iso).getTime();
@@ -1697,6 +1713,7 @@
     var CRIT = [
       { k: "sofZmanShmaMGA", l: 'סוף זמן ק"ש (מג"א)' },
       { k: "sofZmanShma", l: 'סוף זמן ק"ש (גר"א)' },
+      { k: "sofZmanTfillaMGA", l: 'סוף זמן תפילה (מג"א)' },
       { k: "sofZmanTfilla", l: "סוף זמן תפילה" }
     ];
     function check() {
@@ -1705,6 +1722,7 @@
       var now = Date.now();
       var show = null;
       CRIT.forEach(function (c) {
+        if (skipByMethod(c.k, z.times)) return;
         var iso = z.times[c.k];
         if (!iso) return;
         var ms = new Date(iso).getTime();
@@ -1726,7 +1744,10 @@
           el.remove();
         });
       }
-      el.querySelector(".lux-crit-txt").textContent = "⏰ " + show.l + " בעוד " + mins + " דק' (" + fmtTime(show.iso) + ")";
+      var critTxt = "⏰ " + show.l + " בעוד " + mins + " דק' (" + fmtTime(show.iso) + ")";
+      var critEl = el.querySelector(".lux-crit-txt");
+      // כתיבה רק בשינוי — כתיבה זהה כל דקה מעירה observers ומייצרת עבודה מיותרת
+      if (critEl && critEl.textContent !== critTxt) critEl.textContent = critTxt;
     }
     setInterval(check, 60000);
     setTimeout(check, 6000);

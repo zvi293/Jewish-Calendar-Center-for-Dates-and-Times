@@ -2,10 +2,7 @@
 <html lang="he" dir="rtl" class="light">
   <head>
     <meta charset="UTF-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
-    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>קרדיטים | הלוח היהודי</title>
     <meta name="title" content="קרדיטים | הלוח היהודי" />
     <meta
@@ -86,7 +83,7 @@
     />
     <meta name="twitter:image:alt" content="הלוח היהודי על רקע כחול" />
 
-    <link rel="stylesheet" href="tailwind.css?v=1" />
+    <link rel="stylesheet" href="tailwind.css?v=2" />
     <link
       href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800&family=Frank+Ruhl+Libre:wght@400;700;900&display=swap"
       rel="stylesheet"
@@ -214,15 +211,23 @@
                   class="text-blue-600 dark:text-blue-400 hover:underline"
                   >KosherJava</a
                 >
-                מאת Eliyahu Hershfeld. הספרייה נטענת באמצעות
+                מאת Eliyahu Hershfeld. הספרייה נטענת מרשתות CDN ציבוריות —
                 <a
+                  href="https://unpkg.com/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="text-blue-600 dark:text-blue-400 hover:underline"
+                  >unpkg</a
+                >
+                (מקור ראשי) ו-<a
                   href="https://www.jsdelivr.com/"
                   target="_blank"
                   rel="noopener noreferrer"
                   class="text-blue-600 dark:text-blue-400 hover:underline"
-                  >jsDelivr CDN</a
-                >. כל הזכויות בספרייה שייכות ליוצריה בהתאם לרישיון הקוד הפתוח
-                שלה (LGPL 2.1).
+                  >jsDelivr</a
+                >
+                (גיבוי). כל הזכויות בספרייה שייכות ליוצריה בהתאם לרישיון הקוד
+                הפתוח שלה (LGPL 2.1).
               </p>
             </div>
 
@@ -242,6 +247,90 @@
                   class="text-blue-600 dark:text-blue-400 hover:underline"
                   >GeoNames</a
                 >. כל הזכויות במאגר שייכות ל-GeoNames ולבעליו.
+              </p>
+            </div>
+
+            <div
+              class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5"
+            >
+              <h3 class="text-lg font-bold text-slate-900 dark:text-white">
+                ספריא (Sefaria)
+              </h3>
+              <p class="mt-2 leading-7 text-slate-700 dark:text-slate-300">
+                הטקסטים התורניים המוצגים באתר — תהילים, תפילות, שיר השירים,
+                חוק לישראל, פרשת השבוע, בן איש חי ועוד — מתקבלים מספריית
+                <a
+                  href="https://www.sefaria.org.il/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="text-blue-600 dark:text-blue-400 hover:underline"
+                  >ספריא (Sefaria)</a
+                >
+                באמצעות ה-API הציבורי שלה. הטקסטים כפופים לרישיון המצוין בעמוד
+                של כל טקסט בספריא (רובם נחלת הכלל או Creative Commons). כל
+                הזכויות שמורות לספריא ולתורמי הטקסטים.
+              </p>
+            </div>
+
+            <div
+              class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5"
+            >
+              <h3 class="text-lg font-bold text-slate-900 dark:text-white">
+                OpenStreetMap (Overpass, Nominatim) ו-Leaflet
+              </h3>
+              <p class="mt-2 leading-7 text-slate-700 dark:text-slate-300">
+                נתוני בתי הכנסת, המקוואות והמיקומים בעמוד "בתי כנסת ומקוואות"
+                מבוססים על נתוני © תורמי
+                <a
+                  href="https://www.openstreetmap.org/copyright"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="text-blue-600 dark:text-blue-400 hover:underline"
+                  >OpenStreetMap</a
+                >, הזמינים תחת רישיון ODbL, ומתקבלים באמצעות שירותי Overpass
+                API ו-Nominatim. המפה מוצגת באמצעות ספריית הקוד הפתוח
+                <a
+                  href="https://leafletjs.com/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="text-blue-600 dark:text-blue-400 hover:underline"
+                  >Leaflet</a
+                >
+                (רישיון BSD-2), הנטענת מרשת unpkg.
+              </p>
+            </div>
+
+            <div
+              class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5"
+            >
+              <h3 class="text-lg font-bold text-slate-900 dark:text-white">
+                ויקיטקסט העברי, פרויקט בן-יהודה ותורת אמת
+              </h3>
+              <p class="mt-2 leading-7 text-slate-700 dark:text-slate-300">
+                חלק מהטקסטים התורניים והתפילות באתר מתקבלים גם
+                מ<a
+                  href="https://he.wikisource.org/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="text-blue-600 dark:text-blue-400 hover:underline"
+                  >ויקיטקסט העברי</a
+                >
+                (מבית קרן ויקימדיה, רישיון CC BY-SA),
+                מ<a
+                  href="https://benyehuda.org/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="text-blue-600 dark:text-blue-400 hover:underline"
+                  >פרויקט בן-יהודה</a
+                >
+                (טקסטים בנחלת הכלל) ומאתר
+                <a
+                  href="https://www.toratemetfreeware.com/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="text-blue-600 dark:text-blue-400 hover:underline"
+                  >תורת אמת</a
+                >. הזכויות בכל טקסט שייכות לבעליהן בהתאם לרישיון החל עליו.
               </p>
             </div>
           </div>
@@ -294,7 +383,8 @@
               </h3>
               <p class="mt-2 leading-7 text-slate-700 dark:text-slate-300">
                 מסגרת עיצוב (CSS framework) המשמשת לעיצוב הממשק והתאמתו לגדלי
-                מסך שונים. נטענת באמצעות CDN. פותחה על ידי
+                מסך שונים. הספרייה מקומפלת בעת הפריסה (deploy) לקובץ
+                tailwind.css הנטען ישירות מהאתר. פותחה על ידי
                 <a
                   href="https://tailwindcss.com/"
                   target="_blank"
@@ -384,6 +474,44 @@
                 שייכות ל-Netlify, Inc.
               </p>
             </div>
+
+            <div
+              class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5"
+            >
+              <h3 class="text-lg font-bold text-slate-900 dark:text-white">
+                OneSignal
+              </h3>
+              <p class="mt-2 leading-7 text-slate-700 dark:text-slate-300">
+                שירות התראות הדחיפה (Push) של האתר מופעל באמצעות
+                <a
+                  href="https://onesignal.com/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="text-blue-600 dark:text-blue-400 hover:underline"
+                  >OneSignal</a
+                >. ההרשמה להתראות מתבצעת רק לאחר אישור המשתמש בדפדפן. כל
+                הזכויות בשירות שייכות ל-OneSignal, Inc.
+              </p>
+            </div>
+
+            <div
+              class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5"
+            >
+              <h3 class="text-lg font-bold text-slate-900 dark:text-white">
+                PayPal
+              </h3>
+              <p class="mt-2 leading-7 text-slate-700 dark:text-slate-300">
+                תרומות לתמיכה בתפעול האתר מתבצעות באמצעות שירות התשלומים
+                <a
+                  href="https://www.paypal.com/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="text-blue-600 dark:text-blue-400 hover:underline"
+                  >PayPal</a
+                >. עיבוד התשלום נעשה כולו באתר PayPal; האתר אינו מקבל ואינו
+                שומר פרטי תשלום. PayPal הוא סימן מסחרי של PayPal, Inc.
+              </p>
+            </div>
           </div>
         </section>
 
@@ -421,11 +549,10 @@
             ככל שנדרש עדכון, תיקון, הבהרה נוספת או הוספת ייחוס מתאים, ניתן לפנות
             לבעל האתר בכתובת
             <a
-              href="mailto:nzweb295@gmail.com
-"
+              href="mailto:nzweb295@gmail.com"
               class="text-blue-600 dark:text-blue-400 hover:underline"
-              >nzweb295@gmail.com
-            </a>
+              >nzweb295@gmail.com</a
+            >
             לצורך בדיקה ועדכון בהתאם.
           </p>
         </section>
@@ -433,7 +560,7 @@
     </main>
 
     <script>
-      const savedTheme = localStorage.getItem("theme");
+      const savedTheme = localStorage.getItem("moadim_theme") || localStorage.getItem("theme");
       const prefersDark = window.matchMedia(
         "(prefers-color-scheme: dark)",
       ).matches;

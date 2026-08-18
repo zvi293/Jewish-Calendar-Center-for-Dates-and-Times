@@ -57,29 +57,34 @@
             '<div class="empty">אין עדיין נתונים שמורים.<br>יש להיכנס פעם אחת ל<a href="/">דף הראשי</a> כדי שהנתונים יישמרו במכשיר.</div>';
           return;
         }
+        // חלק מהנתונים מגיעים משירותים חיצוניים (למשל שם העיר מ-Nominatim) —
+        // כל ערך עובר escaping לפני שילוב ב-innerHTML
+        function esc(s) {
+          return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+        }
         var html = "";
         html += "<h1>✡ הלוח היהודי</h1>";
-        html += '<div class="sub">' + (d.hebDate || "") + (d.gregDate ? " · " + d.gregDate : "") + (d.city ? " · " + d.city : "") + "</div>";
-        if (d.nextZman) html += '<div class="card next">⏳ ' + d.nextZman + "</div>";
+        html += '<div class="sub">' + esc(d.hebDate || "") + (d.gregDate ? " · " + esc(d.gregDate) : "") + (d.city ? " · " + esc(d.city) : "") + "</div>";
+        if (d.nextZman) html += '<div class="card next">⏳ ' + esc(d.nextZman) + "</div>";
         if (d.zmanim && d.zmanim.length) {
           html += '<div class="card"><div class="sec-title">זמני היום</div>';
           d.zmanim.forEach(function (z) {
-            html += '<div class="row"><span>' + z.l + "</span><b>" + z.v + "</b></div>";
+            html += '<div class="row"><span>' + esc(z.l) + "</span><b>" + esc(z.v) + "</b></div>";
           });
           html += "</div>";
         }
         if (d.shabbatEnter || d.parsha) {
           html += '<div class="card"><div class="sec-title">שבת</div>';
-          if (d.parsha) html += '<div class="row"><span>פרשה</span><b>' + d.parsha + "</b></div>";
-          if (d.shabbatEnter) html += '<div class="row"><span>🕯️ כניסה</span><b>' + d.shabbatEnter + "</b></div>";
-          if (d.shabbatExit) html += '<div class="row"><span>✨ יציאה</span><b>' + d.shabbatExit + "</b></div>";
+          if (d.parsha) html += '<div class="row"><span>פרשה</span><b>' + esc(d.parsha) + "</b></div>";
+          if (d.shabbatEnter) html += '<div class="row"><span>🕯️ כניסה</span><b>' + esc(d.shabbatEnter) + "</b></div>";
+          if (d.shabbatExit) html += '<div class="row"><span>✨ יציאה</span><b>' + esc(d.shabbatExit) + "</b></div>";
           html += "</div>";
         }
         if (d.tehillimDaily) {
-          html += '<div class="card"><div class="sec-title">תהילים יומי</div><div class="row"><span>יום ' + d.tehillimDaily.day + " לחודש</span><b>פרקים " + d.tehillimDaily.range + "</b></div></div>";
+          html += '<div class="card"><div class="sec-title">תהילים יומי</div><div class="row"><span>יום ' + esc(d.tehillimDaily.day) + " לחודש</span><b>פרקים " + esc(d.tehillimDaily.range) + "</b></div></div>";
         }
         if (d.dafYomi) {
-          html += '<div class="card"><div class="sec-title">הדף היומי</div><div class="row"><span>דף</span><b>' + d.dafYomi + "</b></div></div>";
+          html += '<div class="card"><div class="sec-title">הדף היומי</div><div class="row"><span>דף</span><b>' + esc(d.dafYomi) + "</b></div></div>";
         }
         html += '<div class="foot">עודכן: ' + new Date(d.updated).toLocaleString("he-IL") + "</div>";
         app.innerHTML = html;

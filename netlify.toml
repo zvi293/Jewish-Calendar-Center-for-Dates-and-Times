@@ -8,3 +8,62 @@
 
 [build.environment]
   NODE_VERSION = "20"
+
+# ── כותרות אבטחה לכל האתר ──
+# CSP מצומצם במכוון: frame-ancestors (מונע clickjacking), base-uri, object-src,
+# form-action — הגנות אמיתיות בלי סיכון שבירה. CSP מלא עם script-src אינו מעשי
+# כאן (עשרות סקריפטים inline ו-onclick=) והיה מחייב 'unsafe-inline' חסר-ערך.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "SAMEORIGIN"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains"
+    Permissions-Policy = "geolocation=(self), camera=(), microphone=(), payment=(), usb=()"
+    Content-Security-Policy = "frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'self'"
+
+# ── מדיניות מטמון ──
+# ברירת המחדל של Netlify היא max-age=0 (revalidation בכל בקשה). קבצי הקוד
+# מוגנים בפרמטר ?v= (מוחלף בכל שינוי) וב-SW שמאמת מול השרת (cache:"no-cache"),
+# כך שמותר להם מטמון קצר. חוקים לקובץ ספציפי — לא glob — כדי ש-Netlify לא
+# ימזג שני ערכי Cache-Control לאותו נתיב (sw.js חייב להישאר ללא מטמון).
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache, must-revalidate"
+
+[[headers]]
+  for = "/OneSignalSDKWorker.js"
+  [headers.values]
+    Cache-Control = "no-cache, must-revalidate"
+
+[[headers]]
+  for = "/script.js"
+  [headers.values]
+    Cache-Control = "public, max-age=3600, stale-while-revalidate=86400"
+
+[[headers]]
+  for = "/lux.js"
+  [headers.values]
+    Cache-Control = "public, max-age=3600, stale-while-revalidate=86400"
+
+[[headers]]
+  for = "/style.css"
+  [headers.values]
+    Cache-Control = "public, max-age=3600, stale-while-revalidate=86400"
+
+[[headers]]
+  for = "/tailwind.css"
+  [headers.values]
+    Cache-Control = "public, max-age=3600, stale-while-revalidate=86400"
+
+[[headers]]
+  for = "/*.png"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"
+
+[[headers]]
+  for = "/*.svg"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"

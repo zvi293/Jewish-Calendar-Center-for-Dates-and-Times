@@ -3,11 +3,47 @@
 
 User-agent: *
 Allow: /
-Disallow: /api/
-Disallow: /*.json$
+Disallow: /package.json
+Disallow: /package-lock.json
 
-# Sitemap
+# ── סורקי AI / LLM — מותרים במפורש (רוצים להופיע בתשובות מנועי AI) ──
+User-agent: GPTBot
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Claude-User
+Allow: /
+
+User-agent: Claude-SearchBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Perplexity-User
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+User-agent: Meta-ExternalAgent
+Allow: /
+
+User-agent: Amazonbot
+Allow: /
+
 Sitemap: https://jewishcalendar.co.il/sitemap.xml
-
-# Search engine crawl rate
-Crawl-delay: 1

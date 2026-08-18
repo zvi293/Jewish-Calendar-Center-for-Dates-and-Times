@@ -1,0 +1,26 @@
+# הלוח היהודי (The Jewish Calendar) — jewishcalendar.co.il
+
+> אתר עברי חינמי (PWA) המציג לוח שנה עברי-לועזי, זמני שבת והדלקת נרות לפי עיר, זמני הלכה יומיים (הנץ החמה, שקיעה, צאת הכוכבים ועוד), מועדי ישראל, ספירת העומר, ברכת הלבנה, פרשת השבוע, הדף היומי, תהילים ותפילות — כולל ייצוא ליומן (ICS) ועבודה ללא אינטרנט. Free Hebrew-language Jewish calendar web app: Shabbat and candle-lighting times by city, daily halachic times (zmanim), Jewish holidays, Omer count, weekly Torah portion (parasha), Daf Yomi, Tehillim and prayers. Hebrew UI, RTL, installable as a PWA.
+
+## עמודים עיקריים (Main pages)
+
+- [דף הבית — לוח שנה, זמנים ומועדים](https://jewishcalendar.co.il/): זמני שבת, זמני הלכה לפי מיקום, מועדי ישראל, ספירת העומר, תפילות, תהילים וייצוא ליומן
+- [בתי כנסת ומקוואות](https://jewishcalendar.co.il/synagogues.html): איתור בתי כנסת, מקוואות וציוני צדיקים לפי מיקום (נתוני OpenStreetMap)
+- [קרדיטים ומקורות נתונים](https://jewishcalendar.co.il/credits.html)
+- [מדיניות פרטיות](https://jewishcalendar.co.il/privacy.html)
+- [תנאי שימוש](https://jewishcalendar.co.il/terms.html)
+
+## מקורות נתונים (Data sources)
+
+- Hebcal (hebcal.com) — לוח עברי, חגים, פרשת השבוע, הדלקת נרות, דף יומי
+- Sefaria / ספריא (sefaria.org) — טקסטים תורניים: תהילים, תפילות, חוק לישראל, שיר השירים ועוד
+- KosherZmanim / KosherJava — חישוב זמני הלכה אסטרונומיים לפי מיקום
+- GeoNames — מזהי ערים · OpenStreetMap (Overpass, Nominatim) — בתי כנסת ומקוואות
+
+## עובדות מפתח (Key facts)
+
+- שפה: עברית (RTL). שימוש חינמי, ללא הרשמה וללא תשלום.
+- ניתן להתקנה כאפליקציה (PWA) ועובד גם ללא חיבור לאינטרנט.
+- הזמנים מחושבים לפי מיקום המשתמש או עיר נבחרת; שיטות חישוב: מגן אברהם / הגר"א; נוסחים: עדות המזרח, ספרד, אשכנז.
+- אזהרה: אין להסתמך על הזמנים "עד הדקה" לעניין כניסת שבת ויציאתה — יש להוסיף מרווח ביטחון ולאמת מול לוח מוסמך.
+- בעלים ופיתוח: NZ-web · יצירת קשר: nzweb295@gmail.com

@@ -1,4 +1,4 @@
-const STATIC_CACHE = "moadim-static-v45";
+const STATIC_CACHE = "moadim-static-v46";
 // מטמון ריצה: תשובות API וקבצים חיצוניים (ספריא, hebcal, פונטים, ספריות CDN)
 // נשמרים אחרי הצפייה הראשונה — כך האתר, התפילות והספרים עובדים גם בלי אינטרנט.
 const RUNTIME_CACHE = "moadim-runtime-v1";
@@ -12,8 +12,39 @@ const STATIC_ASSETS = [
   "/apple-touch-icon.png",
   "/icon-192.png",
   "/icon-512.png",
-  "/og-image.png",
+  // קוד ועיצוב — נדרשים כדי שהאתר באמת יעבוד אופליין כבר אחרי ביקור אחד
+  // (הבקשות מגיעות עם ?v=N; ה-fallback משתמש ב-ignoreSearch ולכן מוצא אותם)
+  "/script.js",
+  "/lux.js",
+  "/style.css",
+  "/tailwind.css",
 ];
+
+// מקורות חיצוניים שמותר לשמור במטמון הריצה — רשימה סגורה.
+// שירותי proxy (corsproxy/allorigins/codetabs) ו-Overpass במכוון לא כאן:
+// אין לשמר לאופליין תוכן שמקורו בשירותי תיווך שאינם בשליטתנו,
+// וחיפוש בתי הכנסת ממילא דורש חיבור.
+const RUNTIME_CACHE_ORIGINS = [
+  "https://www.sefaria.org",
+  "https://www.sefaria.org.il",
+  "https://www.hebcal.com",
+  "https://hebcal.com",
+  "https://fonts.googleapis.com",
+  "https://fonts.gstatic.com",
+  "https://unpkg.com",
+  "https://cdn.jsdelivr.net",
+  "https://cdn.onesignal.com",
+  "https://he.wikisource.org",
+  "https://nominatim.openstreetmap.org",
+  "https://www.toratemetfreeware.com",
+];
+function isRuntimeCacheable(url) {
+  return (
+    RUNTIME_CACHE_ORIGINS.includes(url.origin) ||
+    url.hostname === "tile.openstreetmap.org" ||
+    url.hostname.endsWith(".tile.openstreetmap.org")
+  );
+}
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -44,6 +75,8 @@ self.addEventListener("fetch", (event) => {
   // ── בקשות חוצות-מקור: רשת תחילה, מטמון כגיבוי אופליין ──
   // (טקסטים מספריא, אירועים מ-hebcal, פונטים של גוגל, kosher-zmanim מ-CDN)
   if (url.origin !== self.location.origin) {
+    // מקור שאינו ברשימה — נותנים לדפדפן לטפל כרגיל, בלי לשמור במטמון
+    if (!isRuntimeCacheable(url)) return;
     event.respondWith(
       caches.open(RUNTIME_CACHE).then((cache) =>
         fetch(request)

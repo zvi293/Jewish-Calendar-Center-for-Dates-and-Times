@@ -4337,7 +4337,7 @@ function openCalendarDay(dateStr) {
               ${eventsHtml}
             </div>
             <label for="calendar-day-notes" style="display:block;margin-bottom:0.45rem;font-size:0.92rem;font-weight:800;color:#0f172a;">הערות ליום זה</label>
-            <textarea id="calendar-day-notes" style="width:100%;min-height:120px;border:1px solid rgba(148,163,184,0.4);border-radius:1rem;padding:0.85rem 1rem;resize:vertical;background:#fff;color:#0f172a;font:inherit;line-height:1.7;" placeholder="אפשר להוסיף כאן פרטים והערות משלך...">${existingNote}</textarea>
+            <textarea id="calendar-day-notes" style="width:100%;min-height:120px;border:1px solid rgba(148,163,184,0.4);border-radius:1rem;padding:0.85rem 1rem;resize:vertical;background:#fff;color:#0f172a;font:inherit;line-height:1.7;" placeholder="אפשר להוסיף כאן פרטים והערות משלך..."></textarea>
             <div style="display:flex;gap:0.65rem;justify-content:flex-start;flex-wrap:wrap;margin-top:1rem;">
               <button type="button" onclick="saveCalendarDayNotes('${dateStr}')" style="border:none;border-radius:999px;background:#2563eb;color:#fff;padding:0.72rem 1.15rem;font-weight:800;cursor:pointer;">שמור הערה</button>
               <button type="button" onclick="syncSingleDayToCalendar('${dateStr}')" style="border:none;border-radius:999px;background:#0f766e;color:#fff;padding:0.72rem 1.15rem;font-weight:800;cursor:pointer;">סנכרן ליומן</button>
@@ -4350,7 +4350,12 @@ function openCalendarDay(dateStr) {
   lockBodyScroll();
   pushModalState("calendar-day-modal");
   const textarea = document.getElementById("calendar-day-notes");
-  if (textarea) textarea.focus();
+  // ההערה מוזנת דרך .value ולא דרך innerHTML — טקסט חופשי של המשתמש
+  // בתוך תבנית HTML היה מאפשר לשבור את ה-textarea ולהריץ קוד (XSS עצמי)
+  if (textarea) {
+    textarea.value = existingNote;
+    textarea.focus();
+  }
 }
 
 function render(filter = "all", search = "") {
@@ -5234,7 +5239,17 @@ initApp();
   }
 
   let t = 0;
+  // בנייד: 30fps במקום 60 — חצי מהעומס המתמשך של קנבס הכוכבים על ה-GPU
+  // (לחץ זיכרון GPU בטלפון גורם לפינוי שכבות ורה-רסטריזציה שנראית כהבהוב).
+  // הסימולציה מפוצה ב-STEP=2 כך שמהירות הנדידה, הריצוד והנצנוץ נשמרת זהה.
+  const _STARS_STEP = window.matchMedia("(pointer: coarse)").matches ? 2 : 1;
+  let _starsFrameNo = 0;
   function draw() {
+    _starsFrameNo++;
+    if (_STARS_STEP === 2 && _starsFrameNo % 2) {
+      requestAnimationFrame(draw);
+      return;
+    }
     // Skip drawing when tab hidden (saves CPU), CSS handles visibility per theme.
     // מדלגים גם כשפופאפ פתוח (html.lux-modal-open): ציור מאחורי שכבת backdrop-filter
     // מכריח re-blur של כל המסך בכל פריים — זה היה מקור הריצוד בנייד.
@@ -5245,10 +5260,10 @@ initApp();
       !document.documentElement.classList.contains("lux-modal-open")
     ) {
       ctx.clearRect(0, 0, W, H);
-      t += 0.016;
+      t += 0.016 * _STARS_STEP;
 
       // Sparkle trigger — more frequent (~5-6/sec)
-      if (Math.random() < 0.09 && stars.length) {
+      if (Math.random() < 0.09 * _STARS_STEP && stars.length) {
         const s = stars[Math.floor(Math.random() * stars.length)];
         if (!s.sparkle) {
           s.sparkle = 60 + Math.random() * 50;
@@ -5258,8 +5273,8 @@ initApp();
 
       stars.forEach((s) => {
         // Drift movement
-        s.x += s.vx;
-        s.y += s.vy;
+        s.x += s.vx * _STARS_STEP;
+        s.y += s.vy * _STARS_STEP;
         if (s.x < -2) s.x = W + 2;
         if (s.x > W + 2) s.x = -2;
         if (s.y < -2) s.y = H + 2;
@@ -5274,7 +5289,7 @@ initApp();
           const progress = s.sparkle / 80;
           const boost = s.sparklePeak * Math.sin(progress * Math.PI);
           a = Math.min(1, a + boost);
-          s.sparkle--;
+          s.sparkle = Math.max(0, s.sparkle - _STARS_STEP);
 
           // Glow halo
           if (boost > 0.1) {
@@ -15846,7 +15861,7 @@ function openBenIshHaiPage() {
     const s=Math.max(0,idx-30), e=Math.min(text.length,idx+q.length+60);
     let snip=(s>0?"...":"")+text.slice(s,e)+(e<text.length?"...":"");
     const esc=q.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
-    return snip.replace(new RegExp(esc,"g"),'<mark style="background:#fef08a;border-radius:2px;">'+q+"</mark>");
+    return snip.replace(new RegExp(esc,"g"),'<mark style="background:#fef08a;border-radius:2px;">$&</mark>');
   }
 
   // ── Build grid ──
@@ -16633,7 +16648,7 @@ function showNusachSelectionPopup(callback) {
     localStorage.setItem("moadim_nusach", nusach);
     localStorage.setItem(NUSACH_CHOSEN_KEY, "true");
     // Update settings dropdown if visible
-    const nusachEl = document.getElementById("nusach-select");
+    const nusachEl = document.getElementById("settings-nusach");
     if (nusachEl) nusachEl.value = nusach;
     overlay.remove();
     if (callback) callback();
@@ -16772,7 +16787,7 @@ openPrayer = async function (key, heLabel, enLabel) {
                     ${content.html}
                   </div>
                   <div style="border-top:1px solid rgba(0,0,0,0.08);margin-top:0.85rem;padding-top:0.75rem;color:#94a3b8;font-size:0.72rem;text-align:center;">
-                    מקור התוכן: <strong>${content.sourceLabel}</strong>${content.sourceUrl ? ` · <a href="${content.sourceUrl}" target="_blank" style="color:#1d4ed8;">קישור למקור</a>` : ""}
+                    מקור התוכן: <strong>${content.sourceLabel}</strong>${content.sourceUrl ? ` · <a href="${content.sourceUrl}" target="_blank" rel="noopener noreferrer" style="color:#1d4ed8;">קישור למקור</a>` : ""}
                   </div>
                 </div>`;
         } else {
@@ -16782,7 +16797,7 @@ openPrayer = async function (key, heLabel, enLabel) {
                   ${content.html}
                 </div>
                 <div style="border-top:1px solid rgba(0,0,0,0.08);margin-top:1.5rem;padding-top:0.75rem;color:#94a3b8;font-size:0.72rem;text-align:center;">
-                  מקור התוכן: <strong>${content.sourceLabel}</strong>${content.sourceUrl ? ` · <a href="${content.sourceUrl}" target="_blank" style="color:#3b82f6;">קישור למקור</a>` : ""}
+                  מקור התוכן: <strong>${content.sourceLabel}</strong>${content.sourceUrl ? ` · <a href="${content.sourceUrl}" target="_blank" rel="noopener noreferrer" style="color:#3b82f6;">קישור למקור</a>` : ""}
                 </div>`;
         }
       }
@@ -17373,10 +17388,10 @@ function shareEventWhatsApp(name, dateStr, heb) {
   const text = `${name}\n📅 ${dateFmt}\n🗓️ ${heb}\n\nסנכרן מהלוח היהודי: ${SITE_URL}`;
   if (navigator.share && /iPhone|iPad|Android/i.test(navigator.userAgent)) {
     navigator.share({ title: name, text, url: SITE_URL }).catch(() => {
-      window.open("https://wa.me/?text=" + encodeURIComponent(text), "_blank");
+      window.open("https://wa.me/?text=" + encodeURIComponent(text), "_blank", "noopener,noreferrer");
     });
   } else {
-    window.open("https://wa.me/?text=" + encodeURIComponent(text), "_blank");
+    window.open("https://wa.me/?text=" + encodeURIComponent(text), "_blank", "noopener,noreferrer");
   }
 }
 
@@ -21361,6 +21376,19 @@ function openSefarimNosafimPage(_pageMode) {
     }
   }
   async function fetchSec(ref, signal) {
+    // טיהור חד-פעמי למכשיר: מטמון BenYehuda ישן נשמר לפני שנוסף החיטוי —
+    // חייב לרוץ לפני בדיקת המטמון, אחרת ערך ישן לא-מחוטא מוחזר כמו שהוא
+    if (ref && ref.indexOf("BENYEHUDA:") === 0) {
+      try {
+        if (!localStorage.getItem("by_cache_sanitized_v1")) {
+          for (var bi = localStorage.length - 1; bi >= 0; bi--) {
+            var bk = localStorage.key(bi);
+            if (bk && bk.indexOf(_SN_CACHE_PREFIX + "BENYEHUDA:") === 0) localStorage.removeItem(bk);
+          }
+          localStorage.setItem("by_cache_sanitized_v1", "1");
+        }
+      } catch (eS0) {}
+    }
     var cached = _snCacheGet(ref);
     if (cached) return cached;
     try {
@@ -21387,6 +21415,16 @@ function openSefarimNosafimPage(_pageMode) {
             var doc = parser.parseFromString(htmlTxt, "text/html");
             var bodyDiv = doc.querySelector(".maintext-prose-body") || doc.querySelector(".text-page-content") || doc.body;
             if (!bodyDiv) continue;
+            // חיטוי: ה-HTML מגיע דרך שירותי proxy חיצוניים שאינם בשליטתנו —
+            // מסירים תגי הרצה ומאפייני on*/javascript: לפני מטמון והצגה ב-innerHTML
+            bodyDiv.querySelectorAll("script,style,iframe,object,embed,link,meta,form").forEach(function (n) { n.remove(); });
+            bodyDiv.querySelectorAll("*").forEach(function (n) {
+              Array.prototype.slice.call(n.attributes).forEach(function (a) {
+                var nm = a.name.toLowerCase();
+                if (nm.indexOf("on") === 0) n.removeAttribute(a.name);
+                else if ((nm === "href" || nm === "src" || nm === "xlink:href") && /^\s*(javascript|data):/i.test(a.value)) n.removeAttribute(a.name);
+              });
+            });
             // מחלק לפסקאות מההיררכיה
             var paras = bodyDiv.querySelectorAll("p, h1, h2, h3, h4");
             var arr = [];

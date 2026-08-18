@@ -2,36 +2,34 @@
 <html lang="he" dir="rtl" class="light">
   <head>
     <meta charset="UTF-8" />
+    <script>
+      // מצב כהה/מלכותי לפני הצגת הדף — מונע הבזק של התמה הבהירה (FOUC)
+      // עד שסקריפט האתר הגדול נטען. applyTheme() רץ אחר-כך באופן אידמפוטנטי.
+      try {
+        if (localStorage.getItem("moadim_theme") === "dark") {
+          document.documentElement.classList.remove("light");
+          document.documentElement.classList.add("dark");
+        }
+        if (localStorage.getItem("lux_royal") === "1") {
+          document.documentElement.classList.add("lux-royal");
+        }
+      } catch (e) {}
+    </script>
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
     />
-    <title>לוח שנה עברי לועזי | לוח שנה יהודי תשפ"ו 2026 | זמני שבת, מועדים וזמני הלכה</title>
-    <meta
-      name="title"
-      content="לוח שנה עברי לועזי | לוח שנה יהודי תשפ"ו 2026 | זמני שבת, מועדים וזמני הלכה"
-    />
+    <title>לוח שנה עברי לועזי תשפ"ו 2026 | זמני שבת, מועדים וזמני הלכה</title>
     <meta
       name="description"
-      content="לוח שנה עברי לועזי תשפ&quot;ו 2026 — לוח שנה יהודי עם זמני שבת והדלקת נרות לפי עיר, מועדי ישראל, ספירת העומר, ברכת הלבנה, הנץ החמה, שקיעה וייצוא ליומן. כל זמני ההלכה במקום אחד, חינם."
-    />
-    <meta
-      name="keywords"
-      content="לוח שנה עברי לועזי, לוח שנה יהודי, לוח שנה עברי, לוח שנה לועזי, לוח שנה עברי לועזי 2026, לוח שנה תשפו, זמני שבת, הדלקת נרות, זמני הלכה, מועדי ישראל, חגים יהודים 2026, ספירת העומר, ברכת הלבנה, קידוש לבנה, הנץ החמה, שקיעה, פרשת השבוע, ראש חודש, דף יומי, jewish calendar 2026, hebrew calendar, zmanim, shabbat times israel"
+      content="לוח שנה עברי לועזי תשפ&quot;ו 2026 — זמני שבת והדלקת נרות לפי עיר, מועדי ישראל, ספירת העומר, זמני הלכה וייצוא ליומן. חינם, ללא הורדה."
     />
     <meta name="author" content="הלוח היהודי" />
     <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
-    <meta name="geo.region" content="IL" />
-    <meta name="geo.country" content="Israel" />
-    <meta name="language" content="Hebrew" />
-    <meta name="revisit-after" content="3 days" />
-    <meta name="category" content="לוח שנה, מועדים, הלכה, יהדות" />
-    <meta name="classification" content="Jewish Calendar, Religion, Utilities" />
     <meta
       name="googlebot"
       content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"
     />
-    <meta http-equiv="content-language" content="he" />
     <meta name="application-name" content="הלוח היהודי" />
     <meta name="apple-mobile-web-app-title" content="הלוח היהודי" />
     <meta name="theme-color" content="#0f172a" />
@@ -56,6 +54,7 @@
     />
 
     <link rel="icon" type="image/svg+xml" href="favicon.svg?v=3" />
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=3" />
     <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=3" />
     <link rel="manifest" href="/site.webmanifest" />
 
@@ -82,7 +81,6 @@
     <meta name="twitter:url" content="https://jewishcalendar.co.il/" />
     <meta name="twitter:title" content="לוח שנה עברי לועזי | לוח שנה יהודי תשפ&quot;ו 2026" />
     <meta name="twitter:description" content="לוח שנה עברי לועזי תשפ&quot;ו 2026 — זמני שבת, הדלקת נרות, מועדים, ספירת העומר, ברכת הלבנה, הנץ החמה, שקיעה וייצוא ליומן. חינם." />
-    <meta name="twitter:site" content="@jewishcal" />
     <meta
       name="twitter:image"
       content="https://jewishcalendar.co.il/og-image.png"
@@ -106,10 +104,10 @@
           "alternateName": ["לוח שנה עברי לועזי", "לוח שנה יהודי", "לוח שנה עברי", "לוח שנה לועזי", "Jewish Calendar", "Hebrew Calendar", "Hebrew Jewish Calendar"],
           "description": "לוח שנה יהודי עברי לועזי תשפ\"ו 2026 – זמני שבת, הדלקת נרות, מועדי ישראל, ספירת העומר, ברכת הלבנה, הנץ החמה, שקיעה וייצוא ליומן.",
           "inLanguage": "he-IL",
-          "potentialAction": {
-            "@type": "SearchAction",
-            "target": "https://jewishcalendar.co.il/?q={search_term_string}",
-            "query-input": "required name=search_term_string"
+          "publisher": { "@id": "https://jewishcalendar.co.il/#org" },
+          "speakable": {
+            "@type": "SpeakableSpecification",
+            "cssSelector": ["#about-title", "#about-lead"]
           }
         },
         {
@@ -136,20 +134,21 @@
             "הדף היומי (דף יומי)"
           ],
           "screenshot": "https://jewishcalendar.co.il/og-image.png",
-          "aggregateRating": {
-            "@type": "AggregateRating",
-            "ratingValue": "5",
-            "ratingCount": "1",
-            "bestRating": "5"
-          }
+          "publisher": { "@id": "https://jewishcalendar.co.il/#org" }
         },
         {
           "@type": "Organization",
           "@id": "https://jewishcalendar.co.il/#org",
           "name": "הלוח היהודי",
           "url": "https://jewishcalendar.co.il/",
-          "logo": "https://jewishcalendar.co.il/favicon.svg",
-          "sameAs": []
+          "logo": "https://jewishcalendar.co.il/icon-512.png",
+          "email": "nzweb295@gmail.com",
+          "contactPoint": {
+            "@type": "ContactPoint",
+            "email": "nzweb295@gmail.com",
+            "contactType": "customer support",
+            "availableLanguage": ["he"]
+          }
         },
         {
           "@type": "FAQPage",
@@ -157,10 +156,58 @@
           "mainEntity": [
             {
               "@type": "Question",
-              "name": "מתי הדלקת נרות שבת הקרובה?",
+              "name": "מה זה הלוח היהודי?",
               "acceptedAnswer": {
                 "@type": "Answer",
-                "text": "הלוח היהודי מציג את זמן הדלקת נרות שבת לפי המיקום שלך בישראל ובעולם, עם ספירה לאחור בזמן אמת. זמן הדלקת הנרות משתנה בין ערים ועונות השנה."
+                "text": "הלוח היהודי (jewishcalendar.co.il) הוא אתר חינמי בעברית המציג לוח שנה עברי-לועזי, זמני שבת והדלקת נרות לפי עיר, זמני הלכה יומיים, מועדי ישראל, ספירת העומר, ברכת הלבנה, פרשת השבוע, הדף היומי, תהילים ותפילות — עם ייצוא ליומן והתקנה כאפליקציה."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "האם האתר חינמי?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "כן. השימוש בלוח היהודי חינמי לחלוטין וללא צורך בהרשמה. ניתן לתמוך בתפעול האתר באמצעות תרומה."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "איך רואים את זמני שבת והדלקת נרות?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "בראש הדף מוצגת כרטיסיית 'שבת קרובה' עם זמן כניסת השבת ויציאתה לפי העיר שנבחרה, וספירה לאחור בזמן אמת. ניתן לבחור עיר אחרת או להשתמש ב-GPS דרך ההגדרות."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "האם הלוח היהודי עובד בלי אינטרנט?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "כן. לאחר ביקור ראשון האתר נשמר במטמון הדפדפן (Service Worker), ורוב התכנים — כולל תפילות וזמנים שחושבו — זמינים גם ללא חיבור לאינטרנט."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "איך מתקינים את הלוח כאפליקציה?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "הלוח היהודי הוא PWA: בנייד בוחרים בתפריט הדפדפן 'הוספה למסך הבית', ובמחשב לוחצים על סמל ההתקנה בשורת הכתובת. אין צורך בחנות אפליקציות."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "מאיפה מגיעים הנתונים באתר?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "נתוני הלוח והחגים מגיעים מ-Hebcal, הטקסטים התורניים (תהילים, תפילות, פרשת השבוע) מספריית ספריא (Sefaria), זמני ההלכה מחושבים בספריית KosherZmanim לפי מיקום, ונתוני בתי הכנסת והמקוואות מבוססים על OpenStreetMap."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "מהם זמני ההלכה שהאתר מציג?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "הלוח מציג זמני הלכה מדויקים לפי מיקומך: הנץ החמה, סוף זמן קריאת שמע (מגן אברהם והגר\"א), זמן תפילת שחרית, חצות, מנחה גדולה, מנחה קטנה, פלג המנחה, שקיעה וצאת הכוכבים."
               }
             },
             {
@@ -168,15 +215,7 @@
               "name": "כמה יום ספירת העומר היום?",
               "acceptedAnswer": {
                 "@type": "Answer",
-                "text": "הלוח היהודי מציג את מספר יום ספירת העומר הנוכחי עם הנוסח המלא לברכה, וכולל את ספירות הקבלה (ספירות) לכל יום מתוך 49 ימי הספירה."
-              }
-            },
-            {
-              "@type": "Question",
-              "name": "מהם זמני ההלכה להיום?",
-              "acceptedAnswer": {
-                "@type": "Answer",
-                "text": "הלוח היהודי מציג זמני הלכה מדויקים לפי מיקומך: הנץ החמה, סוף זמן קריאת שמע, זמן תפילת שחרית, חצות, זמן מנחה גדולה, מנחה קטנה, פלג המנחה, שקיעה וצאת הכוכבים (תצ\"ה)."
+                "text": "בתקופת הספירה הלוח מציג את יום הספירה הנוכחי עם הנוסח המלא לברכה וספירות הקבלה לכל יום. ספירת העומר מתחילה בליל פסח ונמשכת 49 יום עד חג השבועות."
               }
             },
             {
@@ -184,39 +223,15 @@
               "name": "מתי ברכת הלבנה החודש?",
               "acceptedAnswer": {
                 "@type": "Answer",
-                "text": "הלוח היהודי מציג את חלון ברכת הלבנה לכל חודש עברי, כולל תאריך ההתחלה (ג׳ בחודש) ותאריך הסיום (ט\"ו בחודש). כולל תזכורת כשחלון הזמן מסתיים."
+                "text": "הלוח מציג את חלון ברכת הלבנה (קידוש לבנה) לכל חודש עברי — מתחילתו (ג' בחודש) ועד סופו (ט\"ו בחודש) — כולל תזכורת לפני סיום החלון."
               }
             },
             {
               "@type": "Question",
-              "name": "איך לייצא את לוח החגים ליומן?",
+              "name": "איך מייצאים את החגים ליומן Google, Apple או Outlook?",
               "acceptedAnswer": {
                 "@type": "Answer",
-                "text": "הלוח היהודי מאפשר ייצוא מהיר של כל המועדים והחגים ליומן Google, Apple Calendar ו-Outlook בפורמט ICS. לחץ על 'סנכרן את הלוח ליומן שלך' בראש הדף."
-              }
-            },
-            {
-              "@type": "Question",
-              "name": "מה השנה העברית היום?",
-              "acceptedAnswer": {
-                "@type": "Answer",
-                "text": "השנה העברית הנוכחית היא תשפ\"ו (5786) המתאימה לשנת 2025-2026. הלוח היהודי מציג את התאריך העברי הנוכחי בכל עת."
-              }
-            },
-            {
-              "@type": "Question",
-              "name": "מהי פרשת השבוע?",
-              "acceptedAnswer": {
-                "@type": "Answer",
-                "text": "הלוח היהודי מציג את פרשת השבוע הנוכחית עם קישור לנוסח המלא בספריית ספריא, כולל תרגום ופרשנות."
-              }
-            },
-            {
-              "@type": "Question",
-              "name": "מהם ימי טוב ומועדי ישראל ב-2026 תשפ\"ו?",
-              "acceptedAnswer": {
-                "@type": "Answer",
-                "text": "מועדי ישראל העיקריים תשפ\"ו 2026: ראש השנה, יום כיפור, סוכות, שמחת תורה, חנוכה, ט\"ו בשבט, פורים, פסח, יום העצמאות, ל\"ג בעומר, שבועות. הלוח היהודי מציג את כל התאריכים המדויקים עם פרטים לכל חג."
+                "text": "לוחצים על כפתור 'סנכרן ליומן' בלוח השנה החודשי (בנייד: סמל ההורדה שבראש הלוח). האתר מוריד קובץ ICS תקני הנפתח ב-Google Calendar, Apple Calendar ו-Outlook בלחיצה אחת."
               }
             }
           ]
@@ -224,20 +239,25 @@
       ]
     }
     </script>
-    <!-- Performance: preconnect to API origins -->
+    <!-- Performance: preconnect to critical origins -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://unpkg.com" crossorigin>
     <link rel="preconnect" href="https://hebcal.com" crossorigin>
     <link rel="preconnect" href="https://www.sefaria.org" crossorigin>
     <link rel="dns-prefetch" href="https://hebcal.com">
     <link rel="dns-prefetch" href="https://www.sefaria.org">
 
-    <link rel="stylesheet" href="tailwind.css?v=1" />
-    <script src="https://unpkg.com/kosher-zmanim@0.9.0/dist/kosher-zmanim.min.js"></script>
-    <script>
-      // Fallback CDN if unpkg fails
-      if (!window.KosherZmanim) {
-        document.write('<scr'+'ipt src="https://cdn.jsdelivr.net/npm/kosher-zmanim@0.9.0/dist/kosher-zmanim.min.js"><\/scr'+'ipt>');
-      }
-    </script>
+    <link rel="stylesheet" href="tailwind.css?v=2" />
+    <!-- KosherZmanim: defer (לא חוסם רינדור); בכשל — נפילה ל-jsDelivr עם אותו hash.
+         script.js בודק את window.KosherZmanim בזמן ריצה ונופל ל-API של Hebcal אם חסר. -->
+    <script
+      src="https://unpkg.com/kosher-zmanim@0.9.0/dist/kosher-zmanim.min.js"
+      integrity="sha384-oajHVnQqCix/BrH1MgbJQS6LNlNaPmnUMsLLT0bMIPiFhSXK/OoQKGy9GQluheJ1"
+      crossorigin="anonymous"
+      defer
+      onerror="var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/kosher-zmanim@0.9.0/dist/kosher-zmanim.min.js';s.integrity='sha384-oajHVnQqCix/BrH1MgbJQS6LNlNaPmnUMsLLT0bMIPiFhSXK/OoQKGy9GQluheJ1';s.crossOrigin='anonymous';document.head.appendChild(s);"
+    ></script>
     <link
       href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800&family=Frank+Ruhl+Libre:wght@400;700;900&display=swap"
       rel="stylesheet"
@@ -262,6 +282,11 @@
             appId: "eb49147f-b7e7-4173-894d-27872508b775",
             allowLocalhostAsSecureOrigin: true,
             notifyButton: { enable: false },
+            // היקף נפרד ל-worker של OneSignal — אחרת הוא נרשם על scope "/"
+            // ומחליף את sw.js שלנו (שני workers על אותו היקף דורסים זה את זה,
+            // מה ששובר את מטמון האופליין ועלול לגרום להבהובי טעינה)
+            serviceWorkerPath: "OneSignalSDKWorker.js",
+            serviceWorkerParam: { scope: "/onesignal/" },
           });
           window.OneSignalReady = true;
           // Sync localStorage preference to actual OneSignal subscription state
@@ -503,7 +528,7 @@
           <a
             href="https://zstore-ai.co.il/"
             target="_blank"
-            rel="noopener noreferrer"
+            rel="sponsored nofollow noopener noreferrer"
             class="inline-flex items-center gap-2 px-5 py-2 rounded-full text-xs md:text-sm font-bold transition-all backdrop-blur-md group lux-premium-badge"
             style="color:#fdf3d0;border:1px solid rgba(232,193,90,0.5);background:linear-gradient(135deg,rgba(120,86,20,0.35),rgba(30,58,138,0.4),rgba(120,86,20,0.35));box-shadow:0 0 22px rgba(232,193,90,0.28),0 0 38px rgba(59,130,246,0.18),inset 0 1px 0 rgba(255,255,255,0.15);text-shadow:0 1px 8px rgba(0,0,0,0.4);"
             onmouseover="this.style.color='#ffffff';this.style.background='linear-gradient(135deg,rgba(150,110,30,0.5),rgba(30,58,138,0.55),rgba(150,110,30,0.5))';this.style.boxShadow='0 0 28px rgba(232,193,90,0.5),0 0 52px rgba(59,130,246,0.28),inset 0 1px 0 rgba(255,255,255,0.25)';"
@@ -1024,13 +1049,14 @@
     <section
       aria-label="אודות הלוח היהודי"
       class="max-w-6xl mx-auto px-4 pt-10 pb-4"
-      itemscope
-      itemtype="https://schema.org/WebApplication"
     >
       <div class="border-t border-slate-200 dark:border-slate-800 pt-8">
-        <h2 class="text-lg font-black text-slate-700 dark:text-slate-300 mb-4" itemprop="name">
+        <h2 id="about-title" class="text-lg font-black text-slate-700 dark:text-slate-300 mb-4">
           הלוח היהודי — לוח שנה עברי לועזי תשפ"ו 2026
         </h2>
+        <p id="about-lead" class="text-sm text-slate-500 dark:text-slate-400 mb-6 leading-relaxed">
+          הלוח היהודי הוא אתר חינמי בעברית המרכז במקום אחד לוח שנה עברי-לועזי, זמני שבת וזמני הלכה לפי מיקום, מועדי ישראל, ספירת העומר, תפילות ותהילים.
+        </p>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
           <div>
             <h3 class="font-bold text-slate-600 dark:text-slate-300 mb-2">⏰ זמני שבת וזמני הלכה</h3>
@@ -1054,48 +1080,141 @@
           </div>
           <div>
             <h3 class="font-bold text-slate-600 dark:text-slate-300 mb-2">📲 אפליקציה ליומן — PWA</h3>
-            <p>הלוח היהודי זמין כ-<strong>אפליקציה מותקנת</strong> על מסך הבית בטלפון (PWA) ללא צורך בהורדה מחנות אפליקציות. תומך ב-<strong>עברית, אנגלית וצרפתית</strong>, עם תמיכה מלאה ב-Dark Mode ומצב בהיר לנוחות קריאה.</p>
+            <p>הלוח היהודי זמין כ-<strong>אפליקציה מותקנת</strong> על מסך הבית בטלפון (PWA) ללא צורך בהורדה מחנות אפליקציות, ועובד גם <strong>ללא חיבור לאינטרנט</strong>. כולל מצב כהה ומצב בהיר לנוחות קריאה.</p>
+          </div>
+          <div>
+            <h3 class="font-bold text-slate-600 dark:text-slate-300 mb-2">📅 מהו לוח שנה עברי-לועזי?</h3>
+            <p>לוח שנה עברי הוא לוח ירחי-שמשי שבו החודשים נקבעים לפי מולד הלבנה והשנים מתואמות לשנת החמה באמצעות עיבור. הלוח היהודי מציג לכל יום את התאריך העברי לצד התאריך הלועזי, כולל ראשי חודשים, פרשות השבוע וכל מועדי ישראל.</p>
+          </div>
+          <div>
+            <h3 class="font-bold text-slate-600 dark:text-slate-300 mb-2">🕯️ מהי הדלקת נרות ומתי מדליקים?</h3>
+            <p>הדלקת נרות שבת נעשית בערב שבת לפני השקיעה — ברוב ערי ישראל כ-20 דקות לפני השקיעה, ובירושלים 40 דקות. הזמן המדויק משתנה לפי מיקום ועונה, והלוח מחשב אותו אוטומטית לפי העיר שלך.</p>
           </div>
         </div>
 
-        <!-- FAQ Section -->
-        <div class="mt-8" itemscope itemtype="https://schema.org/FAQPage">
+        <!-- טבלת מועדים סטטית — נגישה גם לסורקים ללא JavaScript (תאריכים: Hebcal) -->
+        <div class="mt-8 overflow-x-auto">
+          <h2 class="text-base font-black text-slate-600 dark:text-slate-300 mb-4">מועדי ישראל תשפ"ז — תאריכים לועזיים</h2>
+          <table class="w-full text-sm text-right text-slate-500 dark:text-slate-400 border-collapse">
+            <caption class="sr-only">תאריכים לועזיים של מועדי ישראל בשנת תשפ"ז (2026–2027)</caption>
+            <thead>
+              <tr class="border-b border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300">
+                <th scope="col" class="py-2 pl-4 font-bold">המועד</th>
+                <th scope="col" class="py-2 pl-4 font-bold">תאריך עברי</th>
+                <th scope="col" class="py-2 pl-4 font-bold">תאריך לועזי</th>
+                <th scope="col" class="py-2 font-bold">יום בשבוע</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="border-b border-slate-100 dark:border-slate-800"><td class="py-2 pl-4 font-semibold">ראש השנה תשפ"ז</td><td class="py-2 pl-4">א'–ב' בתשרי</td><td class="py-2 pl-4">12–13 בספטמבר 2026</td><td class="py-2">שבת–ראשון</td></tr>
+              <tr class="border-b border-slate-100 dark:border-slate-800"><td class="py-2 pl-4 font-semibold">יום כיפור</td><td class="py-2 pl-4">י' בתשרי</td><td class="py-2 pl-4">21 בספטמבר 2026</td><td class="py-2">שני</td></tr>
+              <tr class="border-b border-slate-100 dark:border-slate-800"><td class="py-2 pl-4 font-semibold">סוכות</td><td class="py-2 pl-4">ט"ו–כ"א בתשרי</td><td class="py-2 pl-4">26 בספטמבר – 2 באוקטובר 2026</td><td class="py-2">שבת–שישי</td></tr>
+              <tr class="border-b border-slate-100 dark:border-slate-800"><td class="py-2 pl-4 font-semibold">שמיני עצרת ושמחת תורה</td><td class="py-2 pl-4">כ"ב בתשרי</td><td class="py-2 pl-4">3 באוקטובר 2026</td><td class="py-2">שבת</td></tr>
+              <tr class="border-b border-slate-100 dark:border-slate-800"><td class="py-2 pl-4 font-semibold">חנוכה</td><td class="py-2 pl-4">כ"ה בכסלו – ב' בטבת</td><td class="py-2 pl-4">5–12 בדצמבר 2026 (נר ראשון: יום שישי 4.12, לפני כניסת השבת)</td><td class="py-2">שבת–שבת</td></tr>
+              <tr class="border-b border-slate-100 dark:border-slate-800"><td class="py-2 pl-4 font-semibold">ט"ו בשבט</td><td class="py-2 pl-4">ט"ו בשבט</td><td class="py-2 pl-4">23 בינואר 2027</td><td class="py-2">שבת</td></tr>
+              <tr class="border-b border-slate-100 dark:border-slate-800"><td class="py-2 pl-4 font-semibold">פורים</td><td class="py-2 pl-4">י"ד באדר ב'</td><td class="py-2 pl-4">23 במרץ 2027 (שושן פורים: 24.3)</td><td class="py-2">שלישי</td></tr>
+              <tr class="border-b border-slate-100 dark:border-slate-800"><td class="py-2 pl-4 font-semibold">פסח</td><td class="py-2 pl-4">ט"ו–כ"א בניסן</td><td class="py-2 pl-4">22–28 באפריל 2027</td><td class="py-2">חמישי–רביעי</td></tr>
+              <tr class="border-b border-slate-100 dark:border-slate-800"><td class="py-2 pl-4 font-semibold">יום העצמאות</td><td class="py-2 pl-4">ה' באייר</td><td class="py-2 pl-4">12 במאי 2027</td><td class="py-2">רביעי</td></tr>
+              <tr class="border-b border-slate-100 dark:border-slate-800"><td class="py-2 pl-4 font-semibold">ל"ג בעומר</td><td class="py-2 pl-4">י"ח באייר</td><td class="py-2 pl-4">25 במאי 2027</td><td class="py-2">שלישי</td></tr>
+              <tr class="border-b border-slate-100 dark:border-slate-800"><td class="py-2 pl-4 font-semibold">שבועות</td><td class="py-2 pl-4">ו' בסיוון</td><td class="py-2 pl-4">11 ביוני 2027</td><td class="py-2">שישי</td></tr>
+              <tr><td class="py-2 pl-4 font-semibold">תשעה באב</td><td class="py-2 pl-4">ט' באב</td><td class="py-2 pl-4">12 באוגוסט 2027</td><td class="py-2">חמישי</td></tr>
+            </tbody>
+          </table>
+          <p class="mt-2 text-xs text-slate-400 dark:text-slate-500">התאריכים לפי הלוח הנהוג בארץ ישראל. ללוח המלא, לזמני החגים המדויקים ולייצוא ליומן — השתמשו בלוח האינטראקטיבי שבראש הדף.</p>
+        </div>
+
+        <!-- FAQ Section — התוכן תואם אחד-לאחד ל-FAQPage JSON-LD שב-head -->
+        <div class="mt-8">
           <h2 class="text-base font-black text-slate-600 dark:text-slate-300 mb-4">שאלות נפוצות על הלוח היהודי</h2>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <details class="group" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
-              <summary class="font-bold text-slate-600 dark:text-slate-300 cursor-pointer list-none flex justify-between items-center py-2 border-b border-slate-100 dark:border-slate-800" itemprop="name">
-                מתי הדלקת נרות שבת הקרובה?
+            <details class="group">
+              <summary class="font-bold text-slate-600 dark:text-slate-300 cursor-pointer list-none flex justify-between items-center py-2 border-b border-slate-100 dark:border-slate-800">
+                מה זה הלוח היהודי?
                 <span class="text-blue-500 group-open:rotate-180 transition-transform">▾</span>
               </summary>
-              <div class="pt-2 pb-3 text-slate-500 dark:text-slate-400" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
-                <p itemprop="text">הלוח היהודי מציג את זמן הדלקת נרות שבת לפי מיקומך בישראל ובעולם, עם ספירה לאחור בזמן אמת. זמן הדלקת הנרות משתנה לפי עיר ועונת השנה.</p>
+              <div class="pt-2 pb-3 text-slate-500 dark:text-slate-400">
+                <p>הלוח היהודי (jewishcalendar.co.il) הוא אתר חינמי בעברית המציג לוח שנה עברי-לועזי, זמני שבת והדלקת נרות לפי עיר, זמני הלכה יומיים, מועדי ישראל, ספירת העומר, ברכת הלבנה, פרשת השבוע, הדף היומי, תהילים ותפילות — עם ייצוא ליומן והתקנה כאפליקציה.</p>
               </div>
             </details>
-            <details class="group" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
-              <summary class="font-bold text-slate-600 dark:text-slate-300 cursor-pointer list-none flex justify-between items-center py-2 border-b border-slate-100 dark:border-slate-800" itemprop="name">
-                כמה יום ספירת העומר היום תשפ"ו?
+            <details class="group">
+              <summary class="font-bold text-slate-600 dark:text-slate-300 cursor-pointer list-none flex justify-between items-center py-2 border-b border-slate-100 dark:border-slate-800">
+                האם האתר חינמי?
                 <span class="text-blue-500 group-open:rotate-180 transition-transform">▾</span>
               </summary>
-              <div class="pt-2 pb-3 text-slate-500 dark:text-slate-400" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
-                <p itemprop="text">הלוח מציג את יום הספירה הנוכחי עם הנוסח המלא לברכה וספירות הקבלה לכל יום. ספירת העומר תשפ"ו 2026 מתחילה בליל פסח ונמשכת 49 יום.</p>
+              <div class="pt-2 pb-3 text-slate-500 dark:text-slate-400">
+                <p>כן. השימוש בלוח היהודי חינמי לחלוטין וללא צורך בהרשמה. ניתן לתמוך בתפעול האתר באמצעות תרומה.</p>
               </div>
             </details>
-            <details class="group" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
-              <summary class="font-bold text-slate-600 dark:text-slate-300 cursor-pointer list-none flex justify-between items-center py-2 border-b border-slate-100 dark:border-slate-800" itemprop="name">
-                מהם זמני ההלכה להיום לפי עיר?
+            <details class="group">
+              <summary class="font-bold text-slate-600 dark:text-slate-300 cursor-pointer list-none flex justify-between items-center py-2 border-b border-slate-100 dark:border-slate-800">
+                איך רואים את זמני שבת והדלקת נרות?
                 <span class="text-blue-500 group-open:rotate-180 transition-transform">▾</span>
               </summary>
-              <div class="pt-2 pb-3 text-slate-500 dark:text-slate-400" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
-                <p itemprop="text">הלוח מציג זמני הלכה מדויקים לפי מיקומך: הנץ החמה, סוף זמן קריאת שמע, זמן שחרית, חצות, מנחה גדולה, מנחה קטנה, פלג המנחה, שקיעה וצאת הכוכבים.</p>
+              <div class="pt-2 pb-3 text-slate-500 dark:text-slate-400">
+                <p>בראש הדף מוצגת כרטיסיית 'שבת קרובה' עם זמן כניסת השבת ויציאתה לפי העיר שנבחרה, וספירה לאחור בזמן אמת. ניתן לבחור עיר אחרת או להשתמש ב-GPS דרך ההגדרות.</p>
               </div>
             </details>
-            <details class="group" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
-              <summary class="font-bold text-slate-600 dark:text-slate-300 cursor-pointer list-none flex justify-between items-center py-2 border-b border-slate-100 dark:border-slate-800" itemprop="name">
-                איך מייצאים את החגים ליומן Google?
+            <details class="group">
+              <summary class="font-bold text-slate-600 dark:text-slate-300 cursor-pointer list-none flex justify-between items-center py-2 border-b border-slate-100 dark:border-slate-800">
+                האם הלוח היהודי עובד בלי אינטרנט?
                 <span class="text-blue-500 group-open:rotate-180 transition-transform">▾</span>
               </summary>
-              <div class="pt-2 pb-3 text-slate-500 dark:text-slate-400" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
-                <p itemprop="text">לחץ על "סנכרן את הלוח ליומן שלך" בראש הדף. הלוח יורד קובץ ICS שמתאים ל-Google Calendar, Apple Calendar ו-Outlook בלחיצה אחת.</p>
+              <div class="pt-2 pb-3 text-slate-500 dark:text-slate-400">
+                <p>כן. לאחר ביקור ראשון האתר נשמר במטמון הדפדפן (Service Worker), ורוב התכנים — כולל תפילות וזמנים שחושבו — זמינים גם ללא חיבור לאינטרנט.</p>
+              </div>
+            </details>
+            <details class="group">
+              <summary class="font-bold text-slate-600 dark:text-slate-300 cursor-pointer list-none flex justify-between items-center py-2 border-b border-slate-100 dark:border-slate-800">
+                איך מתקינים את הלוח כאפליקציה?
+                <span class="text-blue-500 group-open:rotate-180 transition-transform">▾</span>
+              </summary>
+              <div class="pt-2 pb-3 text-slate-500 dark:text-slate-400">
+                <p>הלוח היהודי הוא PWA: בנייד בוחרים בתפריט הדפדפן 'הוספה למסך הבית', ובמחשב לוחצים על סמל ההתקנה בשורת הכתובת. אין צורך בחנות אפליקציות.</p>
+              </div>
+            </details>
+            <details class="group">
+              <summary class="font-bold text-slate-600 dark:text-slate-300 cursor-pointer list-none flex justify-between items-center py-2 border-b border-slate-100 dark:border-slate-800">
+                מאיפה מגיעים הנתונים באתר?
+                <span class="text-blue-500 group-open:rotate-180 transition-transform">▾</span>
+              </summary>
+              <div class="pt-2 pb-3 text-slate-500 dark:text-slate-400">
+                <p>נתוני הלוח והחגים מגיעים מ-Hebcal, הטקסטים התורניים (תהילים, תפילות, פרשת השבוע) מספריית ספריא (Sefaria), זמני ההלכה מחושבים בספריית KosherZmanim לפי מיקום, ונתוני בתי הכנסת והמקוואות מבוססים על OpenStreetMap.</p>
+              </div>
+            </details>
+            <details class="group">
+              <summary class="font-bold text-slate-600 dark:text-slate-300 cursor-pointer list-none flex justify-between items-center py-2 border-b border-slate-100 dark:border-slate-800">
+                מהם זמני ההלכה שהאתר מציג?
+                <span class="text-blue-500 group-open:rotate-180 transition-transform">▾</span>
+              </summary>
+              <div class="pt-2 pb-3 text-slate-500 dark:text-slate-400">
+                <p>הלוח מציג זמני הלכה מדויקים לפי מיקומך: הנץ החמה, סוף זמן קריאת שמע (מגן אברהם והגר"א), זמן תפילת שחרית, חצות, מנחה גדולה, מנחה קטנה, פלג המנחה, שקיעה וצאת הכוכבים.</p>
+              </div>
+            </details>
+            <details class="group">
+              <summary class="font-bold text-slate-600 dark:text-slate-300 cursor-pointer list-none flex justify-between items-center py-2 border-b border-slate-100 dark:border-slate-800">
+                כמה יום ספירת העומר היום?
+                <span class="text-blue-500 group-open:rotate-180 transition-transform">▾</span>
+              </summary>
+              <div class="pt-2 pb-3 text-slate-500 dark:text-slate-400">
+                <p>בתקופת הספירה הלוח מציג את יום הספירה הנוכחי עם הנוסח המלא לברכה וספירות הקבלה לכל יום. ספירת העומר מתחילה בליל פסח ונמשכת 49 יום עד חג השבועות.</p>
+              </div>
+            </details>
+            <details class="group">
+              <summary class="font-bold text-slate-600 dark:text-slate-300 cursor-pointer list-none flex justify-between items-center py-2 border-b border-slate-100 dark:border-slate-800">
+                מתי ברכת הלבנה החודש?
+                <span class="text-blue-500 group-open:rotate-180 transition-transform">▾</span>
+              </summary>
+              <div class="pt-2 pb-3 text-slate-500 dark:text-slate-400">
+                <p>הלוח מציג את חלון ברכת הלבנה (קידוש לבנה) לכל חודש עברי — מתחילתו (ג' בחודש) ועד סופו (ט"ו בחודש) — כולל תזכורת לפני סיום החלון.</p>
+              </div>
+            </details>
+            <details class="group">
+              <summary class="font-bold text-slate-600 dark:text-slate-300 cursor-pointer list-none flex justify-between items-center py-2 border-b border-slate-100 dark:border-slate-800">
+                איך מייצאים את החגים ליומן Google, Apple או Outlook?
+                <span class="text-blue-500 group-open:rotate-180 transition-transform">▾</span>
+              </summary>
+              <div class="pt-2 pb-3 text-slate-500 dark:text-slate-400">
+                <p>לוחצים על כפתור "סנכרן ליומן" בלוח השנה החודשי (בנייד: סמל ההורדה שבראש הלוח). האתר מוריד קובץ ICS תקני הנפתח ב-Google Calendar, Apple Calendar ו-Outlook בלחיצה אחת.</p>
               </div>
             </details>
           </div>
@@ -1128,6 +1247,12 @@
             data-i18n-key="footer_terms"
           >
             תנאי שימוש
+          </a>
+          <a
+            href="terms.html#nagishut"
+            class="inline-flex items-center justify-center rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-5 py-2.5 text-sm font-bold text-slate-700 dark:text-slate-200 transition-colors hover:border-blue-300 hover:text-blue-600 dark:hover:border-blue-500 dark:hover:text-blue-400"
+          >
+            הצהרת נגישות
           </a>
         </div>
         <p class="text-xs text-slate-400 dark:text-slate-500">
@@ -1996,8 +2121,16 @@
     <!-- ═══ ניווט תחתון — מובייל בלבד; התוכן מרונדר ע"י lux.js לפי בחירת המשתמש ═══ -->
     <nav id="lux-bottom-nav" aria-label="ניווט מהיר"></nav>
 
-    <script src="script.js?v=28"></script>
-    <script src="lux.js?v=23" defer></script>
+    <noscript>
+      <section style="max-width:56rem;margin:2rem auto;padding:1rem;text-align:right;direction:rtl;">
+        <h2>הלוח היהודי — לוח שנה עברי לועזי</h2>
+        <p>אתר זה מציג זמני שבת והדלקת נרות לפי עיר, זמני הלכה יומיים (הנץ החמה, שקיעה, צאת הכוכבים ועוד), מועדי ישראל, ספירת העומר, ברכת הלבנה, פרשת השבוע, הדף היומי, תהילים ותפילות. להצגת הזמנים המדויקים יש להפעיל JavaScript.</p>
+        <p>מקורות: Hebcal, ספריא, KosherZmanim, GeoNames · <a href="synagogues.html">בתי כנסת ומקוואות</a> · <a href="credits.html">קרדיטים</a> · <a href="privacy.html">מדיניות פרטיות</a> · <a href="terms.html">תנאי שימוש</a></p>
+      </section>
+    </noscript>
+
+    <script src="script.js?v=29" defer></script>
+    <script src="lux.js?v=25" defer></script>
 
     <!-- Service Worker registration — enables offline caching (PWA) -->
     <script>

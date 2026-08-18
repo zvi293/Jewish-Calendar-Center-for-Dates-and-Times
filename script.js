@@ -335,12 +335,15 @@ let _modalScrollLockCount = 0;
 function lockBodyScroll() {
   _modalScrollLockCount++;
   if (_modalScrollLockCount === 1) {
+    // חובה לקרוא את מיקום הגלילה לפני position:fixed — ההצבה מאפסת את window.scrollY,
+    // וקריאה אחריה שמרה תמיד 0: הרקע קפץ לראש הדף בפתיחה והסגירה החזירה לראש במקום למקום האמיתי
+    const y = window.scrollY;
     document.body.style.overflow = "hidden";
     document.body.style.touchAction = "pan-y";
     document.body.style.position = "fixed";
     document.body.style.width = "100%";
-    document.body.style.top = `-${window.scrollY}px`;
-    document.body.dataset.scrollY = window.scrollY;
+    document.body.style.top = `-${y}px`;
+    document.body.dataset.scrollY = y;
   }
   _syncModalOpenClass();
 }
@@ -365,7 +368,7 @@ function unlockBodyScroll() {
 const _OVERLAY_OPEN_SELECTOR =
   'body > [id$="-modal"]:not(.hidden), body > .lux-sheet-overlay, ' +
   "body > #lux-stories, body > #lux-year-wheel, body > #lux-nav-editor, " +
-  "body > #lux-moon-pop, body > .lux-badge-pop, body > #lux-tour-overlay, " +
+  "body > #lux-moon-pop, body > .lux-badge-pop, " +
   "body > #chapter-nav-popup, body > #cal-month-year-picker";
 function _isAnyOverlayOpen() {
   return (
@@ -425,6 +428,7 @@ window.addEventListener("popstate", function (e) {
     } else if (modalId === "omer-modal") {
       const el = document.getElementById(modalId);
       if (el) {
+        el.__closing = false;
         el.classList.add("opacity-0");
         setTimeout(() => el.classList.add("hidden"), 300);
       }
@@ -895,6 +899,8 @@ function _startLevanaCountdown(endDateStr, which) {
   _stopLevanaCountdown();
   const zmanKey = which === "s" ? "s" : "e";
   function update() {
+    // מאחורי פופאפ פתוח אין לכתוב לדף — כל שינוי מכריח re-blur; הערך משעון קיר, ההשהיה חסרת-הפסד
+    if (document.hidden || document.documentElement.classList.contains("lux-modal-open")) return;
     const el = document.getElementById("levana-countdown-display");
     if (!el) { _stopLevanaCountdown(); return; }
     const target = _levanaZmanMs(endDateStr, zmanKey);
@@ -1001,9 +1007,13 @@ function closeOmerModal() {
   if (!m || m.classList.contains("hidden")) return;
   // לחיצת X/רקע: יוצאים דרך history.back כדי לסנכרן את המחסנית — popstate יסגור בפועל
   if (_activeModals[_activeModals.length - 1] === "omer-modal") {
+    // הגנת כניסה-חוזרת: לחיצה כפולה לפני שה-popstate הגיע — back() שני סוגר את המודאל שמתחת
+    if (m.__closing) return;
+    m.__closing = true;
     history.back();
     return;
   }
+  m.__closing = false;
   m.classList.add("opacity-0");
   setTimeout(() => m.classList.add("hidden"), 300);
   _stopOmerCountdown();
@@ -1031,10 +1041,14 @@ async function openSefariaModal(hebTitle, enRef, opts) {
     `<div class="animate-pulse text-center mt-10">${ui.sefariaLoading || 'טוען טקסט ממסד הנתונים...'}</div>`;
   // הקרדיט המוטמע למטה ב-textHtml מטפל בקישור — לא צריך עוד ב-credit-link element
 
+  const _wasHidden = m.classList.contains("hidden");
   m.classList.remove("hidden");
   setTimeout(() => m.classList.remove("opacity-0"), 10);
-  lockBodyScroll();
-  pushModalState("sefaria-modal");
+  // נועלים ורושמים רק במעבר נסתר→גלוי — פתיחה כפולה (ghost-tap) נעלה פעמיים ושחררה פעם אחת
+  if (_wasHidden) {
+    lockBodyScroll();
+    pushModalState("sefaria-modal");
+  }
   // Sync font size
   applyPrayerFontSize("#sefaria-modal-content");
   document
@@ -1490,10 +1504,14 @@ async function openShnayimMikraModal(hebTitle, enRef) {
     '<div class="animate-pulse text-center mt-10">טוען מקרא ותרגום אונקלוס...</div>';
   // הקרדיט מוטמע בתוך הטקסט עצמו — אין עוד element נפרד של sefaria-credit-link
 
+  const _wasHidden = m.classList.contains("hidden");
   m.classList.remove("hidden");
   setTimeout(() => m.classList.remove("opacity-0"), 10);
-  lockBodyScroll();
-  pushModalState("sefaria-modal");
+  // נועלים ורושמים רק במעבר נסתר→גלוי — פתיחה כפולה (ghost-tap) נעלה פעמיים ושחררה פעם אחת
+  if (_wasHidden) {
+    lockBodyScroll();
+    pushModalState("sefaria-modal");
+  }
   // Sync font size
   applyPrayerFontSize("#sefaria-modal-content");
   document
@@ -1554,9 +1572,13 @@ function closeSefariaModal() {
   if (!m || m.classList.contains("hidden")) return;
   // לחיצת X/רקע: יוצאים דרך history.back כדי לסנכרן את המחסנית — popstate יקרא לנו שוב
   if (_activeModals[_activeModals.length - 1] === "sefaria-modal") {
+    // הגנת כניסה-חוזרת: לחיצה כפולה לפני שה-popstate הגיע — back() שני סוגר את המודאל שמתחת
+    if (m.__closing) return;
+    m.__closing = true;
     history.back();
     return;
   }
+  m.__closing = false;
   m.classList.add("opacity-0");
   setTimeout(() => m.classList.add("hidden"), 300);
   unlockBodyScroll();
@@ -1702,10 +1724,14 @@ async function openChokLeIsraelModal() {
       '<div class="animate-pulse text-center py-10 text-slate-400">טוען...</div>';
   }
 
+  const _wasHidden = m.classList.contains('hidden');
   m.classList.remove('hidden');
   requestAnimationFrame(() => m.classList.remove('opacity-0'));
-  lockBodyScroll();
-  pushModalState('chok-israel-modal');
+  // נועלים ורושמים רק במעבר נסתר→גלוי — פתיחה כפולה נעלה פעמיים ושחררה פעם אחת
+  if (_wasHidden) {
+    lockBodyScroll();
+    pushModalState('chok-israel-modal');
+  }
   applyPrayerFontSize('#chok-israel-modal-content');
 
   try {
@@ -2077,9 +2103,13 @@ function closeChokLeIsraelModal() {
   if (!m || m.classList.contains('hidden')) return;
   // לחיצת X/רקע: יוצאים דרך history.back כדי לסנכרן את המחסנית — popstate יקרא לנו שוב
   if (_activeModals[_activeModals.length - 1] === 'chok-israel-modal') {
+    // הגנת כניסה-חוזרת: לחיצה כפולה לפני שה-popstate הגיע — back() שני סוגר את המודאל שמתחת
+    if (m.__closing) return;
+    m.__closing = true;
     history.back();
     return;
   }
+  m.__closing = false;
   m.classList.add('opacity-0');
   setTimeout(() => m.classList.add('hidden'), 300);
   unlockBodyScroll();
@@ -3676,6 +3706,31 @@ async function renderNextMoedTimes(e) {
 }
 
 
+/* שם עיר משוער מקואורדינטות GPS (Nominatim) — משמש את useGPS להצגת שם המיקום */
+async function _gpsReverseGeocode(lat, lon) {
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&accept-language=he&zoom=14`,
+      { headers: { "Accept": "application/json" } },
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    const a = data.address || {};
+    const cityName =
+      a.city ||
+      a.town ||
+      a.village ||
+      a.suburb ||
+      a.municipality ||
+      a.county ||
+      a.state ||
+      null;
+    return cityName;
+  } catch (e) {
+    return null;
+  }
+}
+
 function useGPS() {
   if (!("geolocation" in navigator)) {
     alert("הדפדפן שלך לא תומך באיתור מיקום.");
@@ -3732,9 +3787,12 @@ function toggleSettings() {
   } else {
     // אם הקריאה היא מלחיצה ידנית (X / backdrop) — נצא דרך history.back כדי לסנכרן את ה-stack
     if (_activeModals[_activeModals.length - 1] === "settings-modal") {
+      if (m.__closing) return;
+      m.__closing = true;
       history.back();
       return;
     }
+    m.__closing = false;
     m.classList.add("opacity-0");
     m.children[0].classList.add("scale-95");
     setTimeout(() => m.classList.add("hidden"), 300);
@@ -4445,9 +4503,13 @@ function closeCalendar() {
   if (!m || m.classList.contains("hidden")) return;
   // לחיצת X/רקע: יוצאים דרך history.back כדי לסנכרן את המחסנית — popstate יקרא לנו שוב
   if (_activeModals[_activeModals.length - 1] === "calendar-modal") {
+    // הגנת כניסה-חוזרת: לחיצה כפולה לפני שה-popstate הגיע — back() שני סוגר את המודאל שמתחת
+    if (m.__closing) return;
+    m.__closing = true;
     history.back();
     return;
   }
+  m.__closing = false;
   closeCalendarDay();
   m.classList.add("opacity-0");
   m.querySelector("div").classList.add("scale-95");
@@ -4534,7 +4596,12 @@ async function ensureYearFetched(year) {
 function openMonthYearPicker() {
   const existing = document.getElementById("cal-month-year-picker");
   if (existing) {
+    // סגירת-טוגל: צורכים גם את רשומת המחסנית/היסטוריה — אחרת לחיצת "חזור" אחת נבלעת
     existing.remove();
+    if (_activeModals[_activeModals.length-1] === "cal-month-year-picker") {
+      _activeModals.pop();
+      try { history.replaceState({modal:_activeModals[_activeModals.length-1]||null}, ""); } catch(e){}
+    }
     return;
   }
 
@@ -4637,7 +4704,12 @@ function openMonthYearPicker() {
         e.target.id !== "cal-month-title" &&
         e.target.id !== "cal-month-heb"
       ) {
+        // סגירת-חוץ: צורכים גם את רשומת המחסנית — אחרת לחיצת "חזור" אחת נבלעת
         pk.remove();
+        if (_activeModals[_activeModals.length-1] === "cal-month-year-picker") {
+          _activeModals.pop();
+          try { history.replaceState({modal:_activeModals[_activeModals.length-1]||null}, ""); } catch(e2){}
+        }
         document.removeEventListener("click", _closePicker);
       }
     });
@@ -5091,6 +5163,13 @@ initApp();
   let stars = [],
     W,
     H;
+  // ציור רק כשה-hero באמת על המסך — גלילה מטה עוצרת את הקנבס וחוסכת GPU בנייד
+  let _starsOnScreen = true;
+  try {
+    new IntersectionObserver((entries) => {
+      _starsOnScreen = entries[0].isIntersecting;
+    }).observe(canvas);
+  } catch (e) {}
 
   function resize() {
     const hero = document.getElementById("hero-section");
@@ -5137,7 +5216,12 @@ initApp();
     // Skip drawing when tab hidden (saves CPU), CSS handles visibility per theme.
     // מדלגים גם כשפופאפ פתוח (html.lux-modal-open): ציור מאחורי שכבת backdrop-filter
     // מכריח re-blur של כל המסך בכל פריים — זה היה מקור הריצוד בנייד.
-    if (!document.hidden && !document.documentElement.classList.contains("lux-modal-open")) {
+    // וגם כשה-hero נגלל אל מחוץ למסך — אין טעם לצייר את מה שלא רואים.
+    if (
+      !document.hidden &&
+      _starsOnScreen &&
+      !document.documentElement.classList.contains("lux-modal-open")
+    ) {
       ctx.clearRect(0, 0, W, H);
       t += 0.016;
 
@@ -6790,7 +6874,7 @@ showZmanOpinions = function (key) {
           <div style="background:linear-gradient(145deg,#1e293b,#0f172a);border:1px solid rgba(99,102,241,0.3);border-radius:2rem;padding:2rem;width:100%;max-width:380px;box-shadow:0 25px 60px rgba(0,0,0,0.5);text-align:right;direction:rtl;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
               <h3 style="color:#e2e8f0;font-size:1.25rem;font-weight:900;margin:0;">${payload.label}</h3>
-              <button onclick="document.getElementById('zman-opinions-modal').remove()" style="background:rgba(255,255,255,0.08);border:none;color:#94a3b8;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center;">✕</button>
+              <button onclick="window._closePopupViaBack('zman-opinions-modal')" style="background:rgba(255,255,255,0.08);border:none;color:#94a3b8;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center;">✕</button>
             </div>
             <p style="color:#64748b;font-size:0.75rem;margin-bottom:1rem;">כל השיטות הזמינות לזמן זה. השיטה הפעילה מסומנת.</p>
             <div style="display:flex;flex-direction:column;gap:0.75rem;">
@@ -14915,11 +14999,26 @@ let _prayerFontSize = parseInt(
 
 // ── פופ-אפ תרומה לאתר ─────────────────────────────────────
 window._closePopupViaBack = function(modalId) {
+  var el = document.getElementById(modalId);
   if (_activeModals[_activeModals.length-1] === modalId) {
+    // הגנת כניסה-חוזרת: לחיצה כפולה על X לפני שה-popstate הגיע — back() שני היה סוגר גם את המודאל שמתחת
+    if (el) {
+      if (el.__closing) return;
+      el.__closing = true;
+    }
     history.back();
-  } else {
-    var el = document.getElementById(modalId);
-    if (el) el.remove();
+  } else if (el) {
+    // מודאלים סטטיים (קבועים ב-HTML) מוסתרים ולא נמחקים — מחיקה הרסה אותם עד רענון
+    if (["omer-modal","sefaria-modal","chok-israel-modal","compass-modal","settings-modal","calendar-modal"].indexOf(modalId) !== -1) {
+      if (!el.classList.contains("hidden")) {
+        el.classList.add("opacity-0");
+        el.classList.add("hidden");
+        unlockBodyScroll();
+      }
+      el.__closing = false;
+    } else {
+      el.remove();
+    }
   }
 };
 window.openDonationModal = function() {
@@ -15257,6 +15356,9 @@ function closePrayerModal() {
   if (!el) return;
   // לחיצת X/רקע: יוצאים דרך history.back כדי לסנכרן את המחסנית — popstate יסגור בפועל
   if (_activeModals[_activeModals.length - 1] === "prayer-modal") {
+    // הגנת כניסה-חוזרת: לחיצה כפולה לפני שה-popstate הגיע — back() שני סוגר את המודאל שמתחת
+    if (el.__closing) return;
+    el.__closing = true;
     history.back();
     return;
   }
@@ -15291,7 +15393,13 @@ function openShirHashirimPage() {
   const CLOSING_PRAYER = 'רִבּוֹן כָּל הָעוֹלָמִים, יְהִי רָצוֹן מִלְּפָנֶיךָ יְהֹוָה אֱלֹהֵינוּ וֵאלֹהֵי אֲבוֹתֵינוּ, שֶׁבִּזְכוּת שִׁיר הַשִּׁירִים אֲשֶׁר קָרָאנוּ, שֶׁהוּא קֹדֶשׁ קָדָשִׁים, בִּזְכוּת פְּסוּקָיו, וּבִזְכוּת תֵּבוֹתָיו, וּבִזְכוּת אוֹתִיּוֹתָיו, וּבִזְכוּת נְקֻדּוֹתָיו, וּבִזְכוּת טְעָמָיו וְצֵרוּפָיו וּרְמָזָיו וְסוֹדוֹתָיו הַקְּדוֹשִׁים וְהַטְּהוֹרִים הַנּוֹרָאִים הַיּוֹצְאִים מִמֶּנּוּ, שֶׁתְּהֵא שָׁעָה זוֹ שְׁעַת רַחֲמִים, שְׁעַת הַקְשָׁבָה, שְׁעַת הַאֲזָנָה, וְנִקְרָאֲךָ וְתַעֲנֵנוּ, נַעֲתִיר לְךָ וְתֵעָתֵר לָנוּ, וְתִהְיֶה עוֹלָה לְפָנֶיךָ קְרִיאַת שִׁיר הַשִּׁירִים כְּאִלּוּ הִשַּׂגְנוּ כָּל־הַסּוֹדוֹת הַנִּפְלָאִים וְהַנּוֹרָאִים אֲשֶׁר הֵם חֲתוּמִים וּסְתוּמִים בּוֹ בְּכָל־תְּנָאָיו, וְנִזְכֶּה לְמָקוֹם שֶׁהַנְּפָשׁוֹת, הָרוּחוֹת וְהַנְּשָׁמוֹת, נֶחְצָבוֹת מִשָּׁם, וּכְאִלּוּ עָשִׂינוּ כָּל־מַה־שֶּׁמֻּטָּל עָלֵינוּ לְהַשִּׂיג בֵּין בְּגִלְגּוּל זֶה, בֵּין בְּגִלְגּוּלִים אֲחֵרִים, וְלִהְיוֹת מִן הָעוֹלִים וְהַזּוֹכִים לָעוֹלָם הַבָּא, עִם שְׁאָר צַדִּיקִים וַחֲסִידִים. וּמַלֵּא כָּל־מִשְׁאֲלוֹת לִבֵּנוּ לְטוֹבָה, וְתִהְיֶה עִם לְבָבֵנוּ וְאִמְרֵי פִינוּ בְּעֵת מַחְשְׁבוֹתֵינוּ, וְעִם יָדֵינוּ בְּעֵת מַעֲבָּדֵינוּ, וְתִשְׁלַח בְּרָכָה וְהַצְלָחָה וְהַרְוָחָה בְּכָל־מַעֲשֵׂי יָדֵינוּ, וּמֵעָפָר עָנְיֵנוּ תְּקִימֵנוּ, וּמֵאַשְׁפּוֹת דַּלּוּתֵנוּ תְּרוֹמְמֵנוּ, וְתָשִׁיב שְׁכִינָתְךָ לְעִיר קָדְשְׁךָ בִּמְהֵרָה בְיָמֵינוּ, אָמֵן:';
 
   let existing = document.getElementById('shir-hashirim-modal');
-  if (existing) existing.remove();
+  if (existing) {
+    // פתיחה-כפולה: ניקוי הישן חייב לשחרר את הנעילה ואת רשומת המחסנית שלו
+    existing.remove();
+    unlockBodyScroll();
+    if (_activeModals[_activeModals.length - 1] === 'shir-hashirim-modal')
+      _activeModals.pop();
+  }
 
   const modal = document.createElement('div');
   modal.id = 'shir-hashirim-modal';
@@ -15377,6 +15485,9 @@ function closeShirHashirimModal() {
   if (!el) return;
   // לחיצת X/רקע: יוצאים דרך history.back כדי לסנכרן את המחסנית — popstate יסגור בפועל
   if (_activeModals[_activeModals.length - 1] === 'shir-hashirim-modal') {
+    // הגנת כניסה-חוזרת: לחיצה כפולה לפני שה-popstate הגיע — back() שני סוגר את המודאל שמתחת
+    if (el.__closing) return;
+    el.__closing = true;
     history.back();
     return;
   }
@@ -16008,7 +16119,14 @@ function openBenIshHaiPage() {
 
   // ── Modal HTML ──
   let existing = document.getElementById("ben-ish-hai-modal");
-  if (existing) existing.remove();
+  if (existing) {
+    // פתיחה-כפולה: ניקוי הישן חייב לשחרר את הנעילה ואת רשומת המחסנית שלו —
+    // אחרת נשארת נעילה תקועה והדף קופא לצמיתות אחרי הסגירה
+    existing.remove();
+    unlockBodyScroll();
+    if (_activeModals[_activeModals.length - 1] === "ben-ish-hai-modal")
+      _activeModals.pop();
+  }
   const modal = document.createElement("div");
   modal.id = "ben-ish-hai-modal";
   modal.style.cssText = "position:fixed;inset:0;z-index:200;background:rgba(2,6,23,0.95);backdrop-filter:blur(8px);overflow:hidden;";
@@ -16299,7 +16417,11 @@ function closeBenIshHaiModal() {
     _activeModals.pop();
     steps++;
   }
-  if (steps > 0) history.go(-steps);
+  if (steps > 0) {
+    // ניווט תכנותי אחורה — בלי גלילת "חזרה הביתה" שנלחמת בשחזור הגלילה
+    window._suppressHomeScroll = true;
+    history.go(-steps);
+  }
 }
 
 
@@ -16400,7 +16522,14 @@ window.openPrayerNavPopup = function () {
 
 function renderPrayerModalShell(title, isPopup, prayerKey) {
   let existing = document.getElementById("prayer-modal");
-  if (existing) existing.remove();
+  if (existing) {
+    // פתיחה-כפולה: ניקוי הישן חייב לשחרר את הנעילה ואת רשומת המחסנית שלו —
+    // אחרת נשארת נעילה תקועה והדף קופא לצמיתות אחרי הסגירה
+    existing.remove();
+    unlockBodyScroll();
+    if (_activeModals[_activeModals.length - 1] === "prayer-modal")
+      _activeModals.pop();
+  }
   const modal = document.createElement("div");
   modal.id = "prayer-modal";
   const _showPrayerNavBtn = (prayerKey === "shacharit" || prayerKey === "mincha" || prayerKey === "maariv");
@@ -16729,7 +16858,14 @@ openTehillimPage = function () {
   const todayIndex = new Date().getDay();
   let activeIndex = todayIndex;
   let existing = document.getElementById("tehillim-modal");
-  if (existing) existing.remove();
+  if (existing) {
+    // פתיחה-כפולה: ניקוי הישן חייב לשחרר את הנעילה ואת רשומת המחסנית שלו —
+    // אחרת נשארת נעילה תקועה והדף קופא לצמיתות אחרי הסגירה
+    existing.remove();
+    unlockBodyScroll();
+    if (_activeModals[_activeModals.length - 1] === "tehillim-modal")
+      _activeModals.pop();
+  }
 
   const modal = document.createElement("div");
   modal.id = "tehillim-modal";
@@ -18859,6 +18995,11 @@ document.addEventListener("keydown", (e) => {
       if (e.target === modal) window._closePopupViaBack("hilulot-modal");
     });
     document.addEventListener("keydown", function esc(e) {
+      // ניקוי-עצמי: אם המודאל כבר נסגר בדרך אחרת — המאזין מסיר את עצמו ולא מצטבר
+      if (!document.getElementById("hilulot-modal")) {
+        document.removeEventListener("keydown", esc);
+        return;
+      }
       if (e.key === "Escape") {
         window._closePopupViaBack("hilulot-modal");
         document.removeEventListener("keydown", esc);
@@ -19169,6 +19310,11 @@ document.addEventListener("keydown", (e) => {
       if (e.target === modal) window._closePopupViaBack("hilulot-cal-modal");
     });
     document.addEventListener("keydown", function esc(e) {
+      // ניקוי-עצמי: אם המודאל כבר נסגר בדרך אחרת — המאזין מסיר את עצמו ולא מצטבר
+      if (!document.getElementById("hilulot-cal-modal")) {
+        document.removeEventListener("keydown", esc);
+        return;
+      }
       if (e.key === "Escape") {
         window._closePopupViaBack("hilulot-cal-modal");
         document.removeEventListener("keydown", esc);
@@ -24303,7 +24449,14 @@ function openSefarimNosafimPage(_pageMode) {
   }
 
   var existing = document.getElementById("sn-modal");
-  if (existing) existing.remove();
+  if (existing) {
+    // פתיחה-כפולה: ניקוי הישן חייב לשחרר את הנעילה ואת רשומת המחסנית שלו —
+    // אחרת נשארת נעילה תקועה והדף קופא לצמיתות אחרי הסגירה
+    existing.remove();
+    unlockBodyScroll();
+    if (_activeModals[_activeModals.length - 1] === "sn-modal")
+      _activeModals.pop();
+  }
   var modal = document.createElement("div");
   modal.id = "sn-modal";
   modal.style.cssText = "position:fixed;inset:0;z-index:200;background:rgba(2,6,23,0.95);backdrop-filter:blur(8px);overflow:hidden;";

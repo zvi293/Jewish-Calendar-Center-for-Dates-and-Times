@@ -1330,9 +1330,8 @@ footer a:hover {
   border: 1.5px solid rgba(232, 193, 90, 0.45) !important;
 }
 
-/* מודאלים על נייר קלף (נוסח/שפה/יצירת קשר/פרטי יום) */
+/* מודאלים על נייר קלף (נוסח/יצירת קשר/פרטי יום) */
 #nusach-selection-modal > div,
-#language-selection-modal > div,
 #contact-modal > div,
 #calendar-day-modal > div {
   background:
@@ -4893,4 +4892,31 @@ html.lux-modal-open #pwa-install-banner * {
   animation: none !important;
   opacity: 1 !important;
   transform: none !important;
+}
+
+
+/* ═══════════════════════════════════════════════════════
+   ✦ מובייל: פופאפים בלי backdrop-filter (תיקון "הבהוב בפתיחה")
+   בטלפון הטשטוש של כל המסך לא מוכן בפריים הראשון של הפתיחה —
+   השכבה מופיעה ואז הטשטוש "קופץ" פנימה פריים אחר-כך, מה שנראה
+   כהבהוב/טעינה-כפולה בכל פתיחת פופאפ (בעיקר בשעון ההלכתי ובכרטיס
+   שנה טובה). הרקעים ממילא כהים וכמעט אטומים — במובייל מוותרים על
+   הטשטוש ומעלים מעט את האטימות; בדסקטופ מראה הזכוכית נשאר.
+   ═══════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  [id$="-modal"],
+  .lux-sheet-overlay,
+  #lux-year-wheel,
+  #lux-nav-editor,
+  #lux-stories,
+  #lux-moon-pop,
+  .lux-badge-pop,
+  #chapter-nav-popup,
+  #cal-month-year-picker {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+  .lux-sheet-overlay {
+    background: rgba(2, 6, 23, 0.84);
+  }
 }

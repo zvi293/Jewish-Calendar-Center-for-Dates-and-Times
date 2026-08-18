@@ -1451,6 +1451,7 @@ let _shmikraData = {
 };
 const SHMIKRA_DOUBLE_KEY = "moadim_shmikra_double";
 const SHMIKRA_RASHI_KEY = "moadim_shmikra_rashi";
+const SHMIKRA_NIKUD_KEY = "moadim_shmikra_nikud";
 
 function getShmikraDouble() {
   return localStorage.getItem(SHMIKRA_DOUBLE_KEY) !== "false";
@@ -1458,6 +1459,17 @@ function getShmikraDouble() {
 function getShmikraRashi() {
   return localStorage.getItem(SHMIKRA_RASHI_KEY) === "true";
 } // default OFF
+function getShmikraNikud() {
+  return localStorage.getItem(SHMIKRA_NIKUD_KEY) !== "false";
+} // default ON — עם ניקוד
+function toggleShmikraNikud() {
+  localStorage.setItem(SHMIKRA_NIKUD_KEY, getShmikraNikud() ? "false" : "true");
+  renderShmikraContent();
+}
+// הסרת ניקוד וטעמים מהטקסט (לתצוגת "בלי ניקוד")
+function stripNikud(s) {
+  return String(s || "").replace(/[֑-ֽֿ-ׇ]/g, "");
+}
 
 function toggleShmikraDouble() {
   const newVal = !getShmikraDouble();
@@ -1604,11 +1616,13 @@ function renderShmikraContent() {
   if (!el) return;
   const showDouble = getShmikraDouble();
   const showRashi = getShmikraRashi();
+  const showNikud = getShmikraNikud();
+  const nk = (s) => (showNikud ? s : stripNikud(s));
   const { torahVerses, onkelosVerses, rashiVerses } = _shmikraData;
 
   let textHtml = "";
   // Toggle bar moved to bottom (inside sefaria-font-bar area)
-  const toggleBarHtml = `<div id="shmikra-toggles" style="display:flex;flex-wrap:nowrap;gap:0.5rem;align-items:center;">
+  const toggleBarHtml = `<div id="shmikra-toggles" style="display:flex;flex-wrap:wrap;gap:0.5rem;align-items:center;justify-content:center;">
           <label style="display:flex;align-items:center;gap:0.25rem;cursor:pointer;font-size:0.7rem;font-weight:700;color:#1e40af;user-select:none;white-space:nowrap;">
             <input type="checkbox" onchange="toggleShmikraDouble()" ${showDouble ? "checked" : ""} style="width:0.9rem;height:0.9rem;accent-color:#2563eb;cursor:pointer;">
             פסוק פעמיים
@@ -1616,6 +1630,10 @@ function renderShmikraContent() {
           <label style="display:flex;align-items:center;gap:0.25rem;cursor:pointer;font-size:0.7rem;font-weight:700;color:#7c3aed;user-select:none;white-space:nowrap;">
             <input type="checkbox" onchange="toggleShmikraRashi()" ${showRashi ? "checked" : ""} style="width:0.9rem;height:0.9rem;accent-color:#7c3aed;cursor:pointer;">
             פירוש רש״י
+          </label>
+          <label style="display:flex;align-items:center;gap:0.25rem;cursor:pointer;font-size:0.7rem;font-weight:700;color:#047857;user-select:none;white-space:nowrap;" title="הצגת הטקסט עם או בלי ניקוד וטעמים">
+            <input type="checkbox" onchange="toggleShmikraNikud()" ${showNikud ? "checked" : ""} style="width:0.9rem;height:0.9rem;accent-color:#047857;cursor:pointer;">
+            ניקוד
           </label>
         </div>`;
   // Inject toggle bar above font bar
@@ -1633,8 +1651,8 @@ function renderShmikraContent() {
   if (torahVerses.length > 0) {
     for (let i = 0; i < torahVerses.length; i++) {
       const verseNum = i + 1;
-      const torahText = torahVerses[i] || "";
-      const onkelosText = onkelosVerses[i] || "";
+      const torahText = nk(torahVerses[i] || "");
+      const onkelosText = nk(onkelosVerses[i] || "");
 
       textHtml += `<div class="shmikra-verse" style="margin-bottom:1.2em;padding:0.8em;border-radius:0.5em;border:1px solid rgba(0,0,0,0.06);background:rgba(0,0,0,0.02);">`;
       textHtml += `<div style="font-size:0.7em;color:#2563eb;margin-bottom:0.3em;font-weight:bold;">פסוק ${verseNum}</div>`;
@@ -1660,7 +1678,7 @@ function renderShmikraContent() {
         const rashiComments = rashiVerses[i];
         textHtml += `<div style="margin-top:0.5em;padding:0.6em 0.7em;border-radius:0.5em;background:rgba(124,58,237,0.05);border:1px solid rgba(124,58,237,0.12);">
                 <div style="font-size:0.65em;color:#7c3aed;font-weight:bold;margin-bottom:0.3em;">רש״י:</div>
-                ${rashiComments.map((c) => `<p style="line-height:1.8;margin:0 0 0.3em 0;color:#4c1d95;font-size:0.95em;">${c}</p>`).join("")}
+                ${rashiComments.map((c) => `<p style="line-height:1.8;margin:0 0 0.3em 0;color:#4c1d95;font-size:0.95em;">${nk(c)}</p>`).join("")}
               </div>`;
       } else if (showRashi && rashiVerses.length === 0) {
         if (i === 0) {
@@ -3259,7 +3277,37 @@ function showDashboard() {
     if (btnShulMikve) btnShulMikve.classList.remove("opacity-0");
     if (prayerWrap) prayerWrap.classList.remove("opacity-0");
   }, 50);
+  // ביטחון: אם מעבר ה-opacity קפא (לשונית ברקע / PWA מוקפא בנייד) האלמנטים
+  // נשארים שקופים לנצח — כופים חשיפה מלאה אחרי שחלון האנימציה הסתיים
+  setTimeout(_forceRevealHeroEls, 900);
 }
+
+// חשיפה כפויה של אלמנטי הבית שנחשפים במעבר opacity חד-פעמי.
+// מעברי CSS קופאים כשהדפדפן משהה רינדור (מסך כבוי, החלפת אפליקציה,
+// throttling בגלילה) — והאלמנטים "נעלמים" עד רענון. כאן משלימים אותם ידנית.
+function _forceRevealHeroEls() {
+  ["dashboard-state", "halacha-banner", "btn-open-calendar", "btn-shul-mikve", "prayer-grid-wrap", "lux-greeting"].forEach((id) => {
+    const el = document.getElementById(id);
+    if (!el || el.classList.contains("hidden") || el.classList.contains("opacity-0")) return;
+    if (parseFloat(getComputedStyle(el).opacity) < 0.95) {
+      el.style.transition = "none";
+      el.style.opacity = "1";
+      el.style.animation = "none";
+      // מעבר/אנימציה שכבר רצים וקפאו לא מתבטלים משינוי style — מסיימים אותם ידנית
+      try {
+        el.getAnimations().forEach((a) => {
+          try { a.finish(); } catch (e1) { try { a.cancel(); } catch (e2) {} }
+        });
+      } catch (e) {}
+    }
+  });
+}
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") setTimeout(_forceRevealHeroEls, 700);
+});
+window.addEventListener("pageshow", () => setTimeout(_forceRevealHeroEls, 700));
+// סריקה מחזורית זולה — אף אלמנט בית לא נשאר תקוע שקוף, לא משנה מתי קפא המעבר
+setInterval(_forceRevealHeroEls, 2500);
 
 // ══════════════════════════════════════════════════
 // ✦  PRAYER GRID — EMBEDDED TEXTS + SEASON AWARE
@@ -16237,7 +16285,8 @@ function applyPrayerFontSize(targetSelector) {
   const BASE_PX = 25;
   const targets = document.querySelectorAll(targetSelector);
   targets.forEach((el) => {
-    el.style.fontSize = (_prayerFontSize / 100) * BASE_PX + "px";
+    // important — כדי לגבור גם על כללי מצב הלימוד (.lux-study) שמוגדרים עם !important
+    el.style.setProperty("font-size", (_prayerFontSize / 100) * BASE_PX + "px", "important");
   });
   // סנכרון תצוגת מהירות גלילה אוטומטית בכל סרגלי הכפתורים שגלויים
   if (window._syncAutoScrollSpeedDisplays) window._syncAutoScrollSpeedDisplays();
@@ -16792,6 +16841,7 @@ function openBenIshHaiPage() {
     if (panel.style.display === "none") {
       buildBMPanel();
       panel.style.display = "block";
+      if (typeof window.showToast === "function") window.showToast("📌 סימניות ומיקומים אחרונים", "info", 2000);
     } else {
       panel.style.display = "none";
     }
@@ -16841,6 +16891,7 @@ function openBenIshHaiPage() {
     if (panel.style.display === "none") {
       buildReaderBMPanel();
       panel.style.display = "block";
+      if (typeof window.showToast === "function") window.showToast("📌 סימניות ומיקומים אחרונים", "info", 2000);
     } else {
       panel.style.display = "none";
     }
@@ -16976,7 +17027,7 @@ function openBenIshHaiPage() {
 
   function applyFontSize() {
     const area = document.getElementById("bih-content-area");
-    if (area) area.style.fontSize = _bihFontSize+"%";
+    if (area) area.style.setProperty("font-size", _bihFontSize+"%", "important");
     const lbl = document.getElementById("bih-font-label");
     if (lbl) lbl.textContent = _bihFontSize+"%";
     if (window._syncAutoScrollSpeedDisplays) window._syncAutoScrollSpeedDisplays();
@@ -17932,6 +17983,7 @@ openTehillimPage = function () {
     if (panel.style.display === "none") {
       window._thBuildBMPanel();
       panel.style.display = "block";
+      if (typeof window.showToast === "function") window.showToast("📌 סימניות ומיקומים אחרונים", "info", 2000);
     } else {
       panel.style.display = "none";
     }
@@ -17973,6 +18025,7 @@ openTehillimPage = function () {
     if (panel.style.display === "none") {
       window._thBuildPsalmBMPanel();
       panel.style.display = "block";
+      if (typeof window.showToast === "function") window.showToast("📌 סימניות ומיקומים אחרונים", "info", 2000);
     } else {
       panel.style.display = "none";
     }
@@ -22253,7 +22306,7 @@ function openSefarimNosafimPage(_pageMode) {
     }
     return true;
   }
-  // יצירת קטע עם הדגשה של המילה הראשונה הנמצאת
+  // יצירת קטע עם הדגשה של כל מילות החיפוש
   function _snSmartSnip(rawText, words) {
     var norm = _snNormalize(rawText);
     var i = -1, hitWord = "";
@@ -22262,13 +22315,34 @@ function openSefarimNosafimPage(_pageMode) {
       if (p >= 0 && (i < 0 || p < i)) { i = p; hitWord = words[k]; }
     }
     if (i < 0) return rawText.slice(0, 80) + "...";
-    // מצא את המקום המתאים בטקסט המקורי (לא מנורמל). פשטות: השתמש בטקסט המנורמל לתצוגה.
-    var s = Math.max(0, i - 40), e = Math.min(norm.length, i + hitWord.length + 60);
-    var esc = hitWord.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    return (s > 0 ? "…" : "") +
-      norm.slice(s, e).replace(new RegExp(esc, "gi"),
-        "<mark style=\"background:#fef08a;border-radius:2px;\">$&</mark>") +
-      (e < norm.length ? "…" : "");
+    // חלון סביב המופע הראשון — רחב מספיק כדי שגם שאר המילים ייכנסו לרוב
+    var s = Math.max(0, i - 45), e = Math.min(norm.length, i + hitWord.length + 110);
+    var snip = norm.slice(s, e);
+    // הדגשת כל המילים, לא רק הראשונה
+    words.forEach(function(w) {
+      var esc = w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      snip = snip.replace(new RegExp(esc, "gi"),
+        "<mark style=\"background:#fde68a;border-radius:3px;padding:0 2px;font-weight:800;\">$&</mark>");
+    });
+    return (s > 0 ? "…" : "") + snip + (e < norm.length ? "…" : "");
+  }
+  // התאמה ברמת פסקה: כל מילות החיפוש חייבות להופיע יחד באותה פסקה.
+  // מחזיר את הפסקה התואמת הראשונה, או null.
+  function _snParaMatch(he, words) {
+    var flat = [];
+    (function fl(x) {
+      if (typeof x === "string") { if (x.trim()) flat.push(x); }
+      else if (Array.isArray(x)) x.forEach(fl);
+    })(he);
+    for (var i = 0; i < flat.length; i++) {
+      var norm = _snNormalize(flat[i]);
+      var ok = true;
+      for (var w = 0; w < words.length; w++) {
+        if (norm.indexOf(words[w]) < 0) { ok = false; break; }
+      }
+      if (ok) return flat[i];
+    }
+    return null;
   }
 
   // ── Book Definitions ──
@@ -23673,18 +23747,222 @@ function openSefarimNosafimPage(_pageMode) {
         {he:"פרק ט — דרכי התפארת",ref:"Tomer Devorah.9"},
         {he:"פרק י — דרכי הנצח, ההוד, היסוד והמלכות",ref:"Tomer Devorah.10"}
       ]},
+    { id:"birkot-board", he:"לוח ברכות הנהנין", subtitle:"כל המאכלים והברכות — לפי הבן איש חי והרב מרדכי אליהו",
+      cat:"tefilot", color:"#b45309", icon:"🍎",
+      credit:"על פי פסקי הבן איש חי והרב מרדכי אליהו זצ\"ל — לשאלות למעשה יש לפנות למורה הוראה", creditUrl:"",
+      type:"hardcoded",
+      intro:"לוח ברכות מקיף: לכל מאכל — הברכה הראשונה והברכה האחרונה, על פי פסקי רבינו יוסף חיים <b>הבן איש חי</b> והרב <b>מרדכי אליהו</b> זצ\"ל. השתמשו בחיפוש למציאה מהירה של כל מאכל. שימו לב: בכל ספק — \"שהכל\" פוטר הכל, ולמעשה יש לשאול מורה הוראה.",
+      content:""},
+    { id:"hatarat-nedarim-beit-el", he:"סדר התרת נדרים", subtitle:"כפי מנהג חכמי בית־אל",
+      cat:"tefilot", color:"#0f766e", icon:"🕊️",
+      credit:"כפי מנהג חכמי בית־אל בירושת\"ו — נחלת הכלל", creditUrl:"",
+      type:"hardcoded",
+      intro:"סדר התרת נדרים כְּפִי מִנְהַג חַכְמֵי בֵּית־אֵל בִּירוּשָׁתַ\"ו, לוֹמַר בְּעֶרֶב שַׁבָּת וְעַרְבֵי רָאשֵׁי חֳדָשִׁים. המבקש אומר את הבקשה בפני שלושה (בית דין), והם משיבים ומתירים.",
+      content:"<div style=\"text-align:center;direction:rtl;line-height:2.2;\">"+
+        "<h2 style=\"color:#0f766e;font-size:1.35em;font-weight:900;margin:0 0 0.3rem;\">סֵדֶר הַתָּרַת נְדָרִים</h2>"+
+        "<p style=\"color:#0d9488;font-size:0.88em;font-weight:700;margin:0 0 1.5rem;\">כְּפִי מִנְהַג חַכְמֵי בֵּית־אֵל בִּירוּשָׁתַ\"ו לוֹמַר בְּעֶרֶב שַׁבָּת וְעַרְבֵי רָאשֵׁי חֳדָשִׁים</p>"+
+        "<div style=\"background:linear-gradient(135deg,#f0fdfa,#ccfbf1);border:1.5px solid rgba(15,118,110,0.3);border-radius:1rem;padding:1.1rem 1.2rem;margin-bottom:1.4rem;text-align:right;\">"+
+          "<p style=\"margin:0;\">הֲרֵי אָנוּ מְבַקְּשִׁים מִמַּעֲלַתְכֶם לְהַתִּיר לָנוּ וּלְנָשׁוֹתֵינוּ וּלְבָנֵינוּ וְלִבְנוֹתֵינוּ וּלְכָל הַנִּלְוִים לָנוּ, כָּל נְדָרִים, שְׁבוּעוֹת, חֲרָמוֹת, נִדּוּיִים, נְזִיפוֹת, וּלְבַטֵּל כָּל קְלָלוֹת, אָלוֹת, שַׁמְתּוֹת, וְכָל דְּבָרִים רָעִים וַחֲלוֹמוֹת רָעוֹת, וְכָל מִינֵי עַיִן הָרָע הֵן וְכַיּוֹצֵא בָּהֶן.</p>"+
+        "</div>"+
+        "<h3 style=\"color:#0f766e;font-size:1.05em;font-weight:900;margin:1.5rem 0 0.7rem;\">וְהַמַּתִּירִים אוֹמְרִים:</h3>"+
+        "<div style=\"background:#fefce8;border:1.5px solid rgba(202,138,4,0.35);border-radius:1rem;padding:1.1rem 1.2rem;margin-bottom:1.4rem;text-align:right;\">"+
+          "<p style=\"margin:0 0 0.9rem;\">בְּצֵרוּף וּבִרְשׁוּת קוּדְשָׁא בְּרִיךְ הוּא וּשְׁכִינְתֵּיהּ, וּבֵית דִּין שֶׁל מַעְלָה וּבֵית דִּין שֶׁל מַטָּה:</p>"+
+          "<p style=\"margin:0 0 0.4rem;text-align:center;font-size:1.15em;font-weight:900;color:#854d0e;\">מוּתָרִים לָכֶם <span style=\"font-size:0.75em;font-weight:700;\">(ג' פעמים)</span></p>"+
+          "<p style=\"margin:0 0 0.4rem;text-align:center;font-size:1.15em;font-weight:900;color:#854d0e;\">שְׁרוּיִים לָכֶם</p>"+
+          "<p style=\"margin:0 0 0.9rem;text-align:center;font-size:1.15em;font-weight:900;color:#854d0e;\">מְחוּלִים לָכֶם</p>"+
+          "<p style=\"margin:0 0 0.9rem;\">אֵין כָּאן נְדָרִים, אֵין כָּאן שְׁבוּעוֹת, אֵין כָּאן חֲרָמוֹת, אֵין כָּאן שַׁמְתּוֹת, אֵין כָּאן עַיִן הָרָע, אֵין כָּאן נִדּוּיִים, אֵין כָּאן קְלָלוֹת.</p>"+
+          "<p style=\"margin:0 0 0.9rem;\">בֵּין שֶׁקִּלַּלְתֶּם אֲחֵרִים, בֵּין שֶׁאֲחֵרִים קִלְלוּ אֶתְכֶם, בֵּין שֶׁקִּלַּלְתֶּם אֶת עַצְמְכֶם אוֹ שֶׁנִּתְחַיַּבְתֶּם שׁוּם קְלָלָה, אוֹ חֵרֶם, אוֹ קוֹנָם, אוֹ שׁוּם גְּזֵרָה רָעָה, אוֹ חֲלוֹמוֹת רָעוֹת, אוֹ פִּתְרוֹנוֹת רָעוֹת, בֵּין שֶׁחֲלַמְתֶּם עַל אֲחֵרִים אוֹ אֲחֵרִים חָלְמוּ עֲלֵיכֶם — כֻּלָּם בְּטֵלִים וּמְבֻטָּלִים כְּחֶרֶשׂ הַנִּשְׁבָּר וּכְדָבָר שֶׁאֵין בּוֹ מַמָּשׁ.</p>"+
+          "<p style=\"margin:0 0 0.9rem;\">וּכְשֵׁם שֶׁהִסְכִּימוּ וְהִתִּירוּ לָכֶם בֵּית דִּין שֶׁל מַטָּה, כָּךְ יַסְכִּימוּ וְיַתִּירוּ לָכֶם בֵּית דִּין שֶׁל מַעְלָה.</p>"+
+          "<p style=\"margin:0;\">וְכָל הַקְּלָלוֹת וַחֲלוֹמוֹת רָעוֹת יִתְהַפְּכוּ עֲלֵיכֶם וְעָלֵינוּ לְטוֹבָה וְלִבְרָכָה, כְּדִכְתִיב:</p>"+
+        "</div>"+
+        "<div style=\"border-right:4px solid #0f766e;background:#f0fdfa;border-radius:0.7rem;padding:0.85rem 1.1rem;margin:0 0 0.8rem;text-align:right;font-weight:700;color:#134e4a;\">\"וַיַּהֲפֹךְ ה' אֱלֹהֶיךָ לְּךָ אֶת הַקְּלָלָה לִבְרָכָה כִּי אֲהֵבְךָ ה' אֱלֹהֶיךָ.\"</div>"+
+        "<p style=\"margin:0 0 0.8rem;font-weight:700;\">וּכְתִיב:</p>"+
+        "<div style=\"border-right:4px solid #0f766e;background:#f0fdfa;border-radius:0.7rem;padding:0.85rem 1.1rem;margin:0 0 0.8rem;text-align:right;font-weight:700;color:#134e4a;\">\"וְאַתֶּם הַדְּבֵקִים בַּה' אֱלֹהֵיכֶם חַיִּים כֻּלְּכֶם הַיּוֹם.\"</div>"+
+        "<div style=\"border-right:4px solid #0f766e;background:#f0fdfa;border-radius:0.7rem;padding:0.85rem 1.1rem;margin:0 0 1.5rem;text-align:right;font-weight:700;color:#134e4a;\">\"יִהְיוּ לְרָצוֹן אִמְרֵי פִי וְהֶגְיוֹן לִבִּי לְפָנֶיךָ, ה' צוּרִי וְגֹאֲלִי.\"</div>"+
+      "</div>"},
     { id:"segulot-tefilot", he:"סגולות ותפילות", subtitle:"ממקורות קדומים של צדיקי ישראל",
       cat:"tefilot", color:"#7c3aed", icon:"🌟",
       credit:"ממקורות קדומים — נחלת הכלל", creditUrl:"",
       type:"hardcoded",
       intro:"אוסף תפילות וסגולות של צדיקים — מהסידור, ליקוטי תפילות לרבי נחמן, כתבי האריז״ל, חיד״א, ומגדולי החסידות. כולל תפילות לרפואה, פרנסה, זיווג, בנים, שמירה, כפרה, עלייה רוחנית וסגולות שונות.",
-      content:"<div style=\"text-align:right;direction:rtl;line-height:1.95;color:#1e293b;\"><div style=\"background:linear-gradient(135deg,#ede9fe,#ddd6fe);border-radius:1rem;padding:1.25rem;margin-bottom:1.5rem;border:1px solid #c4b5fd;\"><h2 style=\"text-align:center;color:#5b21b6;font-size:1.3em;font-weight:900;margin:0 0 0.7rem;\">🌟 סגולות ותפילות מהמקורות</h2><p style=\"margin:0;color:#4c1d95;font-size:0.95em;text-align:center;\">אוסף של תפילות וסגולות של צדיקים — לרפואה, פרנסה, זיווג, שמירה, ושאר הצרכים. כל תפילה מצוטטת ממקור קדום: סידור, ליקוטי תפילות לרבי נחמן, כתבי האריז״ל, חיד״א, בעל \"כף החיים\", ובעלי החסידות. סגולה כללית: כל תפילה — בכוונה ובהבנה, מתוך הסידור או החומש, בנעימה ובאטיות.</p></div><h2 style=\"text-align:center;color:#dc2626;font-size:1.35em;font-weight:900;margin:2rem 0 1rem;border-bottom:3px solid currentColor;padding-bottom:0.5rem;\">🩺 רפואה ובריאות</h2><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #dc2626;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#dc2626;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">תפילה לרפואה שלמה</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 רבי נחמן מברסלב — \"ליקוטי תפילות\" א', ר\"ה</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> לאמרה לפני שאומרים פרק קי\"ט בתהלים, או בכל עת צרה.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">רִבּוֹנוֹ שֶׁל עוֹלָם, מָלֵא רַחֲמִים, רוֹפֵא חוֹלֵי עַמּוֹ יִשְׂרָאֵל. תַּעַזְרֵנִי וְתַצִּילֵנִי וְתוֹשִׁיעֵנִי וּתְרַפְּאֵנִי בִּרְפוּאָה שְׁלֵמָה. שְׁלַח דְּבָרְךָ וְתִרְפָּאֵנוּ, וְהַצִּילֵנוּ מִכָּל מַחֲלָה וּמִכָּל פֶּגַע רָע. וְזַכֵּנִי לְהַשִּׂיג רְפוּאָה לְעַצְמִי וְלִבְנֵי בֵיתִי בִּזְכוּת צַדִּיקֶיךָ הָאֲמִתִּיִּים, וְזַכֵּנִי לְהִתְקָרֵב אֵלֶיךָ בֶּאֱמֶת. אָמֵן.</div></div><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #dc2626;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#dc2626;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">תפילת \"מי שברך\" לחולה</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 נוסח קדום מן הסידור — נחלת הכלל</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> אומרים אצל הציבור או יחיד, מזכירים שם החולה ושם אמו.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">מִי שֶׁבֵּרַךְ אֲבוֹתֵינוּ אַבְרָהָם יִצְחָק וְיַעֲקֹב, מֹשֶׁה וְאַהֲרֹן, דָּוִד וּשְׁלֹמֹה — הוּא יְבָרֵךְ וִירַפֵּא אֶת הַחוֹלֶה (פלוני בן פלונית) בְּתוֹךְ שְׁאָר חוֹלֵי יִשְׂרָאֵל. הַקָּדוֹשׁ בָּרוּךְ הוּא יִמָּלֵא רַחֲמִים עָלָיו לְהַחֲלִימוֹ וּלְרַפֹּאתוֹ וּלְהַחֲזִיקוֹ וּלְהַחֲיוֹתוֹ. וְיִשְׁלַח לוֹ מְהֵרָה רְפוּאָה שְׁלֵמָה מִן הַשָּׁמַיִם, רְפוּאַת הַנֶּפֶשׁ וּרְפוּאַת הַגּוּף. הַשְׁתָּא בַּעֲגָלָא וּבִזְמַן קָרִיב, וְנֹאמַר אָמֵן.</div></div><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #dc2626;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#dc2626;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">מזמור צ\"א — יושב בסתר עליון</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 תהלים — שיר של פגעים, מקובל אצל האריז\"ל</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> לומר 7 פעמים בכוונה לרפואה, או 11 פעמים לעת צרה.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">יֹשֵׁב בְּסֵתֶר עֶלְיוֹן בְּצֵל שַׁדַּי יִתְלוֹנָן. אֹמַר לַה' מַחְסִי וּמְצוּדָתִי אֱלֹהַי אֶבְטַח בּוֹ. כִּי הוּא יַצִּילְךָ מִפַּח יָקוּשׁ מִדֶּבֶר הַוּוֹת. בְּאֶבְרָתוֹ יָסֶךְ לָךְ וְתַחַת כְּנָפָיו תֶּחְסֶה צִנָּה וְסֹחֵרָה אֲמִתּוֹ. לֹא תִירָא מִפַּחַד לָיְלָה, מֵחֵץ יָעוּף יוֹמָם. מִדֶּבֶר בָּאֹפֶל יַהֲלֹךְ, מִקֶּטֶב יָשׁוּד צָהֳרָיִם. יִפֹּל מִצִּדְּךָ אֶלֶף וּרְבָבָה מִימִינֶךָ אֵלֶיךָ לֹא יִגָּשׁ. כִּי מַלְאָכָיו יְצַוֶּה לָּךְ לִשְׁמָרְךָ בְּכָל דְּרָכֶיךָ. אֹרֶךְ יָמִים אַשְׂבִּיעֵהוּ וְאַרְאֵהוּ בִּישׁוּעָתִי.</div></div><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #dc2626;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#dc2626;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">אנא בכוח</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 תפילה קדומה — תנא רבי נחוניא בן הקנה</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נאמרת בקריאת שמע של שחרית. סגולה גדולה לרפואה ולשמירה.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">אָנָּא בְּכֹחַ גְּדֻלַּת יְמִינְךָ תַּתִּיר צְרוּרָה. קַבֵּל רִנַּת עַמְּךָ, שַׂגְּבֵנוּ, טַהֲרֵנוּ נוֹרָא. נָא גִבּוֹר דּוֹרְשֵׁי יִחוּדְךָ כְּבָבַת שָׁמְרֵם. בָּרְכֵם, טַהֲרֵם, רַחֲמֵם, צִדְקָתְךָ תָּמִיד גָּמְלֵם. חֲסִין קָדוֹשׁ בְּרֹב טוּבְךָ נַהֵל עֲדָתְךָ. יָחִיד גֵּאֶה, לְעַמְּךָ פְּנֵה, זוֹכְרֵי קְדֻשָּׁתֶךָ. שַׁוְעָתֵנוּ קַבֵּל וּשְׁמַע צַעֲקָתֵנוּ, יוֹדֵעַ תַּעֲלֻמוֹת. בָּרוּךְ שֵׁם כְּבוֹד מַלְכוּתוֹ לְעוֹלָם וָעֶד.</div></div><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #dc2626;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#dc2626;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">תפילה קצרה לרפואה — חיד\"א</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 הרב חיים יוסף דוד אזולאי — \"עבודת הקודש\"</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> לחזור 3 פעמים על שם החולה ועל הפסוקים בכוונה גדולה.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">אֵל נָא רְפָא נָא לוֹ. רְפָאֵנוּ ה' וְנֵרָפֵא, הוֹשִׁיעֵנוּ וְנִוָּשֵׁעָה, כִּי תְהִלָּתֵנוּ אָתָּה, וְהַעֲלֵה אֲרוּכָה וּמַרְפֵּא לְכָל תַּחֲלוּאֵינוּ וּלְכָל מַכְאוֹבֵינוּ וּלְכָל מַכּוֹתֵינוּ. בָּרוּךְ אַתָּה ה' רוֹפֵא חוֹלֵי עַמּוֹ יִשְׂרָאֵל.</div></div><h2 style=\"text-align:center;color:#d97706;font-size:1.35em;font-weight:900;margin:2rem 0 1rem;border-bottom:3px solid currentColor;padding-bottom:0.5rem;\">💰 פרנסה ושפע</h2><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #d97706;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#d97706;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">פרשת המן — אמירה יומית</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 שמות ט\"ז, סגולה מהאריז\"ל ומהבעש\"ט</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> לומר בכל יום, ובפרט ביום שלישי של פרשת בשלח, סגולה לפרנסה.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">וַיֹּאמֶר ה' אֶל מֹשֶׁה הִנְנִי מַמְטִיר לָכֶם לֶחֶם מִן הַשָּׁמָיִם, וְיָצָא הָעָם וְלָקְטוּ דְּבַר יוֹם בְּיוֹמוֹ לְמַעַן אֲנַסֶּנּוּ הֲיֵלֵךְ בְּתוֹרָתִי אִם לֹא. וְהָיָה בַּיּוֹם הַשִּׁשִּׁי וְהֵכִינוּ אֵת אֲשֶׁר יָבִיאוּ וְהָיָה מִשְׁנֶה עַל אֲשֶׁר יִלְקְטוּ יוֹם יוֹם. וַיֹּאכְלוּ אֶת הַמָּן אַרְבָּעִים שָׁנָה עַד בֹּאָם אֶל אֶרֶץ נוֹשָׁבֶת. (מומלץ לאמרה במלואה מתוך החומש).</div></div><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #d97706;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#d97706;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">פתח אליהו</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 תיקוני הזוהר — הקדמת תיקוני הזוהר</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נוהגים לאמרה לפני תפילת מנחה, סגולה לפרנסה ולעלייה רוחנית.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">פָּתַח אֵלִיָּהוּ וְאָמַר: רִבּוֹן עָלְמִין אַנְתְּ הוּא חַד וְלָא בְחוּשְׁבָּן, אַנְתְּ הוּא עִלָּאָה עַל כָּל עִלָּאִין, סְתִימָא עַל כָּל סְתִימִין, לֵית מַחֲשָׁבָה תְּפִיסָא בָךְ כְּלָל. אַנְתְּ הוּא דְּאַפֵּקְתָּ עֶשֶׂר תִּקּוּנִין וְקָרֵינָן לְהוֹן עֶשֶׂר סְפִירָן, לְאַנְהָגָא בְהוֹן עָלְמִין סְתִימִין דְּלָא אִתְגַּלְיָן וְעָלְמִין דְּאִתְגַּלְיָן. וּבְהוֹן אִתְכַּסֵּית מִבְּנֵי נָשָׁא. וְאַנְתְּ הוּא דְּקָשִׁיר לוֹן וּמְיַחֵד לוֹן. (לאמירה במלואו).</div></div><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #d97706;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#d97706;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">מזמור כ\"ג — ה' רועי</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 תהלים — מזמורי דוד</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> לומר 3 פעמים אחר תפילת ערבית. מקובל מן החיד\"א וממקובלי ירושלים.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">מִזְמוֹר לְדָוִד: ה' רֹעִי לֹא אֶחְסָר. בִּנְאוֹת דֶּשֶׁא יַרְבִּיצֵנִי עַל מֵי מְנֻחוֹת יְנַהֲלֵנִי. נַפְשִׁי יְשׁוֹבֵב יַנְחֵנִי בְמַעְגְּלֵי צֶדֶק לְמַעַן שְׁמוֹ. גַּם כִּי אֵלֵךְ בְּגֵיא צַלְמָוֶת לֹא אִירָא רָע כִּי אַתָּה עִמָּדִי שִׁבְטְךָ וּמִשְׁעַנְתֶּךָ הֵמָּה יְנַחֲמֻנִי. תַּעֲרֹךְ לְפָנַי שֻׁלְחָן נֶגֶד צֹרְרָי דִּשַּׁנְתָּ בַשֶּׁמֶן רֹאשִׁי כּוֹסִי רְוָיָה. אַךְ טוֹב וָחֶסֶד יִרְדְּפוּנִי כָּל יְמֵי חַיָּי וְשַׁבְתִּי בְּבֵית ה' לְאֹרֶךְ יָמִים.</div></div><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #d97706;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#d97706;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">תפילת רבי נחמן לפרנסה</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 רבי נחמן מברסלב — \"ליקוטי תפילות\"</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> מסוגלת לפרנסה ברווח ובכבוד. לומר לפני תפילת ערבית.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">רִבּוֹנוֹ שֶׁל עוֹלָם, יוֹדֵעַ תַּעֲלוּמוֹת, חוֹנֵן הַדַּעַת וּמְלַמֵּד לֶאֱנוֹשׁ בִּינָה. זַכֵּנִי וְעָזְרֵנִי בְּרַחֲמֶיךָ הָרַבִּים שֶׁתִּהְיֶה פַּרְנָסָתִי בְּהֶתֵּר וְלֹא בְּאִסּוּר, בְּכָבוֹד וְלֹא בְּבִזּוּי, בְּנַחַת וְלֹא בְּצַעַר, מִתַּחַת יָדְךָ הָרְחָבָה וְהַמְּלֵאָה — וְלֹא מִידֵי בָּשָׂר וָדָם. וְזַכֵּנִי לְהָסִיר מִלִּבִּי כָּל דְּאָגוֹת הַפַּרְנָסָה, וְלִבְטֹחַ בְּךָ לְבַד, וְלַעֲבֹד אוֹתְךָ בְּשִׂמְחָה. אָמֵן.</div></div><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #d97706;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#d97706;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">ברכת המזון בכוונה</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 יסוד הסגולה — בעל \"כף החיים\" וה\"בן איש חי\"</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> הברכת המזון נאמרת מתוך הסידור בכוונה, סגולה גדולה לפרנסה.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">בעלי המוסר אמרו: כל מי שמברך ברכת המזון בכוונה — פרנסתו מצויה לו כל ימיו ובכבוד. ועיקר הסגולה: לאמרה מתוך סידור, לא בעל פה, באטיות ובנעימה, ולכוון על \"הזן את הכל בטובו\" — שה' זן ומפרנס את כל העולם. כך כתב בעל \"כף החיים\" (סימן קפ\"ה) בשם החיד\"א.</div></div><h2 style=\"text-align:center;color:#be185d;font-size:1.35em;font-weight:900;margin:2rem 0 1rem;border-bottom:3px solid currentColor;padding-bottom:0.5rem;\">💍 זיווג הגון</h2><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #be185d;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#be185d;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">תפילת רבי אלימלך לזיווג</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 רבי אלימלך מליז'נסק — מצורף לסידור \"תפילת איש\"</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> לאמרה בכל יום בערב ראש חודש. מסוגלת לזיווג הגון.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">יְהִי רָצוֹן מִלְּפָנֶיךָ ה' אֱלֹהֵינוּ וֵאלֹהֵי אֲבוֹתֵינוּ, שֶׁתְּזַמֵּן לִי בֶּן זוּגִי הָרָאוּי לִי, בֶּן זוּג הָגוּן וְיָרֵא שָׁמַיִם, בַּעַל מִדּוֹת טוֹבוֹת. תַּפְקִיד שָׁלוֹם בֵּינֵינוּ וְלֹא תְּהֵא קְטָטָה בֵּינֵינוּ לְעוֹלָם. וְזַכֵּנוּ לִבְנוֹת בַּיִת נֶאֱמָן בְּיִשְׂרָאֵל, וּלְהַעֲמִיד דּוֹרוֹת יְשָׁרִים מְבֹרָכִים, עוֹסְקֵי תּוֹרָה וּמִצְוֹת לִשְׁמָהּ, וְשֶׁיִּהְיֶה זִוּוּגֵנוּ לְשֵׁם שָׁמַיִם. אָמֵן.</div></div><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #be185d;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#be185d;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">שיר השירים — סגולה לזיווג</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 מסורת קבלית מהאריז\"ל</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> לומר את שיר השירים כולו ביום ראשון של פרשת השבוע, או מדי ערב שבת לאחר קבלת שבת.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">שִׁיר הַשִּׁירִים אֲשֶׁר לִשְׁלֹמֹה. יִשָּׁקֵנִי מִנְּשִׁיקוֹת פִּיהוּ כִּי טוֹבִים דֹּדֶיךָ מִיָּיִן. (פתיחה לקריאת המגילה כולה). כתב האריז\"ל ש\"שיר השירים\" הוא תיקון להעלאת השכינה, וסגולה גדולה לזיווג. כל המקבל על עצמו לקראו מדי ערב שבת — הקב\"ה יזמן לו זיווגו הראוי. (מומלץ לקראו מתוך החומש מתחילה ועד סוף).</div></div><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #be185d;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#be185d;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">תפילה לזיווג — חיד\"א</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 הרב חיים יוסף דוד אזולאי — \"עבודת הקודש\"</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> לאמרה במוצאי שבת לאחר הבדלה.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">רִבּוֹנוֹ שֶׁל עוֹלָם, אַתָּה זִיוַּגְתָּ זִוּוּגִים עוֹד מִקֹּדֶם בְּרִיאַת הָעוֹלָם. וּכְמוֹ שֶׁאַתָּה זִיוַּגְתָּ אֶת אַבְרָהָם וְשָׂרָה, יִצְחָק וְרִבְקָה, יַעֲקֹב וְרָחֵל וְלֵאָה — כָּךְ תְּזַמֵּן לִי אֶת זִוּוּגִי הָאֲמִתִּי בִּזְמַנּוֹ הָרָאוּי, וְתַעֲזֹר לִי שֶׁאַכִּיר בּוֹ. וְאַל יָהוּם הַשָּׂטָן לְעַכֵּב זִוּוּגֵנוּ, וְזַכֵּנוּ לִבְנוֹת בַּיִת קָדוֹשׁ וְטָהוֹר בְּיִשְׂרָאֵל לְשִׂמְךָ הַגָּדוֹל. אָמֵן.</div></div><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #be185d;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#be185d;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">תפילה אצל ציון רבי מאיר בעל הנס</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 מסורת מטבריה — סגולה ידועה לזיווג ולכל ישועה</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> אומרים בעת הצורך תוך הדלקת נר על שם רבי מאיר בעל הנס.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">אֱלָהָא דְמֵאִיר עֲנֵנִי, אֱלָהָא דְמֵאִיר עֲנֵנִי, אֱלָהָא דְמֵאִיר עֲנֵנִי — בִּזְכוּת רַבִּי מֵאִיר בַּעַל הַנֵּס תְּזַכֵּנִי לְזִוּוּגִי הָרָאוּי לִי, וְתִשְׁמְעֵנִי וְתַעֲנֵנִי בְּעֵת צָרָתִי. וְכַשֵּׁם שֶׁשָּׁמַעְתָּ תְּפִלָּתוֹ שֶׁל רַבִּי מֵאִיר וְעָשִׂיתָ לוֹ נֵס — כָּךְ תַּעֲשֶׂה עִמִּי נֵס וְתוֹשִׁיעֵנִי בִּזְכוּתוֹ. אָמֵן.</div></div><h2 style=\"text-align:center;color:#0891b2;font-size:1.35em;font-weight:900;margin:2rem 0 1rem;border-bottom:3px solid currentColor;padding-bottom:0.5rem;\">👶 בנים וזרע של קיימא</h2><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #0891b2;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#0891b2;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">תפילת חנה</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 שמואל א, פרק א-ב — תפילתה של חנה בשילה</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> סגולה מעולה לנשים המתפללות לזרע של קיימא.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">וְהִיא מָרַת נָפֶשׁ וַתִּתְפַּלֵּל עַל ה' וּבָכֹה תִבְכֶּה. וַתִּדֹּר נֶדֶר וַתֹּאמַר: ה' צְבָאוֹת אִם רָאֹה תִרְאֶה בָּעֳנִי אֲמָתֶךָ וּזְכַרְתַּנִי וְלֹא תִשְׁכַּח אֶת אֲמָתֶךָ, וְנָתַתָּה לַאֲמָתְךָ זֶרַע אֲנָשִׁים — וּנְתַתִּיו לַה' כָּל יְמֵי חַיָּיו, וּמוֹרָה לֹא יַעֲלֶה עַל רֹאשׁוֹ. וְחַנָּה הִיא מְדַבֶּרֶת עַל לִבָּהּ, רַק שְׂפָתֶיהָ נָּעוֹת וְקוֹלָהּ לֹא יִשָּׁמֵעַ. (לאמירה כפי שמופיע בכתוב).</div></div><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #0891b2;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#0891b2;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">שיר המעלות לבת ציון — מזמור קכ\"ז</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 תהלים — סגולה גדולה ללידה ולגידול בנים</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> לומר במהלך ההריון בכל יום. נוהגים לתלות מזמור זה בחדר היולדת.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">שִׁיר הַמַּעֲלוֹת לִשְׁלֹמֹה: אִם ה' לֹא יִבְנֶה בַיִת שָׁוְא עָמְלוּ בוֹנָיו בּוֹ. אִם ה' לֹא יִשְׁמָר עִיר שָׁוְא שָׁקַד שׁוֹמֵר. שָׁוְא לָכֶם מַשְׁכִּימֵי קוּם מְאַחֲרֵי שֶׁבֶת אֹכְלֵי לֶחֶם הָעֲצָבִים כֵּן יִתֵּן לִידִידוֹ שֵׁנָא. הִנֵּה נַחֲלַת ה' בָּנִים שָׂכָר פְּרִי הַבָּטֶן. כְּחִצִּים בְּיַד גִּבּוֹר כֵּן בְּנֵי הַנְּעוּרִים. אַשְׁרֵי הַגֶּבֶר אֲשֶׁר מִלֵּא אֶת אַשְׁפָּתוֹ מֵהֶם, לֹא יֵבֹשׁוּ כִּי יְדַבְּרוּ אֶת אוֹיְבִים בַּשָּׁעַר.</div></div><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #0891b2;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#0891b2;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">תפילת אליעזר על יצחק</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 בראשית כ\"ד — תפילתו של אליעזר</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> סגולה לזיווג הגון לבנים ובנות, ולסיוע משמים בבחירת בן זוג.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">ה' אֱלֹהֵי אֲדֹנִי אַבְרָהָם הַקְרֵה נָא לְפָנַי הַיּוֹם וַעֲשֵׂה חֶסֶד עִם אֲדֹנִי אַבְרָהָם. הִנֵּה אָנֹכִי נִצָּב עַל עֵין הַמָּיִם וּבְנוֹת אַנְשֵׁי הָעִיר יֹצְאֹת לִשְׁאֹב מָיִם. וְהָיָה הַנַּעֲרָ אֲשֶׁר אֹמַר אֵלֶיהָ הַטִּי נָא כַדֵּךְ וְאֶשְׁתֶּה וְאָמְרָה שְׁתֵה וְגַם גְּמַלֶּיךָ אַשְׁקֶה — אֹתָהּ הֹכַחְתָּ לְעַבְדְּךָ לְיִצְחָק וּבָהּ אֵדַע כִּי עָשִׂיתָ חֶסֶד עִם אֲדֹנִי.</div></div><h2 style=\"text-align:center;color:#0e7490;font-size:1.35em;font-weight:900;margin:2rem 0 1rem;border-bottom:3px solid currentColor;padding-bottom:0.5rem;\">🛡️ שמירה ושמירת הדרך</h2><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #0e7490;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#0e7490;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">תפילת הדרך</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 נוסח קדום — נחלת הכלל</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נאמרת בעת היציאה לדרך אחרי שעוברים פרסה (כ-4 ק\"מ) מן העיר. כשאומרים — בלשון רבים.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">יְהִי רָצוֹן מִלְּפָנֶיךָ ה' אֱלֹהֵינוּ וֵאלֹהֵי אֲבוֹתֵינוּ שֶׁתּוֹלִיכֵנוּ לְשָׁלוֹם וְתַצְעִידֵנוּ לְשָׁלוֹם וְתַדְרִיכֵנוּ לְשָׁלוֹם וְתִסְמְכֵנוּ לְשָׁלוֹם וְתַגִּיעֵנוּ לִמְחוֹז חֶפְצֵנוּ לְחַיִּים וּלְשִׂמְחָה וּלְשָׁלוֹם, וְתַצִּילֵנוּ מִכַּף כָּל אוֹיֵב וְאוֹרֵב בַּדֶּרֶךְ וּמִכָּל מִינֵי פֻּרְעָנֻיּוֹת הַמִּתְרַגְּשׁוֹת לָבֹא לָעוֹלָם. וְתִשְׁלַח בְּרָכָה בְּכָל מַעֲשֵׂה יָדֵינוּ וְתִתְּנֵנוּ לְחֵן וּלְחֶסֶד וּלְרַחֲמִים בְּעֵינֶיךָ וּבְעֵינֵי כָל רוֹאֵינוּ. וְתִשְׁמַע קוֹל תְּחִנּוּנֵינוּ. כִּי אֵל שׁוֹמֵעַ תְּפִלָּה וְתַחֲנוּן אָתָּה. בָּרוּךְ אַתָּה ה' שׁוֹמֵעַ תְּפִלָּה.</div></div><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #0e7490;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#0e7490;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">שיר המעלות אשא עיני — מזמור קכ\"א</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 תהלים — שיר של שמירה</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> לומר 7 פעמים בכוונה, סגולה לשמירת הדרך ולשמירת הבית.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">שִׁיר לַמַּעֲלוֹת: אֶשָּׂא עֵינַי אֶל הֶהָרִים מֵאַיִן יָבֹא עֶזְרִי. עֶזְרִי מֵעִם ה' עֹשֵׂה שָׁמַיִם וָאָרֶץ. אַל יִתֵּן לַמּוֹט רַגְלֶךָ אַל יָנוּם שֹׁמְרֶךָ. הִנֵּה לֹא יָנוּם וְלֹא יִישָׁן שׁוֹמֵר יִשְׂרָאֵל. ה' שֹׁמְרֶךָ ה' צִלְּךָ עַל יַד יְמִינֶךָ. יוֹמָם הַשֶּׁמֶשׁ לֹא יַכֶּכָּה וְיָרֵחַ בַּלָּיְלָה. ה' יִשְׁמָרְךָ מִכָּל רָע יִשְׁמֹר אֶת נַפְשֶׁךָ. ה' יִשְׁמָר צֵאתְךָ וּבוֹאֶךָ מֵעַתָּה וְעַד עוֹלָם.</div></div><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #0e7490;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#0e7490;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">פסוקי שמירת הבית — אריז\"ל</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 מסורת מהאריז\"ל — סגולה לשמירת הבית מכל רע</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נוהגים לכתבם על קלף ולתלות בכניסה לבית, או לאמרם מדי ערב לפני השינה.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">ה' שׁוֹמְרֶךָ ה' צִלְּךָ עַל יַד יְמִינֶךָ (תהלים קכ\"א). אַל תִּירָא מִפַּחַד פִּתְאֹם וּמִשּׁוֹאַת רְשָׁעִים כִּי תָבֹא, עֻצוּ עֵצָה וְתֻפָר דַּבְּרוּ דָבָר וְלֹא יָקוּם כִּי עִמָּנוּ אֵל (משלי ג', ישעיהו ח'). הִנֵּה לֹא יָנוּם וְלֹא יִישָׁן שׁוֹמֵר יִשְׂרָאֵל. כִּי מַלְאָכָיו יְצַוֶּה לָּךְ לִשְׁמָרְךָ בְּכָל דְּרָכֶיךָ.</div></div><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #0e7490;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#0e7490;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">אנא בכוח — לשמירה</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 תפילה קדומה — תיקון לשמירה</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> לאמרה לפני יציאה לדרך, ובכל עת שצריך שמירה מיוחדת.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">אָנָּא בְּכֹחַ גְּדֻלַּת יְמִינְךָ — תַּתִּיר צְרוּרָה. סגולת \"אנא בכוח\" היא לפתיחת כל הצרורים והמכשולים בדרך. נוהגים לכוון על השם הקדוש של מ\"ב אותיות הנכלל בו, וכל המכוון בו זוכה לשמירה גמורה בכל אשר ילך. כך כתב הרמ\"ק בתומר דבורה.</div></div><h2 style=\"text-align:center;color:#6b21a8;font-size:1.35em;font-weight:900;margin:2rem 0 1rem;border-bottom:3px solid currentColor;padding-bottom:0.5rem;\">✨ כפרה ותשובה</h2><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #6b21a8;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#6b21a8;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">וידוי קצר — בכוונה</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 נוסח קדום שבסידור — חיד\"א ובן איש חי המליצו עליו</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נאמר בכל יום בנפילת אפים. סגולה לכפרה גמורה.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">אָנָּא ה', חָטָאתִי עָוִיתִי פָּשַׁעְתִּי לְפָנֶיךָ אֲנִי וּבֵיתִי. אָנָּא ה', כַּפֵּר נָא לַחֲטָאִים וְלָעֲוֹנוֹת וְלַפְּשָׁעִים שֶׁחָטָאתִי וְשֶׁעָוִיתִי וְשֶׁפָּשַׁעְתִּי לְפָנֶיךָ — אֲנִי וּבֵיתִי וּבְנֵי וּבְנוֹתַי וְכָל יִשְׂרָאֵל אַחֵינוּ. כַּכָּתוּב בְּתוֹרַת מֹשֶׁה עַבְדֶּךָ: \"כִּי בַיּוֹם הַזֶּה יְכַפֵּר עֲלֵיכֶם לְטַהֵר אֶתְכֶם, מִכֹּל חַטֹּאתֵיכֶם לִפְנֵי ה' תִּטְהָרוּ\".</div></div><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #6b21a8;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#6b21a8;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">תיקון חצות — קצר</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 מסורת מהאריז\"ל וקבלת הספרדים</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נאמר בליל חצות, או בכל עת שמרגישים צורך בתיקון. סגולה גדולה לבני עליה.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">יָשַׁבְתִּי בְּדָד וָאֶדֹּם, כִּי נָטַל עָלָי, יִתֵּן בֶּעָפָר פִּיהוּ אוּלַי יֵשׁ תִּקְוָה. עַל נַהֲרוֹת בָּבֶל שָׁם יָשַׁבְנוּ גַּם בָּכִינוּ בְּזָכְרֵנוּ אֶת צִיּוֹן. (מומלץ לאמרו במלואו מתוך הסידור — תהלים ע\"ט, קל\"ז, ועוד. נאמר בישיבה על הקרקע, או על מושב נמוך, באבל על חורבן בית המקדש).</div></div><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #6b21a8;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#6b21a8;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">ק\"ש שעל המיטה — וידוי</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 נוסח קדום שבסידור</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נאמרת לפני השינה. כל המקפיד עליה — סגולה לכפרה ולשמירה ממקרים לא טהורים.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">רִבּוֹנוֹ שֶׁל עוֹלָם, הֲרֵינִי מוֹחֵל לְכָל מִי שֶׁהִכְעִיס וְהִקְנִיט אוֹתִי אוֹ שֶׁחָטָא כְּנֶגְדִּי. בֵּין בְּגוּפִי בֵּין בְּמָמוֹנִי, בֵּין בִּכְבוֹדִי בֵּין בְּכָל אֲשֶׁר לִי. בֵּין בְּאֹנֶס בֵּין בְּרָצוֹן, בֵּין בְּשׁוֹגֵג בֵּין בְּמֵזִיד, בֵּין בְּדִבּוּר בֵּין בְּמַעֲשֶׂה, בֵּין בְּגִלְגּוּל זֶה בֵּין בְּגִלְגּוּל אַחֵר. וְלֹא יֵעָנֵשׁ שׁוּם אָדָם בְּסִבָּתִי. יְהִי רָצוֹן מִלְּפָנֶיךָ ה' אֱלֹהַי וֵאלֹהֵי אֲבוֹתַי שֶׁלֹּא אֶחֱטָא עוֹד וְלֹא אַכְעִיסְךָ, וּמַה שֶּׁחָטָאתִי לְפָנֶיךָ — מְחֹק בְּרַחֲמֶיךָ הָרַבִּים.</div></div><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #6b21a8;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#6b21a8;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">מודה אני — שחרית</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 נוסח חכמי ספרד — בעל \"סדר היום\"</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נאמר מיד עם הקיצה, סגולה לפתיחת היום בקדושה ובהודאה.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">מוֹדֶה אֲנִי לְפָנֶיךָ מֶלֶךְ חַי וְקַיָּם, שֶׁהֶחֱזַרְתָּ בִּי נִשְׁמָתִי בְּחֶמְלָה — רַבָּה אֱמוּנָתֶךָ. (כל היודע על תורת הגלגול והשבת הנשמה בכל יום — יודע כמה גדולה התודעה הזו: ה' נותן לאדם הזדמנות חדשה בכל בוקר. כך כתב בעל \"ייטב לב\" וה\"בית אהרן\" מקרלין).</div></div><h2 style=\"text-align:center;color:#15803d;font-size:1.35em;font-weight:900;margin:2rem 0 1rem;border-bottom:3px solid currentColor;padding-bottom:0.5rem;\">📿 עלייה רוחנית</h2><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #15803d;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#15803d;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">עשרה מזמורי תיקון הכללי</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 רבי נחמן מברסלב — \"ליקוטי מוהר\"ן\" ח\"ב, סימן צ\"ב</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> עשרת המזמורים: ט\"ז, ל\"ב, מ\"א, מ\"ב, נ\"ט, ע\"ז, צ, ק\"ה, קל\"ז, ק\"נ. סגולה לטהרה ולכל ישועה.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">תהלים ט\"ז (מכתם לדוד שמרני אל), ל\"ב (לדוד משכיל אשרי נשוי פשע), מ\"א (למנצח מזמור לדוד אשרי משכיל אל דל), מ\"ב (למנצח משכיל לבני קרח), נ\"ט (למנצח אל תשחת לדוד), ע\"ז (למנצח על ידותון לאסף), צ' (תפילה למשה איש האלהים), ק\"ה (הודו לה' קראו בשמו), קל\"ז (על נהרות בבל), ק\"נ (הללויה הללו אל בקדשו). מקובל לאמרם מתוך הסידור או התהילים, באטיות ובכוונה.</div></div><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #15803d;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#15803d;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">תפילת השלמה — בעש\"ט</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 הבעל שם טוב — נוסחים מצדיקי החסידות</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נאמרת בכל בוקר אחר תפילת שחרית, בתודה על השלמת התפילה.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">אֶת אֲשֶׁר חָסַרְתִּי בִּתְפִלָּתִי בְּכַוָּנָה — תְּמַלֵּא אַתָּה בְּרַחֲמֶיךָ הָרַבִּים. וְתַעֲלֶה תְפִלָּתִי לְפָנֶיךָ עִם תְּפִלַּת כָּל יִשְׂרָאֵל, וְתִתְעַטֵּף בִּפְאֵר תְּפִלּוֹתָם שֶׁל צַדִּיקֶיךָ אֲשֶׁר בְּדוֹרֵנוּ וּבְכָל הַדּוֹרוֹת. וְתִשְׁתַּלֵּם תְּפִלָּתִי לִרְצוֹנְךָ הַטּוֹב.</div></div><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #15803d;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#15803d;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">ברכות התורה — עיון בכוונה</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 מסורת חז\"ל — \"שלא ברכו בתורה תחילה\"</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> יש לאומרם בכוונה גדולה בכל בוקר. מי שלא מברך — נחשב שלא למד.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">בָּרוּךְ אַתָּה ה' אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם אֲשֶׁר קִדְּשָׁנוּ בְּמִצְוֹתָיו וְצִוָּנוּ עַל דִּבְרֵי תוֹרָה. וְהַעֲרֵב נָא ה' אֱלֹהֵינוּ אֶת דִּבְרֵי תוֹרָתְךָ בְּפִינוּ וּבְפִי עַמְּךָ בֵּית יִשְׂרָאֵל, וְנִהְיֶה אֲנַחְנוּ וְצֶאֱצָאֵינוּ וְצֶאֱצָאֵי עַמְּךָ בֵּית יִשְׂרָאֵל, כֻּלָּנוּ יוֹדְעֵי שְׁמֶךָ וְלוֹמְדֵי תוֹרָתֶךָ לִשְׁמָהּ. בָּרוּךְ אַתָּה ה' הַמְלַמֵּד תּוֹרָה לְעַמּוֹ יִשְׂרָאֵל.</div></div><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #15803d;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#15803d;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">התבודדות — דקה ביום</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 רבי נחמן מברסלב — \"ליקוטי מוהר\"ן\" קי\"ז</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> מסוגלת לקרבה לה' ולעלייה רוחנית מתמדת. אפילו דקה אחת ביום ניתנת לאדם להתבודד עם ה'.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">דרכו של רבי נחמן: לקבוע שעה מיוחדת ביום שבה האדם מדבר עם ה' בלשון פשוטה, באותה שפה שמדבר בה עם חברו. לפרוש את כל אשר על לבו — צרותיו, שמחותיו, חלומותיו. וכשמתחיל לדבר עם ה' — מתחיל ה' לדבר עמו. (אמירת הצדיק: \"שלוש שעות של תפילה ביום — סגולה לכל הישועות\").</div></div><h2 style=\"text-align:center;color:#7c3aed;font-size:1.35em;font-weight:900;margin:2rem 0 1rem;border-bottom:3px solid currentColor;padding-bottom:0.5rem;\">🍀 סגולות שונות</h2><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #7c3aed;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#7c3aed;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">סגולה לעין הרע — בני יוסף</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 מסורת קבלית מהאריז\"ל — \"בן פורת יוסף\"</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> אמירת הפסוקים 3 פעמים, סגולה לבטל כל עין רעה.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">בֵּן פֹּרָת יוֹסֵף בֵּן פֹּרָת עֲלֵי עָיִן בָּנוֹת צָעֲדָה עֲלֵי שׁוּר (בראשית מ\"ט). וְכַשֵּׁם שֶׁאֵין הָעַיִן שׁוֹלֶטֶת בְּזַרְעוֹ שֶׁל יוֹסֵף הַצַּדִּיק — כָּךְ אַל תִּשְׁלֹט עַיִן הָרָע בִּי וּבְכָל זַרְעִי וּבְכָל אֲשֶׁר לִי. אָמֵן.</div></div><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #7c3aed;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#7c3aed;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">סגולה לזיכרון — בעל \"כף החיים\"</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 מהבן איש חי וה\"כף החיים\" — אורח חיים סימן קכ\"ז</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> לומר בכל בוקר אחר תפילת שחרית. סגולה לחיזוק הזיכרון בתורה.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">אַתָּה חוֹנֵן לְאָדָם דַּעַת וּמְלַמֵּד לֶאֱנוֹשׁ בִּינָה. חָנֵּנוּ מֵאִתְּךָ דֵּעָה בִּינָה וְהַשְׂכֵּל. רִבּוֹנוֹ שֶׁל עוֹלָם, פְּתַח לִבִּי בְּתוֹרָתֶךָ, וְשִׂמְחָתֶךָ תַּסֵּב לִבִּי. וְכָל הַחוֹשְׁבִים עָלַי רָעָה — מְהֵרָה הָפֵר עֲצָתָם וְקַלְקֵל מַחֲשַׁבְתָּם.</div></div><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #7c3aed;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#7c3aed;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">סגולה לשלום בית</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 בעל \"כף החיים\" — או\"ח סי' ר\"מ; וב\"מתוק מדבש\" על הזוהר</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> הסגולה היא בשמירת קדושת הבית, ושמירת הברית. בנוסף, ישנן תפילות מיוחדות.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">יְהִי רָצוֹן מִלְּפָנֶיךָ אֲדוֹן הַשָּׁלוֹם מֶלֶךְ שֶׁהַשָּׁלוֹם שֶׁלּוֹ, שֶׁתָּשִׁים שָׁלוֹם וְאַחֲוָה בְּתוֹךְ בֵּיתִי וּבְתוֹךְ מִשְׁפַּחְתִּי. וְנִהְיֶה אֲנַחְנוּ וְזַרְעֵנוּ אַחֲרֵינוּ אֹהֲבֵי שָׁלוֹם וְרוֹדְפֵי שָׁלוֹם בֶּאֱמֶת וּבְלֵב שָׁלֵם, וְלֹא תִהְיֶה קְטָטָה וְלֹא טַעֲנָה בֵּינֵינוּ לְעוֹלָם. וְעַל יְדֵי שָׁלוֹם זֶה יִתְקַיֵּם בָּנוּ: \"ה' עֹז לְעַמּוֹ יִתֵּן ה' יְבָרֵךְ אֶת עַמּוֹ בַשָּׁלוֹם\".</div></div><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #7c3aed;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#7c3aed;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">סגולה נגד פחד — \"דקיקה דשמשון\"</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 מסורת קבלית — קמיע שמשון הגיבור (אריז\"ל)</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> לומר 3 פעמים בעת פחד או צרה.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">יַעֲקֹב, יַעֲקֹב, יַעֲקֹב. שִׁמְךָ הַטּוֹב עָלַי. ה' עִמִּי לֹא אִירָא — מַה יַּעֲשֶׂה לִי אָדָם. ה' לִי בְּעֹזְרָי — וַאֲנִי אֶרְאֶה בְשׂנְאָי. טוֹב לַחֲסוֹת בַּה' מִבְּטֹחַ בָּאָדָם, טוֹב לַחֲסוֹת בַּה' מִבְּטֹחַ בִּנְדִיבִים. (מקובל בכתבי האריז\"ל לאמרו בעת חרדה או חלום רע).</div></div><div style=\"text-align:center;margin-top:2rem;padding:1rem;background:#fef3c7;border-radius:0.7rem;color:#78350f;font-size:0.9em;\"><strong>הערה כללית:</strong> כל הסגולות והתפילות לקוחות מן המקורות הקדומים של צדיקי ישראל. הסגולה הגדולה ביותר היא תפילה בכוונה, אמונה תמה, ותשובה שלמה.</div></div>"}
+      content:"<div style=\"text-align:right;direction:rtl;line-height:1.95;color:#1e293b;\"><div style=\"background:linear-gradient(135deg,#ede9fe,#ddd6fe);border-radius:1rem;padding:1.25rem;margin-bottom:1.5rem;border:1px solid #c4b5fd;\"><h2 style=\"text-align:center;color:#5b21b6;font-size:1.3em;font-weight:900;margin:0 0 0.7rem;\">🌟 סגולות ותפילות מהמקורות</h2><p style=\"margin:0;color:#4c1d95;font-size:0.95em;text-align:center;\">אוסף של תפילות וסגולות של צדיקים — לרפואה, פרנסה, זיווג, שמירה, ושאר הצרכים. כל תפילה מצוטטת ממקור קדום: סידור, ליקוטי תפילות לרבי נחמן, כתבי האריז״ל, חיד״א, בעל \"כף החיים\", ובעלי החסידות. סגולה כללית: כל תפילה — בכוונה ובהבנה, מתוך הסידור או החומש, בנעימה ובאטיות.</p></div><h2 style=\"text-align:center;color:#dc2626;font-size:1.35em;font-weight:900;margin:2rem 0 1rem;border-bottom:3px solid currentColor;padding-bottom:0.5rem;\">🩺 רפואה ובריאות</h2><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #dc2626;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#dc2626;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">תפילה לרפואה שלמה</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 רבי נחמן מברסלב — \"ליקוטי תפילות\" א', ר\"ה</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> לאמרה לפני שאומרים פרק קי\"ט בתהלים, או בכל עת צרה.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">רִבּוֹנוֹ שֶׁל עוֹלָם, מָלֵא רַחֲמִים, רוֹפֵא חוֹלֵי עַמּוֹ יִשְׂרָאֵל. תַּעַזְרֵנִי וְתַצִּילֵנִי וְתוֹשִׁיעֵנִי וּתְרַפְּאֵנִי בִּרְפוּאָה שְׁלֵמָה. שְׁלַח דְּבָרְךָ וְתִרְפָּאֵנוּ, וְהַצִּילֵנוּ מִכָּל מַחֲלָה וּמִכָּל פֶּגַע רָע. וְזַכֵּנִי לְהַשִּׂיג רְפוּאָה לְעַצְמִי וְלִבְנֵי בֵיתִי בִּזְכוּת צַדִּיקֶיךָ הָאֲמִתִּיִּים, וְזַכֵּנִי לְהִתְקָרֵב אֵלֶיךָ בֶּאֱמֶת. אָמֵן.</div></div><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #dc2626;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#dc2626;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">תפילת \"מי שברך\" לחולה</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 נוסח קדום מן הסידור — נחלת הכלל</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> אומרים אצל הציבור או יחיד, מזכירים שם החולה ושם אמו.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">מִי שֶׁבֵּרַךְ אֲבוֹתֵינוּ אַבְרָהָם יִצְחָק וְיַעֲקֹב, מֹשֶׁה וְאַהֲרֹן, דָּוִד וּשְׁלֹמֹה — הוּא יְבָרֵךְ וִירַפֵּא אֶת הַחוֹלֶה (פלוני בן פלונית) בְּתוֹךְ שְׁאָר חוֹלֵי יִשְׂרָאֵל. הַקָּדוֹשׁ בָּרוּךְ הוּא יִמָּלֵא רַחֲמִים עָלָיו לְהַחֲלִימוֹ וּלְרַפֹּאתוֹ וּלְהַחֲזִיקוֹ וּלְהַחֲיוֹתוֹ. וְיִשְׁלַח לוֹ מְהֵרָה רְפוּאָה שְׁלֵמָה מִן הַשָּׁמַיִם, רְפוּאַת הַנֶּפֶשׁ וּרְפוּאַת הַגּוּף. הַשְׁתָּא בַּעֲגָלָא וּבִזְמַן קָרִיב, וְנֹאמַר אָמֵן.</div></div><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #dc2626;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#dc2626;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">מזמור צ\"א — יושב בסתר עליון</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 תהלים — שיר של פגעים, מקובל אצל האריז\"ל</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> לומר 7 פעמים בכוונה לרפואה, או 11 פעמים לעת צרה.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">יֹשֵׁב בְּסֵתֶר עֶלְיוֹן בְּצֵל שַׁדַּי יִתְלוֹנָן. אֹמַר לַה' מַחְסִי וּמְצוּדָתִי אֱלֹהַי אֶבְטַח בּוֹ. כִּי הוּא יַצִּילְךָ מִפַּח יָקוּשׁ מִדֶּבֶר הַוּוֹת. בְּאֶבְרָתוֹ יָסֶךְ לָךְ וְתַחַת כְּנָפָיו תֶּחְסֶה צִנָּה וְסֹחֵרָה אֲמִתּוֹ. לֹא תִירָא מִפַּחַד לָיְלָה, מֵחֵץ יָעוּף יוֹמָם. מִדֶּבֶר בָּאֹפֶל יַהֲלֹךְ, מִקֶּטֶב יָשׁוּד צָהֳרָיִם. יִפֹּל מִצִּדְּךָ אֶלֶף וּרְבָבָה מִימִינֶךָ אֵלֶיךָ לֹא יִגָּשׁ. כִּי מַלְאָכָיו יְצַוֶּה לָּךְ לִשְׁמָרְךָ בְּכָל דְּרָכֶיךָ. אֹרֶךְ יָמִים אַשְׂבִּיעֵהוּ וְאַרְאֵהוּ בִּישׁוּעָתִי.</div></div><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #dc2626;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#dc2626;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">אנא בכוח</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 תפילה קדומה — תנא רבי נחוניא בן הקנה</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נאמרת בקריאת שמע של שחרית. סגולה גדולה לרפואה ולשמירה.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">אָנָּא בְּכֹחַ גְּדֻלַּת יְמִינְךָ תַּתִּיר צְרוּרָה. קַבֵּל רִנַּת עַמְּךָ, שַׂגְּבֵנוּ, טַהֲרֵנוּ נוֹרָא. נָא גִבּוֹר דּוֹרְשֵׁי יִחוּדְךָ כְּבָבַת שָׁמְרֵם. בָּרְכֵם, טַהֲרֵם, רַחֲמֵם, צִדְקָתְךָ תָּמִיד גָּמְלֵם. חֲסִין קָדוֹשׁ בְּרֹב טוּבְךָ נַהֵל עֲדָתְךָ. יָחִיד גֵּאֶה, לְעַמְּךָ פְּנֵה, זוֹכְרֵי קְדֻשָּׁתֶךָ. שַׁוְעָתֵנוּ קַבֵּל וּשְׁמַע צַעֲקָתֵנוּ, יוֹדֵעַ תַּעֲלֻמוֹת. בָּרוּךְ שֵׁם כְּבוֹד מַלְכוּתוֹ לְעוֹלָם וָעֶד.</div></div><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #dc2626;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#dc2626;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">תפילה קצרה לרפואה — חיד\"א</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 הרב חיים יוסף דוד אזולאי — \"עבודת הקודש\"</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> לחזור 3 פעמים על שם החולה ועל הפסוקים בכוונה גדולה.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">אֵל נָא רְפָא נָא לוֹ. רְפָאֵנוּ ה' וְנֵרָפֵא, הוֹשִׁיעֵנוּ וְנִוָּשֵׁעָה, כִּי תְהִלָּתֵנוּ אָתָּה, וְהַעֲלֵה אֲרוּכָה וּמַרְפֵּא לְכָל תַּחֲלוּאֵינוּ וּלְכָל מַכְאוֹבֵינוּ וּלְכָל מַכּוֹתֵינוּ. בָּרוּךְ אַתָּה ה' רוֹפֵא חוֹלֵי עַמּוֹ יִשְׂרָאֵל.</div></div><h2 style=\"text-align:center;color:#d97706;font-size:1.35em;font-weight:900;margin:2rem 0 1rem;border-bottom:3px solid currentColor;padding-bottom:0.5rem;\">💰 פרנסה ושפע</h2><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #d97706;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#d97706;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">פרשת המן — אמירה יומית</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 שמות ט\"ז, סגולה מהאריז\"ל ומהבעש\"ט</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> לומר בכל יום, ובפרט ביום שלישי של פרשת בשלח, סגולה לפרנסה.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">וַיֹּאמֶר ה' אֶל מֹשֶׁה הִנְנִי מַמְטִיר לָכֶם לֶחֶם מִן הַשָּׁמָיִם, וְיָצָא הָעָם וְלָקְטוּ דְּבַר יוֹם בְּיוֹמוֹ לְמַעַן אֲנַסֶּנּוּ הֲיֵלֵךְ בְּתוֹרָתִי אִם לֹא. וְהָיָה בַּיּוֹם הַשִּׁשִּׁי וְהֵכִינוּ אֵת אֲשֶׁר יָבִיאוּ וְהָיָה מִשְׁנֶה עַל אֲשֶׁר יִלְקְטוּ יוֹם יוֹם. וַיֹּאכְלוּ אֶת הַמָּן אַרְבָּעִים שָׁנָה עַד בֹּאָם אֶל אֶרֶץ נוֹשָׁבֶת. (מומלץ לאמרה במלואה מתוך החומש).</div></div><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #d97706;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#d97706;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">פתח אליהו</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 תיקוני הזוהר — הקדמת תיקוני הזוהר</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נוהגים לאמרה לפני תפילת מנחה, סגולה לפרנסה ולעלייה רוחנית.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">פָּתַח אֵלִיָּהוּ וְאָמַר: רִבּוֹן עָלְמִין אַנְתְּ הוּא חַד וְלָא בְחוּשְׁבָּן, אַנְתְּ הוּא עִלָּאָה עַל כָּל עִלָּאִין, סְתִימָא עַל כָּל סְתִימִין, לֵית מַחֲשָׁבָה תְּפִיסָא בָךְ כְּלָל. אַנְתְּ הוּא דְּאַפֵּקְתָּ עֶשֶׂר תִּקּוּנִין וְקָרֵינָן לְהוֹן עֶשֶׂר סְפִירָן, לְאַנְהָגָא בְהוֹן עָלְמִין סְתִימִין דְּלָא אִתְגַּלְיָן וְעָלְמִין דְּאִתְגַּלְיָן. וּבְהוֹן אִתְכַּסֵּית מִבְּנֵי נָשָׁא. וְאַנְתְּ הוּא דְּקָשִׁיר לוֹן וּמְיַחֵד לוֹן. (לאמירה במלואו).</div></div><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #d97706;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#d97706;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">מזמור כ\"ג — ה' רועי</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 תהלים — מזמורי דוד</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> לומר 3 פעמים אחר תפילת ערבית. מקובל מן החיד\"א וממקובלי ירושלים.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">מִזְמוֹר לְדָוִד: ה' רֹעִי לֹא אֶחְסָר. בִּנְאוֹת דֶּשֶׁא יַרְבִּיצֵנִי עַל מֵי מְנֻחוֹת יְנַהֲלֵנִי. נַפְשִׁי יְשׁוֹבֵב יַנְחֵנִי בְמַעְגְּלֵי צֶדֶק לְמַעַן שְׁמוֹ. גַּם כִּי אֵלֵךְ בְּגֵיא צַלְמָוֶת לֹא אִירָא רָע כִּי אַתָּה עִמָּדִי שִׁבְטְךָ וּמִשְׁעַנְתֶּךָ הֵמָּה יְנַחֲמֻנִי. תַּעֲרֹךְ לְפָנַי שֻׁלְחָן נֶגֶד צֹרְרָי דִּשַּׁנְתָּ בַשֶּׁמֶן רֹאשִׁי כּוֹסִי רְוָיָה. אַךְ טוֹב וָחֶסֶד יִרְדְּפוּנִי כָּל יְמֵי חַיָּי וְשַׁבְתִּי בְּבֵית ה' לְאֹרֶךְ יָמִים.</div></div><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #d97706;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#d97706;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">תפילת רבי נחמן לפרנסה</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 רבי נחמן מברסלב — \"ליקוטי תפילות\"</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> מסוגלת לפרנסה ברווח ובכבוד. לומר לפני תפילת ערבית.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">רִבּוֹנוֹ שֶׁל עוֹלָם, יוֹדֵעַ תַּעֲלוּמוֹת, חוֹנֵן הַדַּעַת וּמְלַמֵּד לֶאֱנוֹשׁ בִּינָה. זַכֵּנִי וְעָזְרֵנִי בְּרַחֲמֶיךָ הָרַבִּים שֶׁתִּהְיֶה פַּרְנָסָתִי בְּהֶתֵּר וְלֹא בְּאִסּוּר, בְּכָבוֹד וְלֹא בְּבִזּוּי, בְּנַחַת וְלֹא בְּצַעַר, מִתַּחַת יָדְךָ הָרְחָבָה וְהַמְּלֵאָה — וְלֹא מִידֵי בָּשָׂר וָדָם. וְזַכֵּנִי לְהָסִיר מִלִּבִּי כָּל דְּאָגוֹת הַפַּרְנָסָה, וְלִבְטֹחַ בְּךָ לְבַד, וְלַעֲבֹד אוֹתְךָ בְּשִׂמְחָה. אָמֵן.</div></div><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #d97706;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#d97706;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">ברכת המזון בכוונה</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 יסוד הסגולה — בעל \"כף החיים\" וה\"בן איש חי\"</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> הברכת המזון נאמרת מתוך הסידור בכוונה, סגולה גדולה לפרנסה.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">בעלי המוסר אמרו: כל מי שמברך ברכת המזון בכוונה — פרנסתו מצויה לו כל ימיו ובכבוד. ועיקר הסגולה: לאמרה מתוך סידור, לא בעל פה, באטיות ובנעימה, ולכוון על \"הזן את הכל בטובו\" — שה' זן ומפרנס את כל העולם. כך כתב בעל \"כף החיים\" (סימן קפ\"ה) בשם החיד\"א.</div></div><h2 style=\"text-align:center;color:#be185d;font-size:1.35em;font-weight:900;margin:2rem 0 1rem;border-bottom:3px solid currentColor;padding-bottom:0.5rem;\">💍 זיווג הגון</h2><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #be185d;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#be185d;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">תפילת רבי אלימלך לזיווג</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 רבי אלימלך מליז'נסק — מצורף לסידור \"תפילת איש\"</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> לאמרה בכל יום בערב ראש חודש. מסוגלת לזיווג הגון.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">יְהִי רָצוֹן מִלְּפָנֶיךָ ה' אֱלֹהֵינוּ וֵאלֹהֵי אֲבוֹתֵינוּ, שֶׁתְּזַמֵּן לִי בֶּן זוּגִי הָרָאוּי לִי, בֶּן זוּג הָגוּן וְיָרֵא שָׁמַיִם, בַּעַל מִדּוֹת טוֹבוֹת. תַּפְקִיד שָׁלוֹם בֵּינֵינוּ וְלֹא תְּהֵא קְטָטָה בֵּינֵינוּ לְעוֹלָם. וְזַכֵּנוּ לִבְנוֹת בַּיִת נֶאֱמָן בְּיִשְׂרָאֵל, וּלְהַעֲמִיד דּוֹרוֹת יְשָׁרִים מְבֹרָכִים, עוֹסְקֵי תּוֹרָה וּמִצְוֹת לִשְׁמָהּ, וְשֶׁיִּהְיֶה זִוּוּגֵנוּ לְשֵׁם שָׁמַיִם. אָמֵן.</div></div><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #be185d;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#be185d;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">שיר השירים — סגולה לזיווג</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 מסורת קבלית מהאריז\"ל</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> לומר את שיר השירים כולו ביום ראשון של פרשת השבוע, או מדי ערב שבת לאחר קבלת שבת.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">שִׁיר הַשִּׁירִים אֲשֶׁר לִשְׁלֹמֹה. יִשָּׁקֵנִי מִנְּשִׁיקוֹת פִּיהוּ כִּי טוֹבִים דֹּדֶיךָ מִיָּיִן. (פתיחה לקריאת המגילה כולה). כתב האריז\"ל ש\"שיר השירים\" הוא תיקון להעלאת השכינה, וסגולה גדולה לזיווג. כל המקבל על עצמו לקראו מדי ערב שבת — הקב\"ה יזמן לו זיווגו הראוי. (מומלץ לקראו מתוך החומש מתחילה ועד סוף).</div></div><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #be185d;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#be185d;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">תפילה לזיווג — חיד\"א</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 הרב חיים יוסף דוד אזולאי — \"עבודת הקודש\"</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> לאמרה במוצאי שבת לאחר הבדלה.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">רִבּוֹנוֹ שֶׁל עוֹלָם, אַתָּה זִיוַּגְתָּ זִוּוּגִים עוֹד מִקֹּדֶם בְּרִיאַת הָעוֹלָם. וּכְמוֹ שֶׁאַתָּה זִיוַּגְתָּ אֶת אַבְרָהָם וְשָׂרָה, יִצְחָק וְרִבְקָה, יַעֲקֹב וְרָחֵל וְלֵאָה — כָּךְ תְּזַמֵּן לִי אֶת זִוּוּגִי הָאֲמִתִּי בִּזְמַנּוֹ הָרָאוּי, וְתַעֲזֹר לִי שֶׁאַכִּיר בּוֹ. וְאַל יָהוּם הַשָּׂטָן לְעַכֵּב זִוּוּגֵנוּ, וְזַכֵּנוּ לִבְנוֹת בַּיִת קָדוֹשׁ וְטָהוֹר בְּיִשְׂרָאֵל לְשִׂמְךָ הַגָּדוֹל. אָמֵן.</div></div><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #be185d;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#be185d;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">תפילה אצל ציון רבי מאיר בעל הנס</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 מסורת מטבריה — סגולה ידועה לזיווג ולכל ישועה</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> אומרים בעת הצורך תוך הדלקת נר על שם רבי מאיר בעל הנס.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">אֱלָהָא דְמֵאִיר עֲנֵנִי, אֱלָהָא דְמֵאִיר עֲנֵנִי, אֱלָהָא דְמֵאִיר עֲנֵנִי — בִּזְכוּת רַבִּי מֵאִיר בַּעַל הַנֵּס תְּזַכֵּנִי לְזִוּוּגִי הָרָאוּי לִי, וְתִשְׁמְעֵנִי וְתַעֲנֵנִי בְּעֵת צָרָתִי. וְכַשֵּׁם שֶׁשָּׁמַעְתָּ תְּפִלָּתוֹ שֶׁל רַבִּי מֵאִיר וְעָשִׂיתָ לוֹ נֵס — כָּךְ תַּעֲשֶׂה עִמִּי נֵס וְתוֹשִׁיעֵנִי בִּזְכוּתוֹ. אָמֵן.</div></div><h2 style=\"text-align:center;color:#0891b2;font-size:1.35em;font-weight:900;margin:2rem 0 1rem;border-bottom:3px solid currentColor;padding-bottom:0.5rem;\">👶 בנים וזרע של קיימא</h2><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #0891b2;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#0891b2;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">תפילת חנה</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 שמואל א, פרק א-ב — תפילתה של חנה בשילה</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> סגולה מעולה לנשים המתפללות לזרע של קיימא.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">וְהִיא מָרַת נָפֶשׁ וַתִּתְפַּלֵּל עַל ה' וּבָכֹה תִבְכֶּה. וַתִּדֹּר נֶדֶר וַתֹּאמַר: ה' צְבָאוֹת אִם רָאֹה תִרְאֶה בָּעֳנִי אֲמָתֶךָ וּזְכַרְתַּנִי וְלֹא תִשְׁכַּח אֶת אֲמָתֶךָ, וְנָתַתָּה לַאֲמָתְךָ זֶרַע אֲנָשִׁים — וּנְתַתִּיו לַה' כָּל יְמֵי חַיָּיו, וּמוֹרָה לֹא יַעֲלֶה עַל רֹאשׁוֹ. וְחַנָּה הִיא מְדַבֶּרֶת עַל לִבָּהּ, רַק שְׂפָתֶיהָ נָּעוֹת וְקוֹלָהּ לֹא יִשָּׁמֵעַ. (לאמירה כפי שמופיע בכתוב).</div></div><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #0891b2;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#0891b2;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">שיר המעלות לבת ציון — מזמור קכ\"ז</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 תהלים — סגולה גדולה ללידה ולגידול בנים</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> לומר במהלך ההריון בכל יום. נוהגים לתלות מזמור זה בחדר היולדת.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">שִׁיר הַמַּעֲלוֹת לִשְׁלֹמֹה: אִם ה' לֹא יִבְנֶה בַיִת שָׁוְא עָמְלוּ בוֹנָיו בּוֹ. אִם ה' לֹא יִשְׁמָר עִיר שָׁוְא שָׁקַד שׁוֹמֵר. שָׁוְא לָכֶם מַשְׁכִּימֵי קוּם מְאַחֲרֵי שֶׁבֶת אֹכְלֵי לֶחֶם הָעֲצָבִים כֵּן יִתֵּן לִידִידוֹ שֵׁנָא. הִנֵּה נַחֲלַת ה' בָּנִים שָׂכָר פְּרִי הַבָּטֶן. כְּחִצִּים בְּיַד גִּבּוֹר כֵּן בְּנֵי הַנְּעוּרִים. אַשְׁרֵי הַגֶּבֶר אֲשֶׁר מִלֵּא אֶת אַשְׁפָּתוֹ מֵהֶם, לֹא יֵבֹשׁוּ כִּי יְדַבְּרוּ אֶת אוֹיְבִים בַּשָּׁעַר.</div></div><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #0891b2;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#0891b2;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">תפילת אליעזר על יצחק</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 בראשית כ\"ד — תפילתו של אליעזר</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> סגולה לזיווג הגון לבנים ובנות, ולסיוע משמים בבחירת בן זוג.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">ה' אֱלֹהֵי אֲדֹנִי אַבְרָהָם הַקְרֵה נָא לְפָנַי הַיּוֹם וַעֲשֵׂה חֶסֶד עִם אֲדֹנִי אַבְרָהָם. הִנֵּה אָנֹכִי נִצָּב עַל עֵין הַמָּיִם וּבְנוֹת אַנְשֵׁי הָעִיר יֹצְאֹת לִשְׁאֹב מָיִם. וְהָיָה הַנַּעֲרָ אֲשֶׁר אֹמַר אֵלֶיהָ הַטִּי נָא כַדֵּךְ וְאֶשְׁתֶּה וְאָמְרָה שְׁתֵה וְגַם גְּמַלֶּיךָ אַשְׁקֶה — אֹתָהּ הֹכַחְתָּ לְעַבְדְּךָ לְיִצְחָק וּבָהּ אֵדַע כִּי עָשִׂיתָ חֶסֶד עִם אֲדֹנִי.</div></div><h2 style=\"text-align:center;color:#0e7490;font-size:1.35em;font-weight:900;margin:2rem 0 1rem;border-bottom:3px solid currentColor;padding-bottom:0.5rem;\">🛡️ שמירה ושמירת הדרך</h2><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #0e7490;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#0e7490;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">תפילת הדרך</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 נוסח קדום — נחלת הכלל</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נאמרת בעת היציאה לדרך אחרי שעוברים פרסה (כ-4 ק\"מ) מן העיר. כשאומרים — בלשון רבים.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">יְהִי רָצוֹן מִלְּפָנֶיךָ ה' אֱלֹהֵינוּ וֵאלֹהֵי אֲבוֹתֵינוּ שֶׁתּוֹלִיכֵנוּ לְשָׁלוֹם וְתַצְעִידֵנוּ לְשָׁלוֹם וְתַדְרִיכֵנוּ לְשָׁלוֹם וְתִסְמְכֵנוּ לְשָׁלוֹם וְתַגִּיעֵנוּ לִמְחוֹז חֶפְצֵנוּ לְחַיִּים וּלְשִׂמְחָה וּלְשָׁלוֹם, וְתַצִּילֵנוּ מִכַּף כָּל אוֹיֵב וְאוֹרֵב בַּדֶּרֶךְ וּמִכָּל מִינֵי פֻּרְעָנֻיּוֹת הַמִּתְרַגְּשׁוֹת לָבֹא לָעוֹלָם. וְתִשְׁלַח בְּרָכָה בְּכָל מַעֲשֵׂה יָדֵינוּ וְתִתְּנֵנוּ לְחֵן וּלְחֶסֶד וּלְרַחֲמִים בְּעֵינֶיךָ וּבְעֵינֵי כָל רוֹאֵינוּ. וְתִשְׁמַע קוֹל תְּחִנּוּנֵינוּ. כִּי אֵל שׁוֹמֵעַ תְּפִלָּה וְתַחֲנוּן אָתָּה. בָּרוּךְ אַתָּה ה' שׁוֹמֵעַ תְּפִלָּה.</div></div><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #0e7490;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#0e7490;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">שיר המעלות אשא עיני — מזמור קכ\"א</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 תהלים — שיר של שמירה</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> לומר 7 פעמים בכוונה, סגולה לשמירת הדרך ולשמירת הבית.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">שִׁיר לַמַּעֲלוֹת: אֶשָּׂא עֵינַי אֶל הֶהָרִים מֵאַיִן יָבֹא עֶזְרִי. עֶזְרִי מֵעִם ה' עֹשֵׂה שָׁמַיִם וָאָרֶץ. אַל יִתֵּן לַמּוֹט רַגְלֶךָ אַל יָנוּם שֹׁמְרֶךָ. הִנֵּה לֹא יָנוּם וְלֹא יִישָׁן שׁוֹמֵר יִשְׂרָאֵל. ה' שֹׁמְרֶךָ ה' צִלְּךָ עַל יַד יְמִינֶךָ. יוֹמָם הַשֶּׁמֶשׁ לֹא יַכֶּכָּה וְיָרֵחַ בַּלָּיְלָה. ה' יִשְׁמָרְךָ מִכָּל רָע יִשְׁמֹר אֶת נַפְשֶׁךָ. ה' יִשְׁמָר צֵאתְךָ וּבוֹאֶךָ מֵעַתָּה וְעַד עוֹלָם.</div></div><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #0e7490;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#0e7490;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">פסוקי שמירת הבית — אריז\"ל</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 מסורת מהאריז\"ל — סגולה לשמירת הבית מכל רע</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נוהגים לכתבם על קלף ולתלות בכניסה לבית, או לאמרם מדי ערב לפני השינה.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">ה' שׁוֹמְרֶךָ ה' צִלְּךָ עַל יַד יְמִינֶךָ (תהלים קכ\"א). אַל תִּירָא מִפַּחַד פִּתְאֹם וּמִשּׁוֹאַת רְשָׁעִים כִּי תָבֹא, עֻצוּ עֵצָה וְתֻפָר דַּבְּרוּ דָבָר וְלֹא יָקוּם כִּי עִמָּנוּ אֵל (משלי ג', ישעיהו ח'). הִנֵּה לֹא יָנוּם וְלֹא יִישָׁן שׁוֹמֵר יִשְׂרָאֵל. כִּי מַלְאָכָיו יְצַוֶּה לָּךְ לִשְׁמָרְךָ בְּכָל דְּרָכֶיךָ.</div></div><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #0e7490;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#0e7490;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">אנא בכוח — לשמירה</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 תפילה קדומה — תיקון לשמירה</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> לאמרה לפני יציאה לדרך, ובכל עת שצריך שמירה מיוחדת.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">אָנָּא בְּכֹחַ גְּדֻלַּת יְמִינְךָ — תַּתִּיר צְרוּרָה. סגולת \"אנא בכוח\" היא לפתיחת כל הצרורים והמכשולים בדרך. נוהגים לכוון על השם הקדוש של מ\"ב אותיות הנכלל בו, וכל המכוון בו זוכה לשמירה גמורה בכל אשר ילך. כך כתב הרמ\"ק בתומר דבורה.</div></div><h2 style=\"text-align:center;color:#6b21a8;font-size:1.35em;font-weight:900;margin:2rem 0 1rem;border-bottom:3px solid currentColor;padding-bottom:0.5rem;\">✨ כפרה ותשובה</h2><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #6b21a8;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#6b21a8;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">וידוי קצר — בכוונה</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 נוסח קדום שבסידור — חיד\"א ובן איש חי המליצו עליו</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נאמר בכל יום בנפילת אפים. סגולה לכפרה גמורה.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">אָנָּא ה', חָטָאתִי עָוִיתִי פָּשַׁעְתִּי לְפָנֶיךָ אֲנִי וּבֵיתִי. אָנָּא ה', כַּפֵּר נָא לַחֲטָאִים וְלָעֲוֹנוֹת וְלַפְּשָׁעִים שֶׁחָטָאתִי וְשֶׁעָוִיתִי וְשֶׁפָּשַׁעְתִּי לְפָנֶיךָ — אֲנִי וּבֵיתִי וּבְנֵי וּבְנוֹתַי וְכָל יִשְׂרָאֵל אַחֵינוּ. כַּכָּתוּב בְּתוֹרַת מֹשֶׁה עַבְדֶּךָ: \"כִּי בַיּוֹם הַזֶּה יְכַפֵּר עֲלֵיכֶם לְטַהֵר אֶתְכֶם, מִכֹּל חַטֹּאתֵיכֶם לִפְנֵי ה' תִּטְהָרוּ\".</div></div><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #6b21a8;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#6b21a8;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">תיקון חצות — קצר</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 מסורת מהאריז\"ל וקבלת הספרדים</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נאמר בליל חצות, או בכל עת שמרגישים צורך בתיקון. סגולה גדולה לבני עליה.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">יָשַׁבְתִּי בְּדָד וָאֶדֹּם, כִּי נָטַל עָלָי, יִתֵּן בֶּעָפָר פִּיהוּ אוּלַי יֵשׁ תִּקְוָה. עַל נַהֲרוֹת בָּבֶל שָׁם יָשַׁבְנוּ גַּם בָּכִינוּ בְּזָכְרֵנוּ אֶת צִיּוֹן. (מומלץ לאמרו במלואו מתוך הסידור — תהלים ע\"ט, קל\"ז, ועוד. נאמר בישיבה על הקרקע, או על מושב נמוך, באבל על חורבן בית המקדש).</div></div><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #6b21a8;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#6b21a8;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">ק\"ש שעל המיטה — וידוי</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 נוסח קדום שבסידור</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נאמרת לפני השינה. כל המקפיד עליה — סגולה לכפרה ולשמירה ממקרים לא טהורים.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">רִבּוֹנוֹ שֶׁל עוֹלָם, הֲרֵינִי מוֹחֵל לְכָל מִי שֶׁהִכְעִיס וְהִקְנִיט אוֹתִי אוֹ שֶׁחָטָא כְּנֶגְדִּי. בֵּין בְּגוּפִי בֵּין בְּמָמוֹנִי, בֵּין בִּכְבוֹדִי בֵּין בְּכָל אֲשֶׁר לִי. בֵּין בְּאֹנֶס בֵּין בְּרָצוֹן, בֵּין בְּשׁוֹגֵג בֵּין בְּמֵזִיד, בֵּין בְּדִבּוּר בֵּין בְּמַעֲשֶׂה, בֵּין בְּגִלְגּוּל זֶה בֵּין בְּגִלְגּוּל אַחֵר. וְלֹא יֵעָנֵשׁ שׁוּם אָדָם בְּסִבָּתִי. יְהִי רָצוֹן מִלְּפָנֶיךָ ה' אֱלֹהַי וֵאלֹהֵי אֲבוֹתַי שֶׁלֹּא אֶחֱטָא עוֹד וְלֹא אַכְעִיסְךָ, וּמַה שֶּׁחָטָאתִי לְפָנֶיךָ — מְחֹק בְּרַחֲמֶיךָ הָרַבִּים.</div></div><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #6b21a8;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#6b21a8;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">מודה אני — שחרית</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 נוסח חכמי ספרד — בעל \"סדר היום\"</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נאמר מיד עם הקיצה, סגולה לפתיחת היום בקדושה ובהודאה.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">מוֹדֶה אֲנִי לְפָנֶיךָ מֶלֶךְ חַי וְקַיָּם, שֶׁהֶחֱזַרְתָּ בִּי נִשְׁמָתִי בְּחֶמְלָה — רַבָּה אֱמוּנָתֶךָ. (כל היודע על תורת הגלגול והשבת הנשמה בכל יום — יודע כמה גדולה התודעה הזו: ה' נותן לאדם הזדמנות חדשה בכל בוקר. כך כתב בעל \"ייטב לב\" וה\"בית אהרן\" מקרלין).</div></div><h2 style=\"text-align:center;color:#15803d;font-size:1.35em;font-weight:900;margin:2rem 0 1rem;border-bottom:3px solid currentColor;padding-bottom:0.5rem;\">📿 עלייה רוחנית</h2><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #15803d;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#15803d;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">עשרה מזמורי תיקון הכללי</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 רבי נחמן מברסלב — \"ליקוטי מוהר\"ן\" ח\"ב, סימן צ\"ב</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> עשרת המזמורים: ט\"ז, ל\"ב, מ\"א, מ\"ב, נ\"ט, ע\"ז, צ, ק\"ה, קל\"ז, ק\"נ. סגולה לטהרה ולכל ישועה.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">תהלים ט\"ז (מכתם לדוד שמרני אל), ל\"ב (לדוד משכיל אשרי נשוי פשע), מ\"א (למנצח מזמור לדוד אשרי משכיל אל דל), מ\"ב (למנצח משכיל לבני קרח), נ\"ט (למנצח אל תשחת לדוד), ע\"ז (למנצח על ידותון לאסף), צ' (תפילה למשה איש האלהים), ק\"ה (הודו לה' קראו בשמו), קל\"ז (על נהרות בבל), ק\"נ (הללויה הללו אל בקדשו). מקובל לאמרם מתוך הסידור או התהילים, באטיות ובכוונה.</div></div><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #15803d;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#15803d;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">תפילת השלמה — בעש\"ט</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 הבעל שם טוב — נוסחים מצדיקי החסידות</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נאמרת בכל בוקר אחר תפילת שחרית, בתודה על השלמת התפילה.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">אֶת אֲשֶׁר חָסַרְתִּי בִּתְפִלָּתִי בְּכַוָּנָה — תְּמַלֵּא אַתָּה בְּרַחֲמֶיךָ הָרַבִּים. וְתַעֲלֶה תְפִלָּתִי לְפָנֶיךָ עִם תְּפִלַּת כָּל יִשְׂרָאֵל, וְתִתְעַטֵּף בִּפְאֵר תְּפִלּוֹתָם שֶׁל צַדִּיקֶיךָ אֲשֶׁר בְּדוֹרֵנוּ וּבְכָל הַדּוֹרוֹת. וְתִשְׁתַּלֵּם תְּפִלָּתִי לִרְצוֹנְךָ הַטּוֹב.</div></div><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #15803d;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#15803d;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">ברכות התורה — עיון בכוונה</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 מסורת חז\"ל — \"שלא ברכו בתורה תחילה\"</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> יש לאומרם בכוונה גדולה בכל בוקר. מי שלא מברך — נחשב שלא למד.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">בָּרוּךְ אַתָּה ה' אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם אֲשֶׁר קִדְּשָׁנוּ בְּמִצְוֹתָיו וְצִוָּנוּ עַל דִּבְרֵי תוֹרָה. וְהַעֲרֵב נָא ה' אֱלֹהֵינוּ אֶת דִּבְרֵי תוֹרָתְךָ בְּפִינוּ וּבְפִי עַמְּךָ בֵּית יִשְׂרָאֵל, וְנִהְיֶה אֲנַחְנוּ וְצֶאֱצָאֵינוּ וְצֶאֱצָאֵי עַמְּךָ בֵּית יִשְׂרָאֵל, כֻּלָּנוּ יוֹדְעֵי שְׁמֶךָ וְלוֹמְדֵי תוֹרָתֶךָ לִשְׁמָהּ. בָּרוּךְ אַתָּה ה' הַמְלַמֵּד תּוֹרָה לְעַמּוֹ יִשְׂרָאֵל.</div></div><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #15803d;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#15803d;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">התבודדות — דקה ביום</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 רבי נחמן מברסלב — \"ליקוטי מוהר\"ן\" קי\"ז</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> מסוגלת לקרבה לה' ולעלייה רוחנית מתמדת. אפילו דקה אחת ביום ניתנת לאדם להתבודד עם ה'.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">דרכו של רבי נחמן: לקבוע שעה מיוחדת ביום שבה האדם מדבר עם ה' בלשון פשוטה, באותה שפה שמדבר בה עם חברו. לפרוש את כל אשר על לבו — צרותיו, שמחותיו, חלומותיו. וכשמתחיל לדבר עם ה' — מתחיל ה' לדבר עמו. (אמירת הצדיק: \"שלוש שעות של תפילה ביום — סגולה לכל הישועות\").</div></div><h2 style=\"text-align:center;color:#7c3aed;font-size:1.35em;font-weight:900;margin:2rem 0 1rem;border-bottom:3px solid currentColor;padding-bottom:0.5rem;\">🍀 סגולות שונות</h2><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #7c3aed;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#7c3aed;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">סגולה לעין הרע — בני יוסף</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 מסורת קבלית מהאריז\"ל — \"בן פורת יוסף\"</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> אמירת הפסוקים 3 פעמים, סגולה לבטל כל עין רעה.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">בֵּן פֹּרָת יוֹסֵף בֵּן פֹּרָת עֲלֵי עָיִן בָּנוֹת צָעֲדָה עֲלֵי שׁוּר (בראשית מ\"ט). וְכַשֵּׁם שֶׁאֵין הָעַיִן שׁוֹלֶטֶת בְּזַרְעוֹ שֶׁל יוֹסֵף הַצַּדִּיק — כָּךְ אַל תִּשְׁלֹט עַיִן הָרָע בִּי וּבְכָל זַרְעִי וּבְכָל אֲשֶׁר לִי. אָמֵן.</div></div><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #7c3aed;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#7c3aed;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">סגולה לזיכרון — בעל \"כף החיים\"</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 מהבן איש חי וה\"כף החיים\" — אורח חיים סימן קכ\"ז</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> לומר בכל בוקר אחר תפילת שחרית. סגולה לחיזוק הזיכרון בתורה.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">אַתָּה חוֹנֵן לְאָדָם דַּעַת וּמְלַמֵּד לֶאֱנוֹשׁ בִּינָה. חָנֵּנוּ מֵאִתְּךָ דֵּעָה בִּינָה וְהַשְׂכֵּל. רִבּוֹנוֹ שֶׁל עוֹלָם, פְּתַח לִבִּי בְּתוֹרָתֶךָ, וְשִׂמְחָתֶךָ תַּסֵּב לִבִּי. וְכָל הַחוֹשְׁבִים עָלַי רָעָה — מְהֵרָה הָפֵר עֲצָתָם וְקַלְקֵל מַחֲשַׁבְתָּם.</div></div><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #7c3aed;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#7c3aed;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">סגולה לשלום בית</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 בעל \"כף החיים\" — או\"ח סי' ר\"מ; וב\"מתוק מדבש\" על הזוהר</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> הסגולה היא בשמירת קדושת הבית, ושמירת הברית. בנוסף, ישנן תפילות מיוחדות.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">יְהִי רָצוֹן מִלְּפָנֶיךָ אֲדוֹן הַשָּׁלוֹם מֶלֶךְ שֶׁהַשָּׁלוֹם שֶׁלּוֹ, שֶׁתָּשִׁים שָׁלוֹם וְאַחֲוָה בְּתוֹךְ בֵּיתִי וּבְתוֹךְ מִשְׁפַּחְתִּי. וְנִהְיֶה אֲנַחְנוּ וְזַרְעֵנוּ אַחֲרֵינוּ אֹהֲבֵי שָׁלוֹם וְרוֹדְפֵי שָׁלוֹם בֶּאֱמֶת וּבְלֵב שָׁלֵם, וְלֹא תִהְיֶה קְטָטָה וְלֹא טַעֲנָה בֵּינֵינוּ לְעוֹלָם. וְעַל יְדֵי שָׁלוֹם זֶה יִתְקַיֵּם בָּנוּ: \"ה' עֹז לְעַמּוֹ יִתֵּן ה' יְבָרֵךְ אֶת עַמּוֹ בַשָּׁלוֹם\".</div></div><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #7c3aed;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#7c3aed;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">סגולה נגד פחד — \"דקיקה דשמשון\"</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 מסורת קבלית — קמיע שמשון הגיבור (אריז\"ל)</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> לומר 3 פעמים בעת פחד או צרה.</div><div style=\"line-height:2;font-size:1em;color:#1e293b;\">יַעֲקֹב, יַעֲקֹב, יַעֲקֹב. שִׁמְךָ הַטּוֹב עָלַי. ה' עִמִּי לֹא אִירָא — מַה יַּעֲשֶׂה לִי אָדָם. ה' לִי בְּעֹזְרָי — וַאֲנִי אֶרְאֶה בְשׂנְאָי. טוֹב לַחֲסוֹת בַּה' מִבְּטֹחַ בָּאָדָם, טוֹב לַחֲסוֹת בַּה' מִבְּטֹחַ בִּנְדִיבִים. (מקובל בכתבי האריז\"ל לאמרו בעת חרדה או חלום רע).</div></div><h2 style=\"text-align:center;color:#0f766e;font-size:1.35em;font-weight:900;margin:2rem 0 1rem;border-bottom:3px solid currentColor;padding-bottom:0.5rem;\">🕯️ סגולות נוספות מן הקדמונים</h2><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #0f766e;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#0f766e;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">תפילת השל\"ה הקדוש על הילדים</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 רבי ישעיה הלוי הורוביץ — \"שני לוחות הברית\" (נהוג לאמרה בערב ראש חודש סיוון, וטובה בכל עת)</p><p style=\"line-height:2;margin:0;\">אַתָּה הוּא יְהֹוָה אֱלֹהֵינוּ עַד שֶׁלֹּא בָרָאתָ הָעוֹלָם, וְאַתָּה הוּא אֱלֹהֵינוּ מִשֶּׁבָּרָאתָ הָעוֹלָם, וּמֵעוֹלָם וְעַד עוֹלָם אַתָּה אֵל... וּבְכֵן יְהִי רָצוֹן מִלְּפָנֶיךָ יְהֹוָה אֱלֹהֵינוּ וֵאלֹהֵי אֲבוֹתֵינוּ, שֶׁתְּחוֹנֵן אוֹתִי (ואת בעלי/אשתי) וְאֶת כָּל יוֹצְאֵי חֲלָצַי בְּבָנִים וּבְבָנוֹת, וְתִפְקְדֵנִי בְּזֶרַע קֹדֶשׁ, וְשֶׁיִּהְיוּ בָּנַי אוֹהֲבֵי ה', יִרְאֵי אֱלֹהִים, אַנְשֵׁי אֱמֶת, זֶרַע קֹדֶשׁ, בַּה' דְּבֵקִים, וּמְאִירִים אֶת הָעוֹלָם בַּתּוֹרָה וּבְמַעֲשִׂים טוֹבִים וּבְכָל מְלֶאכֶת עֲבוֹדַת הַבּוֹרֵא... וְתֵן לָהֶם בְּרִיאוּת וְכָבוֹד וָכֹחַ, וְתֵן לָהֶם קוֹמָה וְיֹפִי וְחֵן וָחֶסֶד, וְתִהְיֶה אַהֲבָה וְאַחְוָה וְשָׁלוֹם בֵּינֵיהֶם... וְיִהְיוּ לְרָצוֹן אִמְרֵי פִי וְהֶגְיוֹן לִבִּי לְפָנֶיךָ, ה' צוּרִי וְגֹאֲלִי.</p></div><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #0f766e;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#0f766e;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">אָנָּא בְּכֹחַ</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 מיוחס לרבי נחוניא בן הקנה — סגולה גדולה לאמרה בכוונה, ובפרט בשעת צרה ובקשה</p><p style=\"line-height:2.2;margin:0;text-align:center;\">אָנָּא בְּכֹחַ גְּדֻלַּת יְמִינְךָ תַּתִּיר צְרוּרָה:<br>קַבֵּל רִנַּת עַמְּךָ, שַׂגְּבֵנוּ טַהֲרֵנוּ נוֹרָא:<br>נָא גִבּוֹר, דּוֹרְשֵׁי יִחוּדְךָ כְּבָבַת שָׁמְרֵם:<br>בָּרְכֵם טַהֲרֵם, רַחֲמֵי צִדְקָתְךָ תָּמִיד גָּמְלֵם:<br>חֲסִין קָדוֹשׁ, בְּרוֹב טוּבְךָ נַהֵל עֲדָתֶךָ:<br>יָחִיד גֵּאֶה, לְעַמְּךָ פְּנֵה, זוֹכְרֵי קְדֻשָּׁתֶךָ:<br>שַׁוְעָתֵנוּ קַבֵּל וּשְׁמַע צַעֲקָתֵנוּ, יוֹדֵעַ תַּעֲלוּמוֹת:<br><span style=\"font-size:0.85em;\">(בלחש: בָּרוּךְ שֵׁם כְּבוֹד מַלְכוּתוֹ לְעוֹלָם וָעֶד)</span></p></div><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #0f766e;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#0f766e;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">סגולת פיטום הקטורת</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 זוהר הקדוש (פרשת וירא) • כף החיים (סי' קלב) — סגולה לפרנסה, לשמירה ולביטול גזרות</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> אמרו בכוונה את פרשת פיטום הקטורת (הנדפסת בכל סידור, בסוף התפילה) — בבוקר ובערב. כתב הזוהר הקדוש שאמירתה מבטלת מגפות וגזרות רעות, ומסוגלת לפרנסה.</div><p style=\"line-height:2;margin:0;\">אַתָּה הוּא יְהֹוָה אֱלֹהֵינוּ שֶׁהִקְטִירוּ אֲבוֹתֵינוּ לְפָנֶיךָ אֶת קְטֹרֶת הַסַּמִּים בִּזְמַן שֶׁבֵּית הַמִּקְדָּשׁ הָיָה קַיָּם, כַּאֲשֶׁר צִוִּיתָ אוֹתָם עַל יְדֵי מֹשֶׁה נְבִיאֶךָ... תָּנוּ רַבָּנָן: פִּטּוּם הַקְּטֹרֶת כֵּיצַד? שְׁלֹשׁ מֵאוֹת וְשִׁשִּׁים וּשְׁמוֹנָה מָנִים הָיוּ בָהּ... (המשך הפרשה — בסידור, בסוף תפילת שחרית)</p></div><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #0f766e;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#0f766e;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">פרשת המן — סגולה לפרנסה</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 ירושלמי ברכות • רבי מנחם מנדל מרימנוב — הבטיח שהאומרה לא יחסר לחמו</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> קוראים את פרשת המן (שמות טז, ד–לו) שניים מקרא ואחד תרגום. רבי מנחם מנדל מרימנוב הנהיג לאמרה ביום שלישי של פרשת בשלח, וטוב לאמרה בכל יום. העיקר — להתבונן שהפרנסה כולה מאת ה', כמן שירד דבר יום ביומו.</div><p style=\"line-height:2;margin:0;\">וַיֹּאמֶר יְהֹוָה אֶל מֹשֶׁה, הִנְנִי מַמְטִיר לָכֶם לֶחֶם מִן הַשָּׁמָיִם; וְיָצָא הָעָם וְלָקְטוּ דְּבַר יוֹם בְּיוֹמוֹ, לְמַעַן אֲנַסֶּנּוּ הֲיֵלֵךְ בְּתוֹרָתִי אִם לֹא... (ההמשך — בחומש שמות פרק טז, ובסידורים)</p></div><div style=\"background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-right:5px solid #0f766e;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(124,58,237,0.08);\"><h3 style=\"color:#0f766e;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">סגולת אמירת \"נשמת כל חי\"</h3><p style=\"font-size:0.83em;color:#64748b;margin:0 0 0.7rem;font-style:italic;\">📜 רבי יהודה החסיד • החתם סופר — סגולה נפלאה לישועה, ונהגו לקבל לאמרה בהודאה על הנס</p><div style=\"background:#fef3c7;padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> הנמצא בצרה יקבל על עצמו שכשייוושע יאמר \"נשמת כל חי\" (הנדפס בסידור, בתפילת שבת) בפני עשרה ובהודאה — וכתבו הקדמונים שזו סגולה בדוקה לישועה.</div><p style=\"line-height:2;margin:0;\">נִשְׁמַת כָּל חַי תְּבָרֵךְ אֶת שִׁמְךָ יְהֹוָה אֱלֹהֵינוּ, וְרוּחַ כָּל בָּשָׂר תְּפָאֵר וּתְרוֹמֵם זִכְרְךָ מַלְכֵּנוּ תָּמִיד. מִן הָעוֹלָם וְעַד הָעוֹלָם אַתָּה אֵל... (ההמשך — בסידור, בתפילת שחרית של שבת)</p></div><div style=\"text-align:center;margin-top:2rem;padding:1rem;background:#fef3c7;border-radius:0.7rem;color:#78350f;font-size:0.9em;\"><strong>הערה כללית:</strong> כל הסגולות והתפילות לקוחות מן המקורות הקדומים של צדיקי ישראל. הסגולה הגדולה ביותר היא תפילה בכוונה, אמונה תמה, ותשובה שלמה.</div></div>"}
   ];
+
+  // ── לוח ברכות הנהנין — נבנה מנתונים מובנים (חיפוש פנימי + כרטיסים) ──
+  (function buildBirkotBoard() {
+    var C = { hamotzi: "#b45309", mezonot: "#d97706", gefen: "#7c3aed", etz: "#16a34a", adama: "#0d9488", shehakol: "#2563eb" };
+    function chip(txt, color) {
+      return "<span style=\"display:inline-block;background:" + color + "18;color:" + color + ";border:1.5px solid " + color + "55;border-radius:999px;padding:0.18rem 0.7rem;font-size:0.82em;font-weight:900;white-space:nowrap;\">" + txt + "</span>";
+    }
+    var R = {
+      hamotzi: ["הַמּוֹצִיא", C.hamotzi], mezonot: ["בּוֹרֵא מִינֵי מְזוֹנוֹת", C.mezonot],
+      gefen: ["בּוֹרֵא פְּרִי הַגֶּפֶן", C.gefen], etz: ["בּוֹרֵא פְּרִי הָעֵץ", C.etz],
+      adama: ["בּוֹרֵא פְּרִי הָאֲדָמָה", C.adama], shehakol: ["שֶׁהַכֹּל", C.shehakol]
+    };
+    var A = {
+      bhm: ["בִּרְכַּת הַמָּזוֹן", C.hamotzi], michya: ["עַל הַמִּחְיָה", C.mezonot],
+      gefen: ["עַל הַגֶּפֶן", C.gefen], etz: ["עַל הָעֵץ", C.etz], nefashot: ["בּוֹרֵא נְפָשׁוֹת", C.shehakol]
+    };
+    // [שם, ברכה ראשונה, ברכה אחרונה, הערה?]
+    var CATS = [
+      { he: "🍞 לחם ומיני דגן", items: [
+        ["לחם, פיתה, חלה, לחמנייה, בגט", "hamotzi", "bhm"],
+        ["מצה", "hamotzi", "bhm"],
+        ["עוגות ועוגיות (פת הבאה בכיסנין)", "mezonot", "michya"],
+        ["בורקס, מלאווח, ג'חנון", "mezonot", "michya"],
+        ["קרקרים, ביסקוויטים, צנימים", "mezonot", "michya"],
+        ["פסטה, מקרוני, אטריות", "mezonot", "michya"],
+        ["קוסקוס, פתיתים, בורגול", "mezonot", "michya"],
+        ["דייסת סולת / קוואקר (שיבולת שועל מבושלת)", "mezonot", "michya"],
+        ["שקדי מרק", "mezonot", "michya"],
+        ["וופלים", "mezonot", "michya"],
+        ["גרנולה ודגני בוקר מחמשת מיני דגן", "mezonot", "michya"],
+        ["אורז מבושל", "mezonot", "nefashot", "כך פסקו הבן איש חי (פנחס, שנה ראשונה) והרב מרדכי אליהו: ברכה ראשונה מזונות — וברכה אחרונה בורא נפשות"],
+        ["פריכיות אורז", "mezonot", "nefashot", "כדין אורז; ויש שנהגו שהכל — והמברך שהכל יש לו על מה לסמוך"],
+        ["קובה (בשר בציפוי בורגול/סולת)", "mezonot", "michya"],
+        ["שניצל בציפוי פירורי לחם", "shehakol", "nefashot", "אם הציפוי דק וטפל לעוף — שהכל על הכל; אם הציפוי עבה וניכר ובא לטעם — מברכים גם מזונות"],
+        ["דגני בוקר מקמח תירס/אורז (קורנפלקס)", "shehakol", "nefashot", "העשויים מקמח תירס — שהכל; מאורז שלם — מזונות"]
+      ]},
+      { he: "🍷 יין ומשקאות", items: [
+        ["יין ומיץ ענבים", "gefen", "gefen"],
+        ["מים", "shehakol", "nefashot", "מברכים רק כששותה לצמאו"],
+        ["מיץ תפוזים ושאר מיצי פירות", "shehakol", "nefashot"],
+        ["קפה, תה, שוקו", "shehakol", "nefashot"],
+        ["בירה, ויסקי, ערק ושאר משקאות חריפים", "shehakol", "nefashot"],
+        ["משקאות קלים ומוגזים", "shehakol", "nefashot"]
+      ]},
+      { he: "🍇 שבעת המינים", items: [
+        ["ענבים", "etz", "etz", "משבעת המינים — ברכה אחרונה \"על העץ\""],
+        ["תאנים", "etz", "etz"],
+        ["רימונים", "etz", "etz"],
+        ["זיתים", "etz", "etz"],
+        ["תמרים", "etz", "etz"],
+        ["צימוקים", "etz", "etz", "כדין ענבים"]
+      ]},
+      { he: "🍎 פירות העץ", items: [
+        ["תפוח, אגס, חבוש", "etz", "nefashot"],
+        ["תפוז, קלמנטינה, לימון, אשכולית, פומלה", "etz", "nefashot"],
+        ["אפרסק, משמש, שזיף, נקטרינה", "etz", "nefashot"],
+        ["מנגו", "etz", "nefashot"],
+        ["אבוקדו", "etz", "nefashot"],
+        ["גויאבה", "etz", "nefashot"],
+        ["דובדבן, גודגדן", "etz", "nefashot"],
+        ["אפרסמון", "etz", "nefashot"],
+        ["ליצ'י, פיטאיה", "etz", "nefashot"],
+        ["שקדים, אגוזי מלך, קשיו, פיסטוק, לוז, פקאן", "etz", "nefashot"],
+        ["קוקוס", "etz", "nefashot"],
+        ["חרוב", "etz", "nefashot"],
+        ["קיווי", "etz", "nefashot", "כך דעת הרב מרדכי אליהו; ויש המברכים האדמה — והמברך האדמה יש לו על מה לסמוך"],
+        ["פירות מסוכרים / מיובשים", "etz", "nefashot", "כברכת הפרי הטרי"]
+      ]},
+      { he: "🍌 פירות האדמה וירקות", items: [
+        ["בננה", "adama", "nefashot"],
+        ["אננס", "adama", "nefashot"],
+        ["פפאיה", "adama", "nefashot", "כך פסקו פוסקי הספרדים, שהעץ מתחלף כל שנה"],
+        ["תות שדה", "adama", "nefashot"],
+        ["אבטיח, מלון", "adama", "nefashot"],
+        ["עגבנייה, מלפפון, פלפל", "adama", "nefashot"],
+        ["גזר, סלק, צנון, צנונית", "adama", "nefashot"],
+        ["חסה, כרוב, כרובית, ברוקולי", "adama", "nefashot"],
+        ["תפוח אדמה, בטטה", "adama", "nefashot"],
+        ["בצל, שום (מבושלים בתבשיל)", "adama", "nefashot"],
+        ["קישוא, חציל, דלעת", "adama", "nefashot"],
+        ["תירס", "adama", "nefashot"],
+        ["אפונה, שעועית, חומוס (גרגירים)", "adama", "nefashot"],
+        ["בוטנים", "adama", "nefashot"],
+        ["גרעינים (חמנייה, דלעת), גרעיני אבטיח", "adama", "nefashot"],
+        ["פופקורן", "adama", "nefashot"],
+        ["צ'יפס ותפוצ'יפס", "adama", "nefashot", "כשניכרת צורת תפוח האדמה — האדמה"],
+        ["חמוצים (מלפפון חמוץ וכד')", "adama", "nefashot"]
+      ]},
+      { he: "🍫 שהכל — בשר, חלב, ממתקים ועוד", items: [
+        ["בשר, עוף", "shehakol", "nefashot"],
+        ["דגים", "shehakol", "nefashot"],
+        ["ביצים", "shehakol", "nefashot"],
+        ["חלב, גבינות, יוגורט, מעדני חלב", "shehakol", "nefashot"],
+        ["שוקולד", "shehakol", "nefashot", "כך המנהג פשוט אצל הספרדים"],
+        ["גלידה, ארטיק", "shehakol", "nefashot"],
+        ["סוכריות, מסטיק, חלווה", "shehakol", "nefashot"],
+        ["במבה וחטיפי תירס תפוחים", "shehakol", "nefashot"],
+        ["פטריות", "shehakol", "nefashot", "אינן יונקות מן הקרקע כצמח"],
+        ["טופו ומוצרי סויה מעובדים", "shehakol", "nefashot"],
+        ["מרק צח (בלי ירקות ניכרים)", "shehakol", "nefashot"],
+        ["דבש", "shehakol", "nefashot"],
+        ["סושי", "shehakol", "nefashot", "האורז עיקר? אם האורז ניכר ועיקר — מזונות ובורא נפשות; דג בלבד — שהכל"]
+      ]}
+    ];
+    var html =
+      "<div style=\"text-align:right;direction:rtl;line-height:1.9;color:#1e293b;\">" +
+      // חיפוש חכם — דביק בראש הלוח
+      "<div style=\"position:sticky;top:0;z-index:6;background:rgba(250,249,246,0.97);backdrop-filter:blur(6px);padding:0.6rem 0.2rem;margin:0 0 0.8rem;border-bottom:1.5px solid rgba(180,83,9,0.25);\">" +
+        "<input type=\"search\" id=\"bb-search\" oninput=\"window._bbFilter(this.value)\" placeholder=\"🔍 חפשו כל מאכל — למשל: אורז, בננה, שוקולד...\" style=\"width:100%;box-sizing:border-box;padding:0.65rem 1.1rem;border-radius:1rem;border:1.5px solid rgba(180,83,9,0.4);background:#fff;font-size:0.95rem;font-weight:600;direction:rtl;outline:none;box-shadow:0 3px 10px rgba(180,83,9,0.12);\">" +
+        "<p id=\"bb-count\" style=\"margin:0.3rem 0 0;font-size:0.72rem;color:#b45309;font-weight:700;text-align:center;\"></p>" +
+      "</div>" +
+      // מקרא
+      "<div style=\"display:flex;flex-wrap:wrap;gap:0.35rem;justify-content:center;margin-bottom:1.2rem;\">" +
+        chip("המוציא", C.hamotzi) + chip("מזונות", C.mezonot) + chip("הגפן", C.gefen) +
+        chip("העץ", C.etz) + chip("האדמה", C.adama) + chip("שהכל", C.shehakol) +
+      "</div>";
+    CATS.forEach(function(cat) {
+      html += "<h2 class=\"bb-cat\" style=\"text-align:center;color:#b45309;font-size:1.25em;font-weight:900;margin:1.6rem 0 0.8rem;border-bottom:2px solid rgba(180,83,9,0.4);padding-bottom:0.4rem;\">" + cat.he + "</h2>";
+      cat.items.forEach(function(it) {
+        var r = R[it[1]], a = A[it[2]];
+        var searchStr = (it[0] + " " + r[0] + " " + a[0] + " " + (it[3] || "")).replace(/[֑-ֽֿ-ׇ]/g, "").toLowerCase();
+        html += "<div class=\"bb-item\" data-s=\"" + searchStr.replace(/"/g, "") + "\" style=\"background:#fff;border:1.5px solid rgba(0,0,0,0.07);border-right:5px solid " + r[1] + ";border-radius:0.85rem;padding:0.7rem 0.9rem;margin-bottom:0.55rem;box-shadow:0 2px 6px rgba(0,0,0,0.04);\">" +
+          "<div style=\"font-weight:900;font-size:1em;margin-bottom:0.4rem;\">" + it[0] + "</div>" +
+          "<div style=\"display:flex;flex-wrap:wrap;gap:0.4rem;align-items:center;\">" +
+            "<span style=\"font-size:0.7em;color:#64748b;font-weight:700;\">ברכה ראשונה:</span>" + chip(r[0], r[1]) +
+            "<span style=\"font-size:0.7em;color:#64748b;font-weight:700;margin-right:0.3rem;\">ברכה אחרונה:</span>" + chip(a[0], a[1]) +
+          "</div>" +
+          (it[3] ? "<div style=\"margin-top:0.45rem;font-size:0.78em;color:#78350f;background:#fef3c7;border-radius:0.5rem;padding:0.35rem 0.6rem;line-height:1.6;\">💡 " + it[3] + "</div>" : "") +
+        "</div>";
+      });
+    });
+    html +=
+      "<h2 class=\"bb-cat\" style=\"text-align:center;color:#b45309;font-size:1.25em;font-weight:900;margin:1.6rem 0 0.8rem;border-bottom:2px solid rgba(180,83,9,0.4);padding-bottom:0.4rem;\">📏 כללים ושיעורים</h2>" +
+      "<div class=\"bb-item\" data-s=\"שיעור כזית כזיית ברכה אחרונה שיעורים רביעית\" style=\"background:#fff;border:1.5px solid rgba(0,0,0,0.07);border-right:5px solid #b45309;border-radius:0.85rem;padding:0.85rem 1rem;margin-bottom:0.55rem;line-height:2;\">" +
+        "✦ ברכה אחרונה מברכים רק אם אכל <b>כזית</b> (כ־27 גרם) בתוך כ־4 דקות, או שתה <b>רביעית</b> (כ־81 מ\"ל) בבת אחת.<br>" +
+        "✦ <b>ספק ברכות להקל</b> — ובכל ספק אפשר לברך שהכל, ש\"שהכל\" פוטר הכל בדיעבד.<br>" +
+        "✦ סדר קדימה בברכות: המוציא, מזונות, הגפן, העץ, האדמה, שהכל.<br>" +
+        "✦ מאכל עיקר וטפל — מברכים על העיקר ופוטרים את הטפל.<br>" +
+        "✦ להלכה למעשה בכל שאלה — יש לפנות למורה הוראה." +
+      "</div></div>";
+    // הזרקת הלוח לתוך רשומת הספר
+    for (var bi = 0; bi < BOOKS.length; bi++) {
+      if (BOOKS[bi].id === "birkot-board") { BOOKS[bi].content = html; break; }
+    }
+    // חיפוש חכם בתוך הלוח — כל מילות החיפוש חייבות להופיע
+    window._bbFilter = function(q) {
+      var norm = String(q || "").replace(/[֑-ֽֿ-ׇ]/g, "").toLowerCase().trim();
+      var words = norm.split(/\s+/).filter(Boolean);
+      var items = document.querySelectorAll(".bb-item");
+      var cats = document.querySelectorAll(".bb-cat");
+      var shown = 0;
+      items.forEach(function(el) {
+        var s = el.getAttribute("data-s") || "";
+        var ok = true;
+        for (var w = 0; w < words.length; w++) if (s.indexOf(words[w]) < 0) { ok = false; break; }
+        el.style.display = ok ? "" : "none";
+        if (ok) shown++;
+      });
+      // הסתרת קטגוריות ריקות
+      cats.forEach(function(h) {
+        var any = false, sib = h.nextElementSibling;
+        while (sib && !sib.classList.contains("bb-cat")) {
+          if (sib.classList.contains("bb-item") && sib.style.display !== "none") { any = true; break; }
+          sib = sib.nextElementSibling;
+        }
+        h.style.display = any ? "" : "none";
+      });
+      var cnt = document.getElementById("bb-count");
+      if (cnt) cnt.textContent = words.length ? "נמצאו " + shown + " מאכלים" : "";
+    };
+  })();
 
   // ── Font size ──
   function applyFS() {
     var c = document.getElementById("sn-reader-content");
-    if (c) c.style.fontSize = _fs + "%";
+    if (c) c.style.setProperty("font-size", _fs + "%", "important");
     var l = document.getElementById("sn-fs-label");
     if (l) l.textContent = _fs + "%";
     if (window._syncAutoScrollSpeedDisplays) window._syncAutoScrollSpeedDisplays();
@@ -24126,7 +24404,10 @@ function openSefarimNosafimPage(_pageMode) {
     if (!p) return;
     var hidden = !p.style.display || p.style.display === "none";
     p.style.display = hidden ? "block" : "none";
-    if (hidden) buildBMPanel();
+    if (hidden) {
+      buildBMPanel();
+      if (typeof window.showToast === "function") window.showToast("📌 סימניות ומיקומים אחרונים", "info", 2000);
+    }
   };
 
   // ── Book-specific bookmarks panel (shown inside subbook/sections/reader views) ──
@@ -24157,7 +24438,10 @@ function openSefarimNosafimPage(_pageMode) {
     if (!p || !_bk) return;
     var hidden = !p.style.display || p.style.display === "none";
     p.style.display = hidden ? "block" : "none";
-    if (hidden) buildBookBMPanel();
+    if (hidden) {
+      buildBookBMPanel();
+      if (typeof window.showToast === "function") window.showToast("📌 סימניות ומיקומים אחרונים", "info", 2000);
+    }
   };
   window._snBookBMGoto = function(key) {
     if (!_bk) return;
@@ -24670,6 +24954,42 @@ function openSefarimNosafimPage(_pageMode) {
       "<p style=\"line-height:2.4;text-align:center;\">" + book.content + "</p>" +
       "<div style=\"margin-top:2rem;padding-top:1rem;border-top:1px solid rgba(0,0,0,0.1);text-align:center;\"><span style=\"color:#94a3b8;font-size:0.7rem;\">" + book.credit + "</span></div>" +
       "<div style=\"height:2rem;\"></div></div>";
+    // ── תוכן עניינים — לספרים ארוכים עם כותרות (סגולות ותפילות וכד') ──
+    try {
+      var heads = content.querySelectorAll("h2, h3");
+      if (heads.length >= 4) {
+        var tocItems = [];
+        heads.forEach(function(h, hi) {
+          h.id = "sn-hc-head-" + hi;
+          tocItems.push({
+            label: (h.tagName === "H2" ? "" : "· ") + h.textContent.trim(),
+            _hid: "sn-hc-head-" + hi
+          });
+        });
+        var tocBtn = document.createElement("button");
+        tocBtn.id = "sn-hc-toc-btn";
+        tocBtn.type = "button";
+        tocBtn.style.cssText = "display:flex;align-items:center;justify-content:center;gap:0.45rem;margin:0 auto 1.25rem;padding:0.6rem 1.4rem;border-radius:999px;border:1.5px solid " + book.color + "55;background:linear-gradient(135deg," + book.color + "14," + book.color + "28);color:" + book.color + ";font-weight:900;font-size:0.9rem;cursor:pointer;box-shadow:0 3px 10px " + book.color + "22;";
+        tocBtn.innerHTML = "📑 תוכן העניינים <span style=\"font-size:0.72rem;font-weight:700;opacity:0.75;\">(" + heads.length + " פרקים)</span>";
+        tocBtn.addEventListener("click", function() {
+          if (typeof window._openChapterNavPopup === "function") {
+            window._openChapterNavPopup({
+              title: "📑 " + book.he,
+              subtitle: "בחרו נושא כדי לקפוץ אליו",
+              color: book.color,
+              items: tocItems.map(function(it) {
+                return { label: it.label, onClick: function() {
+                  var el = document.getElementById(it._hid);
+                  if (el) el.scrollIntoView({ block: "start", behavior: "smooth" });
+                } };
+              })
+            });
+          }
+        });
+        var inner = content.firstChild;
+        if (inner) inner.insertBefore(tocBtn, inner.firstChild);
+      }
+    } catch (eToc) {}
     content.scrollTop = 0;
     showView("sn-reader-view");
     pushModalState("sn-reader-pane");
@@ -24730,75 +25050,93 @@ function openSefarimNosafimPage(_pageMode) {
     var words = _snTokenize(q);
     if (words.length === 0) return;
     var booksToSearch = _searchBid === "all" ? _modeBooks() : BOOKS.filter(function(b){ return b.id === _searchBid; });
-    for (var bi = 0; bi < booksToSearch.length; bi++) {
-      if (sig.aborted) break;
-      var book = booksToSearch[bi];
-      if (book.type === "hardcoded") {
-        var txt = (book.intro + " " + book.content).replace(/<[^>]*>/g, "");
-        var txtNorm = _snNormalize(txt);
-        if (_snSmartMatch(txtNorm, words)) {
-          total++;
-          if (re) {
-            var btn = document.createElement("button");
-            btn.style.cssText = "display:block;width:100%;text-align:right;padding:0.75rem 1rem;border:none;border-bottom:1px solid rgba(0,0,0,0.07);cursor:pointer;background:none;direction:rtl;";
-            btn.innerHTML = "<span style=\"color:"+book.color+";font-size:0.75rem;font-weight:900;\">"+book.he+"</span><p style=\"margin:0.2rem 0 0;font-size:0.83rem;color:#374151;line-height:1.5;\">"+_snSmartSnip(txt,words)+"</p>";
-            (function(bk, qwords){ btn.onclick = function(){
-              window._snPendingHighlight = qwords;
-              // ניקוי חיפוש ללא history.back כדי למנוע race condition
-              if (_sAb) { _sAb.abort(); _sAb = null; }
-              clearTimeout(_sDeb);
-              var ovs = document.getElementById("sn-search-view");
-              if (ovs) ovs.style.display = "none";
-              if (_activeModals[_activeModals.length-1] === "sn-search-view") {
-                _activeModals.pop();
-                try { history.replaceState({modal:"sn-modal"}, ""); } catch(e){}
-              }
-              _bk=bk; _sec=0; openHardcoded(bk);
-            }; })(book, words.slice());
-            re.appendChild(btn);
-          }
-        }
-        continue;
+    // כרטיס תוצאה מעוצב
+    function resultCard(color, titleHtml, snipHtml, onClick) {
+      var btn = document.createElement("button");
+      btn.className = "sn-search-hit";
+      btn.style.cssText = "display:block;width:100%;text-align:right;padding:0.8rem 1rem;margin:0 0 0.6rem;border:1.5px solid rgba(0,0,0,0.07);border-right:5px solid " + color + ";border-radius:0.9rem;cursor:pointer;background:#fff;direction:rtl;box-shadow:0 2px 8px rgba(0,0,0,0.05);transition:transform 0.12s ease, box-shadow 0.12s ease;";
+      btn.onmouseenter = function(){ btn.style.transform = "translateY(-2px)"; btn.style.boxShadow = "0 6px 16px rgba(0,0,0,0.1)"; };
+      btn.onmouseleave = function(){ btn.style.transform = ""; btn.style.boxShadow = "0 2px 8px rgba(0,0,0,0.05)"; };
+      btn.innerHTML = "<span style=\"color:" + color + ";font-size:0.75rem;font-weight:900;\">" + titleHtml + "</span>" +
+        "<p style=\"margin:0.25rem 0 0;font-size:0.85rem;color:#374151;line-height:1.7;\">" + snipHtml + "</p>";
+      btn.onclick = onClick;
+      return btn;
+    }
+    // יציאה נקייה ממסך החיפוש (ללא history.back — מונע race condition)
+    function leaveSearchView() {
+      if (_sAb) { _sAb.abort(); _sAb = null; }
+      clearTimeout(_sDeb);
+      var ovs = document.getElementById("sn-search-view");
+      if (ovs) ovs.style.display = "none";
+      if (_activeModals[_activeModals.length-1] === "sn-search-view") {
+        _activeModals.pop();
+        try { history.replaceState({modal:"sn-modal"}, ""); } catch(e){}
       }
-      var subBooksToSearch = book.type === "multi" ? book.subBooks : [null];
-      for (var si = 0; si < subBooksToSearch.length; si++) {
-        if (sig.aborted) break;
-        var sb = subBooksToSearch[si];
+    }
+    // רשימת משימות שטוחה — כל סימן/פרק בנפרד, לסריקה מקבילית מהירה
+    var tasks = [];
+    booksToSearch.forEach(function(book) {
+      if (book.type === "hardcoded") { tasks.push({ book: book, hardcoded: true }); return; }
+      var subs = book.type === "multi" ? book.subBooks : [null];
+      subs.forEach(function(sb) {
         var sections = sb ? sb.sections : book.sections;
-        for (var p = 0; p < sections.length; p++) {
-          if (sig.aborted) break;
-          if (st) st.textContent = "מחפש ב" + book.he + (sb?" — "+sb.he:"") + "... ("+(p+1)+"/"+sections.length+")";
-          var he = await fetchSec(sections[p].ref, sig);
-          if (sig.aborted) break;
-          var secText = flatText(he).replace(/<[^>]*>/g, "");
-          var secNorm = _snNormalize(secText);
-          if (_snSmartMatch(secNorm, words)) {
-            total++;
-            if (re) {
-              var rbtn = document.createElement("button");
-              rbtn.style.cssText = "display:block;width:100%;text-align:right;padding:0.75rem 1rem;border:none;border-bottom:1px solid rgba(0,0,0,0.07);cursor:pointer;background:none;direction:rtl;transition:background 0.1s;";
-              rbtn.innerHTML = "<span style=\"color:"+book.color+";font-size:0.75rem;font-weight:900;\">"+book.he+(sb?" — "+sb.he:"")+" — "+sections[p].he+"</span>"+
-                "<p style=\"margin:0.2rem 0 0;font-size:0.83rem;color:#374151;line-height:1.5;\">"+_snSmartSnip(secText,words)+"</p>";
-              rbtn.onmouseenter = function(){ this.style.background="#f1f5f9"; };
-              rbtn.onmouseleave = function(){ this.style.background="none"; };
-              (function(cbk, csb, cp, qwords){ rbtn.onclick = function(){
-                window._snPendingHighlight = qwords;
-                if (_sAb) { _sAb.abort(); _sAb = null; }
-                clearTimeout(_sDeb);
-                var ovs = document.getElementById("sn-search-view");
-                if (ovs) ovs.style.display = "none";
-                if (_activeModals[_activeModals.length-1] === "sn-search-view") {
-                  _activeModals.pop();
-                  try { history.replaceState({modal:"sn-modal"}, ""); } catch(e){}
-                }
-                _bk=cbk; _sbk=csb; _sec=cp; window._snOpenSection(cp);
-              }; })(book,sb,p,words.slice());
-              re.appendChild(rbtn);
-            }
-          }
+        sections.forEach(function(sec, p) { tasks.push({ book: book, sb: sb, p: p, sec: sec }); });
+      });
+    });
+    var done = 0;
+    function updStatus() {
+      if (st && !sig.aborted) st.textContent = "🔍 נסרקו " + done + " מתוך " + tasks.length + " · נמצאו " + total + " תוצאות";
+    }
+    async function runTask(t) {
+      if (sig.aborted) return;
+      var book = t.book;
+      if (t.hardcoded) {
+        var txt = (book.intro + " " + book.content).replace(/<[^>]*>/g, "");
+        if (_snSmartMatch(_snNormalize(txt), words)) {
+          total++;
+          if (re) re.appendChild(resultCard(book.color, book.he, _snSmartSnip(txt, words), function() {
+            window._snPendingHighlight = words.slice();
+            leaveSearchView();
+            _bk = book; _sec = 0; openHardcoded(book);
+          }));
+        }
+        return;
+      }
+      var he = await fetchSec(t.sec.ref, sig);
+      if (sig.aborted) return;
+      // כל מילות החיפוש חייבות להופיע יחד באותה פסקה — לא כל מילה במקום אחר
+      var para = _snParaMatch(he, words);
+      if (para) {
+        total++;
+        var paraText = String(para).replace(/<[^>]*>/g, "");
+        if (re) {
+          (function(cbk, csb, cp, sec) {
+            re.appendChild(resultCard(book.color,
+              book.he + (csb ? " — " + csb.he : "") + " — " + sec.he,
+              _snSmartSnip(paraText, words),
+              function() {
+                window._snPendingHighlight = words.slice();
+                leaveSearchView();
+                _bk = cbk; _sbk = csb; _sec = cp; window._snOpenSection(cp);
+              }));
+          })(book, t.sb, t.p, t.sec);
         }
       }
     }
+    // מאגר עובדים מקבילי — פי כמה מהיר מסריקה טורית
+    var ti = 0;
+    async function worker() {
+      while (!sig.aborted) {
+        var t = tasks[ti++];
+        if (!t) return;
+        try { await runTask(t); } catch(e) {}
+        done++;
+        if (done % 4 === 0 || done === tasks.length) updStatus();
+      }
+    }
+    var workers = [];
+    for (var wk = 0; wk < Math.min(6, tasks.length); wk++) workers.push(worker());
+    await Promise.all(workers);
     if (!sig.aborted && (_searchBid === "all" || _searchBid === "__bih__")) {
       total = await _snSearchBenIshHai(words, sig, re, st, total, q);
     }
@@ -24980,10 +25318,11 @@ function openSefarimNosafimPage(_pageMode) {
       "</div>",
       "<div style=\"padding:0.6rem 1rem;border-bottom:1px solid rgba(0,0,0,0.07);flex-shrink:0;display:flex;flex-direction:column;gap:0.5rem;\">",
         "<select id=\"sn-search-book-sel\" style=\"width:100%;padding:0.4rem 0.75rem;border-radius:999px;border:1px solid rgba(0,0,0,0.15);background:#fff;color:#1e293b;font-size:0.85rem;direction:rtl;outline:none;cursor:pointer;\"></select>",
-        "<input id=\"sn-search-input\" type=\"search\" placeholder=\"הקלד לחיפוש — תוצאות מופיעות תוך כדי הקלדה\" oninput=\"window._snSearchInput(this.value);\" style=\"width:100%;box-sizing:border-box;padding:0.45rem 0.85rem;border-radius:999px;border:1px solid rgba(0,0,0,0.18);background:#fff;color:#1e293b;font-size:0.9rem;direction:rtl;outline:none;\"/>",
+        "<input id=\"sn-search-input\" type=\"search\" placeholder=\"🔍 הקלידו מילה או ביטוי — תוצאות תוך כדי הקלדה\" oninput=\"window._snSearchInput(this.value);\" style=\"width:100%;box-sizing:border-box;padding:0.65rem 1.1rem;border-radius:1rem;border:1.5px solid rgba(99,102,241,0.35);background:#fff;color:#1e293b;font-size:0.95rem;font-weight:600;direction:rtl;outline:none;box-shadow:0 3px 12px rgba(99,102,241,0.12);\"/>",
+        "<p style=\"color:#94a3b8;font-size:0.7rem;margin:0.15rem 0 0;text-align:center;\">💡 בחיפוש של כמה מילים — יוצגו רק קטעים שבהם כל המילים מופיעות יחד</p>",
       "</div>",
-      "<p id=\"sn-search-status\" style=\"color:#64748b;font-size:0.78rem;padding:0.3rem 1rem;margin:0;flex-shrink:0;min-height:1.5rem;\"></p>",
-      "<div id=\"sn-search-results\" style=\"overflow-y:auto;flex:1;direction:rtl;\"></div>",
+      "<p id=\"sn-search-status\" style=\"color:#6366f1;font-size:0.78rem;font-weight:700;padding:0.4rem 1rem;margin:0;flex-shrink:0;min-height:1.5rem;\"></p>",
+      "<div id=\"sn-search-results\" style=\"overflow-y:auto;flex:1;direction:rtl;padding:0.5rem 0.9rem 1.5rem;background:#f8fafc;\"></div>",
     "</div>",
     // Book-specific bookmarks floating panel (overlay on subbook/sections/reader views)
     "<div id=\"sn-book-bm-panel\" style=\"display:none;position:absolute;top:60px;right:12px;left:12px;z-index:50;background:rgba(254,243,199,0.98);border:1.5px solid rgba(245,158,11,0.5);border-radius:0.85rem;padding:0.75rem 1rem;max-height:55vh;overflow-y:auto;direction:rtl;box-shadow:0 8px 24px rgba(0,0,0,0.25);\"></div>"
@@ -25081,7 +25420,7 @@ function closeSefarimNosafimModal() {
       else if (reader === "tehillim" && window._thSaveLastPosition) { ok = window._thSaveLastPosition(); label = "תהילים"; }
     } catch(e) { console.warn("LP save failed:", e); }
     if (ok) {
-      if (typeof window.showToast === "function") window.showToast("📍 המיקום נשמר ב" + label, "success", 2500);
+      if (typeof window.showToast === "function") window.showToast("📌 סימניית מיקום אחרון נשמרה ב" + label, "success", 2500);
       flashButtonGreen();
     }
   };

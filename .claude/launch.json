@@ -4,14 +4,8 @@
     {
       "name": "site",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["--yes", "serve", "-l", "4173", "."],
-      "port": 4173
-    },
-    {
-      "name": "site2",
-      "runtimeExecutable": "npx",
-      "runtimeArgs": ["--yes", "serve", "-l", "4180", "."],
-      "port": 4180
+      "runtimeArgs": ["-y", "http-server", "-p", "8123", "-c-1", "."],
+      "port": 8123
     }
   ]
 }

@@ -15,6 +15,23 @@
         }
       } catch (e) {}
     </script>
+    <script>
+      // הפניה מהדומיין הישן של Netlify לדומיין הראשי — ב-JS ולא ב-301 בשרת:
+      // 301 כפוי שובר את האפליקציות (PWA) שהותקנו מהדומיין הישן — הניווט אל
+      // מחוץ ל-scope גורם לאנדרואיד להציג סרגל כתובת במקום מסך מלא.
+      // לכן מפנים רק גלישה בדפדפן רגיל; אפליקציה מותקנת נשארת בדומיין שלה.
+      try {
+        if (
+          location.hostname === "jewishcalendar.netlify.app" &&
+          window.matchMedia("(display-mode: browser)").matches &&
+          !navigator.standalone
+        ) {
+          location.replace(
+            "https://jewishcalendar.co.il" + location.pathname + location.search + location.hash
+          );
+        }
+      } catch (e) {}
+    </script>
     <meta
       name="viewport"
       content="width=device-width, initial-scale=1.0, viewport-fit=cover"
@@ -2158,7 +2175,7 @@
       </section>
     </noscript>
 
-    <script src="script.js?v=30" defer></script>
+    <script src="script.js?v=31" defer></script>
     <script src="lux.js?v=27" defer></script>
 
     <!-- Service Worker registration — enables offline caching (PWA) -->

@@ -30,6 +30,12 @@
       "runtimeExecutable": "npx",
       "runtimeArgs": ["-y", "http-server", "-p", "8135", "-c-1", "."],
       "port": 8135
+    },
+    {
+      "name": "site-fix",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["-y", "http-server", "-p", "8141", "-c-1", "."],
+      "port": 8141
     }
   ]
 }

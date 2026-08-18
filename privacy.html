@@ -2,6 +2,21 @@
 <html lang="he" dir="rtl" class="light">
   <head>
     <meta charset="UTF-8" />
+    <script>
+      // הפניה מהדומיין הישן של Netlify לדומיין הראשי — בדפדפן רגיל בלבד.
+      // לא 301 בשרת: זה שובר את ה-PWA שהותקנו מהדומיין הישן (ראו netlify.toml).
+      try {
+        if (
+          location.hostname === "jewishcalendar.netlify.app" &&
+          window.matchMedia("(display-mode: browser)").matches &&
+          !navigator.standalone
+        ) {
+          location.replace(
+            "https://jewishcalendar.co.il" + location.pathname + location.search + location.hash
+          );
+        }
+      } catch (e) {}
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>מדיניות פרטיות | הלוח היהודי</title>
     <meta name="title" content="מדיניות פרטיות | הלוח היהודי" />

@@ -1803,7 +1803,9 @@ const _CHOK_SECTION_STYLES = {
   'כתובים':  { bg: '#fff7ed', border: '#f97316', text: '#9a3412',  emoji: '✍️' },
   'משנה':    { bg: '#faf5ff', border: '#a855f7', text: '#6b21a8',  emoji: '📚' },
   'גמרא':    { bg: '#f0fdfa', border: '#14b8a6', text: '#0f766e',  emoji: '🕯️' },
+  'זוהר':    { bg: '#ecfeff', border: '#06b6d4', text: '#155e75',  emoji: '💠' },
   'הלכה':    { bg: '#fff1f2', border: '#f43f5e', text: '#9f1239',  emoji: '⚖️' },
+  'הלכה פסוקה': { bg: '#fff1f2', border: '#f43f5e', text: '#9f1239',  emoji: '⚖️' },
   'מוסר':    { bg: '#f8fafc', border: '#64748b', text: '#1e293b',  emoji: '💭' },
 };
 const _CHOK_RASHI_SECTIONS = new Set(['תורה', 'נביאים', 'כתובים', 'גמרא']);
@@ -1960,10 +1962,21 @@ function renderChokContent() {
           </div>
         </div>`;
       } else {
-        // Small instructional text — show dimmed
         // תוכן ה-sheet נכתב ע"י משתמשי ספריא — עובר חיטוי לפני innerHTML
         const cleaned = sanitizeExternalHtml(src.outsideText.replace(/<\/?small>/g, '').replace(/<\/?h[1-6]>/g, ''));
-        html += `<div style="margin:0.4rem auto 0.6rem;color:#94a3b8;font-size:0.78rem;max-width:32rem;">${cleaned}</div>`;
+        const _plainLen = src.outsideText.replace(/<[^>]*>/g, '').trim().length;
+        if (/<small>/i.test(src.outsideText) || _plainLen < 120) {
+          // הערת הוראה קצרה (כוונות וכד') — מוצגת מעומעמת ומוקטנת
+          html += `<div style="margin:0.4rem auto 0.6rem;color:#94a3b8;font-size:0.78rem;max-width:32rem;">${cleaned}</div>`;
+        } else {
+          // טקסט לימוד מלא שהגיע כטקסט חופשי — בגיליונות חוק לישראל זהו ביאור
+          // הזוהר בלשון הקודש. גודל כתב מלא כמו שאר התוכן (מושפע מכפתורי הגודל),
+          // בגוון טורקיז נבדל כדי להבחין בינו לבין לשון הזוהר עצמה.
+          const _beurLabel = currentSection === 'זוהר' ? '💠 ביאור הזוהר בלשון הקודש' : '';
+          html += `<div style="margin-bottom:1.4rem;padding:0.9rem 1rem;border-radius:0.75rem;border:1px solid rgba(8,145,178,0.22);background:rgba(8,145,178,0.05);">` +
+            (_beurLabel ? `<div style="font-size:0.68rem;color:#0891b2;font-weight:700;margin-bottom:0.4rem;">${_beurLabel}</div>` : '') +
+            `<div style="color:#155e75;line-height:inherit;">${cleaned}</div></div>`;
+        }
       }
     } else if (src.text && src.text.he) {
       // הטקסט מגיע מ-sheet של ספריא (תוכן שנערך ע"י משתמשים) — חיטוי לפני הצגה

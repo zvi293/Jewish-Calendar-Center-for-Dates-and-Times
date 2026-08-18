@@ -1041,7 +1041,10 @@ async function openSefariaModal(hebTitle, enRef, opts) {
     `<div class="animate-pulse text-center mt-10">${ui.sefariaLoading || 'טוען טקסט ממסד הנתונים...'}</div>`;
   // הקרדיט המוטמע למטה ב-textHtml מטפל בקישור — לא צריך עוד ב-credit-link element
 
-  const _wasHidden = m.classList.contains("hidden");
+  if (m.__hideTimer) { clearTimeout(m.__hideTimer); m.__hideTimer = null; }
+  // "נסתר" כולל גם חלון-דהייה: נראה אך כבר לא במחסנית (הסגירה שחררה) — אחרת הפתיחה תיבלע
+  const _wasHidden =
+    m.classList.contains("hidden") || _activeModals.indexOf("sefaria-modal") === -1;
   m.classList.remove("hidden");
   setTimeout(() => m.classList.remove("opacity-0"), 10);
   // נועלים ורושמים רק במעבר נסתר→גלוי — פתיחה כפולה (ghost-tap) נעלה פעמיים ושחררה פעם אחת
@@ -1504,7 +1507,10 @@ async function openShnayimMikraModal(hebTitle, enRef) {
     '<div class="animate-pulse text-center mt-10">טוען מקרא ותרגום אונקלוס...</div>';
   // הקרדיט מוטמע בתוך הטקסט עצמו — אין עוד element נפרד של sefaria-credit-link
 
-  const _wasHidden = m.classList.contains("hidden");
+  if (m.__hideTimer) { clearTimeout(m.__hideTimer); m.__hideTimer = null; }
+  // "נסתר" כולל גם חלון-דהייה: נראה אך כבר לא במחסנית (הסגירה שחררה) — אחרת הפתיחה תיבלע
+  const _wasHidden =
+    m.classList.contains("hidden") || _activeModals.indexOf("sefaria-modal") === -1;
   m.classList.remove("hidden");
   setTimeout(() => m.classList.remove("opacity-0"), 10);
   // נועלים ורושמים רק במעבר נסתר→גלוי — פתיחה כפולה (ghost-tap) נעלה פעמיים ושחררה פעם אחת
@@ -1580,7 +1586,7 @@ function closeSefariaModal() {
   }
   m.__closing = false;
   m.classList.add("opacity-0");
-  setTimeout(() => m.classList.add("hidden"), 300);
+  m.__hideTimer = setTimeout(() => m.classList.add("hidden"), 300);
   unlockBodyScroll();
 }
 
@@ -1724,7 +1730,10 @@ async function openChokLeIsraelModal() {
       '<div class="animate-pulse text-center py-10 text-slate-400">טוען...</div>';
   }
 
-  const _wasHidden = m.classList.contains('hidden');
+  if (m.__hideTimer) { clearTimeout(m.__hideTimer); m.__hideTimer = null; }
+  // "נסתר" כולל גם חלון-דהייה: נראה אך כבר לא במחסנית (הסגירה שחררה) — אחרת הפתיחה תיבלע
+  const _wasHidden =
+    m.classList.contains('hidden') || _activeModals.indexOf('chok-israel-modal') === -1;
   m.classList.remove('hidden');
   requestAnimationFrame(() => m.classList.remove('opacity-0'));
   // נועלים ורושמים רק במעבר נסתר→גלוי — פתיחה כפולה נעלה פעמיים ושחררה פעם אחת
@@ -2111,7 +2120,7 @@ function closeChokLeIsraelModal() {
   }
   m.__closing = false;
   m.classList.add('opacity-0');
-  setTimeout(() => m.classList.add('hidden'), 300);
+  m.__hideTimer = setTimeout(() => m.classList.add('hidden'), 300);
   unlockBodyScroll();
 }
 window.openChokLeIsraelModal = openChokLeIsraelModal;
@@ -3953,7 +3962,10 @@ function openCompass() {
 
 function closeCompass() {
   const m = document.getElementById("compass-modal");
-  if (!m || m.classList.contains("hidden")) return;
+  if (!m) return;
+  // איפוס נעל הכניסה-החוזרת — מודאל סטטי, בלי זה ה-X מת לצמיתות אחרי הסגירה הראשונה
+  m.__closing = false;
+  if (m.classList.contains("hidden")) return;
   m.classList.add("opacity-0");
   setTimeout(() => m.classList.add("hidden"), 300);
   if (compassListener) {
@@ -4501,6 +4513,15 @@ function openCalendar() {
 function closeCalendar() {
   const m = document.getElementById("calendar-modal");
   if (!m || m.classList.contains("hidden")) return;
+  // בוחר החודש/שנה פתוח מעלינו? סוגרים אותו קודם ומנקים את רשומתו — אחרת בדיקת ראש-המחסנית מפספסת
+  const _pk = document.getElementById("cal-month-year-picker");
+  if (_pk) {
+    _pk.remove();
+    if (_activeModals[_activeModals.length - 1] === "cal-month-year-picker") {
+      _activeModals.pop();
+      try { history.replaceState({ modal: _activeModals[_activeModals.length - 1] || null }, ""); } catch (e) {}
+    }
+  }
   // לחיצת X/רקע: יוצאים דרך history.back כדי לסנכרן את המחסנית — popstate יקרא לנו שוב
   if (_activeModals[_activeModals.length - 1] === "calendar-modal") {
     // הגנת כניסה-חוזרת: לחיצה כפולה לפני שה-popstate הגיע — back() שני סוגר את המודאל שמתחת
@@ -5167,7 +5188,8 @@ initApp();
   let _starsOnScreen = true;
   try {
     new IntersectionObserver((entries) => {
-      _starsOnScreen = entries[0].isIntersecting;
+      // הרשומה האחרונה — batch יכול להכיל [יצא, חזר] וקריאת הראשונה מקפיאה את הכוכבים כשה-hero גלוי
+      _starsOnScreen = entries[entries.length - 1].isIntersecting;
     }).observe(canvas);
   } catch (e) {}
 

@@ -4920,3 +4920,33 @@ html.lux-modal-open #pwa-install-banner * {
     background: rgba(2, 6, 23, 0.84);
   }
 }
+
+
+/* ═══════════════════════════════════════════════════════
+   ✦ מובייל: חיסול גורף של backdrop-filter + כניסה מיידית ליריעות
+   הכלל הקודם כיסה רק את שכבות-הרקע של הפופאפים, אבל נשארו טשטושים
+   על אלמנטים פנימיים (סרגלי גופן/חיפוש דביקים בתוך קוראים, הכרטיס
+   הפנימי של ספריא/חוק-לישראל, טוסטים) — וכל אחד מהם "קופץ" באיחור
+   של פריים-שניים במובייל ונראה כהבהוב בתוך הפופאפ עצמו. לכן: במובייל
+   אין טשטוש בשום מקום. פיצויי אטימות לבודדים שהיו שקופים מדי.
+   אנימציית הכניסה של .lux-sheet מבוטלת במובייל — הופעה מיידית
+   אינה יכולה להבהב (בדסקטופ הכול נשאר כשהיה).
+   ═══════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  *,
+  *::before,
+  *::after {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+  #lux-bottom-nav {
+    background: rgba(9, 16, 36, 0.95) !important;
+  }
+  #sefaria-modal > div:first-child,
+  #chok-israel-modal > div:first-child {
+    background: rgba(250, 248, 243, 0.97) !important;
+  }
+  .lux-sheet {
+    animation: none !important;
+  }
+}

@@ -629,10 +629,16 @@
     /* ── העורך ── */
     function openNavEditor() {
       var existing = document.getElementById("lux-nav-editor");
-      if (existing) { luxModalClose("lux-nav-editor"); return; }
+      if (existing) {
+        // ghost-tap בנייד: נגיעה כפולה מיד אחרי הפתיחה נסגרה מיידית ונראתה כהבהוב
+        if (Date.now() - (existing.__luxOpenedAt || 0) < 600) return;
+        luxModalClose("lux-nav-editor");
+        return;
+      }
       var working = getSel();
       var overlay = document.createElement("div");
       overlay.id = "lux-nav-editor";
+      overlay.__luxOpenedAt = Date.now();
       overlay.innerHTML =
         "<div class='lux-ne-inner'>" +
           "<h3 class='lux-ne-title'>📱 עריכת סרגל הניווט</h3>" +
@@ -804,7 +810,12 @@
     }
     function openWheel() {
       var old = document.getElementById("lux-year-wheel");
-      if (old) { luxModalClose("lux-year-wheel"); return; }
+      if (old) {
+        // ghost-tap בנייד: נגיעה כפולה מיד אחרי הפתיחה נסגרה מיידית ונראתה כהבהוב
+        if (Date.now() - (old.__luxOpenedAt || 0) < 600) return;
+        luxModalClose("lux-year-wheel");
+        return;
+      }
       var rawEvents = (getCachedEvents() || []).filter(function (e) {
         // כל החגים, המועדים והצומות — לא רק החגים הגדולים
         if (["major", "minor", "fast"].indexOf(e.type) === -1) return false;
@@ -853,6 +864,7 @@
       } catch (e) {}
       var overlay = document.createElement("div");
       overlay.id = "lux-year-wheel";
+      overlay.__luxOpenedAt = Date.now();
       overlay.innerHTML =
         '<div class="lux-yw-inner">' +
           '<button type="button" class="lux-yw-close" aria-label="סגור">✕</button>' +
@@ -2631,10 +2643,16 @@
 
     function openReader() {
       var old = document.getElementById("lux-selichot-reader");
-      if (old) { luxModalClose("lux-selichot-reader"); return; }
+      if (old) {
+        // ghost-tap בנייד: נגיעה כפולה מיד אחרי הפתיחה נסגרה מיידית ונראתה כהבהוב
+        if (Date.now() - (old.__luxOpenedAt || 0) < 600) return;
+        luxModalClose("lux-selichot-reader");
+        return;
+      }
       var nus = currentNusach();
       var ov = document.createElement("div");
       ov.id = "lux-selichot-reader";
+      ov.__luxOpenedAt = Date.now();
       var chipsHtml = "";
       if (nus.byDay) {
         chipsHtml = '<div class="lux-sel-chips">' + DAY_NODES.map(function (n, i) {
@@ -4256,9 +4274,15 @@
       TRACKS.forEach(function (t) { if (t.key === key) tr = t; });
       if (!tr) return;
       var old = document.getElementById("lux-track-reader");
-      if (old) { luxModalClose("lux-track-reader"); return; }
+      if (old) {
+        // ghost-tap בנייד: נגיעה כפולה מיד אחרי הפתיחה נסגרה מיידית ונראתה כהבהוב
+        if (Date.now() - (old.__luxOpenedAt || 0) < 600) return;
+        luxModalClose("lux-track-reader");
+        return;
+      }
       var ov = document.createElement("div");
       ov.id = "lux-track-reader";
+      ov.__luxOpenedAt = Date.now();
       ov.innerHTML =
         '<div class="lux-sel-head">' +
           '<button type="button" class="lux-sel-close" aria-label="סגור">✕</button>' +
@@ -4528,7 +4552,12 @@
     /* ── קורא הלימוד היומי ── */
     function openPlanReader(planId) {
       var old = document.getElementById("lux-plan-reader");
-      if (old) { luxModalClose("lux-plan-reader"); return; }
+      if (old) {
+        // ghost-tap בנייד: נגיעה כפולה מיד אחרי הפתיחה נסגרה מיידית ונראתה כהבהוב
+        if (Date.now() - (old.__luxOpenedAt || 0) < 600) return;
+        luxModalClose("lux-plan-reader");
+        return;
+      }
       var pl = null;
       plans().forEach(function (p) { if (p.id === planId) pl = p; });
       if (!pl) return;
@@ -4543,6 +4572,7 @@
       var totalDays = Math.ceil(bk.count / pl.perDay);
       var ov = document.createElement("div");
       ov.id = "lux-plan-reader";
+      ov.__luxOpenedAt = Date.now();
       ov.innerHTML =
         '<div class="lux-sel-head">' +
           '<button type="button" class="lux-sel-close" aria-label="סגור">✕</button>' +

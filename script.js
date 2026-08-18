@@ -482,7 +482,12 @@ function setupModalBackdropClose() {
 }
 
 // --- Navbar Scroll Logic ---
+// מחליפים מחלקות רק כשחוצים את הסף — עבודה על כל אירוע גלילה גורמת לריצודים בנייד
+let _navScrolledState = null;
 window.addEventListener("scroll", () => {
+  const scrolledNow = window.scrollY > 50;
+  if (scrolledNow === _navScrolledState) return;
+  _navScrolledState = scrolledNow;
   const navButtons = document.querySelectorAll(".nav-action-btn");
   const isBlueTheme = document.documentElement.classList.contains("theme-blue");
   if (window.scrollY > 50) {
@@ -3270,6 +3275,15 @@ function showDashboard() {
   if (prayerWrap) {
     prayerWrap.classList.remove("hidden");
   }
+  // איפוס עקיפות inline מריצה קודמת של כלב-השמירה — כדי שמעבר החשיפה ינוגן נקי
+  [dash, banner, btn, btnShulMikve, prayerWrap].forEach((el) => {
+    if (!el) return;
+    el.style.opacity = "";
+    el.style.transition = "";
+    el.style.animation = "";
+    el.__luxRevealOk = false;
+    el.__luxLowTicks = 0;
+  });
   setTimeout(() => {
     dash.classList.remove("opacity-0");
     banner.classList.remove("opacity-0");
@@ -3289,7 +3303,13 @@ function _forceRevealHeroEls() {
   ["dashboard-state", "halacha-banner", "btn-open-calendar", "btn-shul-mikve", "prayer-grid-wrap", "lux-greeting"].forEach((id) => {
     const el = document.getElementById(id);
     if (!el || el.classList.contains("hidden") || el.classList.contains("opacity-0")) return;
+    // אלמנט שכבר אושר כגלוי לא נבדק שוב — בדיקות getComputedStyle מחזוריות
+    // גורמות לחישובי סגנון מיותרים וריצודים בנייד
+    if (el.__luxRevealOk) return;
     if (parseFloat(getComputedStyle(el).opacity) < 0.95) {
+      // שתי פעימות רצופות (≥2.5 שניות) — מעבר חי של 500ms לעולם לא "נחטף"
+      el.__luxLowTicks = (el.__luxLowTicks || 0) + 1;
+      if (el.__luxLowTicks < 2) return;
       el.style.transition = "none";
       el.style.opacity = "1";
       el.style.animation = "none";
@@ -3299,6 +3319,10 @@ function _forceRevealHeroEls() {
           try { a.finish(); } catch (e1) { try { a.cancel(); } catch (e2) {} }
         });
       } catch (e) {}
+      el.__luxRevealOk = true;
+    } else {
+      el.__luxLowTicks = 0;
+      el.__luxRevealOk = true;
     }
   });
 }
@@ -8583,8 +8607,8 @@ function buildShemaPayload(context) {
   var parts = [];
 
   // ── שמע ישראל ──
-  parts.push(p("שְׁמַ֖ע יִשְׂרָאֵ֑ל יְהֹוָ֥ה אֱלֹהֵ֖ינוּ יְהֹוָ֥ה ׀ אֶחָֽד׃"));
-  parts.push(sup(p("בלחש: בָּרוּךְ שֵּׁם כְּבוֹד מַלְכוּתוֹ לְעוֹלָם וָעֶד:")));
+  parts.push(p('<span class="shema-main">שְׁמַ֖ע יִשְׂרָאֵ֑ל יְהֹוָ֥ה אֱלֹהֵ֖ינוּ יְהֹוָ֥ה ׀ אֶחָֽד׃</span>'));
+  parts.push(p('<span class="shema-baruch">בלחש: בָּרוּךְ שֵּׁם כְּבוֹד מַלְכוּתוֹ לְעוֹלָם וָעֶד:</span>'));
   parts.push(p("וְאָ֣הַבְתָּ֔ אֵ֖ת יְהֹוָ֣ה אֱלֹהֶ֑יךָ בְּכׇל־לְבָבְךָ֥ וּבְכׇל־נַפְשְׁךָ֖ וּבְכׇל־מְאֹדֶֽךָ׃ וְהָי֞וּ הַדְּבָרִ֣ים הָאֵ֗לֶּה אֲשֶׁ֨ר אָנֹכִ֧י מְצַוְּךָ֛ הַיּ֖וֹם עַל־לְבָבֶֽךָ׃ וְשִׁנַּנְתָּ֣ם לְבָנֶ֔יךָ וְדִבַּרְתָּ֖ בָּ֑ם בְּשִׁבְתְּךָ֤ בְּבֵיתֶ֙ךָ֙ וּבְלֶכְתְּךָ֣ בַדֶּ֔רֶךְ וּֽבְשׇׁכְבְּךָ֖ וּבְקוּמֶֽךָ׃ וּקְשַׁרְתָּ֥ם לְא֖וֹת עַל־יָדֶ֑ךָ וְהָי֥וּ לְטֹטָפֹ֖ת בֵּ֥ין עֵינֶֽיךָ׃ וּכְתַבְתָּ֛ם עַל־מְזֻז֥וֹת בֵּיתֶ֖ךָ וּבִשְׁעָרֶֽיךָ׃"));
   parts.push(p("וְהָיָ֗ה אִם־שָׁמֹ֤עַ תִּשְׁמְעוּ֙ אֶל־מִצְוֺתַ֔י אֲשֶׁ֧ר אָנֹכִ֛י מְצַוֶּ֥ה אֶתְכֶ֖ם הַיּ֑וֹם לְאַהֲבָ֞ה אֶת־יְהֹוָ֤ה אֱלֹֽהֵיכֶם֙ וּלְעׇבְד֔וֹ בְּכׇל־לְבַבְכֶ֖ם וּבְכׇל־נַפְשְׁכֶֽם׃ וְנָתַתִּ֧י מְטַֽר־אַרְצְכֶ֛ם בְּעִתּ֖וֹ יוֹרֶ֣ה וּמַלְק֑וֹשׁ וְאָסַפְתָּ֣ דְגָנֶ֔ךָ וְתִֽירֹשְׁךָ֖ וְיִצְהָרֶֽךָ׃ וְנָתַתִּ֛י עֵ֥שֶׂב בְּשָׂדְךָ֖ לִבְהֶמְתֶּ֑ךָ וְאָכַלְתָּ֖ וְשָׂבָֽעְתָּ׃ הִשָּֽׁמְר֣וּ לָכֶ֔ם פֶּ֥ן יִפְתֶּ֖ה לְבַבְכֶ֑ם וְסַרְתֶּ֗ם וַעֲבַדְתֶּם֙ אֱלֹהִ֣ים אֲחֵרִ֔ים וְהִשְׁתַּחֲוִיתֶ֖ם לָהֶֽם׃ וְחָרָ֨ה אַף־יְהֹוָ֜ה בָּכֶ֗ם וְעָצַ֤ר אֶת־הַשָּׁמַ֙יִם֙ וְלֹֽא־יִהְיֶ֣ה מָטָ֔ר וְהָ֣אֲדָמָ֔ה לֹ֥א תִתֵּ֖ן אֶת־יְבוּלָ֑הּ וַאֲבַדְתֶּ֣ם מְהֵרָ֗ה מֵעַל֙ הָאָ֣רֶץ הַטֹּבָ֔ה אֲשֶׁ֥ר יְהֹוָ֖ה נֹתֵ֥ן לָכֶֽם׃ וְשַׂמְתֶּם֙ אֶת־דְּבָרַ֣י אֵ֔לֶּה עַל־לְבַבְכֶ֖ם וְעַֽל־נַפְשְׁכֶ֑ם וּקְשַׁרְתֶּ֨ם אֹתָ֤ם לְאוֹת֙ עַל־יֶדְכֶ֔ם וְהָי֥וּ לְטוֹטָפֹ֖ת בֵּ֥ין עֵינֵיכֶֽם׃ וְלִמַּדְתֶּ֥ם אֹתָ֛ם אֶת־בְּנֵיכֶ֖ם לְדַבֵּ֣ר בָּ֑ם בְּשִׁבְתְּךָ֤ בְּבֵיתֶ֙ךָ֙ וּבְלֶכְתְּךָ֣ בַדֶּ֔רֶךְ וּֽבְשׇׁכְבְּךָ֖ וּבְקוּמֶֽךָ׃ וּכְתַבְתָּ֛ם עַל־מְזוּז֥וֹת בֵּיתֶ֖ךָ וּבִשְׁעָרֶֽיךָ׃ לְמַ֨עַן יִרְבּ֤וּ יְמֵיכֶם֙ וִימֵ֣י בְנֵיכֶ֔ם עַ֚ל הָֽאֲדָמָ֔ה אֲשֶׁ֨ר נִשְׁבַּ֧ע יְהֹוָ֛ה לַאֲבֹתֵיכֶ֖ם לָתֵ֣ת לָהֶ֑ם כִּימֵ֥י הַשָּׁמַ֖יִם עַל־הָאָֽרֶץ׃"));
   parts.push(p("וַיֹּ֥אמֶר יְהֹוָ֖ה אֶל־מֹשֶׁ֥ה לֵּאמֹֽר׃ דַּבֵּ֞ר אֶל־בְּנֵ֤י יִשְׂרָאֵל֙ וְאָמַרְתָּ֣ אֲלֵהֶ֔ם וְעָשׂ֨וּ לָהֶ֥ם צִיצִ֛ת עַל־כַּנְפֵ֥י בִגְדֵיהֶ֖ם לְדֹרֹתָ֑ם וְנָ֥תְנ֛וּ עַל־צִיצִ֥ת הַכָּנָ֖ף פְּתִ֥יל תְּכֵֽלֶת׃ וְהָיָ֣ה לָכֶם֮ לְצִיצִת֒ וּרְאִיתֶ֣ם אֹת֗וֹ וּזְכַרְתֶּם֙ אֶת־כׇּל־מִצְוֺ֣ת יְהֹוָ֔ה וַעֲשִׂיתֶ֖ם אֹתָ֑ם וְלֹֽא־תָת֜וּרוּ אַחֲרֵ֤י לְבַבְכֶם֙ וְאַחֲרֵ֣י עֵֽינֵיכֶ֔ם אֲשֶׁר־אַתֶּ֥ם זֹנִ֖ים אַחֲרֵיהֶֽם׃ לְמַ֣עַן תִּזְכְּר֔וּ וַעֲשִׂיתֶ֖ם אֶת־כׇּל־מִצְוֺתָ֑י וִהְיִיתֶ֥ם קְדֹשִׁ֖ים לֵאלֹֽהֵיכֶֽם׃ אֲנִ֞י יְהֹוָ֣ה אֱלֹֽהֵיכֶ֗ם אֲשֶׁ֨ר הוֹצֵ֤אתִי אֶתְכֶם֙ מֵאֶ֣רֶץ מִצְרַ֔יִם לִהְי֥וֹת לָכֶ֖ם לֵאלֹהִ֑ים אֲנִ֖י יְהֹוָ֥ה אֱלֹהֵיכֶֽם׃ אמת <small>וחוזר ואומר</small>"));
@@ -23821,7 +23845,19 @@ function openSefarimNosafimPage(_pageMode) {
         ["פריכיות אורז", "mezonot", "nefashot", "כדין אורז; ויש שנהגו שהכל — והמברך שהכל יש לו על מה לסמוך"],
         ["קובה (בשר בציפוי בורגול/סולת)", "mezonot", "michya"],
         ["שניצל בציפוי פירורי לחם", "shehakol", "nefashot", "אם הציפוי דק וטפל לעוף — שהכל על הכל; אם הציפוי עבה וניכר ובא לטעם — מברכים גם מזונות"],
-        ["דגני בוקר מקמח תירס/אורז (קורנפלקס)", "shehakol", "nefashot", "העשויים מקמח תירס — שהכל; מאורז שלם — מזונות"]
+        ["דגני בוקר מקמח תירס/אורז (קורנפלקס)", "shehakol", "nefashot", "העשויים מקמח תירס — שהכל; מאורז שלם — מזונות"],
+        ["פיצה", "hamotzi", "bhm", "בצק פיצה רגיל נילוש במים ודינו כפת גמורה; נילוש ברובו במי פירות או חלב וטעמם ניכר — מזונות (אלא אם קבע סעודה)"],
+        ["סופגנייה", "mezonot", "michya", "בצק מטוגן בשמן עמוק — לעולם מזונות ואינו בא לידי המוציא, אף בקביעות סעודה"],
+        ["פנקייק, לביבות קמח", "mezonot", "michya", "בלילה רכה מטוגנת"],
+        ["קרואסון, רוגלך, דניש", "mezonot", "michya"],
+        ["בייגלה", "mezonot", "michya", "נאכל לכסיסה ולא לקביעות סעודה"],
+        ["לזניה, פשטידת אטריות (קוגל)", "mezonot", "michya", "הבצק עיקר והגבינה/הרוטב טפלים"],
+        ["לחמנייה מתוקה (מזונות)", "mezonot", "michya", "רק כשטעם המתיקות ניכר היטב בעיסה; נילושה במים בעיקרה — דינה כלחם"],
+        ["מג'דרה (אורז עם עדשים)", "mezonot", "nefashot", "האורז עיקר ופוטר את העדשים; ברכה אחרונה — בורא נפשות כדין אורז"],
+        ["ביסלי, אפרופו וחטיפי בצק", "mezonot", "michya", "עשויים מקמח חיטה"],
+        ["חטיף גרנולה (הדגן עיקר)", "mezonot", "michya"],
+        ["מרק עם אטריות / שקדי מרק", "mezonot", "michya", "מין דגן חשוב ואינו בטל — ברכת המזונות פוטרת גם את המרק; על המחיה כשאכל כזית"],
+        ["חמין (טשולנט) עם חיטה או גריסים", "mezonot", "michya", "כשהגרעינים נתמעכו או נדבקו בבישול — מזונות; בלא דגן — מברך על העיקר"]
       ]},
       { he: "🍷 יין ומשקאות", items: [
         ["יין ומיץ ענבים", "gefen", "gefen"],
@@ -23829,7 +23865,9 @@ function openSefarimNosafimPage(_pageMode) {
         ["מיץ תפוזים ושאר מיצי פירות", "shehakol", "nefashot"],
         ["קפה, תה, שוקו", "shehakol", "nefashot"],
         ["בירה, ויסקי, ערק ושאר משקאות חריפים", "shehakol", "nefashot"],
-        ["משקאות קלים ומוגזים", "shehakol", "nefashot"]
+        ["משקאות קלים ומוגזים", "shehakol", "nefashot"],
+        ["שייק פירות (סמוזי)", "shehakol", "nefashot", "פירות שרוסקו לגמרי ונעשו משקה — ברכתם שהכל"],
+        ["מיץ גזר וירקות סחוטים", "shehakol", "nefashot"]
       ]},
       { he: "🍇 שבעת המינים", items: [
         ["ענבים", "etz", "etz", "משבעת המינים — ברכה אחרונה \"על העץ\""],
@@ -23853,7 +23891,8 @@ function openSefarimNosafimPage(_pageMode) {
         ["קוקוס", "etz", "nefashot"],
         ["חרוב", "etz", "nefashot"],
         ["קיווי", "etz", "nefashot", "כך דעת הרב מרדכי אליהו; ויש המברכים האדמה — והמברך האדמה יש לו על מה לסמוך"],
-        ["פירות מסוכרים / מיובשים", "etz", "nefashot", "כברכת הפרי הטרי"]
+        ["פירות מסוכרים / מיובשים", "etz", "nefashot", "כברכת הפרי הטרי"],
+        ["סלט פירות", "etz", "nefashot", "כשרובו פירות העץ; ואם יש בו גם פרי אדמה חשוב (בננה, מלון) — מברך שתי ברכות"]
       ]},
       { he: "🍌 פירות האדמה וירקות", items: [
         ["בננה", "adama", "nefashot"],
@@ -23869,11 +23908,15 @@ function openSefarimNosafimPage(_pageMode) {
         ["קישוא, חציל, דלעת", "adama", "nefashot"],
         ["תירס", "adama", "nefashot"],
         ["אפונה, שעועית, חומוס (גרגירים)", "adama", "nefashot"],
+        ["עדשים מבושלות", "adama", "nefashot"],
         ["בוטנים", "adama", "nefashot"],
         ["גרעינים (חמנייה, דלעת), גרעיני אבטיח", "adama", "nefashot"],
         ["פופקורן", "adama", "nefashot"],
         ["צ'יפס ותפוצ'יפס", "adama", "nefashot", "כשניכרת צורת תפוח האדמה — האדמה"],
-        ["חמוצים (מלפפון חמוץ וכד')", "adama", "nefashot"]
+        ["חמוצים (מלפפון חמוץ וכד')", "adama", "nefashot"],
+        ["סלט ירקות", "adama", "nefashot"],
+        ["מרק ירקות (הירקות ניכרים)", "adama", "nefashot", "מי שלקות כשלקות — אף מי המרק ברכתם האדמה, וכן פסקו הבן איש חי והרב מרדכי אליהו"],
+        ["קינואה מבושלת", "adama", "nefashot", "אינה מחמשת מיני דגן ואין לה דין אורז"]
       ]},
       { he: "🍫 שהכל — בשר, חלב, ממתקים ועוד", items: [
         ["בשר, עוף", "shehakol", "nefashot"],
@@ -23888,7 +23931,14 @@ function openSefarimNosafimPage(_pageMode) {
         ["טופו ומוצרי סויה מעובדים", "shehakol", "nefashot"],
         ["מרק צח (בלי ירקות ניכרים)", "shehakol", "nefashot"],
         ["דבש", "shehakol", "nefashot"],
-        ["סושי", "shehakol", "nefashot", "האורז עיקר? אם האורז ניכר ועיקר — מזונות ובורא נפשות; דג בלבד — שהכל"]
+        ["סושי", "shehakol", "nefashot", "האורז עיקר? אם האורז ניכר ועיקר — מזונות ובורא נפשות; דג בלבד — שהכל"],
+        ["פלאפל", "shehakol", "nefashot", "חומוס שנטחן לגמרי, נילוש וטוגן ונשתנתה צורתו; ויש אומרים האדמה — והמברך שהכל יצא לכל הדעות"],
+        ["פירה (מחית תפוחי אדמה)", "shehakol", "nefashot", "לשיטת הבן איש חי (שנה ראשונה פנחס אות טז) פרי שנתרסק לגמרי עד שאין צורתו ניכרת — שהכל"],
+        ["טחינה וסלט טחינה", "shehakol", "nefashot", "שומשום שנטחן לגמרי; ובדרך כלל טפלה לפת"],
+        ["ריבה וממרחים חלקים", "shehakol", "nefashot", "בריבה שנימוחה לגמרי; חתיכות פרי ניכרות — כברכת הפרי; על פת — נפטרת בברכת הפת"],
+        ["שוקולד לבן", "shehakol", "nefashot"],
+        ["קרמבו", "shehakol", "nefashot", "הקצף עיקר והביסקוויט טפל"],
+        ["פודינג, ג'לי, מעדנים", "shehakol", "nefashot"]
       ]}
     ];
     var html =
@@ -24363,7 +24413,13 @@ function openSefarimNosafimPage(_pageMode) {
     var paraLabel = paraIdx !== null ? " — " + toHN(paraIdx + 1) : "";
     // Replace any existing last-position entry for this book
     var d = _bmAll(), arr = (d[_bk.id] || []).filter(function(b){ return !b.isLastPos; });
-    arr.unshift({ key: key, label: "📍 מיקום אחרון — " + (s.he || _bk.he) + paraLabel, sub: _sbk ? _sbk.he : null, ts: Date.now(), isLastPos: true });
+    var entry = { key: key, label: "📍 מיקום אחרון — " + (s.he || _bk.he) + paraLabel, sub: _sbk ? _sbk.he : null, ts: Date.now(), isLastPos: true };
+    // בספר "hardcoded" אין פסקאות ממוספרות — שומרים את מיקום הגלילה עצמו
+    if (_bk.type === "hardcoded") {
+      var hcContent = document.getElementById("sn-reader-content");
+      if (hcContent) entry.scrollTop = hcContent.scrollTop;
+    }
+    arr.unshift(entry);
     d[_bk.id] = arr; _bmSave(d);
     buildBMPanel();
     if (typeof buildBookBMPanel === "function") { try { buildBookBMPanel(); } catch(e) {} }
@@ -24389,7 +24445,19 @@ function openSefarimNosafimPage(_pageMode) {
     _sbk = (book.type === "multi" && sbid) ? (book.subBooks.find(function(s){ return s.id === sbid; })||null) : null;
     var panel = document.getElementById("sn-bm-panel");
     if (panel) panel.style.display = "none";
-    if (book.type === "hardcoded") { _sec = 0; openHardcoded(book); }
+    if (book.type === "hardcoded") {
+      _sec = 0; openHardcoded(book);
+      // שחזור מיקום הגלילה השמור (מיקום אחרון בספר ללא פסקאות)
+      try {
+        var savedEntry = (_bmAll()[bid] || []).find(function(b){ return b.key === key; });
+        if (savedEntry && typeof savedEntry.scrollTop === "number" && savedEntry.scrollTop > 0) {
+          setTimeout(function() {
+            var hc = document.getElementById("sn-reader-content");
+            if (hc) hc.scrollTo({ top: savedEntry.scrollTop, behavior: "smooth" });
+          }, 350);
+        }
+      } catch(e) {}
+    }
     else { _sec = isNaN(sidx) ? 0 : sidx; window._snOpenSection(_sec); }
     // Scroll to specific paragraph after section opens (if applicable)
     if (paraIdx !== null) {
@@ -24841,6 +24909,8 @@ function openSefarimNosafimPage(_pageMode) {
     if (!content || !title) return;
     title.textContent = (_sbk ? _sbk.he + " — " : "") + sec.he;
     applyFS(); updateBMBtn(); _snBuildCMToolbar();
+    var chBtn = document.getElementById("sn-chapters-btn");
+    if (chBtn) chBtn.style.display = "";
     if (window._snUpdateMBToggleVisibility) window._snUpdateMBToggleVisibility();
     if (window._snUpdateBHToggleVisibility) window._snUpdateBHToggleVisibility();
     content.onscroll = null;
@@ -24948,6 +25018,9 @@ function openSefarimNosafimPage(_pageMode) {
     if (!content || !title) return;
     title.textContent = book.he;
     applyFS(); updateBMBtn(); _snBuildCMToolbar();
+    // לספר "hardcoded" אין פרקים — כפתור ניווט הפרקים מיותר ומוסתר
+    var chBtn = document.getElementById("sn-chapters-btn");
+    if (chBtn) chBtn.style.display = "none";
     content.innerHTML =
       "<div style=\"max-width:680px;margin:0 auto;padding:1.5rem 1rem 0.5rem;font-family:\'Frank Ruhl Libre\',\'David Libre\',serif;direction:rtl;color:#1e293b;\">" +
       "<div style=\"background:#fef3c7;border:1.5px solid rgba(245,158,11,0.4);border-radius:1rem;padding:1rem 1.25rem;margin-bottom:1.75rem;line-height:1.9;font-size:0.9em;color:#78350f;\">" + book.intro + "</div>" +
@@ -25033,8 +25106,8 @@ function openSefarimNosafimPage(_pageMode) {
       if (_sAb) { _sAb.abort(); _sAb = null; }
       if (st) st.textContent = ""; if (re) re.innerHTML = ""; return;
     }
-    if (st) st.textContent = "מחפש...";
-    _sDeb = setTimeout(function(){ window._snSearchRun(); }, 400);
+    if (st) st.innerHTML = '<span class="sn-spin"></span>מחפש...';
+    _sDeb = setTimeout(function(){ window._snSearchRun(); }, 350);
   };
   window._snSearchRun = async function() {
     var q = (document.getElementById("sn-search-input")||{}).value;
@@ -25044,7 +25117,7 @@ function openSefarimNosafimPage(_pageMode) {
     var sig = _sAb.signal;
     var st = document.getElementById("sn-search-status");
     var re = document.getElementById("sn-search-results");
-    if (st) st.textContent = "מחפש...";
+    if (st) st.innerHTML = '<span class="sn-spin"></span>מחפש...';
     if (re) re.innerHTML = "";
     var total = 0;
     var words = _snTokenize(q);
@@ -25077,15 +25150,18 @@ function openSefarimNosafimPage(_pageMode) {
     var tasks = [];
     booksToSearch.forEach(function(book) {
       if (book.type === "hardcoded") { tasks.push({ book: book, hardcoded: true }); return; }
+      // ספר "external" (ברכת לבנה) — אין בו תוכן לסריקה
+      if (book.type === "external") return;
       var subs = book.type === "multi" ? book.subBooks : [null];
       subs.forEach(function(sb) {
         var sections = sb ? sb.sections : book.sections;
+        if (!sections || !sections.length) return;
         sections.forEach(function(sec, p) { tasks.push({ book: book, sb: sb, p: p, sec: sec }); });
       });
     });
     var done = 0;
     function updStatus() {
-      if (st && !sig.aborted) st.textContent = "🔍 נסרקו " + done + " מתוך " + tasks.length + " · נמצאו " + total + " תוצאות";
+      if (st && !sig.aborted) st.innerHTML = '<span class="sn-spin"></span>נסרקו ' + done + " מתוך " + tasks.length + " · נמצאו " + total + " תוצאות";
     }
     async function runTask(t) {
       if (sig.aborted) return;
@@ -25135,13 +25211,21 @@ function openSefarimNosafimPage(_pageMode) {
       }
     }
     var workers = [];
-    for (var wk = 0; wk < Math.min(6, tasks.length); wk++) workers.push(worker());
+    for (var wk = 0; wk < Math.min(10, tasks.length); wk++) workers.push(worker());
     await Promise.all(workers);
     if (!sig.aborted && (_searchBid === "all" || _searchBid === "__bih__")) {
       total = await _snSearchBenIshHai(words, sig, re, st, total, q);
     }
     if (!sig.aborted && st)
-      st.textContent = total > 0 ? "נמצאו "+total+' תוצאות עבור "'+q+'"' : 'לא נמצאו תוצאות עבור "'+q+'"';
+      st.textContent = total > 0 ? "✅ נמצאו "+total+' תוצאות עבור "'+q+'"' : "";
+    if (!sig.aborted && total === 0 && re) {
+      re.innerHTML =
+        '<div style="text-align:center;padding:3rem 1.5rem;color:#94a3b8;">' +
+          '<div style="font-size:3rem;margin-bottom:0.6rem;">🔎</div>' +
+          '<p style="font-size:1rem;font-weight:800;color:#64748b;margin:0 0 0.3rem;">לא נמצאו תוצאות עבור "' + q.replace(/</g, "&lt;") + '"</p>' +
+          '<p style="font-size:0.8rem;margin:0;">נסו מילה אחרת, פחות מילים, או חיפוש בכל הספרים</p>' +
+        "</div>";
+    }
   };
 
   async function _snSearchBenIshHai(words, sig, re, st, totalSoFar, q) {
@@ -25169,9 +25253,9 @@ function openSefarimNosafimPage(_pageMode) {
     var parshiyot1 = ["Bereshit","Noach","Lech Lecha","Vayera","Chayei Sara","Toldot","Vayetzei","Vayishlach","Vayeshev","Miketz","Vayigash","Vayechi","Shemot","Vaera","Bo","Beshalach","Yitro","Mishpatim","Terumah","Tetzaveh","Ki Tisa","Vayakhel","Pekudei","Vayikra","Tzav","Shmini","Tazria Metzora","Achrei Mot Kedoshim","Emor","Behar Bechukotai","Bamidbar","Nasso","Beha'alotcha","Sh'lach","Korach","Chukat","Balak","Pinchas","Matot Masei","Devarim","Vaetchanan","Eikev","Re'eh","Shoftim","Ki Teitzei","Ki Tavo","Nitzavim","Vayeilech","Ha'Azinu"];
     var parshiyotHe1 = ["בראשית","נח","לך לך","וירא","חיי שרה","תולדות","ויצא","וישלח","וישב","מקץ","ויגש","ויחי","שמות","וארא","בא","בשלח","יתרו","משפטים","תרומה","תצוה","כי תשא","ויקהל","פקודי","ויקרא","צו","שמיני","תזריע-מצורע","אחרי-קדושים","אמור","בהר-בחקותי","במדבר","נשא","בהעלותך","שלח","קרח","חקת","בלק","פינחס","מטות-מסעי","דברים","ואתחנן","עקב","ראה","שופטים","כי תצא","כי תבוא","נצבים","וילך","האזינו"];
     var BIH_COLOR = "#22c55e";
-    for (var ymi = 0; ymi < BIH_YEARS.length; ymi++) {
-      if (sig.aborted) break;
-      var ym = BIH_YEARS[ymi];
+    // רשימת משימות שטוחה — כל פרשה נסרקת במקביל דרך fetchSec (כולל מטמון מקומי)
+    var bihTasks = [];
+    BIH_YEARS.forEach(function(ym) {
       var parshList, parshListHe;
       if (ym.en === null) {
         parshList = ym.parshiyot.map(function(p){return p.dr;});
@@ -25180,64 +25264,71 @@ function openSefarimNosafimPage(_pageMode) {
         parshList = parshiyot1;
         parshListHe = parshiyotHe1;
       }
-      for (var pi = 0; pi < parshList.length; pi++) {
-        if (sig.aborted) break;
-        var pEn = parshList[pi];
-        var pHe = parshListHe[pi];
-        if (st) st.textContent = "מחפש בבן איש חי — " + ym.he + " — " + pHe + " ("+(pi+1)+"/"+parshList.length+")";
-        var ref = ym.en === null
-          ? "Ben_Ish_Hai,_Drashot,_"+pEn.replace(/ /g,"_")
-          : "Ben_Ish_Hai,_"+ym.en.replace(/ /g,"_")+",_"+pEn.replace(/ /g,"_");
-        try {
-          var url = "https://www.sefaria.org/api/texts/"+encodeURIComponent(ref)+"?pad=0&lang=he";
-          var res = await fetch(url, { signal: sig });
-          if (!res.ok) continue;
-          var data = await res.json();
-          if (data.error) continue;
-          var hex = data.he || [];
-          var bihText = flatText(hex).replace(/<[^>]*>/g, "");
-          var bihNorm = _snNormalize(bihText);
-          if (_snSmartMatch(bihNorm, words)) {
-            total++;
-            if (re) {
-              var bbtn = document.createElement("button");
-              bbtn.style.cssText = "display:block;width:100%;text-align:right;padding:0.75rem 1rem;border:none;border-bottom:1px solid rgba(0,0,0,0.07);cursor:pointer;background:none;direction:rtl;transition:background 0.1s;";
-              bbtn.innerHTML = "<span style=\"color:"+BIH_COLOR+";font-size:0.75rem;font-weight:900;\">בן איש חי — "+ym.he+" — "+pHe+"</span>"+
-                "<p style=\"margin:0.2rem 0 0;font-size:0.83rem;color:#374151;line-height:1.5;\">"+_snSmartSnip(bihText,words)+"</p>";
-              bbtn.onmouseenter = function(){ this.style.background="#f1f5f9"; };
-              bbtn.onmouseleave = function(){ this.style.background="none"; };
-              (function(yearMode, parshaIdx, qwords){
-                bbtn.onclick = function(){
-                  if (_sAb) { _sAb.abort(); _sAb = null; }
-                  clearTimeout(_sDeb);
-                  var ovs2 = document.getElementById("sn-search-view");
-                  if (ovs2) ovs2.style.display = "none";
-                  if (_activeModals[_activeModals.length-1] === "sn-search-view") {
-                    _activeModals.pop();
-                    try { history.replaceState({modal:"sn-modal"}, ""); } catch(e){}
-                  }
-                  window._bihPendingHighlight = qwords;
-                  setTimeout(function() {
-                    if (typeof window.openBenIshHaiPage === "function") window.openBenIshHaiPage();
-                    setTimeout(function(){
-                      try {
-                        if (yearMode === "drashot" && typeof window._bihSetMode === "function") window._bihSetMode("drashot");
-                        else if (yearMode === "y0" && typeof window._bihSetMode === "function") window._bihSetMode("y0");
-                        else if (yearMode === "y1" && typeof window._bihSetMode === "function") window._bihSetMode("y1");
-                      } catch(e){}
-                      setTimeout(function(){ if (typeof window._bihOpenParsha === "function") window._bihOpenParsha(parshaIdx, 0); }, 120);
-                    }, 100);
-                  }, 60);
-                };
-              })(ym.en === null ? "drashot" : ym.mode, pi, words.slice());
-              re.appendChild(bbtn);
-            }
-          }
-        } catch(e) {
-          if (e && e.name === "AbortError") break;
+      parshList.forEach(function(pEn, pi) {
+        bihTasks.push({ ym: ym, pi: pi, pEn: pEn, pHe: parshListHe[pi] });
+      });
+    });
+    var bihDone = 0;
+    function bihStatus() {
+      if (st && !sig.aborted) st.innerHTML = '<span class="sn-spin"></span>סורק בבן איש חי — ' + bihDone + " מתוך " + bihTasks.length + " פרשות · נמצאו " + total + " תוצאות";
+    }
+    function bihResultCard(t, bihText) {
+      var bbtn = document.createElement("button");
+      bbtn.className = "sn-search-hit";
+      bbtn.style.cssText = "display:block;width:100%;text-align:right;padding:0.8rem 1rem;margin:0 0 0.6rem;border:1.5px solid rgba(0,0,0,0.07);border-right:5px solid " + BIH_COLOR + ";border-radius:0.9rem;cursor:pointer;background:#fff;direction:rtl;box-shadow:0 2px 8px rgba(0,0,0,0.05);transition:transform 0.12s ease, box-shadow 0.12s ease;";
+      bbtn.onmouseenter = function(){ bbtn.style.transform = "translateY(-2px)"; bbtn.style.boxShadow = "0 6px 16px rgba(0,0,0,0.1)"; };
+      bbtn.onmouseleave = function(){ bbtn.style.transform = ""; bbtn.style.boxShadow = "0 2px 8px rgba(0,0,0,0.05)"; };
+      bbtn.innerHTML = "<span style=\"color:"+BIH_COLOR+";font-size:0.75rem;font-weight:900;\">בן איש חי — "+t.ym.he+" — "+t.pHe+"</span>"+
+        "<p style=\"margin:0.25rem 0 0;font-size:0.85rem;color:#374151;line-height:1.7;\">"+_snSmartSnip(bihText, words)+"</p>";
+      var yearMode = t.ym.en === null ? "drashot" : t.ym.mode;
+      var parshaIdx = t.pi;
+      var qwords = words.slice();
+      bbtn.onclick = function(){
+        if (_sAb) { _sAb.abort(); _sAb = null; }
+        clearTimeout(_sDeb);
+        var ovs2 = document.getElementById("sn-search-view");
+        if (ovs2) ovs2.style.display = "none";
+        if (_activeModals[_activeModals.length-1] === "sn-search-view") {
+          _activeModals.pop();
+          try { history.replaceState({modal:"sn-modal"}, ""); } catch(e){}
         }
+        window._bihPendingHighlight = qwords;
+        setTimeout(function() {
+          if (typeof window.openBenIshHaiPage === "function") window.openBenIshHaiPage();
+          setTimeout(function(){
+            try { if (typeof window._bihSetMode === "function") window._bihSetMode(yearMode); } catch(e){}
+            setTimeout(function(){ if (typeof window._bihOpenParsha === "function") window._bihOpenParsha(parshaIdx, 0); }, 120);
+          }, 100);
+        }, 60);
+      };
+      return bbtn;
+    }
+    async function bihRun(t) {
+      if (sig.aborted) return;
+      var ref = t.ym.en === null
+        ? "Ben_Ish_Hai,_Drashot,_"+t.pEn.replace(/ /g,"_")
+        : "Ben_Ish_Hai,_"+t.ym.en.replace(/ /g,"_")+",_"+t.pEn.replace(/ /g,"_");
+      var hex = await fetchSec(ref, sig);
+      if (sig.aborted || !hex || (Array.isArray(hex) && !hex.length)) return;
+      var bihText = flatText(hex).replace(/<[^>]*>/g, "");
+      if (_snSmartMatch(_snNormalize(bihText), words)) {
+        total++;
+        if (re) re.appendChild(bihResultCard(t, bihText));
       }
     }
+    var bti = 0;
+    async function bihWorker() {
+      while (!sig.aborted) {
+        var t = bihTasks[bti++];
+        if (!t) return;
+        try { await bihRun(t); } catch(e) {}
+        bihDone++;
+        if (bihDone % 5 === 0 || bihDone === bihTasks.length) bihStatus();
+      }
+    }
+    var bihWorkers = [];
+    for (var bw = 0; bw < Math.min(8, bihTasks.length); bw++) bihWorkers.push(bihWorker());
+    await Promise.all(bihWorkers);
     return total;
   }
 
@@ -25292,7 +25383,7 @@ function openSefarimNosafimPage(_pageMode) {
         "<button onclick=\"history.back();\" style=\"background:rgba(0,0,0,0.06);border:none;color:#1e293b;padding:0.4rem 0.75rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;white-space:nowrap;flex-shrink:0;\">← חזרה</button>",
         "<h3 id=\"sn-reader-title\" style=\"color:#1e293b;font-size:0.9rem;font-weight:900;margin:0;text-align:center;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:rtl;\"></h3>",
         "<div style=\"display:flex;gap:0.35rem;flex-shrink:0;\">",
-          "<button onclick=\"window._snGoToChapters();\" style=\"background:rgba(0,0,0,0.06);border:none;color:#1e293b;padding:0.4rem 0.55rem;border-radius:999px;cursor:pointer;font-size:0.82rem;\" title=\"כל הפרקים\">📑</button>",
+          "<button id=\"sn-chapters-btn\" onclick=\"window._snGoToChapters();\" style=\"background:rgba(0,0,0,0.06);border:none;color:#1e293b;padding:0.4rem 0.55rem;border-radius:999px;cursor:pointer;font-size:0.82rem;\" title=\"כל הפרקים\">📑</button>",
           "<button id=\"sn-reader-bm-btn\" onclick=\"window._snToggleBookmark();\" style=\"background:rgba(0,0,0,0.06);border:none;color:#1e293b;padding:0.4rem 0.55rem;border-radius:999px;cursor:pointer;font-size:0.82rem;\" title=\"סימנייה\">🔖</button>",
           "<button onclick=\"window._snToggleBookBMPanel();\" style=\"background:rgba(0,0,0,0.06);border:none;color:#1e293b;padding:0.4rem 0.55rem;border-radius:999px;cursor:pointer;font-size:0.82rem;\" title=\"סימניות הספר\">📌</button>",
           "<button onclick=\"window._snOpenSearch();\" style=\"background:rgba(0,0,0,0.06);border:none;color:#1e293b;padding:0.4rem 0.55rem;border-radius:999px;cursor:pointer;font-size:0.82rem;\">🔍</button>",
@@ -25310,19 +25401,24 @@ function openSefarimNosafimPage(_pageMode) {
         "<span id=\"sn-cm-toolbar\" style=\"display:flex;align-items:center;gap:0.4rem;\"></span>",
       "</div>",
     "</div>",
-    "<div id=\"sn-search-view\" style=\"display:none;position:absolute;inset:0;background:#faf9f6;flex-direction:column;overflow:hidden;\">",
-      "<div style=\"display:flex;align-items:center;justify-content:space-between;padding:0.7rem 1rem;border-bottom:1px solid rgba(0,0,0,0.09);background:#faf9f6;flex-shrink:0;gap:0.5rem;\">",
-        "<button onclick=\"window._snCloseSearch();\" style=\"background:rgba(0,0,0,0.06);border:none;color:#1e293b;padding:0.4rem 0.75rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;flex-shrink:0;\">← חזרה</button>",
-        "<h3 style=\"color:#1e293b;font-size:0.95rem;font-weight:900;margin:0;text-align:center;flex:1;\">"+(_pageMode === "tefilot" ? "חיפוש בתפילות" : "חיפוש בספרים")+"</h3>",
-        "<div style=\"width:60px;flex-shrink:0;\"></div>",
+    "<div id=\"sn-search-view\" style=\"display:none;position:absolute;inset:0;background:linear-gradient(180deg,#eef2ff 0%,#f8fafc 40%);flex-direction:column;overflow:hidden;\">",
+      "<div style=\"background:linear-gradient(135deg,#4f46e5,#7c3aed);padding:0.85rem 1rem 2.3rem;flex-shrink:0;box-shadow:0 4px 20px rgba(79,70,229,0.3);\">",
+        "<div style=\"display:flex;align-items:center;justify-content:space-between;gap:0.5rem;\">",
+          "<button onclick=\"window._snCloseSearch();\" style=\"background:rgba(255,255,255,0.16);border:1px solid rgba(255,255,255,0.3);color:#fff;padding:0.4rem 0.9rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:800;flex-shrink:0;\">← חזרה</button>",
+          "<h3 style=\"color:#fff;font-size:1.02rem;font-weight:900;margin:0;text-align:center;flex:1;text-shadow:0 1px 6px rgba(0,0,0,0.25);\">"+(_pageMode === "tefilot" ? "🔍 חיפוש בתפילות" : "🔍 חיפוש בספרים")+"</h3>",
+          "<div style=\"width:70px;flex-shrink:0;\"></div>",
+        "</div>",
       "</div>",
-      "<div style=\"padding:0.6rem 1rem;border-bottom:1px solid rgba(0,0,0,0.07);flex-shrink:0;display:flex;flex-direction:column;gap:0.5rem;\">",
-        "<select id=\"sn-search-book-sel\" style=\"width:100%;padding:0.4rem 0.75rem;border-radius:999px;border:1px solid rgba(0,0,0,0.15);background:#fff;color:#1e293b;font-size:0.85rem;direction:rtl;outline:none;cursor:pointer;\"></select>",
-        "<input id=\"sn-search-input\" type=\"search\" placeholder=\"🔍 הקלידו מילה או ביטוי — תוצאות תוך כדי הקלדה\" oninput=\"window._snSearchInput(this.value);\" style=\"width:100%;box-sizing:border-box;padding:0.65rem 1.1rem;border-radius:1rem;border:1.5px solid rgba(99,102,241,0.35);background:#fff;color:#1e293b;font-size:0.95rem;font-weight:600;direction:rtl;outline:none;box-shadow:0 3px 12px rgba(99,102,241,0.12);\"/>",
-        "<p style=\"color:#94a3b8;font-size:0.7rem;margin:0.15rem 0 0;text-align:center;\">💡 בחיפוש של כמה מילים — יוצגו רק קטעים שבהם כל המילים מופיעות יחד</p>",
+      "<div style=\"padding:0 1rem;margin-top:-1.5rem;flex-shrink:0;position:relative;z-index:2;display:flex;flex-direction:column;gap:0.5rem;\">",
+        "<div style=\"position:relative;\">",
+          "<input id=\"sn-search-input\" type=\"search\" placeholder=\"הקלידו מילה או ביטוי...\" oninput=\"window._snSearchInput(this.value);\" style=\"width:100%;box-sizing:border-box;padding:0.9rem 2.9rem 0.9rem 1.1rem;border-radius:1.2rem;border:none;background:#fff;color:#1e293b;font-size:1rem;font-weight:600;direction:rtl;outline:none;box-shadow:0 8px 28px rgba(79,70,229,0.22),0 2px 8px rgba(0,0,0,0.08);\"/>",
+          "<span style=\"position:absolute;top:50%;right:1.05rem;transform:translateY(-50%);font-size:1.05rem;pointer-events:none;opacity:0.7;\">🔍</span>",
+        "</div>",
+        "<select id=\"sn-search-book-sel\" style=\"width:100%;padding:0.5rem 0.9rem;border-radius:999px;border:1.5px solid rgba(99,102,241,0.25);background:#fff;color:#4338ca;font-size:0.85rem;font-weight:700;direction:rtl;outline:none;cursor:pointer;box-shadow:0 2px 8px rgba(79,70,229,0.08);\"></select>",
+        "<p style=\"color:#818cf8;font-size:0.7rem;margin:0;text-align:center;font-weight:600;\">💡 בחיפוש של כמה מילים — יוצגו רק קטעים שבהם כל המילים מופיעות יחד</p>",
       "</div>",
-      "<p id=\"sn-search-status\" style=\"color:#6366f1;font-size:0.78rem;font-weight:700;padding:0.4rem 1rem;margin:0;flex-shrink:0;min-height:1.5rem;\"></p>",
-      "<div id=\"sn-search-results\" style=\"overflow-y:auto;flex:1;direction:rtl;padding:0.5rem 0.9rem 1.5rem;background:#f8fafc;\"></div>",
+      "<p id=\"sn-search-status\" style=\"color:#6366f1;font-size:0.78rem;font-weight:700;padding:0.5rem 1.2rem 0.2rem;margin:0;flex-shrink:0;min-height:1.6rem;display:flex;align-items:center;gap:0.45rem;\"></p>",
+      "<div id=\"sn-search-results\" style=\"overflow-y:auto;flex:1;direction:rtl;padding:0.5rem 1rem 1.5rem;\"></div>",
     "</div>",
     // Book-specific bookmarks floating panel (overlay on subbook/sections/reader views)
     "<div id=\"sn-book-bm-panel\" style=\"display:none;position:absolute;top:60px;right:12px;left:12px;z-index:50;background:rgba(254,243,199,0.98);border:1.5px solid rgba(245,158,11,0.5);border-radius:0.85rem;padding:0.75rem 1rem;max-height:55vh;overflow-y:auto;direction:rtl;box-shadow:0 8px 24px rgba(0,0,0,0.25);\"></div>"

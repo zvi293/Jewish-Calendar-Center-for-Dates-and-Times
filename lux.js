@@ -49,26 +49,54 @@
     setTimeout(shoot, 6000 + Math.random() * 8000);
   });
 
-  /* ── 3. ירח חי — פאזת הירח האמיתית, בלחיצה נפתחת ברכת הלבנה ───── */
+  /* ── 3. ירח חי — פאזת הירח האמיתית; בלחיצה: פופאפ מצב הירח ואז ברכת הלבנה ── */
   safe("moonPhase", function () {
     var hero = document.getElementById("hero-section");
     if (!hero) return;
     var SYNODIC = 29.53058867;
-    var ref = Date.UTC(2000, 0, 6, 18, 14); // מולד ידוע
-    var age = ((Date.now() - ref) / 86400000) % SYNODIC;
-    if (age < 0) age += SYNODIC;
-    var idx = Math.round(age / (SYNODIC / 8)) % 8;
+    var REF_MOLAD = Date.UTC(2000, 0, 6, 18, 14); // מולד ידוע
     var faces = ["🌑", "🌒", "🌓", "🌔", "🌕", "🌖", "🌗", "🌘"];
-    var dayNum = Math.floor(age) + 1;
+    function moonNow() {
+      var age = ((Date.now() - REF_MOLAD) / 86400000) % SYNODIC;
+      if (age < 0) age += SYNODIC;
+      var idx = Math.round(age / (SYNODIC / 8)) % 8;
+      return { age: age, idx: idx, day: Math.floor(age) + 1, pct: Math.round((age / SYNODIC) * 100) };
+    }
+    var m0 = moonNow();
     var btn = document.createElement("button");
     btn.type = "button";
     btn.id = "lux-moon";
-    btn.setAttribute("aria-label", "ברכת הלבנה");
-    btn.title = "יום " + dayNum + " למולד · לחץ לברכת הלבנה";
-    btn.textContent = faces[idx];
-    btn.addEventListener("click", function () {
+    btn.setAttribute("aria-label", "מצב הירח וברכת הלבנה");
+    btn.title = "יום " + m0.day + " למולד · לחץ למצב הירח ולברכת הלבנה";
+    btn.textContent = faces[m0.idx];
+    function goLevana() {
       if (typeof window.openPrayer === "function")
         window.openPrayer("kiddush-levana", "ברכת לבנה", "Kiddush Levana");
+    }
+    btn.addEventListener("click", function () {
+      var old = document.getElementById("lux-moon-pop");
+      if (old) { old.remove(); return; }
+      var m = moonNow();
+      var pop = document.createElement("div");
+      pop.id = "lux-moon-pop";
+      pop.innerHTML =
+        '<div class="lux-moon-pop-in">' +
+          '<span class="lux-moon-pop-face">' + faces[m.idx] + "</span>" +
+          "<h3>מראה הירח כעת בשמים</h3>" +
+          '<p class="lux-moon-pop-day">🌙 יום <b>' + m.day + "</b> למולד הלבנה</p>" +
+          '<div class="lux-moon-pop-track"><div class="lux-moon-pop-fill"></div></div>' +
+          '<p class="lux-moon-pop-note">עוברים לברכת הלבנה בעוד רגע...</p>' +
+          '<div class="lux-moon-pop-btns">' +
+            '<button type="button" class="lux-moon-pop-go">🌙 לברכת הלבנה עכשיו</button>' +
+            '<button type="button" class="lux-moon-pop-x" aria-label="סגירה">✕</button>' +
+          "</div>" +
+        "</div>";
+      document.body.appendChild(pop);
+      var timer = setTimeout(function () { pop.remove(); goLevana(); }, 4600);
+      function closeOnly() { clearTimeout(timer); pop.remove(); }
+      pop.querySelector(".lux-moon-pop-go").addEventListener("click", function () { closeOnly(); goLevana(); });
+      pop.querySelector(".lux-moon-pop-x").addEventListener("click", closeOnly);
+      pop.addEventListener("click", function (e) { if (e.target === pop) closeOnly(); });
     });
     hero.appendChild(btn);
   });
@@ -140,8 +168,10 @@
       // מעבר ה-opacity של .lux-in קופא כשהדפדפן משהה את ציר האנימציות
       // (רקע/מסך כבוי/הקפאת PWA) — כרטיס שנשאר שקוף שני מחזורים רצופים
       // מקבל חשיפה כפויה בלי מעבר, כדי שלא "ייעלם" עד רענון.
+      // כרטיס שכבר אושר כגלוי (_luxOK) לא נבדק שוב — בדיקת getComputedStyle
+      // על עשרות כרטיסים בכל שנייה גורמת לריצודים בנייד.
       grid.querySelectorAll(".event-card.lux-in").forEach(function (c) {
-        if (c._luxForced) return;
+        if (c._luxForced || c._luxOK) return;
         if (parseFloat(getComputedStyle(c).opacity) < 0.9) {
           c._luxLowTicks = (c._luxLowTicks || 0) + 1;
           if (c._luxLowTicks >= 2) {
@@ -156,7 +186,7 @@
             c._luxForced = true;
           }
         } else {
-          c._luxLowTicks = 0;
+          c._luxOK = true;
         }
       });
       // גם אלמנטי הבית (לוח היומי, זמנים, כפתורי התפילות, האייקונים) —
@@ -330,8 +360,13 @@
     var KEY = "lux_marks_v1";
     var ON_KEY = "lux_marker_on";
     function enabled() { try { return localStorage.getItem(ON_KEY) !== "0"; } catch (e) { return true; } }
-    function loadAll() { return jget(KEY, {}); }
-    function saveAll(m) { jset(KEY, m); }
+    // מטמון בזיכרון — JSON.parse כל 1.2 שניות בלולאת השחזור מיותר ומרצד בנייד
+    var _marksCache = null;
+    function loadAll() {
+      if (_marksCache === null) _marksCache = jget(KEY, {});
+      return _marksCache;
+    }
+    function saveAll(m) { _marksCache = m; jset(KEY, m); }
     // מזהה יציב לפסקה — תחילת הטקסט המנורמל (שורד רינדור מחדש של המודאל)
     function sig(el) {
       var t = (el.textContent || "").replace(/\s+/g, " ").trim();
@@ -412,6 +447,7 @@
       // עטיפת שורות בקוראי התפילות (טקסט מבוסס <br>)
       document.querySelectorAll("#prayer-modal .modal-body").forEach(wrapLines);
       var marks = loadAll();
+      if (!Object.keys(marks).length) return;
       AREAS.forEach(function (k) {
         var s = marks[k];
         if (!s) return;
@@ -836,6 +872,35 @@
       parts.push('<circle class="lux-yw-now" cx="170" cy="38" r="5"><animate attributeName="r" values="4.5;6.5;4.5" dur="2.2s" repeatCount="indefinite"/></circle>');
       parts.push('<text class="lux-yw-monthlabel" x="170" y="24" text-anchor="middle" style="fill:#fff;font-weight:900;">היום</text>');
       svg.innerHTML = parts.join("");
+      // ── זום חודשי: לחיצה על אייקון מרחפת ומגדילה את כל אייקוני אותו
+      //    החודש (הם צפופים); לחיצה במקום אחר מחזירה אותם למקומם ──
+      var zoomedMonth = null;
+      var evNodes = []; // { g, month, x, y, ang }
+      function unzoomAll() {
+        if (!zoomedMonth) return;
+        zoomedMonth = null;
+        svg.classList.remove("lux-yw-zoommode");
+        evNodes.forEach(function (n) {
+          n.g.classList.remove("lux-yw-zoomed");
+          n.g.style.transform = "";
+        });
+      }
+      function zoomMonth(mk) {
+        unzoomAll();
+        zoomedMonth = mk;
+        svg.classList.add("lux-yw-zoommode");
+        var group = evNodes.filter(function (n) { return n.month === mk; })
+          .sort(function (a, b) { return a.ang - b.ang; });
+        // פריסה מחדש על קשת רחבה יותר סביב מרכז הקבוצה — מרווח קבוע בין אייקונים
+        var mid = group.reduce(function (s, n) { return s + n.ang; }, 0) / group.length;
+        var GAP = 0.30, RZ = 138, SCALE = 1.75;
+        group.forEach(function (n, gi) {
+          var na = group.length === 1 ? mid : mid + (gi - (group.length - 1) / 2) * GAP;
+          var nx = CX + RZ * Math.cos(na), ny = CY + RZ * Math.sin(na);
+          n.g.classList.add("lux-yw-zoomed");
+          n.g.style.transform = "translate(" + (nx - n.x).toFixed(1) + "px," + (ny - n.y).toFixed(1) + "px) scale(" + SCALE + ")";
+        });
+      }
       // חגים — אייקון אמיתי של כל חג על הטבעת, עם הילה זהב
       events.forEach(function (ev, i) {
         var diff = (new Date(ev.date) - new Date()) / 86400000;
@@ -846,8 +911,13 @@
         g.innerHTML =
           '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="11" class="lux-yw-halo"/>' +
           '<text x="' + x.toFixed(1) + '" y="' + (y + 4.2).toFixed(1) + '" text-anchor="middle" font-size="12">' + (ev.icon || "✨") + "</text>";
+        var evMonth = heMonthOf(new Date(ev.date));
+        evNodes.push({ g: g, month: evMonth, x: x, y: y, ang: ang });
         var c = g;
-        c.addEventListener("click", function () {
+        c.addEventListener("click", function (e) {
+          e.stopPropagation();
+          // לחיצה ראשונה על חודש צפוף — קודם מרחפים ומגדילים את כל אייקוני החודש
+          if (zoomedMonth !== evMonth) { zoomMonth(evMonth); return; }
           var info = overlay.querySelector("#lux-yw-info");
           var dateStr = new Date(ev.date).toLocaleDateString("he-IL", { day: "numeric", month: "long" });
           var heb = "";
@@ -877,7 +947,14 @@
         svg.appendChild(c);
       });
       overlay.querySelector(".lux-yw-close").addEventListener("click", function () { luxModalClose("lux-year-wheel"); });
-      overlay.addEventListener("click", function (e) { if (e.target === overlay) luxModalClose("lux-year-wheel"); });
+      overlay.addEventListener("click", function (e) {
+        // בזמן זום חודשי — לחיצה בכל מקום אחר קודם מחזירה את האייקונים למקומם
+        if (zoomedMonth && !e.target.closest(".lux-yw-evt") && !e.target.closest("#lux-yw-info")) {
+          unzoomAll();
+          return;
+        }
+        if (e.target === overlay) luxModalClose("lux-year-wheel");
+      });
       document.body.appendChild(overlay);
       // כפתור "חזור" בטלפון סוגר את הגלגל במקום לצאת מהאפליקציה
       luxModalOpen("lux-year-wheel");
@@ -930,9 +1007,13 @@
     if (day === 6) greet = "✨ שבוע טוב";
     var el = document.createElement("div");
     el.id = "lux-greeting";
-    function paint() {
+    function paint(force) {
       var heb = luxHebDateStr();
-      el.innerHTML = greet + (heb ? ' · <span class="lux-greet-date">' + heb + "</span>" : "");
+      var base = greet + (heb ? ' · <span class="lux-greet-date">' + heb + "</span>" : "");
+      // ציור מחדש רק כשמשהו השתנה — כתיבת innerHTML זהה כל 1.5 שניות מרצדת בנייד
+      if (!force && el.__luxGreetBase === base) return;
+      el.__luxGreetBase = base;
+      el.innerHTML = base;
       // עיטור השם האישי מוחל אחרי כל ציור מחדש (מוגדר בפיצ'ר personalName)
       if (window.__luxNameDecorate) window.__luxNameDecorate(el);
     }
@@ -951,7 +1032,7 @@
         } catch (e) {}
       }
     }, 1300);
-    window.addEventListener("lux-name-changed", paint);
+    window.addEventListener("lux-name-changed", function () { paint(true); });
     // עדכון כשנתוני הזמנים מגיעים (התאריך עשוי להתקדם ביום אחרי צאת הכוכבים)
     var tries = 0;
     var t = setInterval(function () {
@@ -1327,14 +1408,36 @@
     } catch (e) { return fallback; }
   }
   function jset(key, val) {
-    try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) {}
+    try { localStorage.setItem(key, JSON.stringify(val)); return true; } catch (e) {}
+    // האחסון מלא (בד"כ מטמון הספרים sn-cache-*) — מפנים מקום ומנסים שוב,
+    // אחרת נתונים חשובים (סדרי לימוד, רצפים) נעלמים בשקט
+    try {
+      var doomed = [];
+      for (var i = 0; i < localStorage.length; i++) {
+        var k = localStorage.key(i);
+        if (k && (k.indexOf("sn-cache-") === 0 || k.indexOf("lux_sef_cal_") === 0)) doomed.push(k);
+      }
+      doomed.slice(0, 80).forEach(function (k) { localStorage.removeItem(k); });
+      localStorage.setItem(key, JSON.stringify(val));
+      return true;
+    } catch (e2) {
+      if (typeof window.showToast === "function") window.showToast("⚠️ האחסון המקומי מלא — לא ניתן לשמור", "error", 3500);
+      return false;
+    }
   }
   /* מודאל קלף גנרי — נסגר גם בכפתור "חזור" בטלפון */
   function luxSheet(id, innerHtml) {
     var old = document.getElementById(id);
-    if (old) { luxModalClose(id); return null; }
+    if (old) {
+      // לחיצה כפולה מהירה (ghost-tap בנייד) — מתעלמים במקום לסגור-ולפתוח,
+      // אחרת הפופאפ "מרצד" ונטען פעמיים
+      if (Date.now() - (old.__luxOpenedAt || 0) < 600) return null;
+      luxModalClose(id);
+      return null;
+    }
     var overlay = document.createElement("div");
     overlay.id = id;
+    overlay.__luxOpenedAt = Date.now();
     overlay.className = "lux-sheet-overlay";
     overlay.innerHTML = '<div class="lux-sheet">' + innerHtml + "</div>";
     overlay.addEventListener("click", function (e) { if (e.target === overlay) luxModalClose(id); });
@@ -1352,16 +1455,16 @@
       var name = "";
       try { name = localStorage.getItem("lux_user_name") || ""; } catch (e) {}
       if (name) {
+        // כשיש שם — הברכה נקייה, בלי כפתור; שינוי השם נעשה מההגדרות
         var html = el.innerHTML;
         var sep = html.indexOf(" · ");
-        var withName = sep !== -1
+        el.innerHTML = sep !== -1
           ? html.slice(0, sep) + ", <b>" + esc(name) + "</b>" + html.slice(sep)
           : html + ", <b>" + esc(name) + "</b>";
-        el.innerHTML = withName + ' <button type="button" class="lux-name-edit" title="שינוי השם שלכם">✏️ שינוי שם</button>';
       } else {
         el.innerHTML += ' <button type="button" class="lux-name-add">👋 מה שמך?</button>';
       }
-      var btn = el.querySelector(".lux-name-add, .lux-name-edit");
+      var btn = el.querySelector(".lux-name-add");
       if (btn) btn.addEventListener("click", askName);
     };
     // אם הברכה כבר צוירה לפני שהוגדרנו — מעטרים עכשיו
@@ -1382,9 +1485,16 @@
       if (!ov) return;
       ov.querySelector("#lux-name-save").addEventListener("click", function () {
         var v = (ov.querySelector("#lux-name-input").value || "").trim().slice(0, 20);
+        var isNew = v && !current;
         try { if (v) localStorage.setItem("lux_user_name", v); } catch (e) {}
         luxModalClose("lux-name-modal");
         setTimeout(function () { window.dispatchEvent(new Event("lux-name-changed")); }, 150);
+        // בפעם הראשונה — מספרים איפה משנים את השם מעכשיו
+        if (isNew && typeof window.showToast === "function") {
+          setTimeout(function () {
+            window.showToast("💾 השם נשמר! אפשר לשנות אותו בכל עת דרך ⚙️ ההגדרות", "success", 4000);
+          }, 400);
+        }
       });
       var clr = ov.querySelector("#lux-name-clear");
       if (clr) clr.addEventListener("click", function () {
@@ -1394,6 +1504,26 @@
       });
       ov.querySelector(".lux-sheet-cancel").addEventListener("click", function () { luxModalClose("lux-name-modal"); });
     }
+    // כפתור "שינוי שם" בהגדרות — הדרך הקבועה לשנות את השם אחרי הבחירה הראשונה
+    function injectNameBtn() {
+      var anchor = document.getElementById("lux-marker-toggle") || document.getElementById("lux-dt-btn") || document.getElementById("lux-tour-btn");
+      if (!anchor || document.getElementById("lux-name-settings-btn")) return;
+      var host = anchor.closest("div");
+      var field = document.createElement("div");
+      field.innerHTML =
+        '<button type="button" id="lux-name-settings-btn" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 transition-all flex items-center justify-between gap-3" style="margin-top:0.75rem;">' +
+          '<span class="font-semibold text-sm">✏️ השם שלי בברכה</span>' +
+          '<span style="color:#94a3b8;font-size:0.8rem;">שינוי / הסרה</span>' +
+        "</button>";
+      host.insertAdjacentElement("afterend", field);
+      field.querySelector("#lux-name-settings-btn").addEventListener("click", function () {
+        if (typeof window.toggleSettings === "function") window.toggleSettings();
+        setTimeout(askName, 250);
+      });
+    }
+    injectNameBtn();
+    setTimeout(injectNameBtn, 3000);
+    setTimeout(injectNameBtn, 5500);
   });
 
   /* ── 25. חיפוש-על: תוצאות חכמות מתחת לתיבת החיפוש ──────────────── */
@@ -1961,7 +2091,7 @@
         { i: "⭐", t: "שבוע של ביקורים", on: visits >= 7 },
         { i: "💎", t: "30 ימי ביקור", on: visits >= 30 },
         { i: "✡️", t: "100 ימי ביקור", on: visits >= 100 }
-      ];
+      ].concat(window._luxStudyBadges ? window._luxStudyBadges() : []);
     }
     function openScreen() {
       var list = badges();
@@ -2175,7 +2305,7 @@
       var en = entry;
       entry = null; sx = null; sy = null;
       // תנועה אופקית מובהקת בלבד — לא מפריעים לגלילה אנכית
-      if (Math.abs(dx) < 45 || Math.abs(dx) < Math.abs(dy) * 1.25) return;
+      if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy) * 1.15) return;
       var fwd = dx > 0; // ימינה = הבא
       function clickBtn(sel) {
         var b = document.querySelector(sel);
@@ -2191,7 +2321,9 @@
   safe("siteTour", function () {
     var STEPS = [
       { sel: "#lux-greeting", t: "ברכה אישית 👋", d: "ברכה לפי שעת היום עם התאריך העברי. לחצו על \"מה שמך?\" כדי שהאתר יברך אתכם בשמכם." },
-      { sel: "#prayer-grid-wrap", t: "תפילות בלחיצה 🙏", d: "תפילת הדרך, ברכת המזון, תיקון הכללי ועוד — לחיצה אחת פותחת את הנוסח המלא. בכפתור \"תפילות נוספות\" מסתתרות עוד הרבה." },
+      { sel: "#lux-moon", t: "הירח החי 🌙", d: "כך נראה הירח בשמים ממש עכשיו. לחיצה מציגה את יום המולד — וממשיכה לברכת הלבנה." },
+      { sel: "#prayer-grid-wrap", t: "תפילות בלחיצה 🙏", d: "תפילת הדרך, ברכת המזון, תיקון הכללי ועוד — לחיצה אחת פותחת את הנוסח המלא. בכפתור \"תפילות נוספות\" מסתתרות עוד הרבה, כולל לוח ברכות הנהנין וסדר התרת נדרים." },
+      { sel: "#lux-plan-row", t: "סדר לימוד אישי 🎯", d: "בוחרים ספר — תהילים, משנה, בן איש חי ועוד — קובעים קצב, והאתר מחלק את הלימוד לימים, מציג בכל יום את המנה, עוקב אחרי ההתקדמות ומעניק תגי התמדה." },
       { sel: "#shabbat-countdown-wrap", t: "ספירה לאחור לשבת 🕯️", d: "כמה זמן נשאר עד כניסת השבת או החג. לחיצה מציגה את כל פרטי השבת: הדלקת נרות, הבדלה ופרשת השבוע." },
       { sel: "#btn-open-calendar", t: "לוח שנה חודשי 📅", d: "לוח שנה עברי-לועזי מלא עם כל החגים, ראשי החודשים והפרשות. אפשר לדפדף בין חודשים גם בהחלקת אצבע." },
       { sel: "#lux-year-wheel-btn", t: "גלגל השנה 🎡", d: "מסע ויזואלי של שנה שלמה — כל החגים על גלגל מסתובב. לחצו על חג כדי לגלות מתי הוא ובעוד כמה ימים." },
@@ -2202,7 +2334,7 @@
       { sel: "#resultsGrid", t: "החגים הקרובים 🗓️", d: "כל המועדים הקרובים עם זמני כניסה ויציאה. בכל כרטיס: סנכרון ליומן, דבר תורה מיוחד ושיתוף בוואטסאפ." },
       { sel: "#lux-pearl", t: "פנינה יומית 💎", d: "ציטוט יומי מתחלף מפרקי אבות ומקורות ישראל — השראה קטנה לכל יום." },
       { sel: "#lux-bottom-nav", t: "ניווט מהיר 📱", d: "סרגל הניווט התחתון — ואפשר לבחור בהגדרות בדיוק אילו קיצורים יופיעו בו." },
-      { sel: ".nav-action-btn", t: "הגדרות ⚙️", d: "נוסח התפילה, שיטת הזמנים, עיצוב, התראות, יארצייטים, הישגים ועוד — הכל מתאים את האתר בדיוק אליכם. סיור נעים! 🙌" }
+      { sel: ".nav-action-btn", t: "הגדרות ⚙️", d: "נוסח התפילה, שיטת הזמנים, עיצוב, התראות, יארצייטים, הישגים, המרת תאריכים ומרקר סימון שורה בספרים — הכל מתאים את האתר בדיוק אליכם. סיור נעים! 🙌" }
     ];
     var idx = 0, overlay = null, hi = null, tip = null;
 
@@ -3880,14 +4012,25 @@
       return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
     }
     function trackState(key) { return jget("lux_track_" + key, { last: null, streak: 0 }); }
+    function yesterdayStr() {
+      var yd = new Date(Date.now() - 86400000);
+      return yd.getFullYear() + "-" + String(yd.getMonth() + 1).padStart(2, "0") + "-" + String(yd.getDate()).padStart(2, "0");
+    }
     function markDone(key) {
       var s = trackState(key);
       var t = todayStr();
       if (s.last === t) return s;
-      var yd = new Date(Date.now() - 86400000);
-      var y = yd.getFullYear() + "-" + String(yd.getMonth() + 1).padStart(2, "0") + "-" + String(yd.getDate()).padStart(2, "0");
-      s.streak = s.last === y ? s.streak + 1 : 1;
+      s.streak = s.last === yesterdayStr() ? s.streak + 1 : 1;
       s.last = t;
+      jset("lux_track_" + key, s);
+      return s;
+    }
+    // ביטול הסימון של היום — לחיצה שנייה על "סיימתי" מחזירה את המצב לאחור
+    function unmarkDone(key) {
+      var s = trackState(key);
+      if (s.last !== todayStr()) return s;
+      s.streak = Math.max(0, s.streak - 1);
+      s.last = s.streak > 0 ? yesterdayStr() : null;
       jset("lux_track_" + key, s);
       return s;
     }
@@ -4016,6 +4159,17 @@
       var doneBtn = ov.querySelector("#lux-tr-done");
       if (trackState(key).last === todayStr()) { doneBtn.classList.add("lux-tr-done-on"); doneBtn.textContent = "✓ הושלם היום"; }
       doneBtn.addEventListener("click", function () {
+        // לחיצה שנייה מבטלת את הסימון של היום
+        if (trackState(key).last === todayStr()) {
+          unmarkDone(key);
+          doneBtn.classList.remove("lux-tr-done-on");
+          doneBtn.textContent = "✓ סיימתי להיום";
+          if (typeof window.showToast === "function") {
+            window.showToast("הסימון בוטל — אפשר לסמן שוב בכל עת", "info", 2200);
+          }
+          renderCards();
+          return;
+        }
         var s = markDone(key);
         doneBtn.classList.add("lux-tr-done-on");
         doneBtn.textContent = "✓ הושלם היום";
@@ -4101,21 +4255,108 @@
   safe("studyPlan", function () {
     var KEY = "lux_study_plans_v1";
     /* קטלוג — ספרים מהאתר עם מבנה פרקים ידוע ב-Sefaria.
-       min = הערכת דקות לימוד ליחידה אחת (פרק/סימן) */
-    var CATALOG = [
-      { id: "tehillim", he: "תהילים", icon: "📖", count: 150, unit: "פרק", min: 3, ref: function (i) { return "Psalms " + (i + 1); } },
-      { id: "shir", he: "שיר השירים", icon: "🌹", count: 8, unit: "פרק", min: 6, ref: function (i) { return "Song of Songs " + (i + 1); } },
-      { id: "tomer", he: "תומר דבורה", icon: "🌳", count: 10, unit: "פרק", min: 12, ref: function (i) { return "Tomer Devorah " + (i + 1); } },
-      { id: "tanya-la", he: "תניא — ליקוטי אמרים", icon: "📗", count: 53, unit: "פרק", min: 10, ref: function (i) { return "Tanya, Part I; Likutei Amarim, Chapter " + (i + 1); } },
-      { id: "mishlei", he: "משלי", icon: "🦉", count: 31, unit: "פרק", min: 5, ref: function (i) { return "Proverbs " + (i + 1); } },
-      { id: "pirkei-avot", he: "פרקי אבות", icon: "🕊️", count: 6, unit: "פרק", min: 10, ref: function (i) { return "Pirkei Avot " + (i + 1); } },
-      { id: "sa-oc", he: "שולחן ערוך — אורח חיים", icon: "📜", count: 697, unit: "סימן", min: 6, ref: function (i) { return "Shulchan Arukh, Orach Chayim " + (i + 1); } },
-      { id: "sa-yd", he: "שולחן ערוך — יורה דעה", icon: "📜", count: 403, unit: "סימן", min: 6, ref: function (i) { return "Shulchan Arukh, Yoreh Deah " + (i + 1); } },
-      { id: "sa-eh", he: "שולחן ערוך — אבן העזר", icon: "📜", count: 178, unit: "סימן", min: 6, ref: function (i) { return "Shulchan Arukh, Even HaEzer " + (i + 1); } },
-      { id: "sa-cm", he: "שולחן ערוך — חושן משפט", icon: "📜", count: 427, unit: "סימן", min: 6, ref: function (i) { return "Shulchan Arukh, Choshen Mishpat " + (i + 1); } },
-      { id: "mb", he: "משנה ברורה", icon: "📖", count: 697, unit: "סימן", min: 8, ref: function (i) { return "Mishnah Berurah " + (i + 1); } },
-      { id: "orchot", he: "אורחות צדיקים", icon: "🌿", count: 28, unit: "שער", min: 15, ref: function (i) { return i === 0 ? "Orchot Tzadikim, Introduction" : "Orchot Tzadikim " + i; } }
+       min = הערכת דקות לימוד ליחידה אחת (פרק/סימן/פרשה) */
+    var SPD = {"bih1":[["בראשית","Bereshit"],["נח","Noach"],["לך לך","Lech Lecha"],["וירא","Vayera"],["חיי שרה","Chayei Sara"],["תולדות","Toldot"],["ויצא","Vayetzei"],["וישלח","Vayishlach"],["וישב","Vayeshev"],["חנוכה","Chanukah"],["מקץ","Miketz"],["ויגש","Vayigash"],["ויחי","Vayechi"],["שמות","Shemot"],["וארא","Vaera"],["בא","Bo"],["בשלח","Beshalach"],["יתרו","Yitro"],["משפטים","Mishpatim"],["תרומה","Terumah"],["תצוה","Tetzaveh"],["כי תשא","Ki Tisa"],["ויקהל","Vayakhel"],["פקודי","Pekudei"],["ויקרא","Vayikra"],["צו","Tzav"],["שמיני","Shmini"],["תזריע-מצורע","Tazria Metzora"],["אחרי-קדושים","Achrei Mot Kedoshim"],["אמור","Emor"],["בהר-בחקותי","Behar Bechukotai"],["במדבר","Bamidbar"],["נשא","Nasso"],["בהעלותך","Beha'alotcha"],["שלח","Sh'lach"],["קרח","Korach"],["חקת","Chukat"],["בלק","Balak"],["פינחס","Pinchas"],["מטות","Matot"],["מסעי","Masei"],["דברים","Devarim"],["ואתחנן","Vaetchanan"],["עקב","Eikev"],["ראה","Re'eh"],["שופטים","Shoftim"],["כי תצא","Ki Teitzei"],["כי תבוא","Ki Tavo"],["נצבים","Nitzavim"],["וילך","Vayeilech"],["האזינו","Ha'Azinu"],["וזאת הברכה","V'Zot HaBerachah"]],"bih2":[["בראשית","Bereshit"],["נח","Noach"],["לך לך","Lech Lecha"],["וירא","Vayera"],["חיי שרה","Chayei Sara"],["תולדות","Toldot"],["ויצא","Vayetzei"],["וישלח","Vayishlach"],["וישב","Vayeshev"],["מקץ","Miketz"],["ויגש","Vayigash"],["ויחי","Vayechi"],["שמות","Shemot"],["וארא","Vaera"],["בא","Bo"],["בשלח","Beshalach"],["יתרו","Yitro"],["משפטים","Mishpatim"],["תרומה","Terumah"],["תצוה","Tetzaveh"],["כי תשא","Ki Tisa"],["ויקהל","Vayakhel"],["פקודי","Pekudei"],["ויקרא","Vayikra"],["צו","Tzav"],["שמיני","Shmini"],["תזריע","Tazria"],["מצורע","Metzora"],["אחרי מות","Achrei Mot"],["קדושים","Kedoshim"],["אמור","Emor"],["בהר-בחקותי","Behar Bechukotai"],["נשא","Nasso"],["בהעלותך","Beha'alotcha"],["שלח","Sh'lach"],["קרח","Korach"],["חקת","Chukat"],["בלק","Balak"],["פינחס","Pinchas"],["מטות","Matot"],["מסעי","Masei"],["ואתחנן","Vaetchanan"],["עקב","Eikev"],["ראה","Re'eh"],["שופטים","Shoftim"],["כי תצא","Ki Teitzei"],["כי תבוא","Ki Tavo"]],"mishnah":[["ברכות","Mishnah Berakhot",9],["פאה","Mishnah Peah",8],["דמאי","Mishnah Demai",7],["כלאים","Mishnah Kilayim",9],["שביעית","Mishnah Sheviit",10],["תרומות","Mishnah Terumot",11],["מעשרות","Mishnah Maasrot",5],["מעשר שני","Mishnah Maaser Sheni",5],["חלה","Mishnah Challah",4],["ערלה","Mishnah Orlah",3],["ביכורים","Mishnah Bikkurim",4],["שבת","Mishnah Shabbat",24],["עירובין","Mishnah Eruvin",10],["פסחים","Mishnah Pesachim",10],["שקלים","Mishnah Shekalim",8],["יומא","Mishnah Yoma",8],["סוכה","Mishnah Sukkah",5],["ביצה","Mishnah Beitzah",5],["ראש השנה","Mishnah Rosh Hashanah",4],["תענית","Mishnah Ta'anit",4],["מגילה","Mishnah Megillah",4],["מועד קטן","Mishnah Moed Katan",3],["חגיגה","Mishnah Chagigah",3],["יבמות","Mishnah Yevamot",16],["כתובות","Mishnah Ketubot",13],["נדרים","Mishnah Nedarim",11],["נזיר","Mishnah Nazir",9],["סוטה","Mishnah Sotah",9],["גיטין","Mishnah Gittin",9],["קידושין","Mishnah Kiddushin",4],["בבא קמא","Mishnah Bava Kamma",10],["בבא מציעא","Mishnah Bava Metzia",10],["בבא בתרא","Mishnah Bava Batra",10],["סנהדרין","Mishnah Sanhedrin",11],["מכות","Mishnah Makkot",3],["שבועות","Mishnah Shevuot",8],["עדויות","Mishnah Eduyot",8],["עבודה זרה","Mishnah Avodah Zarah",5],["אבות","Pirkei Avot",6],["הוריות","Mishnah Horayot",3],["זבחים","Mishnah Zevachim",14],["מנחות","Mishnah Menachot",13],["חולין","Mishnah Chullin",12],["בכורות","Mishnah Bekhorot",9],["ערכין","Mishnah Arakhin",9],["תמורה","Mishnah Temurah",7],["כריתות","Mishnah Keritot",6],["מעילה","Mishnah Meilah",6],["תמיד","Mishnah Tamid",7],["מדות","Mishnah Middot",5],["קינים","Mishnah Kinnim",3],["כלים","Mishnah Kelim",30],["אהלות","Mishnah Oholot",18],["נגעים","Mishnah Negaim",14],["פרה","Mishnah Parah",12],["טהרות","Mishnah Tahorot",10],["מקואות","Mishnah Mikvaot",10],["נדה","Mishnah Niddah",10],["מכשירין","Mishnah Makhshirin",6],["זבים","Mishnah Zavim",5],["טבול יום","Mishnah Tevul Yom",4],["ידים","Mishnah Yadayim",4],["עוקצין","Mishnah Oktzin",3]],"midot":[["הקדמה","Introduction"],["הקדמה שניה","Second Introduction"],["אמת (א)","Truth, Part I"],["אמת (ב)","Truth, Part II"],["הכנסת אורחים (א)","Hospitality, Part I"],["הכנסת אורחים (ב)","Hospitality, Part II"],["אהבה (א)","Love, Part I"],["אהבה (ב)","Love, Part II"],["אמונה (א)","Faith, Part I"],["אמונה (ב)","Faith, Part II"],["אכילה (א)","Eating, Part I"],["אכילה (ב)","Eating, Part II"],["אלמן (א)","A Widower, Part I"],["אלמן (ב)","A Widower, Part II"],["ארץ ישראל (ב)","The Land of Israel, Part II"],["אבידה","Lost Objects"],["בנים (א)","Children, Part I"],["בנים (ב)","Children, Part II"],["בית (א)","A House, Part I"],["בית (ב)","A House, Part II"],["בושה","Embarrassment; Modesty"],["בגדים (א)","Clothing, Part I"],["בגדים (ב)","Clothing, Part II"],["בטחון (א)","Trust in God, Part I"],["בטחון (ב)","Trust in God, Part II"],["בשורה (א)","Tidings, Part I"],["בשורה (ב)","Tidings, Part II"],["ברכה","Blessing"],["בכייה","Crying"],["גאוה","Haughtiness"],["גניבה וגזילה (א)","Theft and Robbery, Part I"],["גניבה וגזילה (ב)","Theft and Robbery, Part II"],["דעת (א)","Knowledge of God, Part I"],["דעת (ב)","Knowledge of God, Part II"],["דרך (א)","Traveling, Part I"],["דרך (ב)","Traveling, Part II"],["דיין","A Judge"],["המתקת דין (א)","Mitigating Judgment, Part I"],["המתקת דין (ב)","Mitigating Judgment, Part II"],["התבודדות (א)","Seclusion, Part I"],["התבודדות (ב)","Seclusion, Part II"],["הרהורים (א)","Improper Thoughts, Part I"],["הרהורים (ב)","Improper Thoughts, Part II"],["התנשאות (א)","Prestige and Importance, Part I"],["התנשאות (ב)","Prestige and Importance, Part II"],["הצלחה (א)","Success and Prosperity, Part I"],["הצלחה (ב)","Success and Prosperity, Part II"],["הריון (א)","Conception; Pregnancy, Part I"],["הריון (ב)","Conception; Pregnancy, Part II"],["הוראה","Instruction"],["ודוי דברים","Confession"],["ותרן","Easygoing"],["זיפן","A Fraud"],["זכות אבות (א)","Ancestral Merit, Part I"],["זכות אבות (ב)","Ancestral Merit, Part II"],["זכירה","Memory"],["זקנים","Elders"],["זריזות","Zealousness"],["חלום (א)","Dreams, Part I"],["חלום (ב)","Dreams, Part II"],["חן (א)","Grace, Part I"],["חן (ב)","Grace, Part II"],["חנפה (א)","Flattery, Part I"],["חנפה (ב)","Flattery, Part II"],["חקירה","Philosophical Investigation"],["חדושין דאוריתא","Original Torah; Sights"],["חיתון","Marriage"],["טבע","Nature"],["טלטול","Wandering"],["טהרה","Purity"],["ישועה","Salvation and Miracles"],["יראה (א)","Fear of God, Part I"],["יראה (ב)","Fear of God, Part II"],["יחוס","Distinguished Ancestry"],["כבוד (א)","Honor and Respect, Part I"],["כבוד (ב)","Honor and Respect, Part II"],["כעס","Anger"],["כישוף","Sorcery"],["לימוד (א)","Torah Study, Part I"],["לימוד (ב)","Torah Study, Part II"],["לשון הרע (א)","Slander, Part I"],["לשון הרע (ב)","Slander, Part II"],["ליצנות","Derision and Mockery"],["מריבה (א)","Conflict and Strife, Part I"],["מריבה (ב)","Conflict and Strife, Part II"],["ממון (א)","Money, Part I"],["ממון (ב)","Money, Part II"],["מפלת (א)","Miscarriage, Part I"],["מפלת (ב)","Miscarriage, Part II"],["מסור","An Informer"],["משקה","Alcohol"],["משיח","The Messiah"],["מוהל","A Circumciser"],["מפורסם","Fame"],["ניאוף (א)","Immoral Behavior, Part I"],["ניאוף (ב)","Immoral Behavior, Part II"],["נדה (א)","Menstruation, Part I"],["נדה (ב)","Menstruation, Part II"],["נפילה (א)","A Fall, Part I"],["נפילה (ב)","A Fall, Part II"],["ניבול פה","Obscene Language"],["נהנה מאחרים (א)","Benefitting from Others, Part I"],["נהנה מאחרים (ב)","Benefitting from Others, Part II"],["נגינה","Song"],["ניסיון","A Test"],["נר תמיד","An Eternal Flame"],["ספירת העומר","Counting the Omer"],["סוד","Mysteries"],["ספר","A Holy Book"],["סגולה","A Divine Remedy"],["ענוה (א)","Humility, Part I"],["ענוה (ב)","Humility, Part II"],["עצבות (א)","Depression, Part I"],["עצבות (ב)","Depression, Part II"],["עצירות","Constipation"],["עבירה","Sin"],["עצלות","Laziness"],["עונש","Punishment"],["עצה","Advice"],["עזות (א)","Arrogance, Part I"],["עזות (ב)","Arrogance, Part II"],["פחד (א)","Fear, Part I"],["פחד (ב)","Fear, Part II"],["פדיון שבויים (א)","Redeeming Captives, Part I"],["פדיון שבויים (ב)","Redeeming Captives, Part II"],["פרישות","Abstinence"],["פוסק","Halakhic Codifiers"],["צדקה (א)","Charity, Part I"],["צדקה (ב)","Charity, Part II"],["צדיק (א)","A Righteous Person, Part I"],["צדיק (ב)","A Righteous Person, Part II"],["קללה (א)","A Curse, Part I"],["קללה (ב)","A Curse, Part II"],["קליפה (א)","Forces of Evil, Part I"],["קליפה (ב)","Forces of Evil, Part II"],["קנאה","Envy and Jealousy"],["קרי (א)","A Seminal Emission, Part I"],["קרי (ב)","A Seminal Emission, Part II"],["קשוי לילד","Difficulty in Childbirth"],["הרחקת רשעים (א)","Distancing the Wicked, Part I"],["הרחקת רשעים (ב)","Distancing the Wicked, Part II"],["רחמנות (א)","Compassion and Mercy, Part I"],["רחמנות (ב)","Compassion and Mercy, Part II"],["ראיה","Vision"],["רפואה","Healing"],["שמחה (א)","Joy and Happiness, Part I"],["שמחה (ב)","Joy and Happiness, Part II"],["שכרות (א)","Drunkenness, Part I"],["שכרות (ב)","Drunkenness, Part II"],["שרים","Public Officials"],["שוחד","Bribery"],["שלום","Peace"],["שבועה","Oaths"],["שבת","The Sabbath"],["שינה","Sleep"],["שוחט","A Ritual Slaughterer"],["תשובה (א)","Repentance, Part I"],["תשובה (ב)","Repentance, Part II"],["תוכחה (א)","Rebuke, Part I"],["תוכחה (ב)","Rebuke, Part II"],["תפילה (א)","Prayer, Part I"],["תפילה (ב)","Prayer, Part II"]],"kedushat":[["בראשית","Genesis, Bereshit"],["נח","Genesis, Noach"],["לך לך","Genesis, Lech Lecha"],["וירא","Genesis, Vayera"],["חיי שרה","Genesis, Chayei Sara"],["תולדות","Genesis, Toldot"],["ויצא","Genesis, Vayetzei"],["וישלח","Genesis, Vayishlach"],["וישב","Genesis, Vayeshev"],["מקץ","Genesis, Miketz"],["ויגש","Genesis, Vayigash"],["ויחי","Genesis, Vayechi"],["שמות","Exodus, Shemot"],["וארא","Exodus, Vaera"],["בא","Exodus, Bo"],["בשלח","Exodus, Beshalach"],["יתרו","Exodus, Yitro"],["משפטים","Exodus, Mishpatim"],["תרומה","Exodus, Terumah"],["תצוה","Exodus, Tetzaveh"],["כי תשא","Exodus, Ki Tisa"],["ויקהל","Exodus, Vayakhel"],["פקודי","Exodus, Pekudei"],["ויקרא","Leviticus, Vayikra"],["צו","Leviticus, Tzav"],["שמיני","Leviticus, Shemini"],["תזריע","Leviticus, Tazria"],["מצורע","Leviticus, Metzora"],["אחרי מות","Leviticus, Acharei Mot"],["קדושים","Leviticus, Kedoshim"],["אמור","Leviticus, Emor"],["בהר","Leviticus, Behar"],["בחוקותי","Leviticus, Bechukotai"],["במדבר","Numbers, Bamidbar"],["נשא","Numbers, Naso"],["בהעלותך","Numbers, Beha'alotcha"],["שלח","Numbers, Shelach"],["קרח","Numbers, Korach"],["חוקת","Numbers, Chukat"],["בלק","Numbers, Balak"],["פינחס","Numbers, Pinchas"],["מטות","Numbers, Matot"],["מסעי","Numbers, Masei"],["דברים","Deuteronomy, Devarim"],["ואתחנן","Deuteronomy, Vaetchanan"],["עקב","Deuteronomy, Eikev"],["ראה","Deuteronomy, Re'eh"],["שופטים","Deuteronomy, Shoftim"],["כי תצא","Deuteronomy, Ki Teitzei"],["כי תבוא","Deuteronomy, Ki Tavo"],["נצבים","Deuteronomy, Nitzavim"],["וילך","Deuteronomy, Vayeilech"],["האזינו","Deuteronomy, Ha'Azinu"],["וזאת הברכה","Deuteronomy, V'Zot HaBerachah"]],"noam":[["בראשית","Sefer Bereshit, Bereshit"],["נח","Sefer Bereshit, Noach"],["לך לך","Sefer Bereshit, Lech Lecha"],["וירא","Sefer Bereshit, Vayera"],["חיי שרה","Sefer Bereshit, Chayye Sara"],["תולדות","Sefer Bereshit, Toldot"],["ויצא","Sefer Bereshit, Vayetzei"],["וישלח","Sefer Bereshit, Vayishlach"],["וישב","Sefer Bereshit, Vayeshev"],["מקץ","Sefer Bereshit, Miketz"],["ויגש","Sefer Bereshit, Vayigash"],["ויחי","Sefer Bereshit, Vayechi"],["שמות","Sefer Shemot, Shemot"],["וארא","Sefer Shemot, Vaera"],["בא","Sefer Shemot, Bo"],["בשלח","Sefer Shemot, Beshalach"],["יתרו","Sefer Shemot, Yitro"],["משפטים","Sefer Shemot, Mishpatim"],["תרומה","Sefer Shemot, Terumah"],["תצוה","Sefer Shemot, Tetzaveh"],["כי תשא","Sefer Shemot, Ki Tisa"],["פקודי","Sefer Shemot, Pekudei"],["ויקרא","Sefer Vayikra, Vayikra"],["צו","Sefer Vayikra, Tzav"],["שמיני","Sefer Vayikra, Shmini"],["תזריע","Sefer Vayikra, Tazria"],["מצורע","Sefer Vayikra, Metzora"],["אחרי מות","Sefer Vayikra, Acharei Mot"],["קדושים","Sefer Vayikra, Kedoshim"],["אמור","Sefer Vayikra, Emor"],["בהר","Sefer Vayikra, Behar"],["בחוקתי","Sefer Vayikra, Bechukotai"],["במדבר","Sefer Bamidbar, Bamidbar"],["נשא","Sefer Bamidbar, Nasso"],["בהעלותך","Sefer Bamidbar, Beha'alotcha"],["שלח","Sefer Bamidbar, Sh'lach"],["קרח","Sefer Bamidbar, Korach"],["חקת","Sefer Bamidbar, Chukat"],["בלק","Sefer Bamidbar, Balak"],["פנחס","Sefer Bamidbar, Pinchas"],["מטות","Sefer Bamidbar, Matot"],["מסעי","Sefer Bamidbar, Masei"],["דברים","Sefer Devarim, Devarim"],["ואתחנן","Sefer Devarim, Vaetchanan"],["עקב","Sefer Devarim, Eikev"],["ראה","Sefer Devarim, Re'eh"],["שופטים","Sefer Devarim, Shoftim"],["כי תצא","Sefer Devarim, Ki Teitzei"],["כי תבוא","Sefer Devarim, Ki Tavo"],["האזינו","Sefer Devarim, Ha'Azinu"]],"menorat":[["פיוט","Piyyut"],["הקדמה","Introduction"],["א; פרק הצדקה","i; On Charity"],["תפילה","ii; On Prayer, Prayer"],["תפילה בבית הכנסת","ii; On Prayer, Prayer in the Synagogue"],["נטילת ידים","ii; On Prayer, Washing"],["ציצית","ii; On Prayer, Tzitzit"],["תפילין","ii; On Prayer, Tefillin"],["סדר מאה ברכות","ii; On Prayer, Hundred Berakhot"],["ענין שליח צבור","ii; On Prayer, Chazzan"],["קדיש","ii; On Prayer, Kaddish"],["שמע","ii; On Prayer, Shema"],["עמידה","ii; On Prayer, Amidah"],["סדר י\\\"ח ברכות","ii; On Prayer, Order of Amidah"],["ברכת כהנים","ii; On Prayer, Birkat Kohanim"],["נפילת אפים","ii; On Prayer, Tachanun"],["קריאת התורה","ii; On Prayer, Torah Reading"],["מנחה","ii; On Prayer, Mincha"],["תפילת ערבית","ii; On Prayer, Arvit"],["קריאת שמע על המיטה","ii; On Prayer, Bedtime Shema"],["תפילות של שבת","ii; On Prayer, Shabbat Prayers"],["הבדלה","ii; On Prayer, Havdalah"],["ראש חודש","ii; On Prayer, Rosh Chodesh"],["ברכת הלבנה","ii; On Prayer, Kiddush Levanah"],["חנוכה","ii; On Prayer, Chanukah"],["פורים","ii; On Prayer, Purim"],["בענין הגעלת הכלים","ii; On Prayer, Pesach, i"],["בענין בדיקת החמץ","ii; On Prayer, Pesach, ii"],["בענין יום ארבעה עשר","ii; On Prayer, Pesach, iii"],["בענין דברים שעוברין בפסח","ii; On Prayer, Pesach, iv"],["בענין לישת המצה","ii; On Prayer, Pesach, v"],["בענין איסור מלאכה","ii; On Prayer, Pesach, vi"],["בענין המלאכות המותרות בחול המועד","ii; On Prayer, Pesach, vii"],["בענין תפלות ימי החג וסדר ליל פסח","ii; On Prayer, Pesach, viii"],["סדר ספירת העומר","ii; On Prayer, Sefirat HaOmer"],["שבועות","ii; On Prayer, Shavuot"],["הלכות התעניות","ii; On Prayer, Fasts"],["בענין הגשמים","ii; On Prayer, Drought Relief"],["תענית יחיד","ii; On Prayer, Individual Fasts"],["מאורעות שאירעו לאבותינו","ii; On Prayer, Matters that Occurred to our Forefathers"],["הלכות תשעה באב","ii; On Prayer, Tisha BeAv"],["תיקון האשמורות","ii; On Prayer, Selichot"],["ראש השנה","ii; On Prayer, Rosh Hashanah"],["יום כיפור","ii; On Prayer, Yom Kippur"],["סוכות","ii; On Prayer, Sukkot"],["הלכות אתרוג והדס וערבה","ii; On Prayer, The Four Species"],["לולב","ii; On Prayer, Lulav"],["תפילות חג הסוכות","ii; On Prayer, Sukkot Prayers"],["הוספות","ii; On Prayer, Addenda"],["מעלת התשובה","iii; On Repentance, The Quality of Repentance"],["ענין הייסורין","iii; On Repentance, On Afflictions"],["כח התשובה","iii; On Repentance, The Power of Repentance"],["סבות התשובה וכלליה","iii; On Repentance, Incentives of Repentance"],["כיצד היא התשובה","iii; On Repentance, What is Repentance"],["מעלת בעל תשובה","iii; On Repentance, The Quality of the Repenter"],["מרגניתא דר' מאיר","iii; On Repentance, Marganita deRabbi Meir"],["זכיות ועברות","iii; On Repentance, Merits and Transgressions"],["סדר התשובה","iii; On Repentance, Order of Teshuvah"],["הלכות תשובה","iii; On Repentance, Laws of Teshuvah"],["מעשיות בצדיקים קדושים","iii; On Repentance, Tales of the Righteous"],["ענין התוכחות","iii; On Repentance, Reprovement"],["מעלות הענווה ומידות העניו","iv; On Humility, Its Attributes"],["הדברים המביאין לידי ענוה","iv; On Humility, Developing Humility"],["דרכי הענווה","iv; On Humility, Its Habits"],["הגאווה וכתותיה","iv; On Humility, Haughtiness and its Subclasses"],["גדולה ענוה","iv; On Humility, Great is Humility"],["יהירות","iv; On Humility, Arrogance"],["לימוד תורה","v; On Fixed Hours of Study, Torah Study"],["התורה אומן למעשה בראשית","v; On Fixed Hours of Study, Torah is an Architect of Creation"],["התורה וישראל","v; On Fixed Hours of Study, Torah and the Jewish People"],["כתר התורה","v; On Fixed Hours of Study, The Crown Torah"],["מאור התורה","v; On Fixed Hours of Study, The Light of Torah"],["רפואת התורה","v; On Fixed Hours of Study, The Healing of Torah"],["עץ החיים","v; On Fixed Hours of Study, Tree of Life"],["חייב אדם למסור את נפשו על התורה","v; On Fixed Hours of Study, Dedication to Torah"],["עניין ביטול תורה ועונשו","v; On Fixed Hours of Study, Bitul Torah"],["שכר העוסק בתורה","v; On Fixed Hours of Study, Its Reward"],["סילוקן של צדיקים","v; On Fixed Hours of Study, Death of the Righteous"],["לימוד התורה ביום ובלילה","v; On Fixed Hours of Study, Torah Study by Day and by Night"],["יפה תורה עם מלאכה","v; On Fixed Hours of Study, Excellent is Torah Combined with a Worldly Occupation"],["כוונת תלמוד תורה לשמה","v; On Fixed Hours of Study, Torah for its Own Sake"],["צריך אדם לחזר אחר התורה","v; On Fixed Hours of Study, Seeking Torah"],["תורה ודרך ארץ","v; On Fixed Hours of Study, Torah and Derekh Eretz"],["ענין ספר תורה","v; On Fixed Hours of Study, Sefer Torah"],["ענין מתן תורה","v; On Fixed Hours of Study, Giving of the Torah"],["ענין עם הארץ","v; On Fixed Hours of Study, Ignorant People"],["כל מי שיודע תורה חייב ללמדה","v; On Fixed Hours of Study, The Duty to Teach Torah"],["דרכי הרב ותלמידיו","v; On Fixed Hours of Study, Teacher Pupil Relationship"],["כבוד תלמידי חכמים ועניין נדוי","v; On Fixed Hours of Study, Honoring the Sages"],["חמש מעלות לעוסק בתורה","v; On Fixed Hours of Study, Five attributes of the Torah scholar"],["גדולה תורה","v; On Fixed Hours of Study, Great is Torah"],["לימוד המצות ע\\\"מ לעשותן וללמדן","vi; On the Commandments, Study in order to keep and teach"],["המצות וישראל","vi; On the Commandments, The commandments and Israel"],["מאהבת ישראל במצות מוסרין נפשם עליהן","vi; On the Commandments, Dedication and sacrifice"],["א' בחריצות וזריזות","vi; On the Commandments, On their fulfilment, i"],["ב' באזהרה מבטול מצות עשה","vi; On the Commandments, On their fulfilment, ii"],["ג' בזריזות להקדים למצוה בבואה","vi; On the Commandments, On their fulfilment, iii"],["ד' להגדיל ולהאדיר את המצות","vi; On the Commandments, On their fulfilment, iv"],["ה' בהידור המצוה","vi; On the Commandments, On their fulfilment, v"],["ו' לקיים המצוה באיברים ובהרגשות","vi; On the Commandments, On their fulfilment, vi"],["ז' בכוונת עשיית המצוה","vi; On the Commandments, On their fulfilment, vii"],["ח' בעשיית המצוה מממון היתר","vi; On the Commandments, On their fulfilment, viii"],["ט' במצות הנוהגות בנשים ובקטנים","vi; On the Commandments, On their fulfilment, ix"],["י' במצות שהן מדברי סופרים","vi; On the Commandments, On their fulfilment, x"],["א' בדבר שכולל כל הברכות","vi; On the Commandments, Order of blessings, i"],["ב' ברכת הלחם והזימון וברכת המזון","vi; On the Commandments, Order of blessings, ii"],["ג' בדברים שמברכין עליהם בורא מיני מזונות","vi; On the Commandments, Order of blessings, iii"],["ד' בדברים שמברכין עליהם שהכל נהיה בדברו","vi; On the Commandments, Order of blessings, iv"],["ה' בדברים שמברכין עליהם בורא פרי האדמה","vi; On the Commandments, Order of blessings, v"],["ו' בדברים שמברכין עליהם בורא פרי העץ","vi; On the Commandments, Order of blessings, vi"],["ז' בדברים שבאים בתוך הסעודה מחמת הסעודה","vi; On the Commandments, Order of blessings, vii"],["ח' בברכות שמברכין על כל ריח מיני בשמים","vi; On the Commandments, Order of blessings, viii"],["ט' בברכות שמברכין על השמועות ועל ראיות העין והשבח וההודאה","vi; On the Commandments, Order of blessings, ix"],["י' בברכות שמברכין על הדברים שאין להם זמן ידוע","vi; On the Commandments, Order of blessings, x"],["הלכות מילה","vi; On the Commandments, Laws of circumcision"],["גדולה מילה","vi; On the Commandments, Great is circumcision"],["ברכת אירוסין","vi; On the Commandments, Betrothal blessing"],["הלכות פדיון הבן","vi; On the Commandments, Laws of redeeming the firstborn"],["הלכות מזוזה","vi; On the Commandments, Laws of mezuzah"],["הלכות אונן","vi; On the Commandments, Laws of onen"],["הלכות אבל","vi; On the Commandments, Laws of mourning"],["דין ההספד","vi; On the Commandments, The eulogy"],["אין מצטערין יותר מדאי","vi; On the Commandments, Not to grieve excessively"],["עירובי חצרות ותבשילין","vi; On the Commandments, Eruvin"],["הלכות חלה","vi; On the Commandments, Laws of Challah"],["ברכת מעקה","vi; On the Commandments, Parapet blessing"],["גדולת גמילות חסדים א","vii; On Acts of Mercy, Great is Kindness I"],["ביקור חולים","vii; On Acts of Mercy, Visiting the Sick"],["תשובת החולה","vii; On Acts of Mercy, The Vidduy"],["הספד המת","vii; On Acts of Mercy, Eulogizing the dead"],["גדולה גמילות חסדים ב","vii; On Acts of Mercy, Great is Kindness II"],["שמור שבת","viii; On the Observance of Sabbath and Holy Days, Observing Shabbat"],["ברית שבת","viii; On the Observance of Sabbath and Holy Days, The covenant of Shabbat"],["עונג שבת","viii; On the Observance of Sabbath and Holy Days, Oneg Shabbat"],["כבוד שבת","viii; On the Observance of Sabbath and Holy Days, Honor the Shabbat"],["גדולה שבת","viii; On the Observance of Sabbath and Holy Days, Great is Shabbat"],["חגים","viii; On the Observance of Sabbath and Holy Days, Holidays"],["הוספה","Addendum"],["גדולת כיבוד אב ואם","ix; On the Honoring of Parents, Great is honoring one's parents"],["פרטי הכבוד","ix; On the Honoring of Parents, The ways of honoring"],["כיבוד אב ואם ולימוד המוסר","ix; On the Honoring of Parents, Morals in honoring one's parents"],["עד היכן כיבוד אב ואם","ix; On the Honoring of Parents, The extent of honoring one's parents"],["זיווגו של אדם; הכרח או בחירה","x; On Marriage, One's match; fate or choice"],["כמה טובה אשה טובה","x; On Marriage, How great is a great wife"],["מידות האשה הטובה","x; On Marriage, The virtues of great wife"],["כבוד האשה","x; On Marriage, Honoring a wife"],["לישא בת טובים","x; On Marriage, Marriage and lineage"],["המזנה על אשתו כעובד ע\\\"ז","x; On Marriage, One who commits adultery is likened to an idolater"],["קשה הוא הזנות","x; On Marriage, The severity of sexual immorality"],["לישא אשה הגונה בימי הבחרות","x; On Marriage, Marrying a suitable wife while young"],["מידות האשה הצנועה","x; On Marriage, The virtues of a modest woman"],["א' ע\\\"פ הראב\\\"ד ומקצת דעות אחרות","x; On Marriage, Communion with one's wife, i According to the Raavad"],["ב' ע\\\"פ הרמב\\\"ן","x; On Marriage, Communion with one's wife, ii According to the Ramban"],["ענין מוסר הבן","xi; On the Education of Children, Discipline a son"],["המייסר את בנו מחכימו","xi; On the Education of Children, He who disciplines his son makes him wise"],["מוסר של אהבה","xi; On the Education of Children, Chastisement of love"],["הצלת בנים לאבות","xi; On the Education of Children, Extrication of fathers by sons"],["דברים שאדם חייב לעשות לבנו","xi; On the Education of Children, Commandment a father must fulfill towards his son"],["חייב הקהל לשכור מלמדי תינוקות","xi; On the Education of Children, The community must hire teachers"],["ישתדל אדם ללמד תורה לבנו","xi; On the Education of Children, One must teach his son Torah"],["אהבת הבנים","xi; On the Education of Children, Love of a father to his sons"],["גדולת הנושא ונותן באמונה","xii; On Upright Conduct in Business, Acting in business honestly"],["להתרחק מן הגזל","xii; On Upright Conduct in Business, Keeping away from theft"],["להתרחק מן האונאה","xii; On Upright Conduct in Business, Keeping away from fraud"],["להלוות לעני בשעת דחקו","xii; On Upright Conduct in Business, To loan the poor"],["לעולם ידבק אדם באומנות חשובה ונקייה","xii; On Upright Conduct in Business, Engaging in an honorable trade"],["מעלת הצדקה והדינין","xiii; On the Proper Administration of Justice, Great is justice"],["גדול המשפט","xiii; On the Proper Administration of Justice, Great is jurisprudence"],["מידות הדיין","xiii; On the Proper Administration of Justice, The qualities of a judge"],["גנאי הדיין שאינו הגון","xiii; On the Proper Administration of Justice, The disgrace of an unfit judge"],["להתרחק מן השוחד","xiii; On the Proper Administration of Justice, Keeping away from bribery"],["לישא משאן של ישראל","xiii; On the Proper Administration of Justice, To carry the load of the people"],["לעשות דין אחד לכל","xiii; On the Proper Administration of Justice, To carry out justice to all"],["למנות דיינים זקנים","xiii; On the Proper Administration of Justice, To appoint elderly judges"],["בשבח השמח בחלקו","xiv; On Contentment, To rejoices in one's lot"],["הצדיק והספוק במועט","xiv; On Contentment, To be satisfied with a little"],["מעלת הביטחון בהקב\\\"ה","xiv; On Contentment, Trusting God"],["מעשיות בחסידים ששמחו בחלקם","xiv; On Contentment, Accounts of the pious ones"],["שכר השמח בחלקו","xiv; On Contentment, The reward of he who rejoices in his lot"],["בענין הקנאה","xiv; On Contentment, On jealousy"],["בשבח המאריך אפו ואינו כועס","xv; On Equanimity, The praise of he who is slow to anger"],["כל הכועס חכמתו מסתלקת ממנו","xv; On Equanimity, He who becomes angry his wisdom departs from him"],["המרבה לכעוס עונו רב","xv; On Equanimity, The great sin of he who becomes angry regularly"],["בענין החנופה","xvi; On Avoidance of Flattery and Deception, On flattery"],["כתות החנפים","xvi; On Avoidance of Flattery and Deception, The classes of flatterers"],["דרכי החנפים","xvi; On Avoidance of Flattery and Deception, The ways of flatterers"],["קשה החנופה","xvi; On Avoidance of Flattery and Deception, The severity of flattery"],["הליצנות והלצים","xvi; On Avoidance of Flattery and Deception, On scoffing"],["קשה הליצנות","xvi; On Avoidance of Flattery and Deception, The severity of scoffing"],["בענין אהבת חבירו","xvii; On Love of Comrades and their Considerate Treatment, Loving one's fellow"],["קשה היא המחלוקת","xvii; On Love of Comrades and their Considerate Treatment, The severity of"],["קשה היא השנאה","xvii; On Love of Comrades and their Considerate Treatment, The severity of discord"],["אהבת הבריות","xvii; On Love of Comrades and their Considerate Treatment, Love of all people"],["להתחבר לטובים ולישרים","xvii; On Love of Comrades and their Considerate Treatment, Associating with the upright"],["מידות החבר הטוב והנאמן","xvii; On Love of Comrades and their Considerate Treatment, The qualities of a good friend"],["גרי הצדק וישראל שוין באהבה","xvii; On Love of Comrades and their Considerate Treatment, Loving the converts equally"],["חביבין הגרים","xvii; On Love of Comrades and their Considerate Treatment, Beloved are the converts"],["לכבד את חבירו","xvii; On Love of Comrades and their Considerate Treatment, Honoring one's friend"],["מות וחיים ביד לשון","xviii; On Cleanness of Speech, Death and life are in the power of the tongue"],["קשה לשון הרע","xviii; On Cleanness of Speech, The severity of slander"],["עונשו של לשון הרע","xviii; On Cleanness of Speech, The punishment of slander"],["כתות מספרי לשון הרע","xviii; On Cleanness of Speech, The classes of slanderers"],["מעלת השתיקה","xviii; On Cleanness of Speech, The greatness of silence"],["בכסוי הסוד וגלויו","xix; On Keeping a Friend's Secret, Keeping and revealing a secret"],["בענין הריב","xix; On Keeping a Friend's Secret, On disputes"],["כתות אנשי שקר","xix; On Keeping a Friend's Secret, Classes of treacherous men"],["יזהר אדם בשבועה","xix; On Keeping a Friend's Secret, Being diligent on vows"],["בענין דרך ארץ","xx; On Good Manners, On etiquette"],["א' דרך ארץ של תלמידי חכמים","xx; On Good Manners, i etiquette of Torah scholars"],["ב' דרך ארץ הראויה לזקנים","xx; On Good Manners, ii etiquette of elders"],["ג' דרך ארץ של אנשים","xx; On Good Manners, iii etiquette of men"],["ד' דרך ארץ של נשים","xx; On Good Manners, iv etiquette of women"],["ה' דרך ארץ בכלל ובפרט","xx; On Good Manners, v etiquette rules"],["דברים שהם מדרכי האמורי","xx; On Good Manners, Ways of the Amorite"],["דברים בדרך ארץ","xx; On Good Manners, More on etiquette"],["פתיחה","Chupat Eliyahu Rabbah, Forward"],["שער שלשה","Chupat Eliyahu Rabbah, Gate of Three"],["שער ארבעה","Chupat Eliyahu Rabbah, Gate of Four"],["שער חמשה","Chupat Eliyahu Rabbah, Gate of Five"],["שער ששה","Chupat Eliyahu Rabbah, Gate of Six"],["שער שבעה","Chupat Eliyahu Rabbah, Gate of Seven"],["שער שמונה","Chupat Eliyahu Rabbah, Gate of Eight"],["שער תשעה","Chupat Eliyahu Rabbah, Gate of Nine"],["שער עשרה","Chupat Eliyahu Rabbah, Gate of Ten"],["שער אחד עשר","Chupat Eliyahu Rabbah, Gate of Eleven"],["שער שנים עשר","Chupat Eliyahu Rabbah, Gate of Twelve"],["שער שלשה עשר","Chupat Eliyahu Rabbah, Gate of Thirteen"],["שער ארבעה עשר","Chupat Eliyahu Rabbah, Gate of Fourteen"],["שער חמשה עשר","Chupat Eliyahu Rabbah, Gate of Fifteen"],["אור עולם","Ohr Olam"],["אור גדול","Ohr Gadol"],["גדול השלום","Great is the peace"],["א' תשובת הר\\\"ר מאיר בענין הזיווגים","Addenda, i"],["ב' דברים שמנו חכמים במנין","Addenda, ii"],["ג' מדרש לעולם","Addenda, iii"]],"likutei":[["הקדמת המחבר","Author's Introduction"],["השכמת הבוקר","Orach Chaim, Laws of Morning Conduct"],["נטילת ידיים שחרית","Orach Chaim, Laws for the Morning Washing of Hands"],["ברכות השחר","Orach Chaim, Laws for Morning Blessings"],["ציצית","Orach Chaim, Laws of Fringes"],["תפילין","Orach Chaim, Laws of Phylacteries"],["קריאת שמע","Orach Chaim, Laws of the Recitation of the Shema"],["תפילה","Orach Chaim, Laws of Prayer"],["נשיאת כפיים","Orach Chaim, Laws of the Priestly Blessing"],["קריאת התורה","Orach Chaim, Laws of the Reading of the Torah"],["בית הכנסת","Orach Chaim, Laws of the Synagogue"],["ברכת הפירות","Orach Chaim, Laws of Blessings on Fruit"],["שבת","Orach Chaim, Laws of the Sabbath"],["ראש חודש","Orach Chaim, Laws of the New Moon"],["פסח","Orach Chaim, Laws of Passover"],["שבועות","Orach Chaim, Laws of Shavuot"],["ראש השנה","Orach Chaim, Laws of Rosh Hashanah"],["יום כיפור","Orach Chaim, Laws of the Day of Atonement"],["סוכה","Orach Chaim, Laws of Sukkot"],["חנוכה","Orach Chaim, Laws of Chanukah"],["פורים","Orach Chaim, Laws of Purim"],["שחיטה","Yoreh Deah, Laws of Slaughtering"],["בשר וחלב","Yoreh Deah, Laws of Meat and Milk"],["ריבית","Yoreh Deah, Laws of Interest"],["מקוואות","Yoreh Deah, Laws of Ritual Baths"],["תלמוד תורה","Yoreh Deah, Laws of Torah Study"],["צדקה","Yoreh Deah, Laws of Charity"],["מילה","Yoreh Deah, Laws of Circumcision"],["אבילות","Yoreh Deah, Laws of Mourning"],["פריה ורביה","Even HaEzer, Laws of Being Fruitful and Multiplying"],["קידושין","Even HaEzer, Laws of Betrothal"],["כתובות","Even HaEzer, Laws of Ketubot"],["גירושין","Even HaEzer, Laws of Divorce"],["הלוואה","Choshen Mishpat, Laws of Loans"],["מקח וממכר","Choshen Mishpat, Laws of Buying and Selling"],["גזילה","Choshen Mishpat, Laws of Theft"],["נזיקין","Choshen Mishpat, Laws of Damages"],["נחלות","Choshen Mishpat, Laws of Inheritance"]],"chovot":[["הקדמת המחבר","Introduction of the Author"],["שער ייחוד","First Treatise on Unity"],["שער הבחינה","Second Treatise on Examination"],["שער עבודת האלוהים","Third Treatise on Service of God"],["שער הביטחון","Fourth Treatise on Trust"],["שער ייחוד המעשה","Fifth Treatise on Devotion"],["שער הכניעה","Sixth Treatise on Submission"],["שער התשובה","Seventh Treatise on Repentance"],["שער חשבון הנפש","Eighth Treatise on Examining the Soul"],["שער הפרישות","Ninth Treatise on Abstinence"],["שער אהבת ה׳","Tenth Treatise on Devotion to God"]],"peleHe":["אהבה להקדוש ברוך הוא","אהבת עצמו","אהבת הבנים והבנות","אהבת איש ואשה","אהבת לומדי התורה ויראי השם וחושבי שמו","אהבת רעים","אבלות","אמונה","אכילה ושתיה","אמת","אבירות לב","ארץ ישראל","אמן","אחים","אחדות","אפיקורוס","אומנות","אסופה","אורחים","אונאה","אונס","ברכות","בית הכנסת","בית המדרש","בזיון","בן","בת","בטלה","בכיה","בנין","בורח","בוחר","בחור","בשר","בשורה","בעלי חיים","בכורים","ברורים","בר לבב","ברור","בדיקה","גאולה","גאוה","גזל","גניבה","גבורה","גלות","גלגול","גר","גדול","גדר","גוי","גילה","גוף","גלוח","גירסא","גערה","דבקות","דרך","דרך ארץ","דעת","דבור","דרושים","דובב שפתי ישנים","דבר","דחיה","דינים","דפוס","דירה","דאגה","דברי חכמים","דרשן","הילול","הלבנה","הליכה","הקפדה","התבודדות","הכנה","הבטחה","הודאה","הידור","השכמה","הצלה","הסכמה","השתדלות","הנאה","הנהגה","הגדה","התעוררות","הוראה","הדלקה","הן צדק","הסח דעת","הכאה","הלבשה","הלואה","הלכה","הרשאה","השואה","ותרנות","ודוי","ויהי נועם","ועד","זכירה","זנות","זהירות","זריזות","זכיה","זווג","זוהר","זודא","זולל וסובא","זריעה","זלזול","זמירות","זקן","זכרונות","חשק וחבה","חנופה","חידוש","חלוש","חלום","חמדה","חיזוק","חינוך","חברה","חברותא","חיים","חוזק","חוכמה","חילול השם","חולה","חסד","חשדא","חסידות","חמיו וחמותו","חמץ","חשבון","חשיבות","חשוד","חתן","חוב","חוסר","חרטה","חול המועד","חורבן בית המקדש","חן","חרש","טומאה","טעם","טרדא","טבע","טרף","טורח","טענות","טעות","טיול","טהרה","יראה","ידיעה","יצר","יתרון","ירידה","יאוש","יגיעה","יין","ילדות","ימין","יונקי שדים","יסוד","יועץ","יופי","ישיבה","יוהרא","ישרות","יסורין","ימים טובים","ישוב הדעת","כבוד אב ואם","כבוד חכמים","כבוד הבריות","כעס","כוונה","כבוד","כיפור","כופה","כהן","כפוי טובה","כוויה","כלב","כניעה","כסף","כינוי","כלה בבית אביה","כתיבה","כיליות","כללות א","כללות ב","לימוד","לב","לשון הרע","ליצנות","לשמה","לווה","לעז","לויה","לבישה","מלכות","מורא","מנוחה","מצוות","מזכה","מותרות","מהירות מיתון","מעשר","מוסר","מחשבה","משא ומתן","מנהג","מידות","מחלוקת","מובחר","משפט ודין","מתן","ממשלה","מילה","מכירה","ממון","ממונה","מונה","מנחה","מניעה","מסירה","מרירות","מתיקות","מלמדי תינוקות","מיתה","נחמה","נדיבות","נקימה ונטירה","נטילת ידים","נבלות הפה","נקיות","נאמנות","נדה","נדרים","נס","נסיון","נסך","נפש","ניצוח","נשים","נפילת אפים","נפלאות","נר שבת ונר חנוכה","סבלנות","סוכה","סייג","סוד","ספר","סנגוריא","סליחות","סעודה","ספינה","ספק","סרבנות","סתר","סגולה","סיפוק","עבודת השם","ענוה","עשירות","עונה","עיון","עניה","עצלות","עצבות","עזות","עמל","עבירה","עזר","עונג","עונש","עצה","ערב","ערך","עניות","עין הרע","עריות","עדות","עצרת","פרישות","פריה ורביה","פורים","פסח","פרנסה","פחד","פרשיות","פדות","פה","צדקה","צעקה","צוואה","צניעות","ציצית","צער","צרה","ציור","צפוי","ציבור","קדושה","קימה","קריאה","קינאה","קללה","קבלה","קביעות","קביעות צדקה","קרובים","קנס","קבורה","קורבנות","קריאת שמע","קול","קרי","רחמנות","ראיה","רדיפה","ריצה","ריבית","ראש השנה","רבים","רגילות","רינה","רפואה","רופא","רחיצה","רבו","רצון","רועה","שלום","שנאה","שבת","שינה","שיחה","שקר","שתיה","שפלות","שתיקה","שמחה","שבועה","שם שמים","שקידה","שכן","שיר","שליח צבור","שמירה","שחוק","שמיעה","שק","שבח","שוגג","שופטים ושוטרים","שוחט","שמש","שכר שכיר","שכר מצוה","שכל","שם טוב","שיעור","שש","ששה","שררה","שואל","שואל כענין","תפילין","תורה","תמימות","תלמידים","תענית","תשובה","תוכחה","תיקון","תחבולות","תלמידי חכמים","תהלים","תולדות","תוספת","תוקע","תשעה באב","תשועה"],"mesillatHe":["בביאור כלל חובת האדם בעולמו","בביאור מדת הזהירות","בחלקי הזהירות","בדרך קנית הזהירות","במפסידי הזהירות וההרחקה מהם","בביאור מדת הזריזות","בחלקי הזריזות","בדרך קנית הזריזות","במפסידי הזריזות והרחקתם","בביאור מדת הנקיות","בפרטי מדת הנקיות","בדרך קנית הנקיות וההרחקה ממפסידיה","בביאור מדת הפרישות","בחלקי הפרישות","בדרך קנית הפרישות וההרחקה ממפסידיה","בביאור מדת הטהרה","בדרך קנית הטהרה וההרחקה ממפסידיה","בביאור מדת החסידות","בביאור חלקי החסידות","במשקל החסידות","בדרך קנית החסידות וההרחקה ממפסידיה","בביאור מדת הענוה וחלקיה","בדרך קנית הענוה וההרחקה ממפסידיה","ביראת החטא וחלקיה","בדרך קנית היראה","בביאור מדת הקדושה ודרך קנייתה"]};
+    function namedBook(id, he, icon, min, unit, units, prefix, items) {
+      return {
+        id: id, he: he, icon: icon, min: min, unit: unit, units: units,
+        count: items.length,
+        ref: function (i) { return prefix + items[i][1]; },
+        label: function (i) { return items[i][0]; }
+      };
+    }
+    // שישה סדרי משנה — רשימה שטוחה של כל 525 הפרקים (אומת מול Sefaria)
+    var MISH_FLAT = [];
+    SPD.mishnah.forEach(function (t) {
+      for (var c = 1; c <= t[2]; c++) MISH_FLAT.push([t[0] + " פרק " + c, t[1] + " " + c]);
+    });
+    // שמירת הלשון + חפץ חיים — כל הסעיפים לפי מבנה הספר באתר
+    var SHMIRA = [
+      ["הקדמת החפץ חיים", "Chafetz Chaim, Preface"],
+      ["פתיחה — לאוין", "Chafetz Chaim, Introduction to the Laws of the Prohibition of Lashon Hara and Rechilut, Negative Commandments"],
+      ["פתיחה — עשין", "Chafetz Chaim, Introduction to the Laws of the Prohibition of Lashon Hara and Rechilut, Positive Commandments"],
+      ["פתיחה — ארורין", "Chafetz Chaim, Introduction to the Laws of the Prohibition of Lashon Hara and Rechilut, Curses"]
     ];
+    (function () {
+      var i;
+      for (i = 1; i <= 10; i++) SHMIRA.push(["הלכות לשון הרע — כלל " + i, "Chafetz Chaim, Part One, The Prohibition Against Lashon Hara, Principle " + i]);
+      for (i = 1; i <= 9; i++) SHMIRA.push(["הלכות רכילות — כלל " + i, "Chafetz Chaim, Part Two, The Prohibition Against Rechilut, Principle " + i]);
+      SHMIRA.push(["שמירת הלשון — הקדמה", "Shemirat HaLashon, Book I, Introduction"]);
+      for (i = 1; i <= 17; i++) SHMIRA.push(["שער הזכירה — פרק " + i, "Shemirat HaLashon, Book I, The Gate of Remembering." + i]);
+      for (i = 1; i <= 17; i++) SHMIRA.push(["שער התבונה — פרק " + i, "Shemirat HaLashon, Book I, The Gate of Discerning." + i]);
+      for (i = 1; i <= 10; i++) SHMIRA.push(["שער התורה — פרק " + i, "Shemirat HaLashon, Book I, The Gate of Torah." + i]);
+      for (i = 1; i <= 30; i++) SHMIRA.push(["חלק שני — פרק " + i, "Shemirat HaLashon, Book II." + i]);
+    })();
+    var CATALOG = [
+      { id: "tehillim", he: "תהילים", icon: "📖", count: 150, unit: "פרק", units: "פרקים", min: 3, ref: function (i) { return "Psalms " + (i + 1); },
+        cm: [
+          { he: "רש\"י", ref: function (i) { return "Rashi on Psalms " + (i + 1); } },
+          { he: "מצודת דוד", ref: function (i) { return "Metzudat David on Psalms " + (i + 1); } }
+        ] },
+      { id: "bih-y1", he: "בן איש חי — שנה ראשונה", icon: "📗", count: SPD.bih1.length, unit: "פרשה", units: "פרשות", min: 25,
+        ref: function (i) { return "Ben Ish Hai, Halachot 1st Year, " + SPD.bih1[i][1]; },
+        label: function (i) { return SPD.bih1[i][0]; } },
+      { id: "bih-y2", he: "בן איש חי — שנה שניה", icon: "📙", count: SPD.bih2.length, unit: "פרשה", units: "פרשות", min: 25,
+        ref: function (i) { return "Ben Ish Hai, Halachot 2nd Year, " + SPD.bih2[i][1]; },
+        label: function (i) { return SPD.bih2[i][0]; } },
+      { id: "mishnah", he: "שישה סדרי משנה", icon: "📚", count: MISH_FLAT.length, unit: "פרק", units: "פרקים", min: 8,
+        ref: function (i) { return MISH_FLAT[i][1]; },
+        label: function (i) { return MISH_FLAT[i][0]; },
+        cm: [
+          { he: "ברטנורא", ref: function (i) { return "Bartenura on " + MISH_FLAT[i][1]; } },
+          { he: "רמב\"ם", ref: function (i) { return "Rambam on " + MISH_FLAT[i][1]; } },
+          { he: "עיקר תוספות יום טוב", ref: function (i) { return "Ikar Tosafot Yom Tov on " + MISH_FLAT[i][1]; } }
+        ] },
+      { id: "pirkei-avot", he: "פרקי אבות", icon: "🕊️", count: 6, unit: "פרק", units: "פרקים", min: 10, ref: function (i) { return "Pirkei Avot " + (i + 1); },
+        cm: [
+          { he: "ברטנורא", ref: function (i) { return "Bartenura on Pirkei Avot " + (i + 1); } }
+        ] },
+      { id: "mishlei", he: "משלי", icon: "🦉", count: 31, unit: "פרק", units: "פרקים", min: 5, ref: function (i) { return "Proverbs " + (i + 1); },
+        cm: [
+          { he: "רש\"י", ref: function (i) { return "Rashi on Proverbs " + (i + 1); } },
+          { he: "מצודת דוד", ref: function (i) { return "Metzudat David on Proverbs " + (i + 1); } }
+        ] },
+      { id: "mesillat", he: "מסילת ישרים", icon: "🛤️", count: 26, unit: "פרק", units: "פרקים", min: 12,
+        ref: function (i) { return "Mesillat Yesharim " + (i + 1); },
+        label: function (i) { return "פרק " + (i + 1) + " — " + SPD.mesillatHe[i]; } },
+      namedBook("chovot", "חובות הלבבות", "❤️", 40, "שער", "שערים", "Duties of the Heart, ", SPD.chovot),
+      namedBook("midot", "ספר המידות", "🌿", 5, "ערך", "ערכים", "Sefer HaMiddot, ", SPD.midot),
+      { id: "pele", he: "פלא יועץ", icon: "💎", count: SPD.peleHe.length, unit: "ערך", units: "ערכים", min: 6,
+        ref: function (i) { return "Pele Yoetz " + (i + 1); },
+        label: function (i) { return SPD.peleHe[i]; } },
+      { id: "tomer", he: "תומר דבורה", icon: "🌳", count: 10, unit: "פרק", units: "פרקים", min: 12, ref: function (i) { return "Tomer Devorah " + (i + 1); } },
+      { id: "tanya-la", he: "תניא — ליקוטי אמרים", icon: "📘", count: 53, unit: "פרק", units: "פרקים", min: 10, ref: function (i) { return "Tanya, Part I; Likutei Amarim, Chapter " + (i + 1); } },
+      { id: "orchot", he: "אורחות צדיקים", icon: "🌿", count: 28, unit: "שער", units: "שערים", min: 15, ref: function (i) { return i === 0 ? "Orchot Tzadikim, Introduction" : "Orchot Tzadikim " + i; } },
+      { id: "shmirat", he: "שמירת הלשון וחפץ חיים", icon: "🗣️", count: SHMIRA.length, unit: "סעיף", units: "סעיפים", min: 12,
+        ref: function (i) { return SHMIRA[i][1]; },
+        label: function (i) { return SHMIRA[i][0]; } },
+      namedBook("likutei", "ליקוטי הלכות", "🌊", 20, "הלכה", "הלכות", "Likutei Halakhot, ", SPD.likutei),
+      { id: "moharan", he: "ליקוטי מוהר\"ן", icon: "🔥", count: 411, unit: "תורה", units: "תורות", min: 10,
+        ref: function (i) { return i < 286 ? "Likutei Moharan " + (i + 1) : "Likutei Moharan, Tinyana " + (i - 285); },
+        label: function (i) { return i < 286 ? "תורה " + (i + 1) + " (קמא)" : "תורה " + (i - 285) + " (תניינא)"; } },
+      namedBook("kedushat", "קדושת לוי", "🕎", 20, "פרשה", "פרשות", "Kedushat Levi, ", SPD.kedushat),
+      namedBook("noam", "נועם אלימלך", "✨", 25, "פרשה", "פרשות", "Noam Elimelekh, ", SPD.noam),
+      namedBook("menorat", "מנורת המאור", "🕯️", 12, "פרק", "פרקים", "Menorat HaMaor, ", SPD.menorat),
+      { id: "sa-oc", he: "שולחן ערוך — אורח חיים", icon: "📜", count: 697, unit: "סימן", units: "סימנים", min: 6, ref: function (i) { return "Shulchan Arukh, Orach Chayim " + (i + 1); },
+        cm: [
+          { he: "משנה ברורה", ref: function (i) { return "Mishnah Berurah " + (i + 1); } },
+          { he: "באר היטב", ref: function (i) { return "Ba'er Hetev on Shulchan Arukh, Orach Chayim " + (i + 1); } }
+        ] },
+      { id: "sa-yd", he: "שולחן ערוך — יורה דעה", icon: "📜", count: 403, unit: "סימן", units: "סימנים", min: 6, ref: function (i) { return "Shulchan Arukh, Yoreh Deah " + (i + 1); },
+        cm: [
+          { he: "באר היטב", ref: function (i) { return "Ba'er Hetev on Shulchan Arukh, Yoreh Deah " + (i + 1); } }
+        ] },
+      { id: "sa-eh", he: "שולחן ערוך — אבן העזר", icon: "📜", count: 178, unit: "סימן", units: "סימנים", min: 6, ref: function (i) { return "Shulchan Arukh, Even HaEzer " + (i + 1); },
+        cm: [
+          { he: "באר היטב", ref: function (i) { return "Ba'er Hetev on Shulchan Arukh, Even HaEzer " + (i + 1); } }
+        ] },
+      { id: "sa-cm", he: "שולחן ערוך — חושן משפט", icon: "📜", count: 427, unit: "סימן", units: "סימנים", min: 6, ref: function (i) { return "Shulchan Arukh, Choshen Mishpat " + (i + 1); },
+        cm: [
+          { he: "באר היטב", ref: function (i) { return "Ba'er Hetev on Shulchan Arukh, Choshen Mishpat " + (i + 1); } }
+        ] },
+      { id: "mb", he: "משנה ברורה", icon: "📖", count: 697, unit: "סימן", units: "סימנים", min: 8, ref: function (i) { return "Mishnah Berurah " + (i + 1); } }
+    ];
+    function unitsOf(bk) { return bk.units || bk.unit + "ים"; }
     function bookOf(id) {
       for (var i = 0; i < CATALOG.length; i++) if (CATALOG[i].id === id) return CATALOG[i];
       return null;
@@ -4128,18 +4369,28 @@
       return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
     }
     function daysLeft(pl, bk) { return Math.max(0, Math.ceil((bk.count - pl.done) / pl.perDay)); }
+    function flatParas(src) {
+      var flat = [];
+      (function walk(x) {
+        if (x == null) return;
+        if (typeof x === "string") { if (x.trim()) flat.push(x); return; }
+        if (Array.isArray(x)) x.forEach(walk);
+      })(src);
+      return flat;
+    }
     function fetchRefText(ref, cb) {
       fetch("https://www.sefaria.org/api/v3/texts/" + encodeURIComponent(ref) + "?version=hebrew")
         .then(function (r) { return r.json(); })
         .then(function (data) {
-          var flat = [];
-          var src = data && data.versions && data.versions[0] ? data.versions[0].text : null;
-          (function walk(x) {
-            if (x == null) return;
-            if (typeof x === "string") { if (x.trim()) flat.push(x); return; }
-            if (Array.isArray(x)) x.forEach(walk);
-          })(src);
-          cb(flat.length ? flat : null);
+          var flat = flatParas(data && data.versions && data.versions[0] ? data.versions[0].text : null);
+          if (flat.length) return cb(flat);
+          // חלק מהספרים (בן איש חי) חוזרים ריקים ב-v3 — ננסה את ה-API הישן
+          return fetch("https://www.sefaria.org/api/texts/" + encodeURIComponent(ref) + "?pad=0&lang=he")
+            .then(function (r2) { return r2.json(); })
+            .then(function (d2) {
+              var f2 = flatParas(d2 && d2.he);
+              cb(f2.length ? f2 : null);
+            });
         })
         .catch(function () { cb(null); });
     }
@@ -4194,11 +4445,29 @@
         var all = plans();
         var cur = null;
         all.forEach(function (p) { if (p.id === planId) cur = p; });
-        if (!cur || (cur.lastDone === todayStr() && cur.done > 0)) return;
+        if (!cur) return;
+        // לחיצה שנייה — ביטול הסימון של היום וחזרה למצב הקודם
+        if (cur.lastDone === todayStr() && cur.done > 0) {
+          cur.done = (typeof cur.prevDone === "number") ? cur.prevDone : Math.max(0, cur.done - cur.perDay);
+          cur.streak = Math.max(0, (cur.streak || 0) - 1);
+          cur.lastDone = null;
+          delete cur.prevDone;
+          savePlans(all);
+          unrecordStudyDay();
+          doneBtn.classList.remove("lux-tr-done-on");
+          doneBtn.textContent = "✓ למדתי — עברו ליום הבא";
+          if (typeof window.showToast === "function") {
+            window.showToast("הסימון בוטל — המנה של היום מחכה לכם", "info", 2400);
+          }
+          renderRow();
+          return;
+        }
+        cur.prevDone = cur.done;
         cur.done = Math.min(bk.count, cur.done + cur.perDay);
         cur.lastDone = todayStr();
         cur.streak = (cur.streak || 0) + 1;
         savePlans(all);
+        recordStudyDay();
         doneBtn.classList.add("lux-tr-done-on");
         doneBtn.textContent = "✓ הושלם היום";
         luxConfetti();
@@ -4208,26 +4477,174 @@
         }
         renderRow();
       });
-      // טעינת היחידות של היום — ברצף, עם כותרת לכל יחידה
-      var html = "";
-      var idx = from;
-      function loadNext() {
-        if (idx >= to) {
-          area.innerHTML = html + '<div class="lux-sel-credit">✦<br>המקור: ספריית Sefaria.org (רישיון פתוח)<br>לימוד פורה! 🙌</div>';
-          area.scrollTop = 0;
-          return;
-        }
-        var i = idx++;
-        fetchRefText(bk.ref(i), function (paras) {
-          html += '<h3 class="lux-pl-unit">' + esc(bk.unit) + " " + (i + 1) + "</h3>";
-          if (paras) html += paras.map(function (p) { return '<p class="lux-sel-para">' + p + "</p>"; }).join("");
-          else html += '<p style="color:#b45309;text-align:center;">לא הצלחנו לטעון חלק זה — בדקו את החיבור.</p>';
-          loadNext();
+      // ── נושאי כלים — צ'יפים להדלקה/כיבוי, כמו בקורא הספרים הרגיל ──
+      var CM_KEY = "lux_plan_cm";
+      var cmAll = jget(CM_KEY, {});
+      var cmOn = (cmAll[bk.id] || []).slice();
+      if (bk.cm && bk.cm.length) {
+        var cmBar = document.createElement("div");
+        cmBar.className = "lux-pl-cmbar";
+        cmBar.innerHTML = '<span class="lux-pl-cmbar-lbl">נושאי כלים:</span>' +
+          bk.cm.map(function (c, ci) {
+            return '<button type="button" class="lux-pl-cmchip' + (cmOn.indexOf(ci) >= 0 ? " lux-pl-cmchip-on" : "") + '" data-ci="' + ci + '">' + esc(c.he) + "</button>";
+          }).join("");
+        area.insertAdjacentElement("beforebegin", cmBar);
+        cmBar.addEventListener("click", function (e) {
+          var b = e.target.closest("[data-ci]");
+          if (!b) return;
+          var ci = parseInt(b.getAttribute("data-ci"), 10);
+          var at = cmOn.indexOf(ci);
+          if (at >= 0) cmOn.splice(at, 1); else cmOn.push(ci);
+          b.classList.toggle("lux-pl-cmchip-on", at < 0);
+          cmAll[bk.id] = cmOn;
+          jset(CM_KEY, cmAll);
+          renderContent();
         });
       }
-      loadNext();
+
+      // טעינת היחידות של היום — ברצף, עם כותרת לכל יחידה + נושאי כלים פעילים
+      var loadToken = 0;
+      function renderContent() {
+        var token = ++loadToken;
+        var html = "";
+        var idx = from;
+        area.innerHTML = '<p style="text-align:center;color:#94a3b8;padding:2rem;">טוען את הלימוד של היום...</p>';
+        function loadCms(i, doneCb) {
+          var list = [];
+          (bk.cm || []).forEach(function (c, k) { if (cmOn.indexOf(k) >= 0) list.push(c); });
+          (function next(k) {
+            if (token !== loadToken) return;
+            if (k >= list.length) return doneCb();
+            fetchRefText(list[k].ref(i), function (paras) {
+              if (token !== loadToken) return;
+              if (paras && paras.length) {
+                html += '<div class="lux-pl-cm"><div class="lux-pl-cm-t">' + esc(list[k].he) + "</div>" +
+                  paras.map(function (p) { return '<p class="lux-pl-cm-p">' + p + "</p>"; }).join("") + "</div>";
+              }
+              next(k + 1);
+            });
+          })(0);
+        }
+        function loadNext() {
+          if (token !== loadToken) return;
+          if (idx >= to) {
+            area.innerHTML = html + '<div class="lux-sel-credit">✦<br>המקור: ספריית Sefaria.org (רישיון פתוח)<br>לימוד פורה! 🙌</div>';
+            area.scrollTop = 0;
+            return;
+          }
+          var i = idx++;
+          fetchRefText(bk.ref(i), function (paras) {
+            if (token !== loadToken) return;
+            html += '<h3 class="lux-pl-unit">' + esc(bk.label ? bk.label(i) : bk.unit + " " + (i + 1)) + "</h3>";
+            if (paras) html += paras.map(function (p) { return '<p class="lux-sel-para">' + p + "</p>"; }).join("");
+            else html += '<p style="color:#b45309;text-align:center;">לא הצלחנו לטעון חלק זה — בדקו את החיבור.</p>';
+            loadCms(i, loadNext);
+          });
+        }
+        loadNext();
+      }
+      renderContent();
     }
     window.luxOpenPlanReader = openPlanReader;
+
+    /* סולם משכי סיום — מדרגות נדיבות, משבוע ועד 3 שנים */
+    var DUR = [7, 10, 14, 21, 30, 45, 60, 75, 90, 105, 120, 135, 150, 165, 182, 210, 240, 270, 300, 330, 365, 425, 485, 545, 605, 665, 730, 790, 850, 910, 1000, 1095];
+    function fmtMin(m) {
+      if (m < 60) return m + " דקות";
+      if (m === 60) return "שעה";
+      if (m === 90) return "שעה וחצי";
+      if (m === 120) return "שעתיים";
+      if (m === 180) return "3 שעות";
+      if (m < 120) return "שעה ו־" + (m - 60) + " דק'";
+      return "שעתיים ו־" + (m - 120) + " דק'";
+    }
+    function fmtDur(d) {
+      if (d === 7) return "שבוע";
+      if (d === 14) return "שבועיים";
+      if (d === 21) return "3 שבועות";
+      if (d < 30) return d + " ימים";
+      if (d === 30) return "חודש";
+      if (d === 45) return "חודש וחצי";
+      if (d === 60) return "חודשיים";
+      if (d === 182) return "חצי שנה";
+      if (d === 365) return "שנה";
+      if (d === 545) return "שנה וחצי";
+      if (d === 730) return "שנתיים";
+      if (d === 1095) return "3 שנים";
+      if (d < 360) return Math.round(d / 30.4) + " חודשים";
+      var months = Math.round((d - 365) / 30.4);
+      if (d < 700) return months > 0 ? "שנה ו־" + months + " חודשים" : "שנה";
+      var m2 = Math.round((d - 730) / 30.4);
+      return m2 > 0 ? "שנתיים ו־" + m2 + " חודשים" : "שנתיים";
+    }
+    /* ── תגי התמדה בלימוד — רצף יומי; מתאפסים בכל תחילת חצי שנה ── */
+    var STREAK_KEY = "lux_plan_streak_v1";
+    function halfYearId() {
+      var d = new Date();
+      return d.getFullYear() + (d.getMonth() < 6 ? "H1" : "H2");
+    }
+    function planStreak() {
+      var s = jget(STREAK_KEY, { last: null, count: 0, period: halfYearId() });
+      if (s.period !== halfYearId()) s = { last: null, count: 0, period: halfYearId() };
+      return s;
+    }
+    var STUDY_BADGES = [
+      { at: 3, i: "🎯", t: "3 ימי התמדה בלימוד" },
+      { at: 7, i: "🥉", t: "שבוע התמדה בלימוד" },
+      { at: 14, i: "🏅", t: "שבועיים התמדה בלימוד" },
+      { at: 30, i: "🥈", t: "חודש התמדה בלימוד" },
+      { at: 60, i: "🥇", t: "חודשיים התמדה בלימוד" },
+      { at: 100, i: "🏆", t: "100 ימי התמדה בלימוד" },
+      { at: 150, i: "💎", t: "150 ימי התמדה בלימוד" }
+    ];
+    // נצרך גם למסך ההישגים (סעיף 31) — לכן נחשף על window
+    window._luxStudyBadges = function () {
+      var c = planStreak().count;
+      return STUDY_BADGES.map(function (b) { return { i: b.i, t: b.t + " (החצי־שנה הנוכחי)", on: c >= b.at }; });
+    };
+    function badgePopup(b) {
+      var el = document.createElement("div");
+      el.className = "lux-badge-pop";
+      el.innerHTML =
+        '<div class="lux-badge-pop-in">' +
+          '<span class="lux-badge-ico">' + b.i + "</span>" +
+          "<h3>🎉 תג חדש נפתח!</h3>" +
+          "<p>" + b.t + "</p>" +
+          '<small>התגים מתאפסים בכל תחילת חצי שנה — המשיכו להתמיד 💪</small>' +
+        "</div>";
+      document.body.appendChild(el);
+      try { if (typeof luxConfetti === "function") luxConfetti(); } catch (e) {}
+      setTimeout(function () {
+        el.classList.add("lux-badge-pop-out");
+        setTimeout(function () { el.remove(); }, 500);
+      }, 4200);
+      el.addEventListener("click", function () { el.remove(); });
+    }
+    function recordStudyDay() {
+      var s = planStreak();
+      var today = todayStr();
+      if (s.last === today) return;
+      var y = new Date(Date.now() - 86400000);
+      var yst = y.getFullYear() + "-" + String(y.getMonth() + 1).padStart(2, "0") + "-" + String(y.getDate()).padStart(2, "0");
+      var before = s.count;
+      s.count = (s.last === yst) ? s.count + 1 : 1;
+      s.last = today;
+      s.period = halfYearId();
+      jset(STREAK_KEY, s);
+      STUDY_BADGES.forEach(function (b) {
+        if (before < b.at && s.count >= b.at) setTimeout(function () { badgePopup(b); }, 800);
+      });
+    }
+    // ביטול יום הלימוד של היום (לחיצה שנייה על "למדתי") — מחזיר את הרצף לאחור
+    function unrecordStudyDay() {
+      var s = planStreak();
+      if (s.last !== todayStr()) return;
+      var y = new Date(Date.now() - 86400000);
+      var yst = y.getFullYear() + "-" + String(y.getMonth() + 1).padStart(2, "0") + "-" + String(y.getDate()).padStart(2, "0");
+      s.count = Math.max(0, s.count - 1);
+      s.last = s.count > 0 ? yst : null;
+      jset(STREAK_KEY, s);
+    }
 
     /* ── אשף הוספת סדר לימוד ── */
     function openWizard() {
@@ -4237,7 +4654,7 @@
         '<p class="lux-sheet-note">בחרו ספר, קבעו קצב — והאתר יחלק לכם אותו לימים ויעקוב אחרי ההתקדמות</p>' +
         '<h4 class="lux-pw-step">1️⃣ באיזה ספר נלמד?</h4>' +
         '<div class="lux-pw-books">' + CATALOG.map(function (b) {
-          return '<button type="button" class="lux-pw-book" data-id="' + b.id + '">' + b.icon + " " + esc(b.he) + '<small>' + b.count + " " + esc(b.unit) + (b.unit === "פרק" ? "ים" : "ים") + "</small></button>";
+          return '<button type="button" class="lux-pw-book" data-id="' + b.id + '">' + b.icon + " " + esc(b.he) + '<small>' + b.count + " " + esc(unitsOf(b)) + "</small></button>";
         }).join("") + "</div>" +
         '<h4 class="lux-pw-step">2️⃣ באיזה קצב?</h4>' +
         '<div style="display:flex;gap:0.4rem;margin-bottom:0.5rem;">' +
@@ -4245,17 +4662,18 @@
           '<button type="button" id="lux-pw-m-days" class="lux-sheet-secondary lux-pw-mode" style="flex:1;">🗓️ לפי תאריך יעד</button>' +
         "</div>" +
         '<div id="lux-pw-min-box">' +
-          '<label class="lux-dt-lbl">כמה דקות ביום נוח לכם ללמוד?</label>' +
-          '<select id="lux-pw-min" class="lux-sheet-input" style="width:100%;">' +
-            [5, 10, 15, 20, 30, 45, 60].map(function (m) { return '<option value="' + m + '"' + (m === 10 ? " selected" : "") + ">" + m + " דקות ביום</option>"; }).join("") +
-          "</select>" +
+          '<label class="lux-dt-lbl">כמה דקות ביום נוח לכם ללמוד? <span style="font-weight:400;">(החליקו לבחירה — עד 3 שעות)</span></label>' +
+          '<div class="lux-pw-slider-row">' +
+            '<input type="range" id="lux-pw-min" min="5" max="180" step="5" value="10" class="lux-pw-range" aria-label="דקות לימוד ביום">' +
+            '<span id="lux-pw-min-lbl" class="lux-pw-slider-val">10 דקות</span>' +
+          "</div>" +
         "</div>" +
         '<div id="lux-pw-days-box" style="display:none;">' +
-          '<label class="lux-dt-lbl">תוך כמה זמן תרצו לסיים?</label>' +
-          '<select id="lux-pw-days" class="lux-sheet-input" style="width:100%;">' +
-            '<option value="7">שבוע</option><option value="30" selected>חודש</option><option value="90">3 חודשים</option>' +
-            '<option value="182">חצי שנה</option><option value="354">שנה</option>' +
-          "</select>" +
+          '<label class="lux-dt-lbl">תוך כמה זמן תרצו לסיים? <span style="font-weight:400;">(החליקו לבחירה — עד 3 שנים)</span></label>' +
+          '<div class="lux-pw-slider-row">' +
+            '<input type="range" id="lux-pw-days" min="0" max="' + (DUR.length - 1) + '" step="1" value="4" class="lux-pw-range" aria-label="משך הלימוד עד הסיום">' +
+            '<span id="lux-pw-days-lbl" class="lux-pw-slider-val">' + fmtDur(DUR[4]) + "</span>" +
+          "</div>" +
         "</div>" +
         '<div id="lux-pw-summary" class="lux-dt-out" style="display:none;"></div>' +
         '<div class="lux-sheet-actions">' +
@@ -4284,7 +4702,7 @@
         sum.style.display = "block";
         sum.innerHTML =
           '<div class="lux-dt-big">📋 התוכנית שלכם</div>' +
-          "בכל יום: <b>" + c.perDay + " " + esc(selBook.unit) + (c.perDay > 1 ? "ים" : "") + "</b> (כ־" + c.estMin + " דקות)<br>" +
+          "בכל יום: <b>" + c.perDay + " " + esc(c.perDay > 1 ? unitsOf(selBook) : selBook.unit) + "</b> (כ־" + c.estMin + " דקות)<br>" +
           "סיום בעוד: <b>" + c.totalDays + " ימים</b> — בסביבות " + end.toLocaleDateString("he-IL", { day: "numeric", month: "long", year: "numeric" }) + " בע\"ה";
         btn.disabled = false;
         btn.style.opacity = "1";
@@ -4306,8 +4724,16 @@
       }
       ov.querySelector("#lux-pw-m-min").addEventListener("click", function () { setMode("minutes"); });
       ov.querySelector("#lux-pw-m-days").addEventListener("click", function () { setMode("days"); });
-      ov.querySelector("#lux-pw-min").addEventListener("change", function () { minutes = parseInt(this.value, 10); repaint(); });
-      ov.querySelector("#lux-pw-days").addEventListener("change", function () { targetDays = parseInt(this.value, 10); repaint(); });
+      ov.querySelector("#lux-pw-min").addEventListener("input", function () {
+        minutes = parseInt(this.value, 10);
+        ov.querySelector("#lux-pw-min-lbl").textContent = fmtMin(minutes);
+        repaint();
+      });
+      ov.querySelector("#lux-pw-days").addEventListener("input", function () {
+        targetDays = DUR[parseInt(this.value, 10)] || 30;
+        ov.querySelector("#lux-pw-days-lbl").textContent = fmtDur(targetDays);
+        repaint();
+      });
       ov.querySelector(".lux-sheet-cancel").addEventListener("click", function () { luxModalClose("lux-plan-wizard"); });
       ov.querySelector("#lux-pw-create").addEventListener("click", function () {
         var c = calc();
@@ -4324,6 +4750,12 @@
         };
         all.push(pl);
         savePlans(all);
+        // מוודאים שהשמירה באמת הצליחה (אחסון מלא = כישלון שקט) לפני שמבשרים
+        var persisted = plans().some(function (p) { return p.id === pl.id; });
+        if (!persisted) {
+          if (typeof window.showToast === "function") window.showToast("⚠️ השמירה נכשלה — האחסון המקומי מלא. נקו מטמון ונסו שוב", "error", 4000);
+          return;
+        }
         luxModalClose("lux-plan-wizard");
         renderRow();
         if (typeof window.showToast === "function") window.showToast("🎯 סדר הלימוד נוצר! הלימוד הראשון מחכה לכם", "success", 3000);
@@ -4337,7 +4769,9 @@
       var row = document.getElementById("lux-plan-row");
       if (!row) return;
       var all = plans();
-      var inner = '<h3 class="lux-tracks-title">🎯 סדר הלימוד האישי שלי</h3>';
+      var _st = planStreak().count;
+      var inner = '<h3 class="lux-tracks-title">🎯 סדר הלימוד האישי שלי' +
+        (_st >= 2 ? ' <span class="lux-plan-streak" title="רצף ימי לימוד — מתאפס כל חצי שנה">🔥 ' + _st + "</span>" : "") + "</h3>";
       if (!all.length) {
         inner += '<button type="button" class="lux-plan-empty" id="lux-plan-add">' +
           '<span class="lux-plan-plus">+</span>' +
@@ -4358,7 +4792,7 @@
             "</div>" +
             '<div class="lux-plan-bar"><div class="lux-plan-fill" style="width:' + pct + '%;"></div></div>' +
             '<div class="lux-plan-stats">' +
-              "<span>" + pl.done + "/" + bk.count + " " + esc(bk.unit) + "ים · " + pct + "%</span>" +
+              "<span>" + pl.done + "/" + bk.count + " " + esc(unitsOf(bk)) + " · " + pct + "%</span>" +
               "<span>" + (finished ? "🎉 הושלם!" : "נותרו כ־" + left + " ימים") + "</span>" +
             "</div>" +
             (finished

@@ -60,17 +60,25 @@
       if (!star || !star.isConnected) {
         star = document.createElement("div");
         star.className = "lux-shooting-star";
-        star.style.top = (5 + Math.random() * 35) + "%";
-        star.style.right = (Math.random() * 40) + "%";
-        hero.appendChild(star); // האנימציה (forwards, נגמרת ב-opacity:0) רצה פעם אחת עם ההוספה
-      } else {
-        star.style.top = (5 + Math.random() * 35) + "%";
-        star.style.right = (Math.random() * 40) + "%";
-        // איתחול האנימציה בלי לגעת בעץ ה-DOM: ביטול, reflow נקודתי, והפעלה מחדש
+        // אנימציית ה-CSS מבוטלת — היריות רצות דרך WAAPI (למטה), ישירות על
+        // ה-compositor. האלמנט מעוגן ב-(0,0) והמיקום האקראי נכנס ל-keyframes
+        // עצמם — יריה לא כותבת אף style ולא מפעילה layout/paint מחוץ לשכבת הכוכב
         star.style.animation = "none";
-        void star.offsetWidth;
-        star.style.animation = "";
+        star.style.top = "0";
+        star.style.right = "0";
+        hero.appendChild(star); // הוספה חד-פעמית לכל חיי הדף
       }
+      try {
+        var hr = hero.getBoundingClientRect();
+        var offY = Math.round(hr.height * (5 + Math.random() * 35) / 100);
+        var offX = -Math.round(hr.width * (Math.random() * 40) / 100); // שמאלה מהקצה הימני
+        var base = "translate(" + offX + "px," + offY + "px) rotate(200deg)";
+        star.animate([
+          { opacity: 0, transform: base + " translateX(0)" },
+          { opacity: 1, offset: 0.12 },
+          { opacity: 0, transform: base + " translateX(340px)" }
+        ], { duration: 1300, easing: "ease-out" });
+      } catch (e) {}
       schedule();
     }
     function schedule() { setTimeout(shoot, 18000 + Math.random() * 26000); }
@@ -827,11 +835,19 @@
         var hh = Math.floor(d / 3600000), mm = Math.floor((d % 3600000) / 60000);
         // פורמט קצר בשורה אחת: "עוד 4:27 שע'" או "עוד 27 דק'"
         var rem = hh > 0 ? hh + ":" + (mm < 10 ? "0" : "") + mm + " שע'" : mm + " דק'";
-        var zHtml = "⏳ <b>" + next.l + " · " + fmtTime(next.iso) + "</b> · עוד " + rem;
-        // כתיבה רק בשינוי — כתיבה זהה מעירה את ה-observers וגוררת re-blur מאחורי פופאפים
-        if (el.innerHTML !== zHtml) el.innerHTML = zHtml;
+        // מבנה קבוע של שני spans — העדכון השוטף (פעם בדקה) נוגע רק בטקסט
+        // של ה-span האחורי, בלי להרוס ולבנות מחדש את צמתי השורה (innerHTML)
+        if (!el.__luxNzMain) {
+          el.innerHTML = "⏳ <b></b><span></span>";
+          el.__luxNzMain = el.querySelector("b");
+          el.__luxNzRem = el.querySelector("span");
+        }
+        var mainTxt = next.l + " · " + fmtTime(next.iso);
+        var remTxt = " · עוד " + rem;
+        if (el.__luxNzMain.textContent !== mainTxt) el.__luxNzMain.textContent = mainTxt;
+        if (el.__luxNzRem.textContent !== remTxt) el.__luxNzRem.textContent = remTxt;
       } else {
-        if (el.textContent !== "") el.textContent = "";
+        if (el.textContent !== "") { el.textContent = ""; el.__luxNzMain = null; el.__luxNzRem = null; }
       }
     }
     setInterval(update, 30000);
@@ -1555,6 +1571,14 @@
     overlay.className = "lux-sheet-overlay";
     overlay.innerHTML = '<div class="lux-sheet">' + innerHtml + "</div>";
     overlay.addEventListener("click", function (e) { if (e.target === overlay) luxModalClose(id); });
+    // כל יריעה מקבלת X עליון קבוע — מובנה, בלי לחכות לסורק האוניברסלי
+    var ux = document.createElement("button");
+    ux.type = "button";
+    ux.className = "lux-ux";
+    ux.setAttribute("aria-label", "סגירת החלון");
+    ux.textContent = "✕";
+    ux.addEventListener("click", function (e) { e.stopPropagation(); luxModalClose(id); });
+    overlay.appendChild(ux);
     document.body.appendChild(overlay);
     luxModalOpen(id);
 
@@ -5167,5 +5191,117 @@
         }
       });
     }, 1500);
+  });
+
+  /* ── 46. כפתור סגירה עליון בכל פופאפ — ערובה אוניברסלית ──────────
+     כל שכבת-על שנפתחת (מודאל, יריעה, קורא) חייבת כפתור X נגיש בחלק
+     העליון. פופאפ שכבר יש לו כפתור סגירה עליון משלו — לא נוגעים בו;
+     לכל השאר מוזרק X קבוע בפינה השמאלית-עליונה של המסך (מעל הרקע
+     המוחשך — לא דורס תוכן), שסוגר דרך מנגנון הסגירה המקורי של הפופאפ. */
+  safe("universalCloseX", function () {
+    var SEL = '[id$="-modal"], .lux-sheet-overlay, #lux-year-wheel, #lux-nav-editor, ' +
+      "#lux-selichot-reader, #lux-track-reader, #lux-plan-reader, #lux-tour-overlay";
+    /* שני סטים של זיהוי:
+       STRICT — רק כפתור X/חזור מובהק. כפתור כזה בחלק העליון פוטר מהזרקה.
+         "סגור"/"ביטול" בתחתית היריעה בכוונה לא כאן — לפי דרישת המשתמש
+         חייב X עליון גם כשיש כפתור סגירה תחתון.
+       PRIORITY — רשימה רחבה, משמשת רק לבחירת מה ללחוץ כשה-X שלנו נלחץ. */
+    var STRICT = '[aria-label*="סגירה"], [aria-label*="סגור"], [aria-label*="חזרה"], [aria-label*="חזור"], ' +
+      '[id$="-close"], [class*="-close"], [class*="close-btn"]';
+    var STRICT_TEXT = { "✕": 1, "×": 1, "✖": 1, "✖️": 1, "X": 1, "x": 1, "←": 1, "→": 1, "‹": 1, "❮": 1 };
+    var PRIORITY = [
+      '[aria-label*="סגירה"]', '[aria-label*="סגור"]', '[aria-label*="חזרה"]', '[aria-label*="חזור"]',
+      ".lux-sheet-cancel", '[id$="-close"]', '[id*="close"]', '[class*="close"]', '[onclick*="lose"]'
+    ];
+    var XTEXT = { "✕": 1, "×": 1, "✖": 1, "✖️": 1, "X": 1, "x": 1, "←": 1, "→": 1, "חזור": 1, "חזרה": 1, "סגור": 1, "סגירה": 1, "ביטול": 1 };
+    function isVisible(el) {
+      if (!el || !el.isConnected) return false;
+      var r = el.getBoundingClientRect();
+      if (r.width < 2 || r.height < 2) return false;
+      var cs = getComputedStyle(el);
+      return cs.display !== "none" && cs.visibility !== "hidden" && parseFloat(cs.opacity || "1") > 0.05;
+    }
+    // כל מועמדי הסגירה הנראים בתוך הפופאפ (בלי ה-X שהזרקנו בעצמנו)
+    function closeCandidates(modal) {
+      var out = [];
+      function push(el) {
+        if (el.classList.contains("lux-ux")) return;
+        if (out.indexOf(el) === -1 && isVisible(el)) out.push(el);
+      }
+      PRIORITY.forEach(function (sel) {
+        try { modal.querySelectorAll(sel).forEach(push); } catch (e) {}
+      });
+      modal.querySelectorAll("button").forEach(function (b) {
+        var t = (b.textContent || "").trim();
+        if (XTEXT[t]) push(b);
+      });
+      return out;
+    }
+    // כפתור X/חזור מובהק בחלק העליון של הפאנל — רק כזה פוטר מהזרקת X.
+    // כפתורי "סגור"/"ביטול" בתחתית לא נספרים כאן בכוונה.
+    function topStrictClose(modal) {
+      var panel = modal.firstElementChild || modal;
+      var pTop = Math.max(panel.getBoundingClientRect().top, 0);
+      var found = [];
+      try { modal.querySelectorAll(STRICT).forEach(function (el) { found.push(el); }); } catch (e) {}
+      modal.querySelectorAll("button, a").forEach(function (b) {
+        var t = (b.textContent || "").trim();
+        if (STRICT_TEXT[t] && found.indexOf(b) === -1) found.push(b);
+      });
+      for (var i = 0; i < found.length; i++) {
+        var el = found[i];
+        if (el.classList.contains("lux-ux") || !isVisible(el)) continue;
+        if (el.getBoundingClientRect().top - pTop < 110) return el;
+      }
+      return null;
+    }
+    function inject(modal) {
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "lux-ux";
+      btn.setAttribute("aria-label", "סגירת החלון");
+      btn.textContent = "✕";
+      btn.addEventListener("click", function (ev) {
+        ev.stopPropagation();
+        ev.preventDefault();
+        // קודם כל — מנגנון הסגירה המקורי של הפופאפ (משחרר נעילות/היסטוריה)
+        var own = closeCandidates(modal)[0];
+        if (own) { own.click(); return; }
+        if (modal.id && typeof window._closePopupViaBack === "function") { window._closePopupViaBack(modal.id); return; }
+        if (modal.id) { luxModalClose(modal.id); return; }
+        modal.remove();
+        try { if (typeof window.unlockBodyScroll === "function") window.unlockBodyScroll(); } catch (e) {}
+      });
+      modal.appendChild(btn);
+      return btn;
+    }
+    function tick() {
+      if (document.hidden) return;
+      document.querySelectorAll(SEL).forEach(function (modal) {
+        if (modal.classList.contains("hidden") || !isVisible(modal)) { modal.__luxUx = null; modal.__luxUxOwn = null; return; }
+        // רק שכבות-על אמיתיות (מכסות את רוב המסך) — פופאפים קטנים עם X משלהם לא רלוונטיים
+        var cs = getComputedStyle(modal);
+        if (cs.position !== "fixed") return;
+        var r = modal.getBoundingClientRect();
+        if (r.width < innerWidth * 0.55 || r.height < innerHeight * 0.55) return;
+        // X קיים (מובנה ב-luxSheet או שהוזרק קודם) — הכל תקין
+        var already = modal.querySelector(".lux-ux");
+        if (already) { modal.__luxUx = already; return; }
+        // לפופאפ יש כפתור X/חזור עליון מובהק משלו (מאומת מחדש בזול דרך ההפניה)
+        if (modal.__luxUxOwn && modal.contains(modal.__luxUxOwn) && isVisible(modal.__luxUxOwn)) return;
+        modal.__luxUxOwn = topStrictClose(modal);
+        if (modal.__luxUxOwn) return;
+        modal.__luxUx = inject(modal);
+      });
+    }
+    // סריקה מיד כשמתווסף/נגרע פופאפ + קצב קבוע כרשת ביטחון (זול: רק כשיש שכבה פתוחה)
+    var pend = null;
+    function schedTick() {
+      if (pend) return;
+      pend = setTimeout(function () { pend = null; tick(); }, 120);
+    }
+    try { new MutationObserver(schedTick).observe(document.body, { childList: true }); } catch (e) {}
+    setInterval(tick, 900);
+    setTimeout(tick, 1200);
   });
 })();

@@ -1730,6 +1730,11 @@ footer a:hover {
    הפס המוזהב עצמו נשאר — רק הזוהר יורד בנייד. אל תחזירו filter לנייד. */
 @media (max-width: 768px), (pointer: coarse) {
   .lux-shooting-star { filter: none; }
+  /* עיגולי הזוהר הקבועים של ההירו: filter:blur קבוע על שלושה אלמנטים גדולים
+     = משטחי rendering יקרים שה-GPU של הטלפון מפיל ומרסטר מחדש תחת עומס —
+     נראה כהבהוב של כל המסך ב-PWA. הגרדיאנט הרדיאלי כבר דוהה לשקוף בעצמו,
+     וה-blur כמעט אינו מוסיף — בנייד מוותרים עליו (inline style ⇒ !important) */
+  .lux-hero-orb { filter: none !important; }
 }
 
 /* ── ירח חי ── */
@@ -4219,6 +4224,33 @@ html.dark .lux-sn-h.lux-sn-f-on, html.dark .lux-sn-g.lux-sn-f-on {
   background: linear-gradient(135deg, #e0b74f, #c9993a);
   color: #211603;
 }
+/* ── כפתור סגירה אוניברסלי — מוזרק לכל פופאפ בלי X עליון משלו ──
+   קבוע בפינה השמאלית-עליונה של המסך, מעל הרקע המוחשך: לא דורס תוכן,
+   באותו מקום בכל האתר, ובגודל מגע נוח (44px) לנייד ולמחשב. */
+.lux-ux {
+  position: fixed;
+  top: calc(0.7rem + env(safe-area-inset-top, 0px));
+  left: calc(0.7rem + env(safe-area-inset-left, 0px));
+  z-index: 99999;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.35);
+  background: rgba(10, 16, 34, 0.78);
+  color: #fff;
+  font-size: 1.25rem;
+  font-weight: 900;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+.lux-ux:hover { background: rgba(30, 41, 70, 0.92); transform: scale(1.06); }
+.lux-ux:active { transform: scale(0.94); }
+
 /* כפתור אישור מחיקה (סדר לימוד) — אדום, ברור שזו פעולה הרסנית */
 .lux-plan-del-yes {
   background: linear-gradient(135deg, #dc2626, #991b1b);

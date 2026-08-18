@@ -160,6 +160,10 @@
     // רשת ביטחון אחרונה: סריקה מחזורית — שום כרטיס (והכפתורים שבו) לא
     // נשאר שקוף אחרי גלילה מעלה/מטה, גם אם אף אחד מהמנגנונים לא ירה.
     setInterval(function () {
+      // הטאב ברקע — אין מה לסרוק; פופאפ פתוח (הגוף נעול בגלילה) — הכרטיסים
+      // מוסתרים מאחוריו, וסריקות getBoundingClientRect/getComputedStyle כל
+      // שנייה רק גורמות לריצוד בנייד. הסריקה מתחדשת מיד עם סגירת הפופאפ.
+      if (document.hidden || document.body.style.position === "fixed") return;
       grid.querySelectorAll(".event-card:not(.lux-in)").forEach(function (c) {
         var r = c.getBoundingClientRect();
         // כל כרטיס שנמצא בתחום המסך או מעליו — נחשף מיד
@@ -443,7 +447,7 @@
     });
     // שחזור הסימון — גם אחרי שהמודאל נבנה מחדש (innerHTML)
     function restore() {
-      if (!enabled()) return;
+      if (!enabled() || document.hidden) return;
       // עטיפת שורות בקוראי התפילות (טקסט מבוסס <br>)
       document.querySelectorAll("#prayer-modal .modal-body").forEach(wrapLines);
       var marks = loadAll();
@@ -711,7 +715,7 @@
   }
   function getCachedEvents() {
     try {
-      var s = JSON.parse(localStorage.getItem("moadim_cached_events_v2") || "null");
+      var s = JSON.parse(localStorage.getItem("moadim_cached_events_v3") || "null");
       if (Array.isArray(s)) return s;
     } catch (e) {}
     return null;
@@ -794,11 +798,39 @@
     function openWheel() {
       var old = document.getElementById("lux-year-wheel");
       if (old) { luxModalClose("lux-year-wheel"); return; }
-      var events = (getCachedEvents() || []).filter(function (e) {
-        if (e.type !== "major") return false;
+      var rawEvents = (getCachedEvents() || []).filter(function (e) {
+        // כל החגים, המועדים והצומות — לא רק החגים הגדולים
+        if (["major", "minor", "fast"].indexOf(e.type) === -1) return false;
+        var nm = e.name || "";
+        if (nm.indexOf("ערב ") === 0) return false;   // ערבי חגים — החג עצמו על הגלגל
+        if (nm.indexOf("שבת ") === 0) return false;   // שבתות מיוחדות — אינן חגים
+        if (nm.indexOf("מברכים") !== -1) return false;
         var d = new Date(e.date);
         var diff = (d - new Date()) / 86400000;
-        return diff > -2 && diff < 358;
+        // עד 363 — שלא ייחתך חג שיושב ממש בתפר (תשעה באב של השנה הבאה)
+        return diff > -2 && diff < 363;
+      });
+      // חגים רב-יומיים (סוכות, פסח, חנוכה, ראש השנה) — אייקון אחד ביום הראשון,
+      // אחרת כל יום מצטייר כעיגול נפרד והחודש הופך למריחת אייקונים צפופה
+      var baseOf = function (nm) {
+        if (/^ראש השנה [אב]'/.test(nm)) return "ראש השנה";
+        if (nm.indexOf("סוכות ") === 0) return "סוכות";
+        if (nm.indexOf("חנוכה") === 0) return "חנוכה";
+        if (/^פסח [אבגדהוז]׳/.test(nm)) return "פסח";
+        return null;
+      };
+      var events = [], groupRep = {};
+      rawEvents.forEach(function (e) {
+        var base = baseOf(e.name || "");
+        if (!base) { events.push(e); return; }
+        if (groupRep[base]) {
+          // חבר נוסף באותו חג — רק מרחיבים את טווח התאריכים לתצוגה
+          if (e.date > groupRep[base].until) groupRep[base].until = e.date;
+          return;
+        }
+        var rep = { name: base, date: e.date, until: e.date, icon: e.icon, type: e.type };
+        groupRep[base] = rep;
+        events.push(rep);
       });
       var hebYear = "";
       try {
@@ -836,11 +868,16 @@
       // חודשי השנה העבריים — קווים מפרידים + תוויות.
       // אוספים קודם את גבולות החודשים, ואז מתייגים כל מקטע באמצעו —
       // כולל המקטע הראשון (החודש הנוכחי, למשל אלול) שקודם לכן לא קיבל תווית.
+      // הכול מעוגן לחצות המקומית של היום (T0) — עיגון לשעה הנוכחית גרם
+      // לאייקוני חגים "לזלוג" מעבר לקו החודש (ראש השנה הופיע באלול)
+      var todayMid = new Date();
+      todayMid.setHours(0, 0, 0, 0);
+      var T0 = todayMid.getTime();
       var monthBounds = [];   // אינדקסי ימים שבהם מתחיל חודש חדש
-      var monthNames = [heMonthOf(new Date())];
+      var monthNames = [heMonthOf(new Date(T0 + 43200000))];
       var prevM = monthNames[0];
       for (var day = 1; day <= 364; day++) {
-        var d = new Date(Date.now() + day * 86400000);
+        var d = new Date(T0 + day * 86400000 + 43200000); // אמצע היום — יציב מול שעון קיץ
         var m = heMonthOf(d);
         if (m && m !== prevM) {
           monthBounds.push(day);
@@ -891,20 +928,31 @@
         svg.classList.add("lux-yw-zoommode");
         var group = evNodes.filter(function (n) { return n.month === mk; })
           .sort(function (a, b) { return a.ang - b.ang; });
-        // פריסה מחדש על קשת רחבה יותר סביב מרכז הקבוצה — מרווח קבוע בין אייקונים
+        // פריסה סביב מרכז הקבוצה — הקשת מוגבלת כדי שהאייקונים המוגדלים
+        // יישארו בתחום החודש שלהם ולא "ינחתו" על חודשים אחרים
         var mid = group.reduce(function (s, n) { return s + n.ang; }, 0) / group.length;
-        var GAP = 0.30, RZ = 138, SCALE = 1.75;
+        var big = group.length >= 5;
+        var GAP = Math.min(0.30, group.length > 1 ? 0.9 / (group.length - 1) : 0.30);
+        var SCALE = big ? 1.5 : 1.75;
         group.forEach(function (n, gi) {
           var na = group.length === 1 ? mid : mid + (gi - (group.length - 1) / 2) * GAP;
+          // קבוצה גדולה — שתי טבעות לסירוגין, כך אין חפיפה גם כשהקשת צפופה
+          var RZ = big ? (gi % 2 === 0 ? 150 : 114) : 138;
           var nx = CX + RZ * Math.cos(na), ny = CY + RZ * Math.sin(na);
           n.g.classList.add("lux-yw-zoomed");
+          // מרימים את המוגדלים לסוף ה-SVG — ב-SVG סדר הציור קובע מי למעלה,
+          // אחרת אייקון מעומעם של חודש אחר מצטייר מעל המוגדל וגונב את הלחיצה
+          svg.appendChild(n.g);
           n.g.style.transform = "translate(" + (nx - n.x).toFixed(1) + "px," + (ny - n.y).toFixed(1) + "px) scale(" + SCALE + ")";
         });
       }
       // חגים — אייקון אמיתי של כל חג על הטבעת, עם הילה זהב
       events.forEach(function (ev, i) {
         var diff = (new Date(ev.date) - new Date()) / 86400000;
-        var ang = (Math.max(0, diff) / 365) * 2 * Math.PI - Math.PI / 2;
+        // מיקום לפי אינדקס היום מחצות (+0.5 = מרכז התא היומי) — כך אייקון
+        // של א' בחודש יושב בבירור בתוך החודש שלו ולא על קו הגבול
+        var dayIdx = Math.round((new Date(ev.date).getTime() - T0) / 86400000);
+        var ang = ((Math.max(0, dayIdx) + 0.5) / 365) * 2 * Math.PI - Math.PI / 2;
         var x = CX + R * Math.cos(ang), y = CY + R * Math.sin(ang);
         var g = document.createElementNS("http://www.w3.org/2000/svg", "g");
         g.setAttribute("class", "lux-yw-evt");
@@ -920,6 +968,10 @@
           if (zoomedMonth !== evMonth) { zoomMonth(evMonth); return; }
           var info = overlay.querySelector("#lux-yw-info");
           var dateStr = new Date(ev.date).toLocaleDateString("he-IL", { day: "numeric", month: "long" });
+          // חג רב-יומי מאוחד — מציגים את כל הטווח שלו
+          if (ev.until && ev.until !== ev.date) {
+            dateStr += " – " + new Date(ev.until).toLocaleDateString("he-IL", { day: "numeric", month: "long" });
+          }
           var heb = "";
           try { heb = typeof window.getHebrewDateString === "function" ? window.getHebrewDateString(new Date(ev.date)) : ""; } catch (e) {}
           info.innerHTML =
@@ -931,7 +983,8 @@
             setTimeout(function () {
               var cards = document.querySelectorAll("#resultsGrid .event-card h3");
               for (var j = 0; j < cards.length; j++) {
-                if (cards[j].textContent.trim() === ev.name) {
+                // חג מאוחד ("סוכות") מוצא את הכרטיס של יומו הראשון ("סוכות א׳")
+                if (cards[j].textContent.trim().indexOf(ev.name) === 0) {
                   var card = cards[j].closest(".event-card");
                   card.classList.add("lux-in");
                   card.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -3215,14 +3268,10 @@
       var marks = [{ at: 6, l: "חצות הלילה" }, { at: 12, l: "עמוד השחר" }];
       return marks;
     }
-    function render(ov) {
-      var c = calc();
-      var svg = ov.querySelector("#lux-hc-svg");
-      var info = ov.querySelector("#lux-hc-info");
-      if (!c) {
-        info.innerHTML = '<p style="color:#b45309;">זמני היום עדיין נטענים — נסו שוב בעוד רגע.</p>';
-        return;
-      }
+    // ── בנייה סטטית של פני השעון — נבנית פעם אחת, לא כל שנייה ──
+    // (בנייה מחדש כל שנייה מאתחלת את אנימציות ה-SVG וגורמת לריצוד בנייד)
+    var faceSig = null, infoSig = null;
+    function buildFace(svg, c, marks) {
       var CX = 170, CY = 170, TWO = 2 * Math.PI;
       var isDay = c.isDay;
       var parts = [];
@@ -3261,13 +3310,10 @@
           parts.push('<line x1="' + (170 + 118 * Math.cos(ra)).toFixed(1) + '" y1="' + (170 + 118 * Math.sin(ra)).toFixed(1) + '" x2="' + (170 + 132 * Math.cos(ra)).toFixed(1) + '" y2="' + (170 + 132 * Math.sin(ra)).toFixed(1) + '" stroke="rgba(224,183,79,0.16)" stroke-width="2.2"/>');
         }
       }
-      // קשת ההתקדמות הזוהרת — כמה מהיממה ההלכתית כבר עבר
+      // קשת ההתקדמות הזוהרת — האורך שלה מתעדכן כל שנייה ב-updateDynamic
       var CIRC = TWO * 140;
-      var frac = Math.max(0, Math.min(1, c.pos / 12));
       parts.push('<circle cx="170" cy="170" r="140" fill="none" stroke="rgba(224,183,79,0.16)" stroke-width="7"/>');
-      if (frac > 0.005) {
-        parts.push('<circle cx="170" cy="170" r="140" fill="none" stroke="url(#lux-hch)" stroke-width="7" stroke-linecap="round" stroke-dasharray="' + (CIRC * frac).toFixed(1) + " " + CIRC.toFixed(1) + '" transform="rotate(-90 170 170)" filter="url(#lux-hcg)"/>');
-      }
+      parts.push('<circle id="lux-hcd-arc" cx="170" cy="170" r="140" fill="none" stroke="url(#lux-hch)" stroke-width="7" stroke-linecap="round" stroke-dasharray="0.01 ' + CIRC.toFixed(1) + '" transform="rotate(-90 170 170)" filter="url(#lux-hcg)"/>');
       // ספרות ושנתות
       for (var h = 1; h <= 12; h++) {
         var ang = ((h - 0.5) / 12) * TWO - Math.PI / 2;
@@ -3281,38 +3327,77 @@
         var qa = (q / 48) * TWO - Math.PI / 2;
         parts.push('<line x1="' + (CX + 128 * Math.cos(qa)).toFixed(1) + '" y1="' + (CY + 128 * Math.sin(qa)).toFixed(1) + '" x2="' + (CX + 132 * Math.cos(qa)).toFixed(1) + '" y2="' + (CY + 132 * Math.sin(qa)).toFixed(1) + '" class="lux-hc-tick" style="opacity:0.4;stroke-width:1;"/>');
       }
-      // סימוני זמני ההלכה עם שמות
-      var marks = isDay ? dayMarks(c) : nightMarks(c);
+      // סימוני זמני ההלכה עם שמות — תוויות צפופות משובצות לסירוגין בשני
+      // רדיוסים (פנימי/חיצוני) כדי שלא יידרסו זו על זו, עם קו מוביל עדין
+      var CLOSE = (TWO / 12) * 1.35; // זמנים קרובים מ~1.35 שעות זמניות — מדורגים
+      var LBL_R = [70, 51];
+      var placed = [], lastAng = null, lastLvl = 0;
       marks.forEach(function (mk) {
         var ang3 = (mk.at / 12) * TWO - Math.PI / 2;
+        var lvl = 0;
+        if (lastAng !== null && ang3 - lastAng < CLOSE) lvl = lastLvl === 0 ? 1 : 0;
+        placed.push({ mk: mk, ang: ang3, lvl: lvl });
+        lastAng = ang3; lastLvl = lvl;
+      });
+      // התפר בראש השעון: התווית הראשונה והאחרונה עלולות להתנגש מעבר ל-12
+      if (placed.length > 2) {
+        var pf = placed[0], pl = placed[placed.length - 1];
+        if (pf.ang + TWO - pl.ang < CLOSE && pf.lvl === pl.lvl) pf.lvl = pf.lvl === 0 ? 1 : 0;
+      }
+      placed.forEach(function (pm) {
+        var mk = pm.mk, ang3 = pm.ang;
         var mx = CX + 88 * Math.cos(ang3), my = CY + 88 * Math.sin(ang3);
         var past = c.pos >= mk.at;
         parts.push('<circle cx="' + mx.toFixed(1) + '" cy="' + my.toFixed(1) + '" r="3.6" class="' + (past ? "lux-hc-mark-past" : "lux-hc-mark") + '"' + (past ? "" : ' filter="url(#lux-hcg)"') + "/>");
-        var lx = CX + 70 * Math.cos(ang3), ly = CY + 70 * Math.sin(ang3);
+        var lr = LBL_R[pm.lvl];
+        if (pm.lvl === 1) {
+          parts.push('<line x1="' + (CX + 83 * Math.cos(ang3)).toFixed(1) + '" y1="' + (CY + 83 * Math.sin(ang3)).toFixed(1) + '" x2="' + (CX + (lr + 6) * Math.cos(ang3)).toFixed(1) + '" y2="' + (CY + (lr + 6) * Math.sin(ang3)).toFixed(1) + '" class="lux-hc-leader"/>');
+        }
+        var lx = CX + lr * Math.cos(ang3), ly = CY + lr * Math.sin(ang3);
         parts.push('<text x="' + lx.toFixed(1) + '" y="' + (ly + 3).toFixed(1) + '" text-anchor="middle" class="lux-hc-mklbl' + (isDay ? "" : " lux-hc-mklbl-n") + (past ? " lux-hc-mklbl-past" : "") + '">' + mk.l + "</text>");
       });
-      // המחוג — עם שמש/ירח בקצהו
-      var hAng = frac * TWO - Math.PI / 2;
-      var hx = CX + 96 * Math.cos(hAng), hy = CY + 96 * Math.sin(hAng);
-      parts.push('<line x1="170" y1="170" x2="' + hx.toFixed(1) + '" y2="' + hy.toFixed(1) + '" class="lux-hc-hand" filter="url(#lux-hcg)"/>');
-      var ex = CX + 112 * Math.cos(hAng), ey = CY + 112 * Math.sin(hAng);
-      parts.push('<circle cx="' + ex.toFixed(1) + '" cy="' + ey.toFixed(1) + '" r="13" fill="' + (isDay ? "#fff6d8" : "#101a35") + '" stroke="#c9993a" stroke-width="2"><animate attributeName="r" values="12;14;12" dur="2.4s" repeatCount="indefinite"/></circle>');
-      parts.push('<text x="' + ex.toFixed(1) + '" y="' + (ey + 5).toFixed(1) + '" text-anchor="middle" font-size="14">' + (isDay ? "☀️" : "🌙") + "</text>");
+      // המחוג — עם שמש/ירח בקצהו (המיקום מתעדכן כל שנייה ב-updateDynamic)
+      parts.push('<line id="lux-hcd-hand" x1="170" y1="170" x2="170" y2="74" class="lux-hc-hand" filter="url(#lux-hcg)"/>');
+      parts.push('<circle id="lux-hcd-end" cx="170" cy="58" r="13" fill="' + (isDay ? "#fff6d8" : "#101a35") + '" stroke="#c9993a" stroke-width="2"><animate attributeName="r" values="12;14;12" dur="2.4s" repeatCount="indefinite"/></circle>');
+      parts.push('<text id="lux-hcd-emoji" x="170" y="63" text-anchor="middle" font-size="14">' + (isDay ? "☀️" : "🌙") + "</text>");
       // מרכז: שעון דיגיטלי חי
+      parts.push('<circle cx="170" cy="170" r="37" fill="' + (isDay ? "rgba(255,252,240,0.92)" : "rgba(6,12,29,0.88)") + '" stroke="rgba(201,153,58,0.7)" stroke-width="1.6"/>');
+      parts.push('<text id="lux-hcd-dig" x="170" y="166" text-anchor="middle" class="lux-hc-dig' + (isDay ? "" : " lux-hc-dig-n") + '"></text>');
+      parts.push('<text id="lux-hcd-hour" x="170" y="184" text-anchor="middle" class="lux-hc-sub2"></text>');
+      svg.innerHTML = parts.join("");
+    }
+    // ── עדכון דינמי כל שנייה — נגיעה נקודתית במאפיינים, בלי לבנות DOM ──
+    function updateDynamic(ov, c) {
+      var CX = 170, CY = 170, TWO = 2 * Math.PI;
+      var frac = Math.max(0, Math.min(1, c.pos / 12));
+      var CIRC = TWO * 140;
+      var arc = ov.querySelector("#lux-hcd-arc");
+      if (arc) arc.setAttribute("stroke-dasharray", (frac > 0.005 ? (CIRC * frac).toFixed(1) : "0.01") + " " + CIRC.toFixed(1));
+      var hAng = frac * TWO - Math.PI / 2;
+      var hand = ov.querySelector("#lux-hcd-hand");
+      if (hand) {
+        hand.setAttribute("x2", (CX + 96 * Math.cos(hAng)).toFixed(1));
+        hand.setAttribute("y2", (CY + 96 * Math.sin(hAng)).toFixed(1));
+      }
+      var ex = CX + 112 * Math.cos(hAng), ey = CY + 112 * Math.sin(hAng);
+      var end = ov.querySelector("#lux-hcd-end");
+      if (end) { end.setAttribute("cx", ex.toFixed(1)); end.setAttribute("cy", ey.toFixed(1)); }
+      var emo = ov.querySelector("#lux-hcd-emoji");
+      if (emo) { emo.setAttribute("x", ex.toFixed(1)); emo.setAttribute("y", (ey + 5).toFixed(1)); }
       var now = new Date();
       var dig = String(now.getHours()).padStart(2, "0") + ":" + String(now.getMinutes()).padStart(2, "0") + ":" + String(now.getSeconds()).padStart(2, "0");
+      var digEl = ov.querySelector("#lux-hcd-dig");
+      if (digEl && digEl.textContent !== dig) digEl.textContent = dig;
       var whole = Math.min(12, Math.floor(c.pos) + 1);
-      parts.push('<circle cx="170" cy="170" r="37" fill="' + (isDay ? "rgba(255,252,240,0.92)" : "rgba(6,12,29,0.88)") + '" stroke="rgba(201,153,58,0.7)" stroke-width="1.6"/>');
-      parts.push('<text x="170" y="166" text-anchor="middle" class="lux-hc-dig' + (isDay ? "" : " lux-hc-dig-n") + '">' + dig + "</text>");
-      parts.push('<text x="170" y="184" text-anchor="middle" class="lux-hc-sub2">שעה ' + heHour(whole) + "׳</text>");
-      svg.innerHTML = parts.join("");
-      // תווית המצב — מחוץ לשעון, כתגית נקייה מעל (לא מתנגשת באלמנטים)
-      var badge = ov.querySelector("#lux-hc-mode-badge");
-      if (badge) {
-        badge.textContent = isDay ? "☀️ היום ההלכתי" : "🌙 הלילה ההלכתי";
-        badge.className = "lux-hc-badge" + (isDay ? "" : " lux-hc-badge-n");
-      }
-      // ── פאנל מידע חי ──
+      var hourStr = "שעה " + heHour(whole) + "׳";
+      var hourEl = ov.querySelector("#lux-hcd-hour");
+      if (hourEl && hourEl.textContent !== hourStr) hourEl.textContent = hourStr;
+    }
+    // ── פאנל המידע — נבנה מחדש רק כשהדקה מתחלפת ──
+    function buildInfo(info, c, marks) {
+      var isDay = c.isDay;
+      var frac = Math.max(0, Math.min(1, c.pos / 12));
+      var whole = Math.min(12, Math.floor(c.pos) + 1);
       var mins = Math.round(c.hourMs / 60000);
       var next = null;
       for (var mi = 0; mi < marks.length; mi++) {
@@ -3334,6 +3419,34 @@
         schedHtml() +
         '<div class="lux-hc-note">שעה זמנית — כדעת <b>הבן איש חי</b>: חלוקת ' + (isDay ? "היום (מעמוד השחר עד צאת הכוכבים)" : "הלילה (מצאת הכוכבים עד עמוד השחר)") + ' ל-12 חלקים שווים. כך נקבעים זמני ההלכה: סוף זמן ק"ש בסוף השעה השלישית, מנחה גדולה מחצי שעה אחר חצות, ועוד.</div>';
     }
+    function render(ov) {
+      var c = calc();
+      var svg = ov.querySelector("#lux-hc-svg");
+      var info = ov.querySelector("#lux-hc-info");
+      if (!c) {
+        info.innerHTML = '<p style="color:#b45309;">זמני היום עדיין נטענים — נסו שוב בעוד רגע.</p>';
+        return;
+      }
+      var marks = c.isDay ? dayMarks(c) : nightMarks(c);
+      // פני השעון נבנים מחדש רק כשמשהו מהותי משתנה: מעבר יום/לילה או זמן שחלף
+      var fSig = (c.isDay ? "D" : "N") + "|" + c.start + "|" +
+        marks.map(function (m) { return c.pos >= m.at ? "1" : "0"; }).join("");
+      if (fSig !== faceSig) {
+        faceSig = fSig;
+        buildFace(svg, c, marks);
+        var badge = ov.querySelector("#lux-hc-mode-badge");
+        if (badge) {
+          badge.textContent = c.isDay ? "☀️ היום ההלכתי" : "🌙 הלילה ההלכתי";
+          badge.className = "lux-hc-badge" + (c.isDay ? "" : " lux-hc-badge-n");
+        }
+      }
+      updateDynamic(ov, c);
+      var iSig = fSig + "|" + Math.floor(Date.now() / 60000);
+      if (iSig !== infoSig) {
+        infoSig = iSig;
+        buildInfo(info, c, marks);
+      }
+    }
     function openClock() {
       var ov = luxSheet("lux-hc-modal",
         '<h3 class="lux-sheet-title">🕰️ השעון ההלכתי</h3>' +
@@ -3346,6 +3459,7 @@
         clearInterval(tickT);
         luxModalClose("lux-hc-modal");
       });
+      faceSig = infoSig = null; // המודאל נבנה מחדש — פני השעון חייבים בנייה ראשונה
       render(ov);
       clearInterval(tickT);
       // שעון חי — מתעדכן כל שנייה (שניות רצות + מחוג + קשת ההתקדמות)
@@ -4834,5 +4948,45 @@
     injectRow2();
     setTimeout(injectRow2, 2600);
     setTimeout(injectRow2, 4500);
+  });
+
+  /* ── 45. הזמנה לסיור מודרך — קופצת פעם אחת בלבד, בכניסה הראשונה ── */
+  safe("tourInvite", function () {
+    var KEY = "lux_tour_invite_shown";
+    try { if (localStorage.getItem(KEY)) return; } catch (e) { return; }
+    var tries = 0;
+    var t = setInterval(function () {
+      tries++;
+      if (tries > 20) { clearInterval(t); return; }
+      // מחכים שהדשבורד ייטען, שהסיור יהיה זמין ושאף פופאפ אחר לא פתוח
+      var ds = document.getElementById("dashboard-state");
+      if (!ds || ds.classList.contains("hidden")) return;
+      if (typeof window.luxStartTour !== "function") return;
+      if (document.body.style.position === "fixed") return;
+      if (document.querySelector(".lux-sheet-overlay")) return;
+      clearInterval(t);
+      // מסומן כ"הוצג" ברגע ההצגה — הפופאפ לעולם לא יקפוץ שוב
+      try { localStorage.setItem(KEY, "1"); } catch (e) {}
+      var ov = luxSheet("lux-tour-invite",
+        '<h3 class="lux-sheet-title">🧭 נעים להכיר!</h3>' +
+        '<p class="lux-sheet-note">זו הפעם הראשונה שלכם כאן — רוצים סיור קצר ומודרך שמראה את כל מה שהאתר יודע לעשות? זמנים, תפילות, ספרים, סדרי לימוד ועוד.</p>' +
+        '<div class="lux-sheet-actions">' +
+          '<button type="button" class="lux-sheet-primary" id="lux-ti-yes">🧭 כן, קחו אותי לסיור</button>' +
+          '<button type="button" class="lux-sheet-cancel" id="lux-ti-no">לא עכשיו</button>' +
+        "</div>");
+      if (!ov) return;
+      ov.querySelector("#lux-ti-yes").addEventListener("click", function () {
+        luxModalClose("lux-tour-invite");
+        setTimeout(function () {
+          try { window.luxStartTour(); } catch (e) {}
+        }, 250);
+      });
+      ov.querySelector("#lux-ti-no").addEventListener("click", function () {
+        luxModalClose("lux-tour-invite");
+        if (typeof window.showToast === "function") {
+          window.showToast('💡 אפשר תמיד לצאת לסיור דרך ⚙️ ההגדרות — "סיור מודרך באתר"', "info", 4800);
+        }
+      });
+    }, 1500);
   });
 })();

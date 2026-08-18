@@ -3985,9 +3985,22 @@ body.lux-shabbat-scene-on #countdown-display {
   stroke-width: 1;
 }
 .lux-hc-mark-past { fill: rgba(148, 163, 184, 0.45); }
-.lux-hc-mklbl { fill: rgba(122, 92, 26, 0.85); font-size: 8.5px; font-weight: 800; }
-.lux-hc-mklbl-n { fill: rgba(217, 196, 138, 0.85); }
+.lux-hc-mklbl {
+  fill: rgba(122, 92, 26, 0.95);
+  font-size: 8.5px;
+  font-weight: 800;
+  /* הילה בהירה סביב האותיות — התווית קריאה גם מעל שנתות וקשתות */
+  paint-order: stroke;
+  stroke: rgba(255, 250, 232, 0.85);
+  stroke-width: 2.4px;
+  stroke-linejoin: round;
+}
+.lux-hc-mklbl-n {
+  fill: rgba(230, 212, 158, 0.98);
+  stroke: rgba(6, 12, 29, 0.85);
+}
 .lux-hc-mklbl-past { opacity: 0.45; }
+.lux-hc-leader { stroke: rgba(161, 118, 42, 0.35); stroke-width: 1; stroke-dasharray: 2 3; }
 .lux-hc-dig {
   fill: #7a3c09;
   font-size: 16px;
@@ -4468,8 +4481,8 @@ html.dark .lux-dt-occ-first { background: linear-gradient(135deg, #2a2410, #3a30
   transform-origin: center;
   cursor: pointer;
 }
-#lux-yw-svg.lux-yw-zoommode .lux-yw-evt { opacity: 0.18; }
-#lux-yw-svg.lux-yw-zoommode .lux-yw-evt.lux-yw-zoomed { opacity: 1; }
+#lux-yw-svg.lux-yw-zoommode .lux-yw-evt { opacity: 0.18; pointer-events: none; }
+#lux-yw-svg.lux-yw-zoommode .lux-yw-evt.lux-yw-zoomed { opacity: 1; pointer-events: auto; }
 #lux-yw-svg .lux-yw-evt.lux-yw-zoomed .lux-yw-halo {
   fill: rgba(232, 193, 90, 0.28);
   stroke: rgba(232, 193, 90, 0.85);
@@ -4753,7 +4766,7 @@ html.dark .lux-plan-streak { color: #fbbf24; background: rgba(251, 191, 36, 0.12
     box-shadow: 0 0 34px rgba(232, 193, 90, 0.65), 0 0 60px rgba(59, 130, 246, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.25);
   }
 }
-.lux-premium-badge { animation: lux-premium-pulse 3s ease-in-out infinite; }
+.lux-premium-badge { animation: lux-premium-pulse 4.5s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) {
   .lux-premium-badge { animation: none; }
 }

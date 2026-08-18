@@ -974,10 +974,10 @@ function initApp() {
   updateCurrentCityLabel();
   updateNotifStatusUI();
 
-  const cachedEvents = localStorage.getItem("moadim_cached_events_v2");
+  const cachedEvents = localStorage.getItem("moadim_cached_events_v3");
   if (cachedEvents) {
     ALL_EVENTS = JSON.parse(cachedEvents);
-    const cachedFull = localStorage.getItem("moadim_cached_events_full_v2");
+    const cachedFull = localStorage.getItem("moadim_cached_events_full_v3");
     window.ALL_EVENTS_FULL = cachedFull ? JSON.parse(cachedFull) : null;
     const _todayY = new Date().getFullYear();
     window.FETCHED_YEARS =
@@ -3041,28 +3041,49 @@ async function fetchLiveCalendarData() {
         return;
       }
 
+      // Hebcal משתמש בגרש טיפוגרפי (’) בכותרות — מנרמלים כדי שההתאמות יתפסו
+      const evTitle = (ev.title || "").replace(/[‘’]/g, "'");
       if (
         ev.category === "fast" ||
         ev.subcat === "fast" ||
-        /Tzom|Ta'anit|Tisha|Tish'a/.test(ev.title)
+        /Tzom|Ta'anit|Tisha|Tish'a/.test(evTitle)
       ) {
         type = "fast";
         icon = "⚖️";
+      } else if (ev.category === "holiday" && ev.subcat === "modern") {
+        // ימי זיכרון ואירועים לאומיים — Hebcal מסמן אותם holiday/modern
+        // (הענף category==="modern" שבהמשך לא נכנס אליו בפועל)
+        type = "minor";
+        if (evTitle.includes("Shoah") || (ev.hebrew && ev.hebrew.includes("שואה"))) {
+          icon = "🕯️";
+          type = "fast";
+        } else if (evTitle.includes("Zikaron") || (ev.hebrew && ev.hebrew.includes("זכרון"))) {
+          icon = "🪖";
+          type = "fast";
+        } else if (evTitle.includes("Atzma") || (ev.hebrew && ev.hebrew.includes("עצמאות"))) {
+          icon = "🇮🇱";
+          type = "major";
+        } else if (evTitle.includes("Yerushalayim") || (ev.hebrew && ev.hebrew.includes("ירושלים"))) {
+          icon = "🎗️";
+        } else {
+          icon = "🗓️";
+        }
       } else if (ev.category === "holiday") {
         type = ev.subcat === "major" ? "major" : "minor";
-        if (ev.title.includes("Pesach")) icon = "🍷";
-        else if (ev.title.includes("Rosh Hashana")) icon = "🍎";
-        else if (ev.title.includes("Yom Kippur")) {
+        if (evTitle.includes("Pesach")) icon = "🍷";
+        else if (evTitle.includes("Rosh Hashana")) icon = "🍎";
+        else if (evTitle.includes("Yom Kippur")) {
           icon = "🕊️";
           type = "fast";
-        } else if (ev.title.includes("Sukkot")) icon = "🌿";
-        else if (ev.title.includes("Hanukkah")) icon = "🕎";
-        else if (ev.title.includes("Purim")) icon = "🎭";
-        else if (ev.title.includes("Shavuot")) icon = "📜";
-        else if (ev.title.includes("Lag B'Omer")) icon = "🔥";
-        else if (ev.title.includes("Tu B'Av")) icon = "💖";
-        else if (ev.title.includes("Tu BiShvat")) icon = "🌳";
-        else if (ev.title.includes("Leil Selichot")) icon = "🕊️";
+        } else if (evTitle.includes("Sukkot")) icon = "🌿";
+        else if (/Hanukkah|Chanukah/.test(evTitle)) icon = "🕎";
+        else if (evTitle.includes("Purim")) icon = "🎭";
+        else if (evTitle.includes("Shavuot")) icon = "📜";
+        else if (/Lag B'Omer|Lag BaOmer/.test(evTitle)) icon = "🔥";
+        else if (evTitle.includes("Tu B'Av")) icon = "💖";
+        else if (/Tu BiShvat|Tu B'Shvat/.test(evTitle)) icon = "🌳";
+        else if (evTitle.includes("Leil Selichot")) icon = "🕊️";
+        else if (evTitle.includes("Shmini Atzeret") || evTitle.includes("Simchat Torah")) icon = "🎉";
       } else if (ev.category === "modern" || ev.category === "israel") {
         // ימי זיכרון ואירועים לאומיים
         type = "minor";
@@ -3125,9 +3146,9 @@ async function fetchLiveCalendarData() {
       (a, b) => new Date(a.date) - new Date(b.date),
     );
     window.FETCHED_YEARS = new Set([cy - 1, cy, cy + 1]);
-    localStorage.setItem("moadim_cached_events_v2", JSON.stringify(ALL_EVENTS));
+    localStorage.setItem("moadim_cached_events_v3", JSON.stringify(ALL_EVENTS));
     localStorage.setItem(
-      "moadim_cached_events_full_v2",
+      "moadim_cached_events_full_v3",
       JSON.stringify(window.ALL_EVENTS_FULL),
     );
 
@@ -3330,8 +3351,12 @@ document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible") setTimeout(_forceRevealHeroEls, 700);
 });
 window.addEventListener("pageshow", () => setTimeout(_forceRevealHeroEls, 700));
-// סריקה מחזורית זולה — אף אלמנט בית לא נשאר תקוע שקוף, לא משנה מתי קפא המעבר
-setInterval(_forceRevealHeroEls, 2500);
+// סריקה מחזורית זולה — אף אלמנט בית לא נשאר תקוע שקוף, לא משנה מתי קפא המעבר.
+// מדלגים כשהטאב ברקע או כשפופאפ פתוח (visibilitychange והטיק שאחרי הסגירה משלימים)
+setInterval(() => {
+  if (document.hidden || document.body.style.position === "fixed") return;
+  _forceRevealHeroEls();
+}, 2500);
 
 // ══════════════════════════════════════════════════
 // ✦  PRAYER GRID — EMBEDDED TEXTS + SEASON AWARE
@@ -5601,8 +5626,11 @@ async function ensureYearFetched(year) {
         icon = "📖";
         name = "פרשת " + (ev.hebrew || ev.title || "");
       } else if (ev.category === "holiday") {
-        var lc = (ev.title || "").toLowerCase();
-        if (lc.includes("fast") || lc.includes("tzom")) {
+        var lc = (ev.title || "").replace(/[‘’]/g, "'").toLowerCase();
+        if (lc.includes("chanukah") || lc.includes("hanukkah")) {
+          icon = "🕎";
+          if (ev.subcat === "major") type = "major";
+        } else if (lc.includes("fast") || lc.includes("tzom") || lc.includes("ta'anit") || lc.includes("tish'a b'av")) {
           type = "fast";
           icon = "⚡";
         } else if (ev.yomtov) {
@@ -23831,13 +23859,20 @@ function openSefarimNosafimPage(_pageMode) {
     var CATS = [
       { he: "🍞 לחם ומיני דגן", items: [
         ["לחם, פיתה, חלה, לחמנייה, בגט", "hamotzi", "bhm"],
-        ["מצה", "hamotzi", "bhm"],
+        ["מצה", "hamotzi", "bhm", "למנהג הספרדים האוכל מצה שלא בפסח — מאחרי י\"ד באייר ועד ערב פסח — מברך מזונות; בפסח עצמו — המוציא"],
         ["עוגות ועוגיות (פת הבאה בכיסנין)", "mezonot", "michya"],
-        ["בורקס, מלאווח, ג'חנון", "mezonot", "michya"],
+        ["בורקס, סמבוסק, מלאווח, ג'חנון", "mezonot", "michya"],
         ["קרקרים, ביסקוויטים, צנימים", "mezonot", "michya"],
         ["פסטה, מקרוני, אטריות", "mezonot", "michya"],
         ["קוסקוס, פתיתים, בורגול", "mezonot", "michya"],
-        ["דייסת סולת / קוואקר (שיבולת שועל מבושלת)", "mezonot", "michya"],
+        ["דייסת סולת / קוואקר (שיבולת שועל מבושלת)", "mezonot", "michya", "כשהדייסה סמיכה ואינה נשפכת; דייסה דלילה מאוד ששותים אותה — שהכל"],
+        ["בלינצ'ס", "mezonot", "michya"],
+        ["קניידלך וכופתאות (כשנאכלים בנפרד)", "mezonot", "michya"],
+        ["שלווה (חיטה תפוחה)", "mezonot", "michya", "כשהגרעינים אינם שלמים; גרעינים שלמים — האדמה"],
+        ["בוטנים אמריקאים (בציפוי בצק)", "mezonot", "nefashot", "הציפוי מקמח והוא העיקר — מזונות; ברכה אחרונה בורא נפשות"],
+        ["גביע גלידה (כשנאכל בנפרד)", "mezonot", "nefashot", "כשאוכלו יחד עם הגלידה — הגביע טפל לגלידה"],
+        ["נבט חיטה", "mezonot", "michya", "מבושל — מזונות; חי — שהכל, ואם רגילים לאוכלו חי — האדמה"],
+        ["מרק אורז", "mezonot", "nefashot", "כדין אורז — מזונות ובורא נפשות"],
         ["שקדי מרק", "mezonot", "michya"],
         ["וופלים", "mezonot", "michya"],
         ["גרנולה ודגני בוקר מחמשת מיני דגן", "mezonot", "michya"],
@@ -23849,8 +23884,8 @@ function openSefarimNosafimPage(_pageMode) {
         ["פיצה", "hamotzi", "bhm", "בצק פיצה רגיל נילוש במים ודינו כפת גמורה; נילוש ברובו במי פירות או חלב וטעמם ניכר — מזונות (אלא אם קבע סעודה)"],
         ["סופגנייה", "mezonot", "michya", "בצק מטוגן בשמן עמוק — לעולם מזונות ואינו בא לידי המוציא, אף בקביעות סעודה"],
         ["פנקייק, לביבות קמח", "mezonot", "michya", "בלילה רכה מטוגנת"],
-        ["קרואסון, רוגלך, דניש", "mezonot", "michya"],
-        ["בייגלה", "mezonot", "michya", "נאכל לכסיסה ולא לקביעות סעודה"],
+        ["קרואסון, רוגלך, דניש, שטרודל", "mezonot", "michya"],
+        ["בייגלה ומקלות מלוחים", "mezonot", "michya", "נאכלים לכסיסה ולא לקביעות סעודה"],
         ["לזניה, פשטידת אטריות (קוגל)", "mezonot", "michya", "הבצק עיקר והגבינה/הרוטב טפלים"],
         ["לחמנייה מתוקה (מזונות)", "mezonot", "michya", "רק כשטעם המתיקות ניכר היטב בעיסה; נילושה במים בעיקרה — דינה כלחם"],
         ["מג'דרה (אורז עם עדשים)", "mezonot", "nefashot", "האורז עיקר ופוטר את העדשים; ברכה אחרונה — בורא נפשות כדין אורז"],
@@ -23860,11 +23895,11 @@ function openSefarimNosafimPage(_pageMode) {
         ["חמין (טשולנט) עם חיטה או גריסים", "mezonot", "michya", "כשהגרעינים נתמעכו או נדבקו בבישול — מזונות; בלא דגן — מברך על העיקר"]
       ]},
       { he: "🍷 יין ומשקאות", items: [
-        ["יין ומיץ ענבים", "gefen", "gefen"],
+        ["יין ומיץ ענבים", "gefen", "gefen", "גם יין מהול במים — כשהרוב יין וטעם היין ניכר"],
         ["מים", "shehakol", "nefashot", "מברכים רק כששותה לצמאו"],
         ["מיץ תפוזים ושאר מיצי פירות", "shehakol", "nefashot"],
         ["קפה, תה, שוקו", "shehakol", "nefashot"],
-        ["בירה, ויסקי, ערק ושאר משקאות חריפים", "shehakol", "nefashot"],
+        ["בירה, ויסקי, ערק, יין תפוחים (סיידר) ושאר המשקאות החריפים", "shehakol", "nefashot"],
         ["משקאות קלים ומוגזים", "shehakol", "nefashot"],
         ["שייק פירות (סמוזי)", "shehakol", "nefashot", "פירות שרוסקו לגמרי ונעשו משקה — ברכתם שהכל"],
         ["מיץ גזר וירקות סחוטים", "shehakol", "nefashot"]
@@ -23879,8 +23914,8 @@ function openSefarimNosafimPage(_pageMode) {
       ]},
       { he: "🍎 פירות העץ", items: [
         ["תפוח, אגס, חבוש", "etz", "nefashot"],
-        ["תפוז, קלמנטינה, לימון, אשכולית, פומלה", "etz", "nefashot"],
-        ["אפרסק, משמש, שזיף, נקטרינה", "etz", "nefashot"],
+        ["תפוז, קלמנטינה, מנדרינה, אשכולית, פומלה", "etz", "nefashot", "לימון חמוץ הנאכל כמות שהוא — יש אומרים שברכתו שהכל"],
+        ["אפרסק, משמש, שזיף, נקטרינה, אפרשזיף", "etz", "nefashot"],
         ["מנגו", "etz", "nefashot"],
         ["אבוקדו", "etz", "nefashot"],
         ["גויאבה", "etz", "nefashot"],
@@ -23891,6 +23926,14 @@ function openSefarimNosafimPage(_pageMode) {
         ["קוקוס", "etz", "nefashot"],
         ["חרוב", "etz", "nefashot"],
         ["קיווי", "etz", "nefashot", "כך דעת הרב מרדכי אליהו; ויש המברכים האדמה — והמברך האדמה יש לו על מה לסמוך"],
+        ["אוכמניות, פטל, תות עץ", "etz", "nefashot"],
+        ["אנונה, פיג'ויה, קרמבולה", "etz", "nefashot"],
+        ["שסק", "etz", "nefashot"],
+        ["סברס (צבר)", "etz", "nefashot"],
+        ["ערמונים", "etz", "nefashot"],
+        ["צנובר", "etz", "nefashot"],
+        ["צלף (קפריסין)", "etz", "nefashot"],
+        ["קליפת אתרוג מסוכרת בדבש", "etz", "nefashot", "מאתרוג שאינו מורכב; ויש המברכים שהכל על קליפות הדר ממותקות"],
         ["פירות מסוכרים / מיובשים", "etz", "nefashot", "כברכת הפרי הטרי"],
         ["סלט פירות", "etz", "nefashot", "כשרובו פירות העץ; ואם יש בו גם פרי אדמה חשוב (בננה, מלון) — מברך שתי ברכות"]
       ]},
@@ -23905,13 +23948,22 @@ function openSefarimNosafimPage(_pageMode) {
         ["חסה, כרוב, כרובית, ברוקולי", "adama", "nefashot"],
         ["תפוח אדמה, בטטה", "adama", "nefashot"],
         ["בצל, שום (מבושלים בתבשיל)", "adama", "nefashot"],
-        ["קישוא, חציל, דלעת", "adama", "nefashot"],
+        ["קישוא, חציל, דלעת, דלורית", "adama", "nefashot"],
+        ["אספרגוס, ארטישוק, במיה, שומר, סלרי (כרפס)", "adama", "nefashot"],
+        ["תרד, פטרוזיליה, כוסברה, עולש (עלשים)", "adama", "nefashot"],
+        ["לפת, קולרבי, חזרת", "adama", "nefashot"],
+        ["פולים, לוביה, תורמוס", "adama", "nefashot"],
+        ["חיטה מבושלת (גרעינים שלמים)", "adama", "nefashot", "כשהגרעינים שלמים ולא נמעכו; נתמעכו או נדבקו בבישול — מזונות"],
+        ["זנגביל (ג'ינג'ר) טרי", "adama", "nefashot"],
+        ["חילבה (לא טחונה)", "adama", "nefashot"],
+        ["שומשום (גרעינים)", "adama", "nefashot", "שומשום שנטחן לגמרי (טחינה) — שהכל"],
+        ["פלפל חריף", "adama", "nefashot", "כבוש או מבושל — האדמה; חי — שהכל, שאינו נאכל כמות שהוא"],
         ["תירס", "adama", "nefashot"],
         ["אפונה, שעועית, חומוס (גרגירים)", "adama", "nefashot"],
         ["עדשים מבושלות", "adama", "nefashot"],
         ["בוטנים", "adama", "nefashot"],
-        ["גרעינים (חמנייה, דלעת), גרעיני אבטיח", "adama", "nefashot"],
-        ["פופקורן", "adama", "nefashot"],
+        ["גרעינים (חמנייה, דלעת), גרעיני אבטיח", "adama", "nefashot", "גרעיני אבטיח מפרי שנזרע לשם אכילת הפרי — שהכל"],
+        ["פופקורן", "adama", "nefashot", "ויש המברכים שהכל, שנשתנתה צורתו"],
         ["צ'יפס ותפוצ'יפס", "adama", "nefashot", "כשניכרת צורת תפוח האדמה — האדמה"],
         ["חמוצים (מלפפון חמוץ וכד')", "adama", "nefashot"],
         ["סלט ירקות", "adama", "nefashot"],
@@ -23925,10 +23977,14 @@ function openSefarimNosafimPage(_pageMode) {
         ["חלב, גבינות, יוגורט, מעדני חלב", "shehakol", "nefashot"],
         ["שוקולד", "shehakol", "nefashot", "כך המנהג פשוט אצל הספרדים"],
         ["גלידה, ארטיק", "shehakol", "nefashot"],
-        ["סוכריות, מסטיק, חלווה", "shehakol", "nefashot"],
+        ["סוכריות, מסטיק, חלווה, חלקום (רחת לוקום), מרשמלו, סוכר", "shehakol", "nefashot"],
         ["במבה וחטיפי תירס תפוחים", "shehakol", "nefashot"],
-        ["פטריות", "shehakol", "nefashot", "אינן יונקות מן הקרקע כצמח"],
-        ["טופו ומוצרי סויה מעובדים", "shehakol", "nefashot"],
+        ["פטריות וכמהין", "shehakol", "nefashot", "אינן יונקות מן הקרקע כצמח"],
+        ["טופו, בשר צמחי ומוצרי סויה מעובדים", "shehakol", "nefashot"],
+        ["חלב קוקוס ומשקאות צמחיים (שקדים, שיבולת שועל)", "shehakol", "nefashot"],
+        ["מי שימורי פירות (כששותים אותם לבדם)", "shehakol", "nefashot"],
+        ["סובין ודייסת סובין", "shehakol", "nefashot"],
+        ["תרופות וסוכריות מציצה בעלות טעם טוב", "shehakol", "nefashot", "תרופה מרה בלא טעם — אינה טעונה ברכה"],
         ["מרק צח (בלי ירקות ניכרים)", "shehakol", "nefashot"],
         ["דבש", "shehakol", "nefashot"],
         ["סושי", "shehakol", "nefashot", "האורז עיקר? אם האורז ניכר ועיקר — מזונות ובורא נפשות; דג בלבד — שהכל"],
@@ -23938,7 +23994,7 @@ function openSefarimNosafimPage(_pageMode) {
         ["ריבה וממרחים חלקים", "shehakol", "nefashot", "בריבה שנימוחה לגמרי; חתיכות פרי ניכרות — כברכת הפרי; על פת — נפטרת בברכת הפת"],
         ["שוקולד לבן", "shehakol", "nefashot"],
         ["קרמבו", "shehakol", "nefashot", "הקצף עיקר והביסקוויט טפל"],
-        ["פודינג, ג'לי, מעדנים", "shehakol", "nefashot"]
+        ["פודינג, ג'לי, קצפת, מעדנים", "shehakol", "nefashot"]
       ]}
     ];
     var html =
@@ -23970,11 +24026,14 @@ function openSefarimNosafimPage(_pageMode) {
     });
     html +=
       "<h2 class=\"bb-cat\" style=\"text-align:center;color:#b45309;font-size:1.25em;font-weight:900;margin:1.6rem 0 0.8rem;border-bottom:2px solid rgba(180,83,9,0.4);padding-bottom:0.4rem;\">📏 כללים ושיעורים</h2>" +
-      "<div class=\"bb-item\" data-s=\"שיעור כזית כזיית ברכה אחרונה שיעורים רביעית\" style=\"background:#fff;border:1.5px solid rgba(0,0,0,0.07);border-right:5px solid #b45309;border-radius:0.85rem;padding:0.85rem 1rem;margin-bottom:0.55rem;line-height:2;\">" +
+      "<div class=\"bb-item\" data-s=\"שיעור כזית כזיית ברכה אחרונה שיעורים רביעית בורא נפשות מעין שלוש על המחיה שבעת המינים מים עוגה יין\" style=\"background:#fff;border:1.5px solid rgba(0,0,0,0.07);border-right:5px solid #b45309;border-radius:0.85rem;padding:0.85rem 1rem;margin-bottom:0.55rem;line-height:2;\">" +
         "✦ ברכה אחרונה מברכים רק אם אכל <b>כזית</b> (כ־27 גרם) בתוך כ־4 דקות, או שתה <b>רביעית</b> (כ־81 מ\"ל) בבת אחת.<br>" +
         "✦ <b>ספק ברכות להקל</b> — ובכל ספק אפשר לברך שהכל, ש\"שהכל\" פוטר הכל בדיעבד.<br>" +
         "✦ סדר קדימה בברכות: המוציא, מזונות, הגפן, העץ, האדמה, שהכל.<br>" +
         "✦ מאכל עיקר וטפל — מברכים על העיקר ופוטרים את הטפל.<br>" +
+        "✦ שתה מים ואכל עוגה — מברך תחילה <b>בורא נפשות</b> ואחר כך <b>מעין שלוש</b>; ואם טעה והקדים מעין שלוש — יברך אחריה בורא נפשות.<br>" +
+        "✦ בירך <b>הגפן</b> ושתה יין וגם מים — ברכת <b>מעין שלוש</b> שעל היין פוטרת גם את המים, ואינו מברך בורא נפשות.<br>" +
+        "✦ אכל פירות מ<b>שבעת המינים</b> יחד עם פירות אחרים שברכתם העץ — מברך באחרונה רק <b>מעין שלוש</b> (\"על העץ\") ופוטר את כולם.<br>" +
         "✦ להלכה למעשה בכל שאלה — יש לפנות למורה הוראה." +
       "</div></div>";
     // הזרקת הלוח לתוך רשומת הספר

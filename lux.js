@@ -1549,21 +1549,15 @@
   safe("personalName", function () {
     // מעטר את שורת הברכה — נקרא מתוך paint() של הברכה אחרי כל ציור מחדש
     window.__luxNameDecorate = function (el) {
-      if (el.querySelector(".lux-name-add")) return;
       var name = "";
       try { name = localStorage.getItem("lux_user_name") || ""; } catch (e) {}
-      if (name) {
-        // כשיש שם — הברכה נקייה, בלי כפתור; שינוי השם נעשה מההגדרות
-        var html = el.innerHTML;
-        var sep = html.indexOf(" · ");
-        el.innerHTML = sep !== -1
-          ? html.slice(0, sep) + ", <b>" + esc(name) + "</b>" + html.slice(sep)
-          : html + ", <b>" + esc(name) + "</b>";
-      } else {
-        el.innerHTML += ' <button type="button" class="lux-name-add">👋 מה שמך?</button>';
-      }
-      var btn = el.querySelector(".lux-name-add");
-      if (btn) btn.addEventListener("click", askName);
+      // בלי שם — הברכה נשארת נקייה; הגדרת השם נעשית רק דרך ⚙️ ההגדרות
+      if (!name) return;
+      var html = el.innerHTML;
+      var sep = html.indexOf(" · ");
+      el.innerHTML = sep !== -1
+        ? html.slice(0, sep) + ", <b>" + esc(name) + "</b>" + html.slice(sep)
+        : html + ", <b>" + esc(name) + "</b>";
     };
     // אם הברכה כבר צוירה לפני שהוגדרנו — מעטרים עכשיו
     var g0 = document.getElementById("lux-greeting");
@@ -1611,7 +1605,7 @@
       field.innerHTML =
         '<button type="button" id="lux-name-settings-btn" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 transition-all flex items-center justify-between gap-3" style="margin-top:0.75rem;">' +
           '<span class="font-semibold text-sm">✏️ השם שלי בברכה</span>' +
-          '<span style="color:#94a3b8;font-size:0.8rem;">שינוי / הסרה</span>' +
+          '<span style="color:#94a3b8;font-size:0.8rem;">הוספה / שינוי / הסרה</span>' +
         "</button>";
       host.insertAdjacentElement("afterend", field);
       field.querySelector("#lux-name-settings-btn").addEventListener("click", function () {
@@ -2426,7 +2420,7 @@
   /* ── 35. סיור מודרך בכל האתר ───────────────────────────────────── */
   safe("siteTour", function () {
     var STEPS = [
-      { sel: "#lux-greeting", t: "ברכה אישית 👋", d: "ברכה לפי שעת היום עם התאריך העברי. לחצו על \"מה שמך?\" כדי שהאתר יברך אתכם בשמכם." },
+      { sel: "#lux-greeting", t: "ברכה אישית 👋", d: "ברכה לפי שעת היום עם התאריך העברי. אפשר להוסיף את שמכם דרך ⚙️ ההגדרות כדי שהאתר יברך אתכם בשמכם." },
       { sel: "#lux-moon", t: "הירח החי 🌙", d: "כך נראה הירח בשמים ממש עכשיו. לחיצה מציגה את יום המולד — וממשיכה לברכת הלבנה." },
       { sel: "#prayer-grid-wrap", t: "תפילות בלחיצה 🙏", d: "תפילת הדרך, ברכת המזון, תיקון הכללי ועוד — לחיצה אחת פותחת את הנוסח המלא. בכפתור \"תפילות נוספות\" מסתתרות עוד הרבה, כולל לוח ברכות הנהנין וסדר התרת נדרים." },
       { sel: "#lux-plan-row", t: "סדר לימוד אישי 🎯", d: "בוחרים ספר — תהילים, משנה, בן איש חי ועוד — קובעים קצב, והאתר מחלק את הלימוד לימים, מציג בכל יום את המנה, עוקב אחרי ההתקדמות ומעניק תגי התמדה." },

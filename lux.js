@@ -5237,11 +5237,17 @@
       });
       return out;
     }
-    // כפתור X/חזור מובהק בחלק העליון של הפאנל — רק כזה פוטר מהזרקת X.
-    // כפתורי "סגור"/"ביטול" בתחתית לא נספרים כאן בכוונה.
-    function topStrictClose(modal) {
+    // כפתור X/חזור מובהק שנמצא כרגע בפועל בחלק העליון של המסך — רק כזה פוטר
+    // מהזרקת X. כפתורי "סגור"/"ביטול" בתחתית לא נספרים, וגם כפתור עליון
+    // שנגלל החוצה עם התוכן מפסיק להיחשב (ואז מוזרק X קבוע במקומו).
+    function inTopBand(el, modal) {
       var panel = modal.firstElementChild || modal;
-      var pTop = Math.max(panel.getBoundingClientRect().top, 0);
+      var off = el.getBoundingClientRect().top - panel.getBoundingClientRect().top;
+      var r = el.getBoundingClientRect();
+      // צמוד לראש הפאנל (עד 110px), לא נגלל החוצה מעליו, ונמצא בפועל על המסך
+      return off > -10 && off < 110 && r.top >= -5 && r.top < innerHeight;
+    }
+    function topStrictClose(modal) {
       var found = [];
       try { modal.querySelectorAll(STRICT).forEach(function (el) { found.push(el); }); } catch (e) {}
       modal.querySelectorAll("button, a").forEach(function (b) {
@@ -5251,7 +5257,7 @@
       for (var i = 0; i < found.length; i++) {
         var el = found[i];
         if (el.classList.contains("lux-ux") || !isVisible(el)) continue;
-        if (el.getBoundingClientRect().top - pTop < 110) return el;
+        if (inTopBand(el, modal)) return el;
       }
       return null;
     }
@@ -5272,11 +5278,19 @@
         modal.remove();
         try { if (typeof window.unlockBodyScroll === "function") window.unlockBodyScroll(); } catch (e) {}
       });
-      modal.appendChild(btn);
+      // מעוגן ל-body ולא לתוך המודאל: transform/backdrop-filter על המודאל היו
+      // הופכים fixed ל-absolute וה-X היה נגלל עם התוכן. ב-body הוא חסין.
+      btn.__luxFor = modal;
+      document.body.appendChild(btn);
       return btn;
     }
     function tick() {
       if (document.hidden) return;
+      // ניקוי X יתומים — הפופאפ שלהם נסגר או הוסתר
+      document.querySelectorAll("body > .lux-ux").forEach(function (x) {
+        var m = x.__luxFor;
+        if (!m || !m.isConnected || m.classList.contains("hidden") || !isVisible(m)) x.remove();
+      });
       document.querySelectorAll(SEL).forEach(function (modal) {
         if (modal.classList.contains("hidden") || !isVisible(modal)) { modal.__luxUx = null; modal.__luxUxOwn = null; return; }
         // רק שכבות-על אמיתיות (מכסות את רוב המסך) — פופאפים קטנים עם X משלהם לא רלוונטיים
@@ -5284,11 +5298,13 @@
         if (cs.position !== "fixed") return;
         var r = modal.getBoundingClientRect();
         if (r.width < innerWidth * 0.55 || r.height < innerHeight * 0.55) return;
-        // X קיים (מובנה ב-luxSheet או שהוזרק קודם) — הכל תקין
-        var already = modal.querySelector(".lux-ux");
-        if (already) { modal.__luxUx = already; return; }
-        // לפופאפ יש כפתור X/חזור עליון מובהק משלו (מאומת מחדש בזול דרך ההפניה)
-        if (modal.__luxUxOwn && modal.contains(modal.__luxUxOwn) && isVisible(modal.__luxUxOwn)) return;
+        // X קיים — מוזרק על body (משויך למודאל הזה) או מובנה בתוך יריעת luxSheet
+        if (modal.__luxUx && modal.__luxUx.isConnected && modal.__luxUx.__luxFor === modal) return;
+        var builtin = modal.querySelector(".lux-ux");
+        if (builtin) { modal.__luxUx = builtin; return; }
+        // לפופאפ יש כפתור X/חזור עליון מובהק משלו — מאומת בכל סבב שהוא עדיין
+        // למעלה בפועל (אם נגלל עם התוכן והתרחק — מזריקים X קבוע במקומו)
+        if (modal.__luxUxOwn && modal.contains(modal.__luxUxOwn) && isVisible(modal.__luxUxOwn) && inTopBand(modal.__luxUxOwn, modal)) return;
         modal.__luxUxOwn = topStrictClose(modal);
         if (modal.__luxUxOwn) return;
         modal.__luxUx = inject(modal);

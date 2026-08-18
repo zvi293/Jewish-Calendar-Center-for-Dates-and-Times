@@ -4251,6 +4251,10 @@ html.dark .lux-sn-h.lux-sn-f-on, html.dark .lux-sn-g.lux-sn-f-on {
 .lux-ux:hover { background: rgba(30, 41, 70, 0.92); transform: scale(1.06); }
 .lux-ux:active { transform: scale(0.94); }
 
+/* הערה: ה-X של הגדרות/עומר הועבר ב-HTML אל שורש האוברליי (מחוץ לפאנל
+   הנגלל) — כך הוא מעוגן למסך ואינו נגלל עם התוכן, בכל גודל מסך.
+   אין למקם כפתורי סגירה בתוך פאנלים נגללים. */
+
 /* כפתור אישור מחיקה (סדר לימוד) — אדום, ברור שזו פעולה הרסנית */
 .lux-plan-del-yes {
   background: linear-gradient(135deg, #dc2626, #991b1b);

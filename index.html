@@ -300,7 +300,7 @@
       href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800&family=Frank+Ruhl+Libre:wght@400;700;900&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="style.css?v=34" />
+    <link rel="stylesheet" href="style.css?v=35" />
 
     <!-- OneSignal Web Push SDK -->
     <script>
@@ -1350,29 +1350,31 @@
       aria-modal="true"
       aria-labelledby="omer-modal-title"
     >
+      <!-- ה-X על שכבת האוברליי — לא נגלל עם תוכן הספירה -->
+      <button
+        id="omer-close-x"
+        onclick="closeOmerModal()"
+        class="absolute top-4 left-4 z-30 text-slate-300 hover:text-white bg-slate-700/80 hover:bg-slate-600 p-3 rounded-full shadow-lg transition-colors"
+        aria-label="סגור"
+      >
+        <svg
+          class="w-5 h-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M6 18L18 6M6 6l12 12"
+          ></path>
+        </svg>
+      </button>
       <div
         class="bg-white dark:bg-slate-800 w-full max-w-xl max-h-[85vh] overflow-y-auto rounded-[2rem] shadow-[0_0_50px_rgba(0,0,0,0.5)] p-6 md:p-8 text-center relative flex flex-col items-center scrollbar-hide"
       >
-        <button
-          onclick="closeOmerModal()"
-          class="absolute top-4 left-4 md:top-6 md:left-6 text-slate-400 hover:text-slate-600 dark:hover:text-white bg-slate-100 dark:bg-slate-700 p-3 rounded-full transition-colors"
-          aria-label="סגור"
-        >
-          <svg
-            class="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M6 18L18 6M6 6l12 12"
-            ></path>
-          </svg>
-        </button>
         <h2
           id="omer-modal-title"
           class="text-2xl font-black text-slate-800 dark:text-white mb-6"
@@ -1672,29 +1674,32 @@
       aria-modal="true"
       aria-labelledby="settings-modal-title"
     >
+      <!-- ה-X יושב על שכבת האוברליי (לא בתוך הפאנל הנגלל) — נשאר קבוע למעלה
+           גם כשגוללים את ההגדרות, בנייד ובמחשב -->
+      <button
+        id="settings-close-x"
+        onclick="toggleSettings()"
+        class="absolute top-4 left-4 z-30 text-slate-300 hover:text-white bg-slate-700/80 hover:bg-slate-600 p-3 rounded-full shadow-lg"
+        aria-label="סגור"
+      >
+        <svg
+          class="w-5 h-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M6 18L18 6M6 6l12 12"
+          ></path>
+        </svg>
+      </button>
       <div
         class="bg-white dark:bg-slate-800 w-full max-w-md max-h-[90vh] overflow-y-auto rounded-[2rem] shadow-2xl p-6 md:p-8 transform scale-95 transition-transform duration-300 relative scrollbar-hide"
       >
-        <button
-          onclick="toggleSettings()"
-          class="absolute top-6 left-6 text-slate-400 hover:text-slate-600 dark:hover:text-white bg-slate-100 dark:bg-slate-700 p-2 rounded-full"
-          aria-label="סגור"
-        >
-          <svg
-            class="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M6 18L18 6M6 6l12 12"
-            ></path>
-          </svg>
-        </button>
         <h2
           id="settings-modal-title"
           class="text-2xl font-black mb-6 text-slate-800 dark:text-white flex items-center gap-2"
@@ -2183,7 +2188,7 @@
     </noscript>
 
     <script src="script.js?v=32" defer></script>
-    <script src="lux.js?v=29" defer></script>
+    <script src="lux.js?v=30" defer></script>
 
     <!-- Service Worker registration — enables offline caching (PWA) -->
     <script>

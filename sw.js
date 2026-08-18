@@ -1,4 +1,4 @@
-const STATIC_CACHE = "moadim-static-v51";
+const STATIC_CACHE = "moadim-static-v52";
 // מטמון ריצה: תשובות API וקבצים חיצוניים (ספריא, hebcal, פונטים, ספריות CDN)
 // נשמרים אחרי הצפייה הראשונה — כך האתר, התפילות והספרים עובדים גם בלי אינטרנט.
 const RUNTIME_CACHE = "moadim-runtime-v1";
@@ -17,8 +17,8 @@ const STATIC_ASSETS = [
   // מ-HTTP cache (בלי הורדה כפולה של ~3MB) והבקשות מהדף פוגעות במטמון
   // בדיוק; סטייה עתידית מכוסה ע"י ה-fallback עם ignoreSearch.
   "/script.js?v=32",
-  "/lux.js?v=29",
-  "/style.css?v=34",
+  "/lux.js?v=30",
+  "/style.css?v=35",
   "/tailwind.css?v=2",
 ];
 
@@ -89,7 +89,11 @@ self.addEventListener("fetch", (event) => {
             }
             return response;
           })
-          .catch(() => cache.match(request, { ignoreVary: true })),
+          .catch(() =>
+            cache
+              .match(request, { ignoreVary: true })
+              .then((cached) => cached || Response.error()),
+          ),
       ),
     );
     return;
@@ -104,7 +108,20 @@ self.addEventListener("fetch", (event) => {
           return response;
         })
         .catch(() =>
-          caches.match(request).then((cached) => cached || caches.match("/index.html")),
+          caches
+            .match(request)
+            .then((cached) => cached || caches.match("/index.html"))
+            // גם הרשת נפלה וגם המטמון ריק (התקנה ראשונה אופליין / שרת פיתוח
+            // באמצע רענון): בלי Response תקין respondWith זורק
+            // "Failed to convert value to 'Response'" — מחזירים דף שגיאה מסודר
+            .then(
+              (cached) =>
+                cached ||
+                new Response(
+                  '<!doctype html><html lang="he" dir="rtl"><meta charset="utf-8"><title>אין חיבור</title><body style="font-family:sans-serif;text-align:center;padding:3rem;"><h1>📡 אין חיבור לאינטרנט</h1><p>בדקו את החיבור ונסו שוב.</p></body></html>',
+                  { status: 503, headers: { "Content-Type": "text/html; charset=utf-8" } },
+                ),
+            ),
         ),
     );
     return;
@@ -127,7 +144,7 @@ self.addEventListener("fetch", (event) => {
             if (response && response.ok) cache.put(request, response.clone());
             return response;
           })
-          .catch(() => cache.match(request)),
+          .catch(() => cache.match(request).then((cached) => cached || Response.error())),
       ),
     );
     return;
@@ -155,7 +172,8 @@ self.addEventListener("fetch", (event) => {
         .catch(() =>
           caches
             .match(request)
-            .then((cached) => cached || caches.match(request, { ignoreSearch: true })),
+            .then((cached) => cached || caches.match(request, { ignoreSearch: true }))
+            .then((cached) => cached || Response.error()),
         ),
     );
     return;

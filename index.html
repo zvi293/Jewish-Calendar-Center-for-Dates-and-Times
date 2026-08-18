@@ -262,7 +262,7 @@
       href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800&family=Frank+Ruhl+Libre:wght@400;700;900&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="style.css?v=30" />
+    <link rel="stylesheet" href="style.css?v=31" />
 
     <!-- OneSignal Web Push SDK -->
     <script>
@@ -1092,7 +1092,10 @@
           </div>
         </div>
 
-        <!-- טבלת מועדים סטטית — נגישה גם לסורקים ללא JavaScript (תאריכים: Hebcal) -->
+        <!-- טבלת מועדים סטטית — נגישה גם לסורקים ללא JavaScript.
+             נבנית אוטומטית בכל דיפלוי ע"י build-year.mjs מנתוני Hebcal —
+             אין לערוך ידנית בין הסמנים (השינויים יידרסו בבילד הבא). -->
+        <!-- LUACH-AUTO:TABLE:START -->
         <div class="mt-8 overflow-x-auto">
           <h2 class="text-base font-black text-slate-600 dark:text-slate-300 mb-4">מועדי ישראל תשפ"ז — תאריכים לועזיים</h2>
           <table class="w-full text-sm text-right text-slate-500 dark:text-slate-400 border-collapse">
@@ -1122,6 +1125,7 @@
           </table>
           <p class="mt-2 text-xs text-slate-400 dark:text-slate-500">התאריכים לפי הלוח הנהוג בארץ ישראל. ללוח המלא, לזמני החגים המדויקים ולייצוא ליומן — השתמשו בלוח האינטראקטיבי שבראש הדף.</p>
         </div>
+        <!-- LUACH-AUTO:TABLE:END -->
 
         <!-- FAQ Section — התוכן תואם אחד-לאחד ל-FAQPage JSON-LD שב-head -->
         <div class="mt-8">
@@ -2130,7 +2134,7 @@
     </noscript>
 
     <script src="script.js?v=29" defer></script>
-    <script src="lux.js?v=25" defer></script>
+    <script src="lux.js?v=26" defer></script>
 
     <!-- Service Worker registration — enables offline caching (PWA) -->
     <script>

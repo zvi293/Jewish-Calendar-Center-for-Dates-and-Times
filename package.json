@@ -2,9 +2,9 @@
   "name": "jewish-calendar",
   "version": "1.0.0",
   "private": true,
-  "description": "Build pipeline that compiles tailwind.css for the site.",
+  "description": "Build pipeline: auto-rolls the Hebrew-year content, then compiles tailwind.css.",
   "scripts": {
-    "build": "tailwindcss -c tailwind.config.js -i tailwind.input.css -o tailwind.css --minify"
+    "build": "node build-year.mjs && tailwindcss -c tailwind.config.js -i tailwind.input.css -o tailwind.css --minify"
   },
   "devDependencies": {
     "tailwindcss": "^3.4.19"

@@ -1722,6 +1722,12 @@ footer a:hover {
   12% { opacity: 1; }
   100% { opacity: 0; transform: rotate(200deg) translateX(340px); }
 }
+/* בנייד: ה-drop-shadow פותח render-surface חדש מעל ההירו בכל הופעה (~30ש')
+   ומאלץ רה-רסטריזציה של כל השכבה על GPU של טלפון = הבהוב מסך מלא ב-PWA.
+   הפס המוזהב עצמו נשאר — רק הזוהר יורד בנייד. אל תחזירו filter לנייד. */
+@media (max-width: 768px), (pointer: coarse) {
+  .lux-shooting-star { filter: none; }
+}
 
 /* ── ירח חי ── */
 #lux-moon {

@@ -35,14 +35,24 @@
   safe("shootingStar", function () {
     var hero = document.getElementById("hero-section");
     if (!hero) return;
+    // הכוכב פעיל גם בנייד (לבקשת המשתמש). מה שגרם להבהוב-מסך כל ~30ש' ב-PWA
+    // היה ה-drop-shadow שלו (render-surface חדש מעל ההירו בכל הופעה) — הוסר
+    // בנייד ב-style.css. בנוסף: יורים רק כשההירו באמת נראה על המסך — מחוץ
+    // למסך ההופעה רק מציירת מאחורי התוכן שהמשתמש קורא.
+    var heroOnScreen = true;
+    try {
+      new IntersectionObserver(function (entries) {
+        // הרשומה האחרונה — batch יכול להכיל [יצא, חזר]
+        heroOnScreen = entries[entries.length - 1].isIntersecting;
+      }).observe(hero);
+    } catch (e) {}
     function shoot() {
       if (!hero.classList.contains("gradient-bg")) return schedule();
       // מאחורי פופאפ/טאב מוסתר הכוכב רק מייצר repaint מתחת לשכבה — מדלגים
       if (document.hidden || document.documentElement.classList.contains("lux-modal-open")) return schedule();
-      // בנייד/PWA אין כוכב נופל: הוספת אלמנט עם filter מעל ההירו פותחת
-      // render-surface חדש ומכריחה רה-רסטריזציה של כל השכבה כל ~30 שניות —
-      // נראה על הטלפון כהבהוב/קפיצה של המסך כולו. בדסקטופ זה זניח ונשאר.
-      if (window.matchMedia("(max-width: 768px), (pointer: coarse), (display-mode: standalone), (prefers-reduced-motion: reduce)").matches) return schedule();
+      if (!heroOnScreen) return schedule();
+      // reduced-motion: ה-CSS ממילא מבטל את האנימציה — אין טעם גם ב-DOM churn
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return schedule();
       var star = document.createElement("div");
       star.className = "lux-shooting-star";
       star.style.top = (5 + Math.random() * 35) + "%";
@@ -1714,7 +1724,8 @@
       { k: "sofZmanShmaMGA", l: 'סוף זמן ק"ש (מג"א)' },
       { k: "sofZmanShma", l: 'סוף זמן ק"ש (גר"א)' },
       { k: "sofZmanTfillaMGA", l: 'סוף זמן תפילה (מג"א)' },
-      { k: "sofZmanTfilla", l: "סוף זמן תפילה" }
+      { k: "sofZmanTfilla", l: "סוף זמן תפילה" },
+      { k: "sunset", l: "שקיעת החמה" }
     ];
     function check() {
       var z = window._lastZData;

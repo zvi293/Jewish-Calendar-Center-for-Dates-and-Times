@@ -24927,7 +24927,7 @@ function openSefarimNosafimPage(_pageMode) {
         "<h2 id=\"sn-subbook-title\" style=\"color:#f1f5f9;font-size:1.1rem;font-weight:900;margin:0;flex:1;text-align:center;\"></h2>",
         "<button onclick=\"window._snOpenSearch();\" style=\"background:rgba(255,255,255,0.08);border:none;color:#e2e8f0;padding:0.4rem 0.8rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;flex-shrink:0;margin-left:0.4rem;\" title=\"חיפוש\">🔍 חיפוש</button>",
         "<button onclick=\"window._snToggleBookBMPanel();\" style=\"background:rgba(255,255,255,0.08);border:none;color:#e2e8f0;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:0.95rem;flex-shrink:0;margin-left:0.4rem;\" title=\"סימניות הספר\">📌</button>",
-        "<button onclick=\"closeSefarimNosafimModal();\" style=\"background:rgba(255,255,255,0.08);border:none;color:#94a3b8;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.1rem;flex-shrink:0;\">✕</button>",
+        "<button onclick=\"history.back();\" style=\"background:rgba(255,255,255,0.08);border:none;color:#94a3b8;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.1rem;flex-shrink:0;\" title=\"חזרה\">✕</button>",
       "</div>",
       "<div style=\"overflow-y:auto;flex:1;padding:2rem 1.25rem;display:flex;align-items:flex-start;justify-content:center;\">",
         "<div id=\"sn-subbook-grid\" style=\"display:grid;grid-template-columns:repeat(2,1fr);gap:1rem;max-width:380px;width:100%;\"></div>",

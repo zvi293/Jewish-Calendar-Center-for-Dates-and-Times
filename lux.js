@@ -5228,7 +5228,19 @@
       btn.addEventListener("click", function (ev) {
         ev.stopPropagation();
         ev.preventDefault();
-        // קודם כל — מנגנון הסגירה המקורי של הפופאפ (משחרר נעילות/היסטוריה)
+        // ה-X מתנהג כמו "חזור" — צעד אחד אחורה בלבד, לא סגירת הכל.
+        // אם לפופאפ יש כפתור חזרה נראה (תצוגת-משנה כמו קורא ספרים) — מפעילים
+        // אותו: זהו מסלול הצעד-האחד המקורי של הפופאפ עצמו.
+        var backBtn = null;
+        try {
+          modal.querySelectorAll("button, a").forEach(function (b) {
+            if (backBtn || b.classList.contains("lux-ux") || !isVisible(b)) return;
+            var t = (b.textContent || "").trim();
+            if (/^[←→‹❮\s]*(חזרה|חזור)$/.test(t)) backBtn = b;
+          });
+        } catch (e) {}
+        if (backBtn) { backBtn.click(); return; }
+        // אין תצוגת-משנה — מנגנון הסגירה המקורי של הפופאפ (משחרר נעילות/היסטוריה)
         var own = closeCandidates(modal)[0];
         if (own) { own.click(); return; }
         if (modal.id && typeof window._closePopupViaBack === "function") { window._closePopupViaBack(modal.id); return; }

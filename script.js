@@ -9236,7 +9236,10 @@ function buildShacharitMizrahiPayload(context) {
     context.isPesach ||
     context.isShavuot ||
     context.isSukkot;
-  var isFullHallel = isHallelDay && !context.isRoshChodesh;
+  // בפסח הלל שלם רק ביום טוב הראשון; בחול המועד פסח ובשביעי של פסח — חצי הלל
+  var _pesachHalfHallel = context.isPesach && (context.isCholHamoed ||
+    /שביעי של פסח|אחרון של פסח|Pesach VII|Pesach VIII/.test((context.events || []).join(" ")));
+  var isFullHallel = isHallelDay && !context.isRoshChodesh && !_pesachHalfHallel;
   var isTorahReadingDay =
     isMonThu ||
     context.isRoshChodesh ||
@@ -11310,7 +11313,10 @@ function buildShacharitAshkenazPayload(context) {
     context.isPesach ||
     context.isShavuot ||
     context.isSukkot;
-  var isFullHallel = isHallelDay && !context.isRoshChodesh;
+  // בפסח הלל שלם רק ביום טוב הראשון; בחול המועד פסח ובשביעי של פסח — חצי הלל
+  var _pesachHalfHallel = context.isPesach && (context.isCholHamoed ||
+    /שביעי של פסח|אחרון של פסח|Pesach VII|Pesach VIII/.test((context.events || []).join(" ")));
+  var isFullHallel = isHallelDay && !context.isRoshChodesh && !_pesachHalfHallel;
   var isSummer =
     context.isPesach || (mon >= 3 && mon <= 8 && !context.isSukkot);
   var isTorahReadingDay =
@@ -12418,7 +12424,10 @@ function buildShacharitSfaradPayload(context) {
     context2.isPesach ||
     context2.isShavuot ||
     context2.isSukkot;
-  var isFullHallel = isHallelDay && !context2.isRoshChodesh;
+  // בפסח הלל שלם רק ביום טוב הראשון; בחול המועד פסח ובשביעי של פסח — חצי הלל
+  var _pesachHalfHallel = context2.isPesach && (context2.isCholHamoed ||
+    /שביעי של פסח|אחרון של פסח|Pesach VII|Pesach VIII/.test((context2.events || []).join(" ")));
+  var isFullHallel = isHallelDay && !context2.isRoshChodesh && !_pesachHalfHallel;
   var isTorahReadingDay =
     isMonThu ||
     context2.isShabbat ||

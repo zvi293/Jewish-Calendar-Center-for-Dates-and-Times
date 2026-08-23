@@ -23562,7 +23562,7 @@ function openSefarimNosafimPage(_pageMode) {
         {he:"פרק י — דרכי הנצח, ההוד, היסוד והמלכות",ref:"Tomer Devorah.10"}
       ]},
     { id:"birkot-board", he:"לוח ברכות הנהנין", subtitle:"כל המאכלים והברכות — לפי הבן איש חי והרב מרדכי אליהו",
-      cat:"tefilot", color:"#b45309", icon:"🍎",
+      cat:"tefilot", color:"#b45309", icon:"🍎", hiddenInGrid:true, // נפתח מהדף הראשי בלבד (openBirkotBoardPage)
       credit:"על פי פסקי הבן איש חי והרב מרדכי אליהו זצ\"ל — לשאלות למעשה יש לפנות למורה הוראה", creditUrl:"",
       type:"hardcoded",
       intro:"לוח ברכות מקיף: לכל מאכל — הברכה הראשונה והברכה האחרונה, על פי פסקי רבינו יוסף חיים <b>הבן איש חי</b> והרב <b>מרדכי אליהו</b> זצ\"ל. השתמשו בחיפוש למציאה מהירה של כל מאכל. שימו לב: בכל ספק — \"שהכל\" פוטר הכל, ולמעשה יש לשאול מורה הוראה.",
@@ -24484,7 +24484,8 @@ function openSefarimNosafimPage(_pageMode) {
     var grid = document.getElementById("sn-books-grid");
     if (!grid) return;
     grid.innerHTML = _MODE_CATS.map(function(cat) {
-      var books = BOOKS.filter(function(b){ return b.cat === cat.id; });
+      var books = BOOKS.filter(function(b){ return b.cat === cat.id && !b.hiddenInGrid; });
+      if (!books.length) return "";
       return "<div style=\"margin-bottom:1.25rem;\">"+
         "<div style=\"display:flex;align-items:center;gap:0.4rem;margin-bottom:0.65rem;\">"+
           "<span style=\"color:"+cat.color+";font-weight:900;font-size:0.85rem;\">"+cat.he+"</span>"+

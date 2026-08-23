@@ -5620,3 +5620,167 @@ body.lux-erev #btn-open-calendar { border-color: rgba(242, 217, 138, 0.45) !impo
   #lux-erev-panel, #lux-erev-panel::before, .lux-erev-title, .lux-erev-corner,
   body.lux-erev #shabbat-countdown-wrap, .lux-erev-btn.lux-erev-hot { animation: none !important; }
 }
+
+
+/* ══════════════════════════════════════════════════════════════
+   פוליש יוקרה למסך הרגיל — CSS בלבד (23/08/2026)
+   כרטיסים עם זהות, ספרות זהב, כותרות מעוטרות, ברק עדין בכותרת
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── כותרת ההירו: "היהודי" עם ברק חי (לא במצב ערב שבת — שם זה זהב) ── */
+body:not(.lux-erev) #hero-section h1 span[data-i18n-key="app_title_2"] {
+  background: linear-gradient(110deg, #60a5fa 0%, #a78bfa 24%, #f2d98a 46%, #60a5fa 60%, #8b5cf6 80%, #60a5fa 100%) !important;
+  background-size: 240% 100% !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  animation: lux-title-sheen 9s ease-in-out infinite;
+}
+@keyframes lux-title-sheen {
+  0%, 100% { background-position: 0% 0; }
+  50% { background-position: 100% 0; }
+}
+/* אורות ההירו נעים לאט — עומק חי */
+.lux-hero-orb { animation: lux-orb-drift 16s ease-in-out infinite alternate; }
+.lux-hero-orb:nth-child(2) { animation-duration: 21s; animation-delay: -6s; }
+.lux-hero-orb:nth-child(3) { animation-duration: 26s; animation-delay: -12s; }
+@keyframes lux-orb-drift {
+  from { transform: translate(0, 0) scale(1); }
+  to { transform: translate(18px, -14px) scale(1.08); }
+}
+
+/* ── ארבעת כרטיסי המידע: פס חיווי עליון + סמל רקע ענק + זהות צבע ── */
+#dashboard-state article.glass-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 2rem;
+}
+#dashboard-state article.glass-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 12%;
+  right: 12%;
+  height: 2px;
+  border-radius: 999px;
+  opacity: 0.85;
+  transition: left 0.35s ease, right 0.35s ease, opacity 0.35s ease;
+}
+#dashboard-state article.glass-card:hover::before { left: 5%; right: 5%; opacity: 1; }
+#dashboard-state article.glass-card::after {
+  position: absolute;
+  bottom: -14px;
+  left: -6px;
+  font-size: 4.1rem;
+  line-height: 1;
+  opacity: 0.07;
+  pointer-events: none;
+  transform: rotate(-8deg);
+  transition: transform 0.4s ease, opacity 0.4s ease;
+}
+#dashboard-state article.glass-card:hover::after { transform: rotate(-2deg) scale(1.08); opacity: 0.12; }
+/* 1 · התאריך היום — ענבר */
+#dashboard-state article:nth-child(1)::before { background: linear-gradient(90deg, transparent, #fbbf24, transparent); }
+#dashboard-state article:nth-child(1)::after { content: "✡"; color: #fbbf24; }
+/* 2 · שבת קרובה — זהב */
+#dashboard-state article:nth-child(2)::before { background: linear-gradient(90deg, transparent, #f2d98a, transparent); }
+#dashboard-state article:nth-child(2)::after { content: "🕯️"; }
+/* 3 · ברכת הלבנה — סגול */
+#dashboard-state article:nth-child(3)::before { background: linear-gradient(90deg, transparent, #c4b5fd, transparent); }
+#dashboard-state article:nth-child(3)::after { content: "🌙"; }
+/* 4 · המועד הבא — תכלת */
+#dashboard-state article:nth-child(4)::before { background: linear-gradient(90deg, transparent, #7dd3fc, transparent); }
+#dashboard-state article:nth-child(4)::after { content: "🎊"; }
+/* שעות השבת — ספרות זהב זוהרות */
+#shabbat-enter, #shabbat-exit {
+  background: linear-gradient(180deg, #fff7dd 0%, #f6dd94 55%, #e0b74f 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: #f2d98a;
+  filter: drop-shadow(0 0 12px rgba(232, 193, 90, 0.30));
+  letter-spacing: 0.02em;
+}
+/* התאריך העברי — נוכחות */
+#stat-today { text-shadow: 0 0 18px rgba(147, 197, 253, 0.35); }
+
+/* ── כותרת "זמני היום" (וכל כותרות הבאנר) עם קווי עיטור ── */
+#halacha-banner h2[data-i18n-key="zmanim"] {
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.85rem;
+  color: #f2d98a !important;
+  text-shadow: 0 0 16px rgba(232, 193, 90, 0.35);
+}
+#halacha-banner h2[data-i18n-key="zmanim"]::before,
+#halacha-banner h2[data-i18n-key="zmanim"]::after {
+  content: "";
+  flex: 1;
+  max-width: 6rem;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(232, 193, 90, 0.55));
+}
+#halacha-banner h2[data-i18n-key="zmanim"]::after {
+  background: linear-gradient(90deg, rgba(232, 193, 90, 0.55), transparent);
+}
+
+/* ── כרטיסי הזמנים: זכוכית עמוקה יותר, קו זהב עליון בהובר, ספרות שנהב ── */
+.zman-card {
+  border-radius: 1.35rem !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 3px 12px rgba(0, 0, 0, 0.18);
+}
+.zman-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 18%;
+  right: 18%;
+  height: 1.5px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, rgba(242, 217, 138, 0.0), transparent);
+  transition: background 0.3s ease;
+  pointer-events: none;
+}
+.zman-card:hover::before {
+  background: linear-gradient(90deg, transparent, rgba(242, 217, 138, 0.9), transparent);
+}
+.zman-card span[dir="ltr"] {
+  color: #fdf9ec !important;
+  text-shadow: 0 0 14px rgba(232, 193, 90, 0.18);
+}
+/* הזמן הנוכחי המודגש (אם מסומן) בולט יותר */
+.zman-card.zman-now, .zman-card[data-zman-active="1"] {
+  border-color: rgba(242, 217, 138, 0.55) !important;
+  box-shadow: 0 0 18px rgba(232, 193, 90, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+/* ── ארבעת כפתורי הלימוד (שניים מקרא / חוק / דף יומי / דבר תורה) ── */
+#shnayim-mikra-link, #chok-israel-btn, #daf-yomi-link, #month-torah-btn {
+  position: relative;
+  border-radius: 1rem !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 6px 16px rgba(0, 0, 0, 0.22) !important;
+  transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.22s ease, background-color 0.22s ease !important;
+}
+#shnayim-mikra-link:hover, #chok-israel-btn:hover, #daf-yomi-link:hover, #month-torah-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 10px 24px rgba(0, 0, 0, 0.3) !important;
+}
+#shnayim-mikra-link:active, #chok-israel-btn:active, #daf-yomi-link:active, #month-torah-btn:active {
+  transform: translateY(0) scale(0.98);
+}
+
+/* ── כפתורי התפילות בדף הראשי: מסגרת חמה יותר ואייקון חי ── */
+body:not(.lux-erev) .prayer-btn {
+  border-color: rgba(232, 193, 90, 0.20);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 4px 14px rgba(0, 0, 0, 0.16);
+}
+
+/* ── פס ההתקדמות של היום — קצה זוהר ── */
+#zmanim-day-bar-fill { box-shadow: 0 0 12px rgba(232, 193, 90, 0.45); }
+
+/* ── תנועה מופחתת ── */
+@media (prefers-reduced-motion: reduce) {
+  body:not(.lux-erev) #hero-section h1 span[data-i18n-key="app_title_2"],
+  .lux-hero-orb { animation: none !important; }
+}

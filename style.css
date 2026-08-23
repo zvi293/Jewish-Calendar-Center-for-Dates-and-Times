@@ -5629,7 +5629,7 @@ body.lux-erev #btn-open-calendar { border-color: rgba(242, 217, 138, 0.45) !impo
 
 /* ── כותרת ההירו: "היהודי" עם ברק חי (לא במצב ערב שבת — שם זה זהב) ── */
 body:not(.lux-erev) #hero-section h1 span[data-i18n-key="app_title_2"] {
-  background: linear-gradient(110deg, #60a5fa 0%, #a78bfa 24%, #f2d98a 46%, #60a5fa 60%, #8b5cf6 80%, #60a5fa 100%) !important;
+  background: linear-gradient(110deg, #93c5fd 0%, #60a5fa 20%, #a78bfa 40%, #60a5fa 60%, #93c5fd 80%, #a78bfa 100%) !important;
   background-size: 240% 100% !important;
   -webkit-background-clip: text !important;
   background-clip: text !important;
@@ -5639,6 +5639,7 @@ body:not(.lux-erev) #hero-section h1 span[data-i18n-key="app_title_2"] {
   0%, 100% { background-position: 0% 0; }
   50% { background-position: 100% 0; }
 }
+body:not(.lux-erev) #hero-section h1 span[data-i18n-key="app_title_2"] { animation-duration: 6s; }
 /* אורות ההירו נעים לאט — עומק חי */
 .lux-hero-orb { animation: lux-orb-drift 16s ease-in-out infinite alternate; }
 .lux-hero-orb:nth-child(2) { animation-duration: 21s; animation-delay: -6s; }
@@ -5783,4 +5784,139 @@ body:not(.lux-erev) .prayer-btn {
 @media (prefers-reduced-motion: reduce) {
   body:not(.lux-erev) #hero-section h1 span[data-i18n-key="app_title_2"],
   .lux-hero-orb { animation: none !important; }
+}
+
+
+/* ══════════════════════════════════════════════════════════════
+   פוליש ב' (23/08/2026) — סרגל זמנים במובייל, כפתורי תפילה,
+   פופאפ ספרים/תפילות נוספות, ניווט תחתון. CSS בלבד.
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── 1. "זמני היום" במובייל: הכותרת למעלה, הכפתורים בשורה נפרדת מתחתיה ── */
+@media (max-width: 767px) {
+  #halacha-banner h2[data-i18n-key="zmanim"] { flex-wrap: wrap; row-gap: 0.65rem; }
+  #halacha-banner h2[data-i18n-key="zmanim"] .lux-zmanim-tools {
+    flex-basis: 100%;
+    order: 5;
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    margin: 0;
+  }
+  #halacha-banner h2[data-i18n-key="zmanim"] .lux-zmanim-tools button {
+    font-size: 0.78rem;
+    padding: 0.38rem 0.9rem;
+  }
+}
+/* הכפתורים עצמם — זכוכית זהב עם עומק */
+.lux-zmanim-tools button {
+  background: linear-gradient(180deg, rgba(232, 193, 90, 0.16), rgba(232, 193, 90, 0.07)) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 3px 10px rgba(0, 0, 0, 0.2);
+}
+
+/* ── 3. כפתורי התפילות (תפילת הדרך → ספרים נוספים): אייקון בבועת זוהר ── */
+body:not(.lux-erev) .prayer-btn {
+  position: relative;
+  border-radius: 1.4rem;
+  min-height: 86px;
+  gap: 0.45rem;
+  background:
+    radial-gradient(ellipse 90% 60% at 50% -10%, rgba(147, 197, 253, 0.10) 0%, transparent 60%),
+    linear-gradient(170deg, rgba(255, 255, 255, 0.09) 0%, rgba(255, 255, 255, 0.03) 60%, rgba(232, 193, 90, 0.05) 100%);
+  overflow: hidden;
+}
+body:not(.lux-erev) .prayer-btn::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 22%;
+  right: 22%;
+  height: 1.5px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, rgba(242, 217, 138, 0.55), transparent);
+  opacity: 0;
+  transition: opacity 0.25s ease, left 0.25s ease, right 0.25s ease;
+}
+body:not(.lux-erev) .prayer-btn:hover::before { opacity: 1; left: 10%; right: 10%; }
+body:not(.lux-erev) .prayer-btn .prayer-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 50%;
+  font-size: 1.3rem;
+  background: radial-gradient(circle at 35% 28%, rgba(191, 219, 254, 0.22), rgba(99, 102, 241, 0.10) 55%, rgba(232, 193, 90, 0.06) 100%);
+  border: 1px solid rgba(191, 219, 254, 0.25);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 0 14px rgba(99, 102, 241, 0.12);
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.25s ease, box-shadow 0.25s ease;
+}
+body:not(.lux-erev) .prayer-btn:hover .prayer-icon {
+  transform: scale(1.14) rotate(-5deg);
+  border-color: rgba(242, 217, 138, 0.6);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 0 20px rgba(232, 193, 90, 0.28);
+}
+body:not(.lux-erev) .prayer-btn .prayer-label { font-size: 0.72rem; letter-spacing: 0.01em; }
+/* שני הכפתורים המודגשים (תפילות/ספרים נוספים) — הילה זהובה */
+body:not(.lux-erev) .prayer-btn.prayer-cta-highlight {
+  background:
+    radial-gradient(ellipse 90% 60% at 50% -10%, rgba(251, 191, 36, 0.14) 0%, transparent 60%),
+    linear-gradient(170deg, rgba(251, 191, 36, 0.13) 0%, rgba(255, 255, 255, 0.03) 60%, rgba(168, 85, 247, 0.08) 100%);
+  border-color: rgba(251, 191, 36, 0.45);
+}
+body:not(.lux-erev) .prayer-btn.prayer-cta-highlight .prayer-icon {
+  background: radial-gradient(circle at 35% 28%, rgba(253, 230, 138, 0.32), rgba(251, 191, 36, 0.12) 55%, transparent 100%);
+  border-color: rgba(251, 191, 36, 0.5);
+}
+
+/* ── 4א. פופאפ ספרים/תפילות נוספות — כרטיסי ספרים יוקרתיים ── */
+#sn-modal { background: radial-gradient(ellipse 120% 55% at 50% -8%, rgba(30, 41, 90, 0.55) 0%, transparent 60%), rgba(2, 6, 23, 0.96) !important; }
+#sn-books-grid button {
+  background:
+    radial-gradient(ellipse 90% 55% at 50% -8%, rgba(147, 197, 253, 0.08) 0%, transparent 60%),
+    linear-gradient(170deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.028) 100%) !important;
+  border: 1px solid rgba(232, 193, 90, 0.20) !important;
+  border-radius: 1.3rem !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.09), 0 4px 14px rgba(0, 0, 0, 0.22) !important;
+  transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.22s ease, box-shadow 0.22s ease, background 0.22s ease !important;
+}
+#sn-books-grid button:hover {
+  background:
+    radial-gradient(ellipse 90% 55% at 50% -8%, rgba(251, 191, 36, 0.10) 0%, transparent 60%),
+    linear-gradient(170deg, rgba(255, 255, 255, 0.13) 0%, rgba(255, 255, 255, 0.05) 100%) !important;
+  border-color: rgba(242, 217, 138, 0.55) !important;
+  transform: translateY(-3px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 10px 26px rgba(0, 0, 0, 0.32), 0 0 18px rgba(232, 193, 90, 0.14) !important;
+}
+#sn-books-grid button:active { transform: translateY(-1px) scale(0.98); }
+/* האייקון בכרטיס ספר — קופץ קלות בהובר */
+#sn-books-grid button > span:first-child {
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+#sn-books-grid button:hover > span:first-child { transform: scale(1.18) rotate(-4deg); }
+/* תתי-ספרים וסעיפים — אותה שפה */
+#sn-subbook-grid button, #sn-sections-grid button {
+  border-radius: 1rem !important;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease !important;
+}
+#sn-subbook-grid button:hover, #sn-sections-grid button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3), 0 0 14px rgba(232, 193, 90, 0.12);
+}
+
+/* ── 4ב. הניווט התחתון — קו זהב חי ומצב פעיל זוהר ── */
+#lux-bottom-nav {
+  border-top: 1px solid rgba(232, 193, 90, 0.38) !important;
+  box-shadow: 0 -10px 34px rgba(5, 11, 26, 0.45), 0 -1px 18px rgba(232, 193, 90, 0.10) !important;
+}
+#lux-bottom-nav button .lbn-ico { transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1); }
+#lux-bottom-nav button:active .lbn-ico { transform: scale(1.2); }
+
+/* ── 4ג. כפתור "תפילות נוספות" (השברון) — נוכחות עדינה יותר ── */
+#prayer-more-btn { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 4px 12px rgba(0, 0, 0, 0.18); }
+
+/* ── תנועה מופחתת ── */
+@media (prefers-reduced-motion: reduce) {
+  body:not(.lux-erev) .prayer-btn .prayer-icon,
+  #sn-books-grid button, #sn-books-grid button > span:first-child { transition: none !important; }
 }

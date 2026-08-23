@@ -5754,8 +5754,6 @@
       var q = new URLSearchParams(location.search).get("erev");
       if (q === "shabbat" || q === "chag") force = q;
     } catch (e) {}
-    // ★ זמני — תצוגה מקדימה לבדיקת המשתמש (23/08/2026). להסיר את השורה הבאה אחרי האישור!
-    if (!force) force = "shabbat";
 
     // מחזיר {kind:"shabbat"|"chag", candles:Date, entered:bool} או null
     function state() {

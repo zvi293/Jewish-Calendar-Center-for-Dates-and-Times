@@ -3,91 +3,253 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ווידג'ט — הלוח היהודי</title>
+    <title>ווידג'טים — הלוח היהודי</title>
     <meta name="robots" content="noindex" />
+    <meta name="theme-color" content="#0c1530" />
     <link rel="icon" type="image/svg+xml" href="favicon.svg?v=3" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png?v=3" />
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
       html, body {
         font-family: "Assistant", system-ui, sans-serif;
-        background: linear-gradient(160deg, #050b1a 0%, #0c1530 55%, #16233f 100%);
+        background:
+          radial-gradient(ellipse 120% 55% at 50% -8%, rgba(30, 41, 90, 0.6) 0%, transparent 60%),
+          linear-gradient(160deg, #050b1a 0%, #0c1530 55%, #16233f 100%);
+        background-attachment: fixed;
         color: #e8eefc;
         min-height: 100vh;
       }
-      .wrap { max-width: 420px; margin: 0 auto; padding: 0.9rem; }
-      .card {
-        background: linear-gradient(165deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));
-        border: 1px solid rgba(232,193,90,0.3);
-        border-radius: 1.1rem;
-        padding: 0.9rem 1rem;
-        margin-bottom: 0.7rem;
-        box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+      .wrap { max-width: 430px; margin: 0 auto; padding: 0.9rem 0.9rem 2rem; }
+      .wide { max-width: 720px; }
+      /* ── כרטיס ווידג'ט ── */
+      .wcard {
+        position: relative;
+        overflow: hidden;
+        background:
+          radial-gradient(ellipse 90% 55% at 50% -8%, rgba(147, 197, 253, 0.08) 0%, transparent 60%),
+          linear-gradient(165deg, rgba(255, 255, 255, 0.085), rgba(255, 255, 255, 0.03));
+        border: 1px solid rgba(232, 193, 90, 0.32);
+        border-radius: 1.3rem;
+        padding: 1rem 1.1rem;
+        margin-bottom: 0.8rem;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 8px 26px rgba(0, 0, 0, 0.3);
       }
-      h1 {
-        font-size: 1.05rem;
+      .wcard::before {
+        content: "";
+        position: absolute;
+        top: 0; left: 18%; right: 18%;
+        height: 1.5px;
+        border-radius: 999px;
+        background: linear-gradient(90deg, transparent, rgba(242, 217, 138, 0.6), transparent);
+      }
+      .whead {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.45rem;
+        font-size: 0.72rem;
         font-weight: 900;
+        letter-spacing: 0.14em;
         color: #f2d98a;
-        text-align: center;
-        margin-bottom: 0.15rem;
+        text-shadow: 0 0 12px rgba(232, 193, 90, 0.35);
+        margin-bottom: 0.55rem;
+        text-transform: uppercase;
       }
-      .sub { text-align: center; color: rgba(191,219,254,0.75); font-size: 0.78rem; margin-bottom: 0.7rem; }
-      .row { display: flex; justify-content: space-between; padding: 0.28rem 0; border-bottom: 1px solid rgba(148,180,255,0.1); font-size: 0.88rem; }
+      .big {
+        text-align: center;
+        font-size: 1.7rem;
+        font-weight: 900;
+        color: #fff;
+        line-height: 1.25;
+      }
+      .big.gold {
+        background: linear-gradient(180deg, #fff7dd 0%, #f2d98a 60%, #dfa933 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        filter: drop-shadow(0 0 14px rgba(232, 193, 90, 0.35));
+      }
+      .mid { text-align: center; color: rgba(191, 219, 254, 0.85); font-size: 0.85rem; font-weight: 700; margin-top: 0.2rem; }
+      .row { display: flex; justify-content: space-between; align-items: center; padding: 0.32rem 0.1rem; border-bottom: 1px solid rgba(148, 180, 255, 0.10); font-size: 0.88rem; font-weight: 600; }
       .row:last-child { border-bottom: none; }
-      .row b { color: #f2d98a; font-variant-numeric: tabular-nums; }
-      .sec-title { font-size: 0.72rem; font-weight: 800; color: rgba(242,217,138,0.8); letter-spacing: 0.12em; margin-bottom: 0.35rem; }
-      .next { text-align: center; color: #fdf3d0; font-weight: 800; font-size: 0.85rem; }
-      .empty { text-align: center; color: rgba(191,219,254,0.7); padding: 2rem 1rem; font-size: 0.9rem; line-height: 1.7; }
-      .foot { text-align: center; color: rgba(191,219,254,0.45); font-size: 0.68rem; margin-top: 0.4rem; }
+      .row b { color: #ffe9a8; font-variant-numeric: tabular-nums; font-weight: 900; font-size: 0.95rem; text-shadow: 0 0 10px rgba(232, 193, 90, 0.25); direction: ltr; }
+      .chips { display: flex; justify-content: center; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.55rem; }
+      .chip2 {
+        display: inline-flex; align-items: center; gap: 0.35rem;
+        padding: 0.32rem 0.8rem; border-radius: 999px;
+        background: rgba(232, 193, 90, 0.10);
+        border: 1px solid rgba(232, 193, 90, 0.4);
+        color: #fdf3d0; font-size: 0.78rem; font-weight: 800;
+      }
+      .chip2 b { color: #ffe9a8; direction: ltr; }
+      /* טבעת עומר */
+      .oring { position: relative; width: 108px; height: 108px; margin: 0.2rem auto 0.4rem; }
+      .oring svg { transform: rotate(-90deg); }
+      .oring .otxt { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+      .oring .onum {
+        font-size: 2rem; font-weight: 900; line-height: 1;
+        background: linear-gradient(180deg, #fff7dd, #f2d98a 60%, #dfa933);
+        -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+      }
+      .oring .oof { font-size: 0.6rem; color: rgba(255, 255, 255, 0.7); font-weight: 700; margin-top: 2px; }
+      .empty { text-align: center; color: rgba(191, 219, 254, 0.75); padding: 2.2rem 1rem; font-size: 0.9rem; line-height: 1.8; }
+      .foot { text-align: center; color: rgba(191, 219, 254, 0.45); font-size: 0.66rem; margin-top: 0.5rem; }
       a { color: #93c5fd; }
+      /* ── דף הגלריה ── */
+      h1.gal { text-align: center; font-size: 1.35rem; font-weight: 900; color: #f2d98a; margin: 0.4rem 0 0.1rem; text-shadow: 0 0 18px rgba(232, 193, 90, 0.35); }
+      .gal-sub { text-align: center; color: rgba(191, 219, 254, 0.8); font-size: 0.8rem; margin-bottom: 1rem; line-height: 1.7; }
+      .gal-grid { display: grid; grid-template-columns: 1fr; gap: 0.8rem; }
+      @media (min-width: 640px) { .gal-grid { grid-template-columns: 1fr 1fr; } }
+      .gal-item { position: relative; }
+      .gal-open {
+        display: flex; justify-content: center; margin-top: 0.55rem;
+      }
+      .gal-open a {
+        display: inline-flex; align-items: center; gap: 0.4rem;
+        padding: 0.4rem 1.1rem; border-radius: 999px;
+        background: linear-gradient(180deg, rgba(232, 193, 90, 0.18), rgba(232, 193, 90, 0.08));
+        border: 1px solid rgba(232, 193, 90, 0.5);
+        color: #fdf3d0; font-size: 0.78rem; font-weight: 800; text-decoration: none;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+      .gal-open a:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3), 0 0 16px rgba(232, 193, 90, 0.2); }
+      .howto {
+        background: rgba(59, 130, 246, 0.10);
+        border: 1px solid rgba(96, 165, 250, 0.35);
+        border-radius: 1.1rem;
+        padding: 0.85rem 1rem;
+        font-size: 0.8rem;
+        color: #dbeafe;
+        line-height: 1.8;
+        margin-bottom: 1rem;
+      }
+      .howto b { color: #fff; }
+      .back { display: block; text-align: center; margin-top: 0.8rem; font-size: 0.8rem; font-weight: 700; }
+      @media (prefers-reduced-motion: reduce) { * { animation: none !important; } }
     </style>
   </head>
   <body>
-    <div class="wrap" id="app">
-      <div class="empty">טוען נתונים…</div>
-    </div>
+    <div class="wrap" id="app"><div class="empty">טוען…</div></div>
     <script>
-      /* עמוד ווידג'ט קומפקטי — קורא את הנתונים שהאתר הראשי שומר במכשיר
-         (window.LuxWidgetData ב-lux.js). משמש בסיס לווידג'טים של האפליקציה. */
+      /* ══ ווידג'טים של הלוח היהודי ══
+         קורא את הנתונים שהאתר שומר במכשיר (lux.js §widgetData → lux_widget_data).
+         ?type=date|zmanim|shabbat|next|tehillim|daf|omer|all — ווידג'ט בודד;
+         בלי פרמטר — גלריית כל הווידג'טים עם הסבר הוספה למסך הבית. */
       (function () {
         var app = document.getElementById("app");
         var d = null;
         try { d = JSON.parse(localStorage.getItem("lux_widget_data") || "null"); } catch (e) {}
-        if (!d || !d.updated) {
-          app.innerHTML =
-            '<div class="empty">אין עדיין נתונים שמורים.<br>יש להיכנס פעם אחת ל<a href="/">דף הראשי</a> כדי שהנתונים יישמרו במכשיר.</div>';
-          return;
-        }
-        // חלק מהנתונים מגיעים משירותים חיצוניים (למשל שם העיר מ-Nominatim) —
-        // כל ערך עובר escaping לפני שילוב ב-innerHTML
         function esc(s) {
           return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
         }
-        var html = "";
-        html += "<h1>✡ הלוח היהודי</h1>";
-        html += '<div class="sub">' + esc(d.hebDate || "") + (d.gregDate ? " · " + esc(d.gregDate) : "") + (d.city ? " · " + esc(d.city) : "") + "</div>";
-        if (d.nextZman) html += '<div class="card next">⏳ ' + esc(d.nextZman) + "</div>";
-        if (d.zmanim && d.zmanim.length) {
-          html += '<div class="card"><div class="sec-title">זמני היום</div>';
-          d.zmanim.forEach(function (z) {
-            html += '<div class="row"><span>' + esc(z.l) + "</span><b>" + esc(z.v) + "</b></div>";
-          });
-          html += "</div>";
+        var type = "";
+        try { type = new URLSearchParams(location.search).get("type") || ""; } catch (e) {}
+
+        if (!d || !d.updated) {
+          app.innerHTML =
+            '<div class="wcard"><div class="empty">אין עדיין נתונים שמורים במכשיר.<br><br>יש להיכנס פעם אחת ל<a href="/">דף הראשי</a> — הנתונים יישמרו וכל הווידג\'טים יתמלאו אוטומטית.</div></div>';
+          return;
         }
-        if (d.shabbatEnter || d.parsha) {
-          html += '<div class="card"><div class="sec-title">שבת</div>';
-          if (d.parsha) html += '<div class="row"><span>פרשה</span><b>' + esc(d.parsha) + "</b></div>";
-          if (d.shabbatEnter) html += '<div class="row"><span>🕯️ כניסה</span><b>' + esc(d.shabbatEnter) + "</b></div>";
-          if (d.shabbatExit) html += '<div class="row"><span>✨ יציאה</span><b>' + esc(d.shabbatExit) + "</b></div>";
-          html += "</div>";
+
+        /* ── בוני ווידג'טים ── */
+        function wDate() {
+          return '<div class="wcard"><div class="whead">📅 התאריך היום</div>' +
+            '<div class="big gold">' + esc(d.hebDate || "—") + "</div>" +
+            '<div class="mid">' + esc(d.gregDate || "") + (d.city ? " · " + esc(d.city) : "") + "</div></div>";
         }
-        if (d.tehillimDaily) {
-          html += '<div class="card"><div class="sec-title">תהילים יומי</div><div class="row"><span>יום ' + esc(d.tehillimDaily.day) + " לחודש</span><b>פרקים " + esc(d.tehillimDaily.range) + "</b></div></div>";
+        function wNext() {
+          if (!d.nextZman) return "";
+          return '<div class="wcard"><div class="whead">⏳ הזמן הבא</div>' +
+            '<div class="big">' + esc(d.nextZman) + "</div></div>";
         }
-        if (d.dafYomi) {
-          html += '<div class="card"><div class="sec-title">הדף היומי</div><div class="row"><span>דף</span><b>' + esc(d.dafYomi) + "</b></div></div>";
+        function wZmanim() {
+          if (!d.zmanim || !d.zmanim.length) return "";
+          var rows = d.zmanim.map(function (z) {
+            return '<div class="row"><span>' + esc(z.l) + "</span><b>" + esc(z.v) + "</b></div>";
+          }).join("");
+          return '<div class="wcard"><div class="whead">🕰️ זמני היום</div>' + rows + "</div>";
         }
-        html += '<div class="foot">עודכן: ' + new Date(d.updated).toLocaleString("he-IL") + "</div>";
-        app.innerHTML = html;
+        function wShabbat() {
+          if (!d.shabbatEnter && !d.parsha) return "";
+          return '<div class="wcard"><div class="whead">🕯️ שבת קרובה</div>' +
+            (d.parsha ? '<div class="big" style="font-size:1.25rem;">' + esc(d.parsha) + "</div>" : "") +
+            '<div class="chips">' +
+              (d.shabbatEnter && d.shabbatEnter !== "--:--" ? '<span class="chip2">🕯️ כניסה <b>' + esc(d.shabbatEnter) + "</b></span>" : "") +
+              (d.shabbatExit && d.shabbatExit !== "--:--" ? '<span class="chip2">✨ יציאה <b>' + esc(d.shabbatExit) + "</b></span>" : "") +
+            "</div></div>";
+        }
+        function wTehillim() {
+          if (!d.tehillimDaily) return "";
+          return '<div class="wcard"><div class="whead">📖 תהילים יומי</div>' +
+            '<div class="big gold" style="font-size:1.35rem;">פרקים ' + esc(d.tehillimDaily.range) + "</div>" +
+            '<div class="mid">יום ' + esc(d.tehillimDaily.day) + " לחודש · חלוקה חודשית</div></div>";
+        }
+        function wDaf() {
+          if (!d.dafYomi) return "";
+          return '<div class="wcard"><div class="whead">📚 הדף היומי</div>' +
+            '<div class="big" style="font-size:1.3rem;">' + esc(d.dafYomi) + "</div></div>";
+        }
+        function wOmer() {
+          var day = d.omerDay || 0;
+          if (!day || day < 1 || day > 49) return "";
+          var C = 2 * Math.PI * 46;
+          var off = C * (1 - day / 49);
+          return '<div class="wcard"><div class="whead">✨ ספירת העומר</div>' +
+            '<div class="oring"><svg width="108" height="108" viewBox="0 0 108 108">' +
+              '<defs><linearGradient id="og" x1="0%" y1="0%" x2="100%" y2="100%">' +
+                '<stop offset="0%" stop-color="#fff3c4"/><stop offset="45%" stop-color="#f2d98a"/><stop offset="100%" stop-color="#dfa933"/>' +
+              "</linearGradient></defs>" +
+              '<circle cx="54" cy="54" r="46" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="7"/>' +
+              '<circle cx="54" cy="54" r="46" fill="none" stroke="url(#og)" stroke-width="7" stroke-linecap="round" ' +
+                'stroke-dasharray="' + C.toFixed(1) + '" stroke-dashoffset="' + off.toFixed(1) + '" ' +
+                'style="filter:drop-shadow(0 0 8px rgba(232,193,90,0.6));"/>' +
+            "</svg>" +
+            '<div class="otxt"><span class="onum">' + day + '</span><span class="oof">מתוך 49</span></div></div>' +
+            '<div class="mid">היום יום ' + day + " לעומר</div></div>";
+        }
+
+        var W = {
+          date:     { t: "📅 התאריך העברי", f: wDate },
+          next:     { t: "⏳ הזמן הבא", f: wNext },
+          zmanim:   { t: "🕰️ זמני היום", f: wZmanim },
+          shabbat:  { t: "🕯️ שבת קרובה", f: wShabbat },
+          tehillim: { t: "📖 תהילים יומי", f: wTehillim },
+          daf:      { t: "📚 הדף היומי", f: wDaf },
+          omer:     { t: "✨ ספירת העומר", f: wOmer }
+        };
+
+        function foot() {
+          return '<div class="foot">עודכן: ' + new Date(d.updated).toLocaleString("he-IL") + ' · <a href="/">הלוח היהודי</a></div>';
+        }
+
+        if (type && W[type]) {
+          // ווידג'ט בודד — מתאים להוספה למסך הבית
+          var html = W[type].f();
+          app.innerHTML = (html || '<div class="wcard"><div class="empty">אין נתונים לווידג\'ט זה כרגע — ' + esc(W[type].t) + " יופיע כשיהיה רלוונטי.</div></div>") + foot();
+          return;
+        }
+        if (type === "all") {
+          app.innerHTML = Object.keys(W).map(function (k) { return W[k].f(); }).join("") + foot();
+          return;
+        }
+
+        // ── גלריה ──
+        document.querySelector(".wrap").classList.add("wide");
+        var items = Object.keys(W).map(function (k) {
+          var html = W[k].f();
+          if (!html) return "";
+          return '<div class="gal-item">' + html +
+            '<div class="gal-open"><a href="widget.html?type=' + k + '">📌 פתח כווידג\'ט נפרד</a></div></div>';
+        }).join("");
+        app.innerHTML =
+          '<h1 class="gal">✡ הווידג\'טים של הלוח היהודי</h1>' +
+          '<div class="gal-sub">כל ווידג\'ט נפתח כעמוד קומפקטי משלו — מושלם לקיצור דרך במסך הבית</div>' +
+          '<div class="howto">💡 <b>איך מוסיפים למסך הבית?</b><br>' +
+            '1. לוחצים על "פתח כווידג\'ט נפרד" מתחת לווידג\'ט שרוצים<br>' +
+            '2. בתפריט הדפדפן (⋮) בוחרים <b>"הוספה למסך הבית"</b><br>' +
+            '3. הווידג\'ט יופיע כאייקון — לחיצה עליו פותחת אותו מיד, בלי לטעון את כל האתר</div>' +
+          '<div class="gal-grid">' + items + "</div>" + foot() +
+          '<a class="back" href="/">→ חזרה ללוח היהודי</a>';
       })();
     </script>
   </body>

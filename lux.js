@@ -5182,9 +5182,12 @@
         doneBtn.classList.add("lux-tr-done-on");
         doneBtn.textContent = "✓ הושלם היום";
         luxConfetti();
-        if (typeof window.showToast === "function") {
-          if (cur.done >= bk.count) window.showToast("🎉 מזל טוב! סיימתם את " + bk.he + " כולו!", "success", 4000);
-          else window.showToast("🎯 כל הכבוד! נותרו " + daysLeft(cur, bk) + " ימים לסיום " + bk.he, "success", 3000);
+        if (cur.done >= bk.count) {
+          // סיום ספר שלם — חגיגת "הדרן עלך" מלאה
+          if (typeof window.luxSiyum === "function") window.luxSiyum(bk.he);
+          else if (typeof window.showToast === "function") window.showToast("🎉 מזל טוב! סיימתם את " + bk.he + " כולו!", "success", 4000);
+        } else if (typeof window.showToast === "function") {
+          window.showToast("🎯 כל הכבוד! נותרו " + daysLeft(cur, bk) + " ימים לסיום " + bk.he, "success", 3000);
         }
         renderRow();
       });
@@ -5989,5 +5992,205 @@
     setInterval(apply, 30000);
     // הנתונים מגיעים אחרי טעינת הדשבורד — בודקים בתדירות גבוהה בדקה הראשונה
     var n = 0, fast = setInterval(function () { apply(); if (++n > 20) clearInterval(fast); }, 3000);
+  });
+
+  /* ═══════════════════════════════════════════════════════════════
+     LUX 9 — טבעת עומר זהב, מצבי אווירה למועדים, ניצוצות, הדרן
+     ═══════════════════════════════════════════════════════════════ */
+
+  /* ── 46. ספירת העומר — טבעת זהב תכשיטית ─────────────────────────
+     גרדיאנט זהב על הטבעת, נקודת ל"ג בעומר (✦ ביום 33), מספר מוזהב.
+     בדיקה ידנית: ?omer=33 בכתובת מציג את הכרטיס עם יום 33. */
+  safe("omerGoldRing", function () {
+    var forceDay = 0;
+    try {
+      var q = new URLSearchParams(location.search).get("omer");
+      if (q) forceDay = Math.max(1, Math.min(49, parseInt(q, 10) || 0));
+    } catch (e) {}
+    var SVG_NS = "http://www.w3.org/2000/svg";
+    function decorate() {
+      var svg = document.querySelector(".omer-ring-svg");
+      if (!svg || svg.querySelector("#lux-omer-grad")) return;
+      var defs = document.createElementNS(SVG_NS, "defs");
+      var grad = document.createElementNS(SVG_NS, "linearGradient");
+      grad.setAttribute("id", "lux-omer-grad");
+      grad.setAttribute("x1", "0%"); grad.setAttribute("y1", "0%");
+      grad.setAttribute("x2", "100%"); grad.setAttribute("y2", "100%");
+      [["0%", "#fff3c4"], ["45%", "#f2d98a"], ["100%", "#dfa933"]].forEach(function (st) {
+        var s = document.createElementNS(SVG_NS, "stop");
+        s.setAttribute("offset", st[0]); s.setAttribute("stop-color", st[1]);
+        grad.appendChild(s);
+      });
+      defs.appendChild(grad);
+      svg.insertBefore(defs, svg.firstChild);
+      var ring = svg.querySelector("#omer-ring-progress");
+      if (ring) ring.style.stroke = "url(#lux-omer-grad)";
+      // נקודת ל"ג בעומר — כוכב קטן על הטבעת ביום 33
+      // ה-SVG מסובב 90°- כך שההתחלה למעלה; זווית יום 33 מחושבת מתחילת הקשת
+      var ang = (33 / 49) * 2 * Math.PI;
+      var cx = 48 + 42 * Math.cos(ang), cy = 48 + 42 * Math.sin(ang);
+      var lag = document.createElementNS(SVG_NS, "circle");
+      lag.setAttribute("cx", cx.toFixed(1)); lag.setAttribute("cy", cy.toFixed(1));
+      lag.setAttribute("r", "3.4");
+      lag.setAttribute("class", "lux-omer-lag");
+      lag.setAttribute("title", 'ל"ג בעומר');
+      svg.appendChild(lag);
+      var cont = document.querySelector(".omer-ring-container");
+      if (cont && !cont.querySelector(".lux-omer-sparkle")) {
+        var sp = document.createElement("span");
+        sp.className = "lux-omer-sparkle";
+        sp.textContent = "✨";
+        cont.appendChild(sp);
+      }
+    }
+    function applyForce() {
+      if (!forceDay) return;
+      var c = document.getElementById("omer-container");
+      if (!c) return;
+      c.classList.remove("hidden");
+      c.classList.add("flex");
+      var n = document.getElementById("omer-day-num");
+      if (n) n.textContent = forceDay;
+      try { if (typeof window.generateOmerText === "function") window.generateOmerText(forceDay); } catch (e) {}
+      try { if (typeof window.updateOmerRing === "function") window.updateOmerRing(forceDay); } catch (e) {}
+    }
+    setTimeout(function () { decorate(); applyForce(); }, 1500);
+    setTimeout(function () { decorate(); applyForce(); }, 5000);
+  });
+
+  /* ── 47. מצבי אווירה למועדים — חנוכה, פורים, אלול, ימי תשובה, ט' באב ─
+     רצועת אווירה עדינה מתחת לכותרת ההירו + גוון רקע לכל תקופה.
+     לא רץ כשמצב ערב שבת/חג פעיל (הוא חזק ממנו). בדיקה: ?season=chanuka|purim|elul|teshuva|av9 */
+  safe("seasonalMoods", function () {
+    var force = null;
+    try {
+      var q = new URLSearchParams(location.search).get("season");
+      if (["chanuka", "purim", "elul", "teshuva", "av9"].indexOf(q) >= 0) force = q;
+    } catch (e) {}
+    var _fmt = null;
+    function hebOf(d) {
+      try {
+        if (!_fmt) _fmt = new Intl.DateTimeFormat("en-u-ca-hebrew", { month: "long", day: "numeric" });
+        var m = "", day = 0;
+        _fmt.formatToParts(d).forEach(function (p) { if (p.type === "month") m = p.value; if (p.type === "day") day = parseInt(p.value, 10); });
+        return { m: m, d: day };
+      } catch (e) { return null; }
+    }
+    // מזהה את מצב האווירה הנוכחי; חנוכה מחזירה גם את מספר הנר של היום
+    function detect() {
+      if (force) return { mood: force, night: force === "chanuka" ? 4 : 0 };
+      var now = new Date();
+      var h = hebOf(now);
+      if (!h) return null;
+      // חנוכה — כמה ימים עברו מאז כ"ה בכסלו (0-7 → נר 1-8)
+      for (var i = 0; i < 8; i++) {
+        var back = hebOf(new Date(now.getTime() - i * 86400000));
+        if (back && /^Kislev/.test(back.m) && back.d === 25) return { mood: "chanuka", night: i + 1 };
+      }
+      if (/^Adar/.test(h.m) && !/Adar I$/.test(h.m) && (h.d === 14 || h.d === 15)) return { mood: "purim", night: 0 };
+      if (/^Elul/.test(h.m)) return { mood: "elul", night: 0 };
+      if (/^Tishri/.test(h.m) && h.d <= 10) return { mood: "teshuva", night: 0 };
+      if (/^Av/.test(h.m) && (h.d === 9 || (h.d === 10 && now.getDay() === 0))) return { mood: "av9", night: 0 };
+      return null;
+    }
+    function stripHtml(st) {
+      if (st.mood === "chanuka") {
+        var candles = "";
+        for (var i = 8; i >= 1; i--) {
+          candles += '<span class="lux-chan-c' + (i <= st.night ? " lux-chan-lit" : "") + '"><i></i></span>';
+          if (i === 5) candles += '<span class="lux-chan-c lux-chan-shamash lux-chan-lit"><i></i></span>';
+        }
+        return '<div class="lux-chan-row" aria-hidden="true">' + candles + "</div>" +
+          '<div class="lux-season-lbl">חנוכה שמח · נר ' + ["", "ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שביעי", "שמיני"][st.night] + "</div>";
+      }
+      if (st.mood === "purim") return '<div class="lux-season-lbl">🎭 פורים שמח! ונהפוך הוא 🎉</div>';
+      if (st.mood === "elul") return '<div class="lux-season-lbl">📯 חודש אלול — ימי הרחמים והסליחות</div>';
+      if (st.mood === "teshuva") return '<div class="lux-season-lbl">📯 עשרת ימי תשובה — לשנה טובה תיכתבו ותיחתמו</div>';
+      if (st.mood === "av9") return '<div class="lux-season-lbl">🕯️ תשעה באב — צום קל ומועיל · יהפך לששון ולשמחה</div>';
+      return "";
+    }
+    var cur = "";
+    function apply() {
+      var body = document.body;
+      var st = body.classList.contains("lux-erev") ? null : detect();
+      var el = document.getElementById("lux-season-strip");
+      ["lux-season-chanuka", "lux-season-purim", "lux-season-elul", "lux-season-teshuva", "lux-season-av9"].forEach(function (c) {
+        body.classList.toggle(c, !!st && c === "lux-season-" + st.mood);
+      });
+      if (!st) { if (el) el.remove(); cur = ""; return; }
+      var key = st.mood + "|" + st.night;
+      if (el && key === cur) return;
+      cur = key;
+      if (!el) {
+        var orn = document.querySelector("#hero-section .hero-ornament");
+        if (!orn) return;
+        el = document.createElement("div");
+        el.id = "lux-season-strip";
+        orn.insertAdjacentElement("afterend", el);
+      }
+      el.className = "lux-season-" + st.mood;
+      el.innerHTML = stripHtml(st);
+    }
+    setTimeout(apply, 1200);
+    setInterval(apply, 60000);
+  });
+
+  /* ── 48. ניצוצות קודש — התפרצות ניצוצות זהב בלחיצת "למדתי" ────── */
+  safe("holySparks", function () {
+    function burst(x, y) {
+      var box = document.createElement("div");
+      box.className = "lux-sparks";
+      box.setAttribute("aria-hidden", "true");
+      for (var i = 0; i < 12; i++) {
+        var s = document.createElement("i");
+        var ang = (i / 12) * 2 * Math.PI + Math.random() * 0.5;
+        var dist = 34 + Math.random() * 40;
+        s.style.setProperty("--dx", (Math.cos(ang) * dist).toFixed(0) + "px");
+        s.style.setProperty("--dy", (Math.sin(ang) * dist - 18).toFixed(0) + "px");
+        s.style.animationDelay = (Math.random() * 0.08).toFixed(2) + "s";
+        box.appendChild(s);
+      }
+      box.style.left = x + "px";
+      box.style.top = y + "px";
+      document.body.appendChild(box);
+      setTimeout(function () { box.remove(); }, 1000);
+    }
+    window.luxSparkBurst = burst;
+    document.addEventListener("click", function (e) {
+      if (!e.target.closest) return;
+      var b = e.target.closest("#lux-pl-done, #lux-tr-done");
+      // ניצוצות רק בסימון (לא בביטול — אז הכפתור כבר במצב "הושלם")
+      if (b && !b.classList.contains("lux-tr-done-on")) burst(e.clientX || (innerWidth / 2), e.clientY || (innerHeight / 2));
+    }, true);
+  });
+
+  /* ── 49. הדרן עלך — חגיגת סיום ספר ─────────────────────────────
+     נקרא מסדר הלימוד האישי כשהספר הושלם. בדיקה: window.luxSiyum("מסילת ישרים") */
+  safe("siyum", function () {
+    window.luxSiyum = function (bookName) {
+      var old = document.getElementById("lux-siyum");
+      if (old) old.remove();
+      var ov = document.createElement("div");
+      ov.id = "lux-siyum";
+      ov.setAttribute("role", "dialog");
+      ov.setAttribute("aria-label", "חגיגת סיום " + bookName);
+      ov.innerHTML =
+        '<div class="lux-siyum-card">' +
+          '<div class="lux-siyum-rays" aria-hidden="true"></div>' +
+          '<div class="lux-siyum-crown" aria-hidden="true">👑</div>' +
+          '<div class="lux-siyum-mazal">מזל טוב!</div>' +
+          '<div class="lux-siyum-hadran">הַדְרָן עֲלָךְ</div>' +
+          '<div class="lux-siyum-book">' + esc(bookName) + "</div>" +
+          '<p class="lux-siyum-text">הֲדַרַן עֲלָךְ וְהַדְרָךְ עֲלָן, דַּעְתָּן עֲלָךְ וְדַעְתָּךְ עֲלָן,<br>לָא נִתְנְשֵׁי מִינָךְ וְלָא תִתְנְשֵׁי מִינָן</p>' +
+          '<p class="lux-siyum-note">סיימתם ספר שלם בסדר הלימוד האישי — זכות עצומה! 🙌</p>' +
+          '<button type="button" class="lux-siyum-btn">לחיים! 🥂</button>' +
+        "</div>";
+      document.body.appendChild(ov);
+      luxModalOpen("lux-siyum");
+      function close() { luxModalClose("lux-siyum"); }
+      ov.querySelector(".lux-siyum-btn").addEventListener("click", close);
+      ov.addEventListener("click", function (e) { if (e.target === ov) close(); });
+      try { luxConfetti(); setTimeout(luxConfetti, 900); } catch (e) {}
+    };
   });
 })();

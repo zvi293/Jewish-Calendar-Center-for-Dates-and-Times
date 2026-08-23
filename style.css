@@ -6024,3 +6024,267 @@ input[type="search"]:focus, input[type="text"]:focus, #sn-sections-filter:focus 
   #cal-days-grid [data-date], #hil-cal-grid button,
   #tehillim-modal button[onclick^="window._tehillimOpenPsalm"] { transition: none !important; }
 }
+
+
+/* ══════════════════════════════════════════════════════════════
+   LUX 9 (23/08/2026) — טבעת עומר זהב, מצבי אווירה, ניצוצות, הדרן
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── 46. טבעת העומר — תכשיט ── */
+.omer-ring-progress {
+  stroke-width: 6.5;
+  filter: drop-shadow(0 0 10px rgba(232, 193, 90, 0.65)) drop-shadow(0 0 22px rgba(232, 193, 90, 0.25));
+}
+.omer-ring-bg { stroke: rgba(255, 255, 255, 0.10); }
+.lux-omer-lag {
+  fill: #fff7dd;
+  stroke: rgba(224, 183, 79, 0.9);
+  stroke-width: 1.5;
+  filter: drop-shadow(0 0 6px rgba(255, 231, 158, 0.95));
+  animation: lux-erev-twinkle 2.6s ease-in-out infinite;
+}
+#omer-day-num {
+  background: linear-gradient(180deg, #fff7dd 0%, #f2d98a 60%, #dfa933 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 10px rgba(232, 193, 90, 0.4));
+}
+.lux-omer-sparkle {
+  position: absolute;
+  top: -6px;
+  right: -4px;
+  font-size: 0.9rem;
+  animation: lux-erev-twinkle 3s ease-in-out infinite;
+  pointer-events: none;
+}
+#omer-container { position: relative; overflow: hidden; }
+#omer-container::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse 70% 90% at 85% 50%, rgba(232, 193, 90, 0.10) 0%, transparent 60%);
+}
+
+/* ── 47. רצועת האווירה מתחת לכותרת ── */
+#lux-season-strip {
+  max-width: 21rem;
+  margin: 0.9rem auto 1.4rem;
+  padding: 0.55rem 1rem 0.65rem;
+  border-radius: 1.1rem;
+  text-align: center;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.02));
+  border: 1px solid rgba(242, 217, 138, 0.35);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 6px 22px rgba(0, 0, 0, 0.25), 0 0 24px rgba(232, 193, 90, 0.10);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: lux-erev-in 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.lux-season-lbl {
+  color: #fdf3d0;
+  font-weight: 800;
+  font-size: 0.86rem;
+  text-shadow: 0 0 12px rgba(232, 193, 90, 0.35);
+}
+/* חנוכייה חיה — 8 נרות + שמש, הדולקים עם להבה מהבהבת */
+.lux-chan-row {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 0.45rem;
+  margin-bottom: 0.35rem;
+  direction: ltr;
+}
+.lux-chan-c {
+  position: relative;
+  width: 6px;
+  height: 22px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #fdf6e3, #e0c890);
+  opacity: 0.5;
+}
+.lux-chan-shamash { height: 30px; opacity: 1; }
+.lux-chan-lit { opacity: 1; }
+.lux-chan-c i {
+  display: none;
+  position: absolute;
+  top: -9px;
+  left: 50%;
+  width: 7px;
+  height: 10px;
+  transform: translateX(-50%);
+  border-radius: 50% 50% 45% 55% / 65% 65% 35% 35%;
+  background: radial-gradient(circle at 50% 78%, #fff7d6 0%, #ffd35c 45%, #ff9d2e 75%, transparent 100%);
+  filter: drop-shadow(0 0 5px rgba(255, 190, 80, 0.9));
+  animation: lux-flame 0.9s ease-in-out infinite alternate;
+}
+.lux-chan-lit i { display: block; }
+/* גווני רקע לכל מועד */
+body.lux-season-chanuka .gradient-bg {
+  background:
+    radial-gradient(ellipse 120% 55% at 50% 110%, rgba(255, 190, 80, 0.20) 0%, transparent 60%),
+    linear-gradient(165deg, #0a0f26 0%, #101b40 45%, #1c2a5e 100%) !important;
+}
+body.lux-season-purim .gradient-bg {
+  background:
+    radial-gradient(ellipse 90% 45% at 15% 0%, rgba(217, 70, 239, 0.14) 0%, transparent 55%),
+    radial-gradient(ellipse 90% 45% at 85% 8%, rgba(34, 211, 238, 0.12) 0%, transparent 55%),
+    linear-gradient(165deg, #140a26 0%, #221046 45%, #2f1a5e 100%) !important;
+}
+body.lux-season-purim #lux-season-strip { border-color: rgba(217, 70, 239, 0.45); }
+body.lux-season-elul .gradient-bg,
+body.lux-season-teshuva .gradient-bg {
+  background:
+    radial-gradient(ellipse 120% 55% at 50% 110%, rgba(232, 193, 90, 0.16) 0%, transparent 60%),
+    radial-gradient(ellipse 90% 45% at 50% -5%, rgba(20, 184, 166, 0.10) 0%, transparent 55%),
+    linear-gradient(165deg, #061426 0%, #0a2038 45%, #123048 100%) !important;
+}
+/* ט' באב — עולם מושתק */
+body.lux-season-av9 .gradient-bg {
+  background: linear-gradient(165deg, #0d0d10 0%, #17171c 50%, #202028 100%) !important;
+}
+body.lux-season-av9 #hero-section { filter: saturate(0.55); }
+body.lux-season-av9 #lux-season-strip {
+  border-color: rgba(148, 163, 184, 0.35);
+  box-shadow: none;
+}
+body.lux-season-av9 .lux-season-lbl { color: #cbd5e1; text-shadow: none; }
+body.lux-season-av9 .lux-hero-orb { opacity: 0.15; }
+
+/* ── 48. ניצוצות קודש ── */
+.lux-sparks {
+  position: fixed;
+  z-index: 12000;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+.lux-sparks i {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff7dd 0%, #f2d98a 55%, rgba(224, 183, 79, 0) 100%);
+  box-shadow: 0 0 8px rgba(255, 224, 138, 0.9);
+  animation: lux-spark-fly 0.85s cubic-bezier(0.16, 0.84, 0.44, 1) forwards;
+}
+@keyframes lux-spark-fly {
+  0% { transform: translate(0, 0) scale(1); opacity: 1; }
+  100% { transform: translate(var(--dx, 30px), var(--dy, -40px)) scale(0.2); opacity: 0; }
+}
+/* תג הרצף קופץ כשהוא מופיע/מתעדכן */
+#lux-streak { animation: lux-streak-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); }
+@keyframes lux-streak-pop {
+  0% { transform: scale(0.7); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* ── 49. הדרן עלך — חגיגת סיום ── */
+#lux-siyum {
+  position: fixed;
+  inset: 0;
+  z-index: 10500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.2rem;
+  background: rgba(5, 8, 20, 0.82);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  animation: lux-siyum-fade 0.35s ease;
+}
+@keyframes lux-siyum-fade { from { opacity: 0; } to { opacity: 1; } }
+.lux-siyum-card {
+  position: relative;
+  width: min(100%, 400px);
+  border-radius: 1.8rem;
+  padding: 2.2rem 1.6rem 1.8rem;
+  text-align: center;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse 120% 70% at 50% -15%, rgba(251, 191, 36, 0.20) 0%, transparent 60%),
+    linear-gradient(170deg, #1c1230 0%, #2a1a4a 55%, #3a2158 100%);
+  border: 1.5px solid rgba(242, 217, 138, 0.65);
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.6), 0 0 60px rgba(251, 191, 36, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  animation: lux-erev-in 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.lux-siyum-rays {
+  position: absolute;
+  top: -60px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 300px;
+  height: 300px;
+  background: conic-gradient(from 0deg,
+    transparent 0deg, rgba(242, 217, 138, 0.10) 12deg, transparent 24deg,
+    transparent 45deg, rgba(242, 217, 138, 0.10) 57deg, transparent 69deg,
+    transparent 90deg, rgba(242, 217, 138, 0.10) 102deg, transparent 114deg,
+    transparent 135deg, rgba(242, 217, 138, 0.10) 147deg, transparent 159deg,
+    transparent 180deg, rgba(242, 217, 138, 0.10) 192deg, transparent 204deg,
+    transparent 225deg, rgba(242, 217, 138, 0.10) 237deg, transparent 249deg,
+    transparent 270deg, rgba(242, 217, 138, 0.10) 282deg, transparent 294deg,
+    transparent 315deg, rgba(242, 217, 138, 0.10) 327deg, transparent 339deg, transparent 360deg);
+  border-radius: 50%;
+  animation: lux-siyum-spin 24s linear infinite;
+  pointer-events: none;
+}
+@keyframes lux-siyum-spin { to { transform: translateX(-50%) rotate(360deg); } }
+.lux-siyum-crown { font-size: 2.2rem; margin-bottom: 0.2rem; }
+.lux-siyum-mazal {
+  color: #e9d5ff;
+  font-weight: 800;
+  font-size: 1rem;
+  letter-spacing: 0.15em;
+}
+.lux-siyum-hadran {
+  font-family: var(--lux-serif);
+  font-weight: 900;
+  font-size: clamp(2rem, 9vw, 2.6rem);
+  line-height: 1.15;
+  margin: 0.15rem 0;
+  background: linear-gradient(100deg, #f8e3ac 0%, #fff7dd 25%, #e8c15a 50%, #fff3c4 75%, #dfa933 100%);
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 20px rgba(251, 191, 36, 0.4));
+  animation: lux-erev-shine 5s ease-in-out infinite;
+}
+.lux-siyum-book {
+  color: #fdf3d0;
+  font-weight: 900;
+  font-size: 1.35rem;
+  margin-bottom: 0.7rem;
+}
+.lux-siyum-text {
+  color: rgba(233, 213, 255, 0.9);
+  font-size: 0.92rem;
+  line-height: 1.8;
+  margin: 0 0 0.6rem;
+  font-family: var(--lux-serif);
+}
+.lux-siyum-note {
+  color: rgba(191, 219, 254, 0.75);
+  font-size: 0.78rem;
+  margin: 0 0 1.1rem;
+}
+.lux-siyum-btn {
+  background: linear-gradient(135deg, #f2d98a 0%, #dfb254 50%, #c9993a 100%);
+  color: #1a1030;
+  border: none;
+  border-radius: 999px;
+  padding: 0.7rem 2.4rem;
+  font-size: 1rem;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 6px 24px rgba(201, 153, 58, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
+}
+.lux-siyum-btn:hover { transform: translateY(-2px) scale(1.03); box-shadow: 0 10px 32px rgba(201, 153, 58, 0.6); }
+.lux-siyum-btn:active { transform: scale(0.97); }
+
+@media (prefers-reduced-motion: reduce) {
+  .lux-siyum-rays, .lux-siyum-hadran, .lux-chan-c i, .lux-omer-lag,
+  .lux-omer-sparkle, #lux-season-strip, .lux-sparks i, #lux-streak { animation: none !important; }
+}

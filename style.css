@@ -4439,8 +4439,13 @@ html.dark .lux-dt-occ-first { background: linear-gradient(135deg, #2a2410, #3a30
   line-height: 1.9;
 }
 .shema-baruch {
-  font-size: 1.14em;
+  font-size: 1.0em;
   font-weight: 700;
+}
+.shema-lachash {
+  font-size: 0.68em;
+  font-weight: 600;
+  color: #64748b;
 }
 
 /* ── גלגל השנה — זום חודשי: אייקוני החודש הנבחר מרחפים ומתרחבים ── */
@@ -6495,4 +6500,34 @@ body.lux-season-av9 .lux-hero-orb { opacity: 0.15; }
     font-size: 0.86rem !important;
     padding: 0.62rem 1.35rem !important;
   }
+}
+
+/* ── כותרת "מנחה" עם פס עדין (מעל הקורבנות) ── */
+.mincha-main-title {
+  display: flex;
+  align-items: center;
+  gap: 0.95rem;
+  margin: 0.5rem 0 1.1rem;
+}
+.mincha-main-title::before,
+.mincha-main-title::after {
+  content: "";
+  flex: 1;
+  height: 1.5px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, rgba(180, 130, 40, 0.55));
+}
+.mincha-main-title::after {
+  background: linear-gradient(90deg, rgba(180, 130, 40, 0.55), transparent);
+}
+.mincha-main-title big b {
+  font-family: var(--lux-serif);
+  font-weight: 900;
+  color: #1e3a8a;
+  letter-spacing: 0.04em;
+}
+
+/* ── ברכת מעין שלוש ובורא נפשות — הכותרת גבוהה יותר במובייל ── */
+@media (max-width: 640px) {
+  h2.prayer-h2-oneline { margin-top: -0.6rem !important; }
 }

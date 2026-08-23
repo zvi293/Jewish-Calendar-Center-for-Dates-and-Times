@@ -6321,10 +6321,15 @@ body.lux-season-av9 .lux-hero-orb { opacity: 0.15; }
 .hil-head-candle {
   display: flex;
   justify-content: center;
-  margin-bottom: 0.3rem;
-  transform: scale(0.62);
+  align-items: flex-end;
+  height: 64px;
+  margin-bottom: 0.65rem;
+  pointer-events: none;
+}
+/* הנר (96px) מעוגן לתחתית המסגרת ומוקטן משם — לא גולש על הכותרת */
+.hil-head-candle .lux-sbs-candle {
+  transform: scale(0.6);
   transform-origin: bottom center;
-  height: 66px;
 }
 /* חיצי ניווט — זהב */
 #hil-prev, #hil-next, #hilulot-cal-modal button[onclick^="window._hilCalNav"] {

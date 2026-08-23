@@ -5789,7 +5789,7 @@
     // ── הכפתורים ──
     function btn(icon, label, action, cls) {
       return '<button type="button" class="prayer-btn lux-erev-btn' + (cls ? " " + cls : "") + '" data-erev="' + action + '">' +
-        '<span class="prayer-icon">' + icon + '</span><span class="prayer-label">' + esc(label) + '</span></button>';
+        '<span class="lux-erev-ico">' + icon + '</span><span class="prayer-label">' + esc(label) + '</span></button>';
     }
     var ACTIONS = {
       shir: function () { if (typeof openShirHashirimPage === "function") openShirHashirimPage(); },
@@ -5846,10 +5846,21 @@
       var enter = isS ? (window.SHABBAT_CANDLES_STR || txt("shabbat-enter")) : (window.HOLIDAY_CANDLES_STR || "");
       var exit = isS ? (window.SHABBAT_HAVDALAH_STR || txt("shabbat-exit")) : (window.HOLIDAY_HAVDALAH_STR || "");
       var p = isS ? parshaName() : "";
-      var sub = isS ? (p ? "פרשת " + p : "") : holName();
-      return '<div class="lux-erev-candles">' + candleHtml() + candleHtml() + "</div>" +
+      var hn = holName();
+      var sub = isS ? (p ? "פרשת " + p : "") : (hn !== "חג" ? hn : "");
+      var dust = "";
+      for (var di = 0; di < 12; di++) {
+        dust += '<i style="left:' + (4 + Math.random() * 92) + "%;animation-delay:" + (Math.random() * 6).toFixed(2) + "s;animation-duration:" + (5 + Math.random() * 5).toFixed(2) + 's;"></i>';
+      }
+      return '<div class="lux-erev-dust" aria-hidden="true">' + dust + "</div>" +
+        '<span class="lux-erev-corner c1" aria-hidden="true">✦</span><span class="lux-erev-corner c2" aria-hidden="true">✦</span>' +
+        '<span class="lux-erev-corner c3" aria-hidden="true">✦</span><span class="lux-erev-corner c4" aria-hidden="true">✦</span>' +
+        '<div class="lux-erev-halo" aria-hidden="true"></div>' +
+        '<div class="lux-erev-candles">' + candleHtml() + candleHtml() + "</div>" +
         '<div class="lux-erev-title">' + (isS ? "שבת שלום" : "חג שמח") + "</div>" +
+        '<div class="lux-erev-orn" aria-hidden="true"><span>✡</span></div>' +
         (sub ? '<div class="lux-erev-sub">' + esc(sub) + "</div>" : "") +
+        '<div class="lux-erev-tag">' + (isS ? "בואי כלה, שבת המלכה" : "מועדים לשמחה, חגים וזמנים לששון") + "</div>" +
         '<div class="lux-erev-times">' +
           (enter && enter !== "--:--" ? '<span>🕯️ הדלקת נרות <b dir="ltr">' + esc(enter) + "</b></span>" : "") +
           (exit && exit !== "--:--" ? '<span>✨ ' + (isS ? "הבדלה" : "צאת החג") + ' <b dir="ltr">' + esc(exit) + "</b></span>" : "") +

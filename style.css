@@ -5256,3 +5256,10 @@ html.dark .cnp-foot { color: #64748b; }
 /* הכותרת שאליה קפצו מתוכן העניינים — הבזק זהב קצר כדי שהעין תמצא אותה */
 @keyframes sn-hc-jump { 0% { background: rgba(242, 217, 138, 0.55); } 100% { background: transparent; } }
 .sn-hc-jump { animation: sn-hc-jump 1.4s ease-out; border-radius: 0.4rem; }
+
+/* מרקר — הדגשת שורה ויזואלית אחת (CSS Custom Highlight API); בדפדפן ישן נופלים ל-.lux-mark-hl על הפסקה */
+::highlight(lux-mark) {
+  background-color: rgba(254, 240, 138, 0.8);
+  color: inherit;
+}
+html.dark ::highlight(lux-mark) { background-color: rgba(250, 204, 21, 0.45); }

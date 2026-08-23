@@ -410,6 +410,92 @@
       }
       return null;
     }
+    /* ── סימון שורה ויזואלית מדויקת ────────────────────────────────────
+       נשמר מזהה הפסקה (sig) + אינדקס התו שנלחץ; בכל תצוגה (נייד/מחשב,
+       כל גודל כתב) מחשבים מחדש איזו שורת-טקסט מכילה את התו הזה ומדגישים
+       רק אותה (CSS Custom Highlight API). בדפדפן ישן — נופלים לסימון הפסקה. */
+    var HL_OK = !!(window.CSS && CSS.highlights && typeof Highlight === "function");
+    var _hl = HL_OK ? new Highlight() : null;
+    if (HL_OK) { try { CSS.highlights.set("lux-mark", _hl); } catch (e) { HL_OK = false; } }
+    var _lineState = {}; // areaKey → { block, off, w, fs, range }
+    function textNodes(block) {
+      var out = [], w = document.createTreeWalker(block, NodeFilter.SHOW_TEXT, null);
+      var n; while ((n = w.nextNode())) out.push(n);
+      return out;
+    }
+    function posAt(nodes, off) {
+      var acc = 0;
+      for (var i = 0; i < nodes.length; i++) {
+        var len = nodes[i].data.length;
+        if (off <= acc + len) return { node: nodes[i], offset: Math.max(0, off - acc) };
+        acc += len;
+      }
+      var last = nodes[nodes.length - 1];
+      return last ? { node: last, offset: last.data.length } : null;
+    }
+    function topAt(nodes, off) {
+      var p = posAt(nodes, off); if (!p) return null;
+      var r = document.createRange(); r.setStart(p.node, p.offset); r.setEnd(p.node, p.offset);
+      var rects = r.getClientRects(); var rc = rects.length ? rects[0] : r.getBoundingClientRect();
+      return rc && (rc.height || rc.top) ? rc : null;
+    }
+    // גבולות השורה (במונחי אינדקס תו בפסקה) שמכילה את התו off
+    function lineBounds(block, off) {
+      var nodes = textNodes(block); if (!nodes.length) return null;
+      var total = 0; nodes.forEach(function (n) { total += n.data.length; });
+      if (!total) return null;
+      off = Math.max(0, Math.min(total - 1, off));
+      var rc = topAt(nodes, off); if (!rc) return null;
+      var y = rc.top, tol = Math.max(2, rc.height * 0.5);
+      function above(i) { var r = topAt(nodes, i); return r ? r.top < y - tol : false; }
+      function below(i) { var r = topAt(nodes, i); return r ? r.top > y + tol : false; }
+      // התחלה: האינדקס הקטן ביותר שאינו "מעל" השורה (גובהי השורות עולים עם הטקסט)
+      var lo = 0, hi = off;
+      while (lo < hi) { var m = (lo + hi) >> 1; if (above(m)) lo = m + 1; else hi = m; }
+      var start = lo;
+      lo = off; hi = total;
+      while (lo < hi) { var m2 = (lo + hi) >> 1; if (below(m2)) hi = m2; else lo = m2 + 1; }
+      var end = lo;
+      if (end <= start) return null;
+      var a = posAt(nodes, start), b = posAt(nodes, end);
+      if (!a || !b) return null;
+      var range = document.createRange(); range.setStart(a.node, a.offset); range.setEnd(b.node, b.offset);
+      return { start: start, end: end, range: range, y: y };
+    }
+    // אינדקס התו שנלחץ בתוך הפסקה
+    function offsetFromPoint(block, x, y) {
+      var node = null, offset = 0;
+      try {
+        if (document.caretPositionFromPoint) { var cp = document.caretPositionFromPoint(x, y); if (cp) { node = cp.offsetNode; offset = cp.offset; } }
+        else if (document.caretRangeFromPoint) { var cr = document.caretRangeFromPoint(x, y); if (cr) { node = cr.startContainer; offset = cr.startOffset; } }
+      } catch (e) {}
+      var nodes = textNodes(block);
+      if (node && node.nodeType === 3 && block.contains(node)) {
+        var acc = 0;
+        for (var i = 0; i < nodes.length; i++) { if (nodes[i] === node) return acc + offset; acc += nodes[i].data.length; }
+      }
+      // נפילה: התו הראשון בשורה שמכילה את גובה הלחיצה
+      var total = 0; nodes.forEach(function (n) { total += n.data.length; });
+      var lo = 0, hi = Math.max(0, total - 1);
+      while (lo < hi) { var m = (lo + hi + 1) >> 1; var r = topAt(nodes, m); if (r && r.top <= y) lo = m; else hi = m - 1; }
+      return lo;
+    }
+    function clearArea(key) {
+      var st = _lineState[key];
+      if (st && st.range && _hl) { try { _hl.delete(st.range); } catch (e) {} }
+      delete _lineState[key];
+      var host = document.querySelector(key);
+      if (host) host.querySelectorAll(".lux-mark-hl").forEach(function (x) { x.classList.remove("lux-mark-hl"); });
+    }
+    function paintLine(key, block, off) {
+      clearArea(key);
+      if (!HL_OK) { block.classList.add("lux-mark-hl"); _lineState[key] = { block: block, off: off }; return true; }
+      var lb = lineBounds(block, off);
+      if (!lb) { block.classList.add("lux-mark-hl"); _lineState[key] = { block: block, off: off }; return true; }
+      try { _hl.add(lb.range); } catch (e) { block.classList.add("lux-mark-hl"); }
+      _lineState[key] = { block: block, off: off, w: block.clientWidth, fs: getComputedStyle(block).fontSize, range: lb.range, start: lb.start, end: lb.end };
+      return true;
+    }
     document.addEventListener("click", function (e) {
       if (!enabled()) return;
       if (!e.target.closest) return;
@@ -424,19 +510,25 @@
       var s = sig(block);
       if (!s) return;
       var marks = loadAll();
-      var wasMarked = block.classList.contains("lux-mark-hl");
-      ar.host.querySelectorAll(".lux-mark-hl").forEach(function (x) { x.classList.remove("lux-mark-hl"); });
-      if (wasMarked || marks[ar.key] === s) {
+      var off = offsetFromPoint(block, e.clientX, e.clientY);
+      var cur = _lineState[ar.key];
+      var sameLine = !!(cur && cur.block === block && (
+        (typeof cur.start === "number") ? (off >= cur.start && off < cur.end) : true));
+      if (sameLine || (!HL_OK && block.classList.contains("lux-mark-hl"))) {
+        clearArea(ar.key);
         delete marks[ar.key];
         saveAll(marks);
         if (typeof window.showToast === "function") window.showToast("🖍️ הסימון הוסר", "info", 1500);
         return;
       }
-      marks[ar.key] = s;
+      marks[ar.key] = { s: s, off: off };
       saveAll(marks);
-      block.classList.add("lux-mark-hl");
+      paintLine(ar.key, block, off);
       if (typeof window.showToast === "function") window.showToast("🖍️ השורה סומנה — נשמר במכשיר זה", "success", 1800);
     });
+    // פריסה השתנתה (סיבוב מסך / גודל כתב) — השורה מחושבת מחדש
+    var _relayoutT = null;
+    window.addEventListener("resize", function () { clearTimeout(_relayoutT); _relayoutT = setTimeout(function () { Object.keys(_lineState).forEach(function (k) { var st = _lineState[k]; if (st && st.block && st.block.isConnected) paintLine(k, st.block, st.off); }); }, 150); });
     // שחזור הסימון — גם אחרי שהמודאל נבנה מחדש (innerHTML)
     function restore() {
       if (!enabled() || document.hidden) return;
@@ -445,13 +537,22 @@
       var marks = loadAll();
       if (!Object.keys(marks).length) return;
       AREAS.forEach(function (k) {
-        var s = marks[k];
-        if (!s) return;
+        var mk = marks[k];
+        if (!mk) return;
         var host = document.querySelector(k);
-        if (!host || host.querySelector(".lux-mark-hl")) return;
+        if (!host) return;
+        var sg = typeof mk === "string" ? mk : mk.s;
+        var off = typeof mk === "string" ? 0 : (mk.off || 0);
+        var st = _lineState[k];
+        if (st && st.block && st.block.isConnected && host.contains(st.block)) {
+          // כבר מסומן — מציירים מחדש רק אם הפריסה השתנתה (רוחב/גודל כתב)
+          if (HL_OK && st.range && (st.w !== st.block.clientWidth || st.fs !== getComputedStyle(st.block).fontSize)) paintLine(k, st.block, st.off);
+          return;
+        }
+        if (!HL_OK && host.querySelector(".lux-mark-hl")) return;
         var blocks = host.querySelectorAll(BLOCK_SEL);
         for (var i = 0; i < blocks.length; i++) {
-          if (sig(blocks[i]) === s) { blocks[i].classList.add("lux-mark-hl"); return; }
+          if (sig(blocks[i]) === sg) { paintLine(k, blocks[i], off); return; }
         }
       });
     }
@@ -468,6 +569,7 @@
       } else {
         // מראה בלבד — הסימונים השמורים (lux_marks_v1) נשארים, כמו במתג ההגדרות
         document.querySelectorAll(".lux-mark-hl").forEach(function (x) { x.classList.remove("lux-mark-hl"); });
+        Object.keys(_lineState).forEach(clearArea);
       }
       var sw = document.querySelector("#lux-marker-toggle .lux-sw");
       if (sw) sw.classList.toggle("lux-sw-on", on);

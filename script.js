@@ -2616,10 +2616,9 @@ async function fetchLiveCalendarData() {
         ),
       ]);
     }
+    // תג המקור ("KosherJava"/"HebCal") הוסר מהתצוגה לבקשת בעל האתר — נשאר רק כ-data attribute
     const srcBadge = document.getElementById("zmanim-source-badge");
-    if (srcBadge)
-      srcBadge.textContent =
-        zmanimSource === "kosher-zmanim" ? "KosherJava" : "HebCal";
+    if (srcBadge) { srcBadge.textContent = ""; srcBadge.setAttribute("data-source", zmanimSource); }
     zData._prevDay = prevZData;
     zData._nextDay = nextZData;
     zData._dateIso = todayLocalIso;
@@ -16239,7 +16238,7 @@ function openBenIshHaiPage() {
     // Sticky header
     const hdr = document.createElement("div");
     hdr.style.cssText = "text-align:center;padding:1.25rem 0 0.75rem;position:sticky;top:0;background:#faf9f6;z-index:2;border-bottom:2px solid "+color+"44;margin-bottom:1.25rem;";
-    hdr.innerHTML = '<span style="background:'+color+';color:#fff;padding:0.3rem 1rem;border-radius:999px;font-size:0.95rem;font-weight:900;">'+parsha.he+'</span>'+
+    hdr.innerHTML = '<span style="background:'+color+';color:#fff;padding:0.3rem 1rem;border-radius:999px;font-size:0.95rem;font-weight:900;">'+parsha.he+'<span class="bih-cur-h"></span></span>'+
       '<span style="color:#94a3b8;font-size:0.72rem;display:block;margin-top:0.35rem;">'+year.he+(texts&&texts.length?' · '+texts.length+' הלכות':'')+'</span>';
     div.appendChild(hdr);
 
@@ -16594,7 +16593,14 @@ function openBenIshHaiPage() {
         const pIdx = parseInt(best.getAttribute("data-pidx"));
         const p = getParshiyot()[pIdx];
         const el = document.getElementById("bih-reading-title");
+        // גם מספר ההלכה (סימן) הנוכחית — האחרונה שראשה נמצא מעל שליש המסך
+        let hIdx = -1;
+        best.querySelectorAll('[id^="bih-h-"]').forEach((it) => { if (it.getBoundingClientRect().top <= mid) hIdx = parseInt(it.id.split("-")[3]); });
         if (el && p && el.textContent !== p.he) el.textContent = p.he;
+        // מספר ההלכה הנוכחית — בתוך תגית הפרשה הדביקה של הקטע (לא בכותרת שמעל)
+        const cur = best.querySelector(".bih-cur-h");
+        const ht = hIdx >= 0 ? " · הלכה " + toHeb(hIdx + 1) : "";
+        if (cur && cur.textContent !== ht) cur.textContent = ht;
       }
     };
 
@@ -16651,8 +16657,7 @@ function openBenIshHaiPage() {
     '</div>'+
 
     '<div id="bih-reading-pane" style="display:none;position:absolute;inset:0;background:#faf9f6;z-index:10;flex-direction:column;overflow:hidden;">'+
-      '<div style="display:flex;align-items:center;justify-content:space-between;padding:0.7rem 1rem;border-bottom:1px solid rgba(0,0,0,0.09);background:#faf9f6;flex-shrink:0;gap:0.5rem;">'+
-        '<button onclick="window._bihCloseReading()" style="background:rgba(0,0,0,0.06);border:none;color:#1e293b;padding:0.4rem 0.75rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;white-space:nowrap;flex-shrink:0;">← חזרה</button>'+
+      '<div style="display:flex;align-items:center;justify-content:space-between;padding:0.7rem 3.6rem 0.7rem 1rem;border-bottom:1px solid rgba(0,0,0,0.09);background:#faf9f6;flex-shrink:0;gap:0.5rem;">'+
         '<h3 id="bih-reading-title" style="color:#1e293b;font-size:0.95rem;font-weight:900;margin:0;text-align:center;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></h3>'+
         '<button onclick="window._bihGoToChapters()" style="background:rgba(0,0,0,0.06);border:none;color:#1e293b;padding:0.4rem 0.55rem;border-radius:999px;cursor:pointer;font-size:0.82rem;flex-shrink:0;margin-left:0.35rem;" title="כל הפרשיות">📑</button>'+
         '<button onclick="window._bihToggleReaderBMPanel()" id="bih-reader-bm-pin" style="background:rgba(0,0,0,0.06);border:none;color:#1e293b;padding:0.4rem 0.55rem;border-radius:999px;cursor:pointer;font-size:0.82rem;flex-shrink:0;margin-left:0.35rem;" title="סימניות">📌</button>'+
@@ -16674,9 +16679,9 @@ function openBenIshHaiPage() {
 
     '<div id="bih-search-overlay" style="display:none;position:absolute;inset:0;background:#faf9f6;z-index:20;flex-direction:column;overflow:hidden;">'+
       '<div style="display:flex;align-items:center;justify-content:space-between;padding:0.7rem 1rem;border-bottom:1px solid rgba(0,0,0,0.09);background:#faf9f6;flex-shrink:0;gap:0.5rem;">'+
-        '<button onclick="window._bihCloseSearch()" style="background:rgba(0,0,0,0.06);border:none;color:#1e293b;padding:0.4rem 0.75rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;flex-shrink:0;">← חזרה</button>'+
+        '<div style="width:38px;flex-shrink:0;"></div>'+
         '<h3 style="color:#1e293b;font-size:0.95rem;font-weight:900;margin:0;text-align:center;flex:1;">חיפוש בבן איש חי</h3>'+
-        '<div style="width:70px;flex-shrink:0;"></div>'+
+        '<button type="button" onclick="window._bihCloseSearch()" aria-label="סגור" title="סגירת החיפוש" style="background:rgba(0,0,0,0.06);border:none;color:#1e293b;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.05rem;flex-shrink:0;display:flex;align-items:center;justify-content:center;">✕</button>'+
       '</div>'+
       '<div style="display:flex;gap:0.5rem;padding:0.65rem 1rem;border-bottom:1px solid rgba(0,0,0,0.07);flex-shrink:0;">'+
         '<input id="bih-search-query" type="search" placeholder="הקלד מילה לחיפוש בכל הספר..." oninput="window._bihSearchInput(this.value)" style="flex:1;padding:0.45rem 0.85rem;border-radius:999px;border:1px solid rgba(0,0,0,0.18);background:#fff;color:#1e293b;font-size:0.9rem;direction:rtl;outline:none;">'+
@@ -16719,6 +16724,10 @@ function openBenIshHaiPage() {
       pushModalState("bih-reading-pane");
     }
     pane.style.display = "flex"; pane.style.flexDirection = "column";
+    // רשימת הפרשיות מוסתרת מאחורי הקורא — כך ה-✕ שלה לא נחשב "גלוי" וה-X האוניברסלי מוזרק לקורא
+    const gridView = document.getElementById("bih-grid-view");
+    if (gridView) gridView.style.visibility = "hidden";
+    try { if (typeof window.__luxUxTick === "function") setTimeout(window.__luxUxTick, 0); } catch (e) {}
     if (titleEl) titleEl.textContent = parsha.he;
     applyFontSize();
 
@@ -16736,6 +16745,7 @@ function openBenIshHaiPage() {
     sectionsDiv.innerHTML = "";
     sectionsDiv.appendChild(section);
     contentArea.scrollTop = 0;
+    try { const cur0 = section.querySelector(".bih-cur-h"); if (cur0) cur0.textContent = " · הלכה " + toHeb((scrollToHalacha || 0) + 1); } catch (e) {}
     if (scrollToHalacha !== undefined) {
       setTimeout(() => { document.getElementById("bih-h-"+parshaIdx+"-"+scrollToHalacha)?.scrollIntoView({behavior:"auto",block:"start"}); }, 150);
     }
@@ -16752,6 +16762,8 @@ function openBenIshHaiPage() {
   window._bihOnReadingPaneClose = () => {
     const pane = document.getElementById("bih-reading-pane");
     if (pane) pane.style.display = "none";
+    const gridView = document.getElementById("bih-grid-view");
+    if (gridView) gridView.style.visibility = "";
     const ca = document.getElementById("bih-content-area");
     if (ca) { if(_scrollListener) ca.removeEventListener("scroll",_scrollListener); if(_titleListener) ca.removeEventListener("scroll",_titleListener); }
     _scrollListener = null; _titleListener = null;

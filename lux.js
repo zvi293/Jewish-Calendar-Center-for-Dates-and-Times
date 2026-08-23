@@ -456,6 +456,140 @@
       });
     }
     setInterval(restore, 1200);
+
+    /* ── כפתור 🖍️ בכותרת כל קורא — מראה/מכבה את המרקר בלי לצאת להגדרות ──
+       מצב המרקר — נקודת אמת אחת: localStorage + מתג ההגדרות + כפתורי הקוראים + הסימונים ב-DOM */
+    function setMarkerOn(on, quiet) {
+      on = !!on;
+      try { localStorage.setItem(ON_KEY, on ? "1" : "0"); } catch (e) {}
+      if (on) {
+        // צביעה מיידית של הסימון השמור (לא לחכות לטיק של 1.2 שניות)
+        try { restore(); } catch (e) {}
+      } else {
+        // מראה בלבד — הסימונים השמורים (lux_marks_v1) נשארים, כמו במתג ההגדרות
+        document.querySelectorAll(".lux-mark-hl").forEach(function (x) { x.classList.remove("lux-mark-hl"); });
+      }
+      var sw = document.querySelector("#lux-marker-toggle .lux-sw");
+      if (sw) sw.classList.toggle("lux-sw-on", on);
+      syncReaderBtns();
+      if (quiet) return;
+      if (on) {
+        if (typeof window._btnToastOn === "function") window._btnToastOn("🖍️ מרקר");
+        else if (typeof window.showToast === "function") window.showToast("🖍️ המרקר הופעל — לחיצה על שורה מסמנת אותה", "success", 2400);
+      } else {
+        if (typeof window._btnToastOff === "function") window._btnToastOff("🖍️ מרקר");
+        else if (typeof window.showToast === "function") window.showToast("המרקר כובה", "success", 2400);
+      }
+    }
+    function vis(el) {
+      if (!el || !el.isConnected || el.offsetParent === null) return false;
+      try { return getComputedStyle(el).display !== "none"; } catch (e) { return true; }
+    }
+    function removeBtns(scope, area) {
+      if (!scope) return;
+      scope.querySelectorAll('.lux-mk-btn[data-lux-mk="' + area + '"]').forEach(function (b) { b.remove(); });
+    }
+    // רישום כותרות הקוראים. resolve() מחזיר {row, ref, where[, style]} או null כשהתצוגה לא פתוחה.
+    // dark=true → גרסה בהירה של הכפתור על כותרת כהה (.lux-sel-head).
+    // המסמך RTL: הילד הראשון בשורת flex יושב בקצה הימני, האחרון בקצה השמאלי.
+    // בקוראים שבהם מוזרק ה-X האוניברסלי (ספרים נוספים / בן איש חי / תהילים) הכפתור נכנס
+    // כילד ראשון של קבוצת הכפתורים השמאלית — הרחוק ביותר מה-X, ו-ensureRoomForX ממשיך לעבוד.
+    var HEADS = [
+      // ספריא / שניים מקרא — [✕ ימין][כותרת שמאל]; הכפתור נצמד ל-✕ (margin-left:auto דוחף את הכותרת שמאלה)
+      { area: "#sefaria-modal-content", resolve: function () {
+          var m = document.getElementById("sefaria-modal");
+          if (!m || m.classList.contains("hidden")) return null;
+          var c = document.getElementById("sefaria-modal-content");
+          if (c && c.querySelector(".daf-line")) { removeBtns(m, "#sefaria-modal-content"); return null; }   // דף יומי — מרקר ייעודי משלו
+          var x = m.querySelector('button[onclick="closeSefariaModal()"]');
+          return x ? { row: x.parentElement, ref: x, where: "afterend", style: "margin-left:auto;margin-right:0.5rem;" } : null;
+        } },
+      { area: "#chok-israel-modal-content", resolve: function () {
+          var m = document.getElementById("chok-israel-modal");
+          if (!m || m.classList.contains("hidden")) return null;
+          var x = m.querySelector('button[onclick="closeChokLeIsraelModal()"]');
+          return x ? { row: x.parentElement, ref: x, where: "afterend", style: "margin-left:auto;margin-right:0.5rem;" } : null;
+        } },
+      // תפילות — שתי הפריסות (popup/fullscreen): קבוצת [☰][✕] משמאל; המרקר ראשון (מימין ל-☰)
+      { area: "#prayer-modal-body", resolve: function () {
+          var x = document.querySelector('#prayer-modal button[onclick="closePrayerModal()"]');
+          return x && x.parentElement ? { row: x.parentElement, ref: x.parentElement, where: "afterbegin" } : null;
+        } },
+      // תהילים — פאנל הפרק; הקבוצה [📌][📑] משמאל
+      { area: "#psalm-text-area", resolve: function () {
+          var pane = document.getElementById("psalm-content-pane");
+          if (!vis(pane)) return null;
+          var b = pane.querySelector("#th-psalm-bm-toggle-btn");
+          return b && b.parentElement ? { row: b.parentElement, ref: b.parentElement, where: "afterbegin" } : null;
+        } },
+      // בן איש חי — כפתורי הכותרת ילדים ישירים; נכנס מיד אחרי הכותרת (מימין ל-📑)
+      { area: "#bih-content-area", resolve: function () {
+          var pane = document.getElementById("bih-reading-pane");
+          if (!vis(pane)) return null;
+          var t = pane.querySelector("#bih-reading-title");
+          return t && t.parentElement ? { row: t.parentElement, ref: t, where: "afterend", style: "margin-left:0.35rem;" } : null;
+        } },
+      // ספרים נוספים — קבוצת [📑][🔖][📌][🔍] (#sn-reader-tools, או הורה של 🔖 בגרסה הישנה); המרקר ראשון
+      { area: "#sn-reader-content", resolve: function () {
+          var v = document.getElementById("sn-reader-view");
+          if (!vis(v)) return null;
+          var g = document.getElementById("sn-reader-tools");
+          if (!g || !v.contains(g)) { var b = v.querySelector("#sn-reader-bm-btn"); g = b ? b.parentElement : null; }
+          return g ? { row: g, ref: g, where: "afterbegin" } : null;
+        } },
+      // קוראי lux (סליחות / מסלולים / סדר לימוד) — [✕ ימין][כותרות flex:1]; המרקר בסוף = קצה שמאל
+      { area: "#lux-sel-area", dark: true, resolve: function () { var h = document.querySelector("#lux-selichot-reader .lux-sel-head"); return h ? { row: h, ref: h, where: "beforeend" } : null; } },
+      { area: "#lux-tr-area",  dark: true, resolve: function () { var h = document.querySelector("#lux-track-reader .lux-sel-head");    return h ? { row: h, ref: h, where: "beforeend" } : null; } },
+      { area: "#lux-pl-area",  dark: true, resolve: function () { var h = document.querySelector("#lux-plan-reader .lux-sel-head");     return h ? { row: h, ref: h, where: "beforeend" } : null; } }
+      // שיר השירים (#shir-scroll-area) הושמט בכוונה — הפסוקים הם span-ים בלי בלוקים, המרקר לא פעיל שם בפועל.
+    ];
+    function makeBtn(entry, spot) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "lux-mk-btn" + (entry.dark ? " lux-mk-dark" : "");
+      b.setAttribute("data-lux-mk", entry.area);        // מזהה אידמפוטנטיות + לאיזה אזור שייך
+      // בלי המילים סגור/חזרה ובלי close ב-id/class — שלא ייחשב ככפתור סגירה ע"י universalCloseX
+      b.setAttribute("aria-label", "מרקר סימון שורה");
+      b.title = "מרקר — לחיצה על שורה צובעת אותה";
+      b.textContent = "🖍️";
+      var extra = (spot && spot.style) || entry.style;
+      if (extra) b.style.cssText += extra;
+      b.addEventListener("click", function (ev) {
+        ev.preventDefault(); ev.stopPropagation();
+        setMarkerOn(!enabled());
+      });
+      return b;
+    }
+    // אידמפוטנטי — כפתור אחד לכל שורת כותרת (לפי data-lux-mk); קוראים שנבנים מחדש ב-innerHTML
+    // מאבדים את הכפתור ומקבלים אותו שוב תוך ≤1.2 שניות (או ≤150ms כשנוסף צומת ל-body)
+    function syncReaderBtns() {
+      var on = enabled();
+      HEADS.forEach(function (entry) {
+        var spot = null;
+        try { spot = entry.resolve(); } catch (e) { spot = null; }
+        if (!spot || !spot.row || !spot.ref) return;
+        var existing = spot.row.querySelector('.lux-mk-btn[data-lux-mk="' + entry.area + '"]');
+        if (!existing) {
+          existing = makeBtn(entry, spot);
+          try { spot.ref.insertAdjacentElement(spot.where, existing); } catch (e) { return; }
+        }
+        existing.classList.toggle("lux-mk-on", on);
+        existing.setAttribute("aria-pressed", on ? "true" : "false");
+      });
+      // מתג ההגדרות תמיד משקף את המפתח (גם אם שונה מתוך קורא)
+      var sw = document.querySelector("#lux-marker-toggle .lux-sw");
+      if (sw) sw.classList.toggle("lux-sw-on", on);
+    }
+    setInterval(function () { if (!document.hidden) syncReaderBtns(); }, 1200);
+    var _mkPend = null;
+    try {
+      new MutationObserver(function () {
+        if (_mkPend) return;
+        _mkPend = setTimeout(function () { _mkPend = null; syncReaderBtns(); }, 150);
+      }).observe(document.body, { childList: true });
+    } catch (e) {}
+    setTimeout(syncReaderBtns, 0);
+
     // מתג בהגדרות — כבוי כברירת מחדל, עם הסבר קצר מה המרקר עושה
     function injectToggle() {
       var anchor = document.getElementById("lux-dt-btn") || document.getElementById("lux-stories-auto-toggle") || document.getElementById("lux-tour-btn");
@@ -467,7 +601,7 @@
         '<button type="button" id="lux-marker-toggle" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 transition-all flex items-center justify-between gap-3" style="margin-top:0.75rem;">' +
           '<span style="text-align:right;flex:1;min-width:0;">' +
             '<span class="font-semibold text-sm" style="display:block;">🖍️ מרקר סימון שורה בספרים</span>' +
-            '<small style="display:block;color:#94a3b8;font-size:0.72rem;font-weight:400;line-height:1.4;margin-top:2px;">כשהמרקר דולק, לחיצה על שורה בספרים ובתפילות צובעת אותה בצהוב — כמו מרקר על דף. הסימון נשמר לפעם הבאה; לחיצה נוספת מוחקת אותו.</small>' +
+            '<small style="display:block;color:#94a3b8;font-size:0.72rem;font-weight:400;line-height:1.4;margin-top:2px;">כשהמרקר דולק, לחיצה על שורה בספרים ובתפילות צובעת אותה בצהוב — כמו מרקר על דף. הסימון נשמר לפעם הבאה; לחיצה נוספת מוחקת אותו. הכפתור 🖍️ נמצא גם בראש כל ספר ותפילה.</small>' +
           "</span>" +
           '<span class="lux-sw' + (on ? " lux-sw-on" : "") + '"><span class="lux-sw-dot"></span></span>' +
         "</button>";
@@ -475,9 +609,8 @@
       field.querySelector("#lux-marker-toggle").addEventListener("click", function () {
         var sw = field.querySelector(".lux-sw");
         var nowOn = !sw.classList.contains("lux-sw-on");
-        sw.classList.toggle("lux-sw-on", nowOn);
-        try { localStorage.setItem(ON_KEY, nowOn ? "1" : "0"); } catch (e) {}
-        if (!nowOn) document.querySelectorAll(".lux-mark-hl").forEach(function (x) { x.classList.remove("lux-mark-hl"); });
+        // נקודת אמת אחת (מפתח + מתג + כפתורי הקוראים + צביעה/ניקוי); הטוסט המפורט נשאר כאן
+        setMarkerOn(nowOn, true);
         if (typeof window.showToast === "function") {
           window.showToast(nowOn ? "🖍️ המרקר הופעל — לחיצה על שורה מסמנת אותה" : "המרקר כובה", "success", 2400);
         }
@@ -563,10 +696,34 @@
     var NAV_ITEMS = [
       { id: "calendar", icon: "📅", label: "לוח שנה", run: function () { if (typeof window.openCalendar === "function") window.openCalendar(); } },
       { id: "sefarim", icon: "📚", label: "ספרים נוספים", run: function () { if (typeof window.openSefarimNosafimPage === "function") window.openSefarimNosafimPage(); } },
-      { id: "tefilot", icon: "🙏", label: "תפילות", run: function () { if (typeof window.openTefilotNosafotPage === "function") window.openTefilotNosafotPage(); } },
+      { id: "tefilot", icon: "🙏", label: "תפילות נוספות", run: function () { if (typeof window.openTefilotNosafotPage === "function") window.openTefilotNosafotPage(); } },
       { id: "tehillim", icon: "📖", label: "תהילים", run: function () { if (typeof window.openTehillimPage === "function") window.openTehillimPage(); } },
-      { id: "zmanim", icon: "🕰️", label: "זמנים", run: function () { var z = document.getElementById("halacha-banner"); if (z) z.scrollIntoView({ behavior: "smooth", block: "center" }); } },
+      { id: "plan", icon: "🎯", label: "סדר לימוד אישי", run: function () {
+        // יש כבר תוכנית לימוד — פותחים את הקורא שלה; אחרת — אשף יצירת תוכנית
+        var plans = jget("lux_study_plans_v1", []);
+        if (Array.isArray(plans) && plans.length && plans[0] && plans[0].id && typeof window.luxOpenPlanReader === "function") window.luxOpenPlanReader(plans[0].id);
+        else if (typeof window.luxOpenPlanWizard === "function") window.luxOpenPlanWizard();
+      } },
+      { id: "zmanim", icon: "⏰", label: "זמנים", run: function () { var z = document.getElementById("halacha-banner"); if (z) z.scrollIntoView({ behavior: "smooth", block: "center" }); } },
       { id: "settings", icon: "⚙️", label: "הגדרות", run: function () { if (typeof window.toggleSettings === "function") window.toggleSettings(); } },
+      { id: "clock", icon: "🕰️", label: "שעון הלכתי", run: function () { if (typeof window.luxOpenHalachicClock === "function") window.luxOpenHalachicClock(); } },
+      { id: "datetool", icon: "🔄", label: "המרת תאריכים", run: function () { if (typeof window.luxOpenDateTool === "function") window.luxOpenDateTool(); } },
+      { id: "chok", icon: "📜", label: "חוק לישראל", run: function () { if (typeof window.openChokLeIsraelModal === "function") window.openChokLeIsraelModal(); } },
+      { id: "daf", icon: "📘", label: "דף היומי", run: function () {
+        // אין פונקציה גלובלית — הקישור בדף מקבל onclick אחרי טעינת נתוני Hebcal
+        var l = document.getElementById("daf-yomi-link");
+        if (l && l.dataset && l.dataset.ready === "1") l.click();
+        else if (typeof window.showToast === "function") window.showToast("הדף היומי עדיין נטען — נסו שוב בעוד רגע", "info");
+      } },
+      { id: "shnayim", icon: "📖", label: "שניים מקרא", run: function () {
+        var l = document.getElementById("shnayim-mikra-link");
+        if (l && l.dataset && l.dataset.ready === "1") l.click();
+        else if (typeof window.showToast === "function") window.showToast("פרשת השבוע עדיין נטענת — נסו שוב בעוד רגע", "info");
+      } },
+      { id: "wheel", icon: "🎡", label: "גלגל השנה", run: function () { if (typeof window.luxOpenYearWheel === "function") window.luxOpenYearWheel(); } },
+      { id: "stories", icon: "✨", label: "סיפורי היום", run: function () { if (typeof window.luxOpenStories === "function") window.luxOpenStories(); } },
+      { id: "shabbat", icon: "🕯️", label: "מידע שבת", run: function () { if (typeof window.openShabbatInfoModal === "function") window.openShabbatInfoModal(); } },
+      { id: "halakhah", icon: "⚖️", label: "הלכה יומית", run: function () { if (typeof window.luxOpenTrack === "function") window.luxOpenTrack("halakhah"); } },
       { id: "shul", icon: "🕍", label: "בתי כנסת", run: function () { location.href = "synagogues.html"; } },
       { id: "shir", icon: "🌹", label: "שיר השירים", run: function () { if (typeof window.openShirHashirimPage === "function") window.openShirHashirimPage(); } },
       { id: "benish", icon: "📗", label: "בן איש חי", run: function () { if (typeof window.openBenIshHaiPage === "function") window.openBenIshHaiPage(); } },
@@ -574,9 +731,19 @@
       { id: "search", icon: "🔍", label: "חיפוש", run: function () { if (typeof window.openGlobalSmartSearch === "function") window.openGlobalSmartSearch(); } },
       { id: "compass", icon: "🧭", label: "מצפן", run: function () { if (typeof window.openCompass === "function") window.openCompass(); } }
     ];
-    var DEFAULT_SEL = ["calendar", "sefarim", "tehillim", "zmanim", "settings"];
+    // הסדר במערך = הסדר בסרגל; ב-RTL הפריט הראשון מוצג בקצה הימני
+    var DEFAULT_SEL = ["sefarim", "tefilot", "tehillim", "plan", "settings"];
     var MAX_ITEMS = 5;
-    var STORE_KEY = "lux_bottom_nav";
+    var STORE_KEY = "lux_bottom_nav_v2";
+    var OLD_STORE_KEY = "lux_bottom_nav";
+    // הגירה: מי שכבר התאים אישית את הסרגל (מפתח ישן) שומר על הבחירה שלו;
+    // ברירת המחדל החדשה חלה רק על מי שמעולם לא ערך את הסרגל
+    try {
+      if (localStorage.getItem(STORE_KEY) === null) {
+        var oldSel = localStorage.getItem(OLD_STORE_KEY);
+        if (oldSel !== null) localStorage.setItem(STORE_KEY, oldSel);
+      }
+    } catch (e) {}
 
     function byId(id) {
       for (var i = 0; i < NAV_ITEMS.length; i++) if (NAV_ITEMS[i].id === id) return NAV_ITEMS[i];
@@ -629,10 +796,13 @@
       var overlay = document.createElement("div");
       overlay.id = "lux-nav-editor";
       overlay.__luxOpenedAt = Date.now();
+      // שני אזורים: (א) תצוגה מקדימה חיה של הסרגל — גרירה לסידור, נגיעה להסרה;
+      //             (ב) קטלוג הפריטים — נגיעה מוסיפה לסוף הסרגל / מסירה ממנו.
       overlay.innerHTML =
         "<div class='lux-ne-inner'>" +
           "<h3 class='lux-ne-title'>📱 עריכת סרגל הניווט</h3>" +
-          "<p class='lux-ne-note'>בחר עד " + MAX_ITEMS + " פריטים — הסדר בסרגל לפי סדר הבחירה</p>" +
+          "<p class='lux-ne-note'>בחרו עד " + MAX_ITEMS + " פריטים · גררו בסרגל למעלה כדי לשנות את הסדר (הראשון מימין)</p>" +
+          "<div class='lux-ne-bar' id='lux-ne-bar' aria-label='תצוגה מקדימה של הסרגל'></div>" +
           "<div class='lux-ne-grid'></div>" +
           "<div class='lux-ne-actions'>" +
             "<button type='button' class='lux-ne-save'>שמור</button>" +
@@ -640,8 +810,62 @@
             "<button type='button' class='lux-ne-cancel'>ביטול</button>" +
           "</div>" +
         "</div>";
+      var bar = overlay.querySelector("#lux-ne-bar");
       var grid = overlay.querySelector(".lux-ne-grid");
 
+      // אחרי גרירה אמיתית — הסדר החדש נקרא מסדר ה-DOM של הסרגל (כמו ב-_poSave)
+      function syncFromBar() {
+        working = Array.prototype.slice.call(bar.querySelectorAll(".po-tile"))
+          .map(function (t) { return t.getAttribute("data-id"); })
+          .filter(byId);
+        drawChips();
+      }
+
+      /* אזור א' — הסרגל החי */
+      function drawBar() {
+        bar.innerHTML = "";
+        working.forEach(function (id) {
+          var item = byId(id);
+          if (!item) return;
+          var slot = document.createElement("div");
+          slot.className = "po-tile lux-ne-slot";
+          slot.setAttribute("data-id", id);
+          slot.setAttribute("role", "button");
+          slot.setAttribute("tabindex", "0");
+          slot.setAttribute("aria-label", item.label);
+          slot.setAttribute("title", "גרירה לסידור · נגיעה להסרה");
+          // ה-✕ הוא span (לא button) בכוונה — כדי שסורק ה-X האוניברסלי לא יזהה אותו ככפתור סגירה
+          slot.innerHTML =
+            "<span class='lux-ne-rm' aria-hidden='true'>✕</span>" +
+            "<span class='lbn-ico' aria-hidden='true'>" + item.icon + "</span>" +
+            "<span class='lbn-label'>" + item.label + "</span>";
+          slot.addEventListener("click", function () {
+            // click שמגיע מיד אחרי גרירה (pointer capture) — לא הסרה
+            if (Date.now() - (bar.__poDragEndAt || 0) < 350) return;
+            var i = working.indexOf(id);
+            if (i !== -1) working.splice(i, 1);
+            drawAll();
+          });
+          slot.addEventListener("keydown", function (e) {
+            if (e.key === "Enter" || e.key === " ") { e.preventDefault(); slot.click(); }
+          });
+          bar.appendChild(slot);
+        });
+        // משבצות פנויות — ממחישות כמה מקום נשאר (לא נגררות: בלי po-tile)
+        for (var k = working.length; k < MAX_ITEMS; k++) {
+          var empty = document.createElement("div");
+          empty.className = "lux-ne-slot lux-ne-slot-empty";
+          empty.setAttribute("aria-hidden", "true");
+          empty.innerHTML = "<span class='lbn-ico'>＋</span><span class='lbn-label'>פנוי</span>";
+          bar.appendChild(empty);
+        }
+        // מנוע הגרירה נקשר לאריחים בזמן החיבור — חייבים לחבר מחדש אחרי כל ציור
+        if (typeof window._poAttachDrag === "function") {
+          window._poAttachDrag(bar, { itemSel: ".po-tile", onDrop: syncFromBar });
+        }
+      }
+
+      /* אזור ב' — קטלוג הפריטים */
       function drawChips() {
         grid.innerHTML = "";
         NAV_ITEMS.forEach(function (item) {
@@ -662,12 +886,13 @@
               setTimeout(function () { chip.classList.remove("lux-ne-shake"); }, 400);
               return;
             }
-            drawChips();
+            drawAll();
           });
           grid.appendChild(chip);
         });
       }
-      drawChips();
+      function drawAll() { drawBar(); drawChips(); }
+      drawAll();
 
       overlay.querySelector(".lux-ne-save").addEventListener("click", function () {
         if (working.length) saveSel(working);
@@ -676,7 +901,7 @@
       });
       overlay.querySelector(".lux-ne-reset").addEventListener("click", function () {
         working = DEFAULT_SEL.slice();
-        drawChips();
+        drawAll();
       });
       overlay.querySelector(".lux-ne-cancel").addEventListener("click", function () {
         luxModalClose("lux-nav-editor");
@@ -697,7 +922,7 @@
         '<label class="block text-sm font-bold text-slate-500 dark:text-slate-400 mb-2">סרגל הניווט התחתון (מובייל)</label>' +
         '<button type="button" id="lux-nav-edit-btn" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 transition-all flex items-center justify-between gap-3">' +
           '<span class="font-semibold text-sm">📱 עריכת סרגל הניווט</span>' +
-          '<span class="text-slate-400 text-xs">עד ' + MAX_ITEMS + " פריטים</span>" +
+          '<span class="text-slate-400 text-xs">עד ' + MAX_ITEMS + " פריטים · גרירה לסידור</span>" +
         "</button>";
       anchor.parentElement.insertAdjacentElement("afterend", field);
       field.querySelector("#lux-nav-edit-btn").addEventListener("click", openNavEditor);
@@ -833,6 +1058,12 @@
         if (nm.indexOf("ערב ") === 0) return false;   // ערבי חגים — החג עצמו על הגלגל
         if (nm.indexOf("שבת ") === 0) return false;   // שבתות מיוחדות — אינן חגים
         if (nm.indexOf("מברכים") !== -1) return false;
+        // יום השואה ויום העצמאות — לא מוצגים על הגלגל (לבקשת בעל האתר; נשארים
+        // בכל שאר האתר). בדיקה לפי הכותרת האנגלית של Hebcal וגם לפי השם העברי —
+        // התאמה מדויקת בלבד, כדי לא לפסול בטעות "יום כיפור"/"יום הכיפורים".
+        var ttl = String(e.titleStr || "").replace(/[‘’]/g, "'");
+        if (/^Yom HaShoah$|^Yom HaAtzma'ut$/.test(ttl)) return false;
+        if (/^יום (השואה|העצמאות)$/.test(nm) || /^יום (השואה|העצמאות)$/.test(String(e.heb || ""))) return false;
         var d = new Date(e.date);
         var diff = (d - new Date()) / 86400000;
         // עד 363 — שלא ייחתך חג שיושב ממש בתפר (תשעה באב של השנה הבאה)
@@ -1006,7 +1237,25 @@
           info.innerHTML =
             '<div class="lux-yw-evname">' + (ev.icon || "✨") + " " + ev.name + "</div>" +
             '<div style="color:rgba(191,219,254,0.8);font-size:0.8rem;">' + dateStr + (heb ? " · " + heb : "") + " · בעוד " + Math.round(diff) + ' ימים</div>' +
-            '<button type="button" id="lux-yw-goto">פתח בלוח המועדים ↓</button>';
+            '<div class="lux-yw-ctas">' +
+              '<button type="button" id="lux-yw-goto">פתח בלוח המועדים ↓</button>' +
+              '<button type="button" id="lux-yw-cal">📅 פתח בלוח השנה</button>' +
+            '</div>';
+          // הנעה לפעולה שנייה: פתיחת הלוח החודשי בחודש של המועד + הדגשת היום.
+          // חייבים לחכות שהגלגל באמת הוסר (הסגירה עוברת דרך history.back() אסינכרוני) —
+          // פתיחת מודאל לפני שה-popstate הגיע הייתה גורמת לו להיסגר מיד.
+          info.querySelector("#lux-yw-cal").addEventListener("click", function () {
+            var dateStr = ev.date;
+            luxModalClose("lux-year-wheel");
+            var t0 = Date.now();
+            (function waitGone() {
+              if (document.getElementById("lux-year-wheel") && Date.now() - t0 < 1600) { setTimeout(waitGone, 40); return; }
+              setTimeout(function () {
+                if (typeof window.openCalendarAt === "function") window.openCalendarAt(dateStr, { openDay: true });
+                else if (typeof window.openCalendar === "function") window.openCalendar();
+              }, 80);
+            })();
+          });
           info.querySelector("#lux-yw-goto").addEventListener("click", function () {
             luxModalClose("lux-year-wheel");
             setTimeout(function () {
@@ -1042,6 +1291,8 @@
       luxModalOpen("lux-year-wheel");
 
     }
+    // חשיפה גלובלית — פריט "גלגל השנה" בסרגל הניווט התחתון
+    window.luxOpenYearWheel = openWheel;
     // כפתור בהירו — אחרי כפתור הלוח החודשי
     var calBtn = document.getElementById("btn-open-calendar");
     if (!calBtn) return;
@@ -1207,6 +1458,23 @@
       '<button type="button" id="lux-share-zmanim">📤 שתף</button>' +
       '<button type="button" id="lux-print-zmanim">🖨️ הדפס</button>';
     heading.appendChild(tools);
+    // ריפוי-עצמי: אם משהו ניתק את הכפתורים מהכותרת (בעבר applyTranslations של
+    // script.js מחק את ילדי ה-h2 בכל רינדור של רשימת האירועים — "הכפתורים נעלמו
+    // עד רענון") — מחברים מחדש את אותו צומת (המאזינים שלו נשמרים).
+    var banner = document.getElementById("halacha-banner") || heading.parentElement;
+    function ensureTools() {
+      if (tools.isConnected) return;
+      var h = document.querySelector('#halacha-banner h2[data-i18n-key="zmanim"]');
+      if (h) h.appendChild(tools);
+    }
+    window.__luxEnsureZmanimTools = ensureTools;
+    try {
+      if (banner && window.MutationObserver) {
+        new MutationObserver(function () { ensureTools(); }).observe(banner, { childList: true, subtree: true });
+      }
+    } catch (e) {}
+    document.addEventListener("visibilitychange", function () { if (!document.hidden) ensureTools(); });
+    setInterval(ensureTools, 3000);
 
     function collectZmanim() {
       var out = [];
@@ -3519,6 +3787,7 @@
     window.luxOpenHalachicClock = openClock;
     // כפתור ליד שיתוף/הדפסה של הזמנים
     function inject() {
+      try { if (typeof window.__luxEnsureZmanimTools === "function") window.__luxEnsureZmanimTools(); } catch (e) {}
       var tools = document.querySelector(".lux-zmanim-tools");
       if (!tools || document.getElementById("lux-hc-btn")) return;
       var b = document.createElement("button");
@@ -3530,6 +3799,7 @@
     }
     inject();
     setTimeout(inject, 2500);
+    setInterval(inject, 3000); // ריפוי-עצמי — אם הכפתור נותק אי-פעם, הוא חוזר
   });
 
   /* ── 41. מחולל כרטיסי שנה טובה ─────────────────────────────────── */
@@ -4534,6 +4804,12 @@
       for (i = 1; i <= 10; i++) SHMIRA.push(["שער התורה — פרק " + i, "Shemirat HaLashon, Book I, The Gate of Torah." + i]);
       for (i = 1; i <= 30; i++) SHMIRA.push(["חלק שני — פרק " + i, "Shemirat HaLashon, Book II." + i]);
     })();
+    // כף החיים: בסימני סת"ם הטקסט ב-Sefaria הוא stub שמפנה ל"קול יעקב" של אותו מחבר —
+    // מפנים ישירות; יו"ד קיים רק א-קיט + ער-רפא, רפח, רצ, רצא (רפ"ב ריק בשני המקורות) → אחרת null
+    var KY_OC = [32, 33, 34, 35, 36, 39, 42];
+    var KY_YD = [270, 271, 272, 273, 274, 275, 276, 277, 278, 279, 280, 281, 288, 290, 291];
+    function kafOC(i) { var n = i + 1; return KY_OC.indexOf(n) >= 0 ? "Kol Yaakov, Orach Chayim " + n : "Kaf HaChayim on Shulchan Arukh, Orach Chayim " + n; }
+    function kafYD(i) { var n = i + 1; return n <= 119 ? "Kaf HaChayim on Shulchan Arukh, Yoreh De'ah " + n : (KY_YD.indexOf(n) >= 0 ? "Kol Yaakov, Yoreh De'ah " + n : null); }
     var CATALOG = [
       { id: "tehillim", he: "תהילים", icon: "📖", count: 150, unit: "פרק", units: "פרקים", min: 3, ref: function (i) { return "Psalms " + (i + 1); },
         cm: [
@@ -4584,14 +4860,18 @@
       namedBook("kedushat", "קדושת לוי", "🕎", 20, "פרשה", "פרשות", "Kedushat Levi, ", SPD.kedushat),
       namedBook("noam", "נועם אלימלך", "✨", 25, "פרשה", "פרשות", "Noam Elimelekh, ", SPD.noam),
       namedBook("menorat", "מנורת המאור", "🕯️", 12, "פרק", "פרקים", "Menorat HaMaor, ", SPD.menorat),
+      // ⚠ ה-cm נשמרים לפי אינדקס (lux_plan_cm) — מוסיפים תמיד בסוף המערך, לא באמצע
       { id: "sa-oc", he: "שולחן ערוך — אורח חיים", icon: "📜", count: 697, unit: "סימן", units: "סימנים", min: 6, ref: function (i) { return "Shulchan Arukh, Orach Chayim " + (i + 1); },
         cm: [
           { he: "משנה ברורה", ref: function (i) { return "Mishnah Berurah " + (i + 1); } },
-          { he: "באר היטב", ref: function (i) { return "Ba'er Hetev on Shulchan Arukh, Orach Chayim " + (i + 1); } }
+          { he: "באר היטב", ref: function (i) { return "Ba'er Hetev on Shulchan Arukh, Orach Chayim " + (i + 1); } },
+          { he: "ביאור הלכה", ref: function (i) { return "Biur Halacha " + (i + 1); } },
+          { he: "כף החיים", ref: kafOC }
         ] },
       { id: "sa-yd", he: "שולחן ערוך — יורה דעה", icon: "📜", count: 403, unit: "סימן", units: "סימנים", min: 6, ref: function (i) { return "Shulchan Arukh, Yoreh Deah " + (i + 1); },
         cm: [
-          { he: "באר היטב", ref: function (i) { return "Ba'er Hetev on Shulchan Arukh, Yoreh Deah " + (i + 1); } }
+          { he: "באר היטב", ref: function (i) { return "Ba'er Hetev on Shulchan Arukh, Yoreh Deah " + (i + 1); } },
+          { he: "כף החיים", ref: kafYD }
         ] },
       { id: "sa-eh", he: "שולחן ערוך — אבן העזר", icon: "📜", count: 178, unit: "סימן", units: "סימנים", min: 6, ref: function (i) { return "Shulchan Arukh, Even HaEzer " + (i + 1); },
         cm: [
@@ -4601,7 +4881,13 @@
         cm: [
           { he: "באר היטב", ref: function (i) { return "Ba'er Hetev on Shulchan Arukh, Choshen Mishpat " + (i + 1); } }
         ] },
-      { id: "mb", he: "משנה ברורה", icon: "📖", count: 697, unit: "סימן", units: "סימנים", min: 8, ref: function (i) { return "Mishnah Berurah " + (i + 1); } }
+      { id: "mb", he: "משנה ברורה", icon: "📖", count: 697, unit: "סימן", units: "סימנים", min: 8, ref: function (i) { return "Mishnah Berurah " + (i + 1); },
+        cm: [
+          { he: "שולחן ערוך", ref: function (i) { return "Shulchan Arukh, Orach Chayim " + (i + 1); } },
+          { he: "ביאור הלכה", ref: function (i) { return "Biur Halacha " + (i + 1); } },
+          { he: "באר היטב", ref: function (i) { return "Ba'er Hetev on Shulchan Arukh, Orach Chayim " + (i + 1); } },
+          { he: "כף החיים", ref: kafOC }
+        ] }
     ];
     function unitsOf(bk) { return bk.units || bk.unit + "ים"; }
     function bookOf(id) {
@@ -4770,7 +5056,9 @@
           (function next(k) {
             if (token !== loadToken) return;
             if (k >= list.length) return doneCb();
-            fetchRefText(list[k].ref(i), function (paras) {
+            var cmRef = list[k].ref(i);
+            if (!cmRef) return next(k + 1);   // אין כיסוי לסימן זה (כף החיים יו"ד מעבר לקי"ט)
+            fetchRefText(cmRef, function (paras) {
               if (token !== loadToken) return;
               if (paras && paras.length) {
                 html += '<div class="lux-pl-cm"><div class="lux-pl-cm-t">' + esc(list[k].he) + "</div>" +
@@ -5228,6 +5516,10 @@
       btn.addEventListener("click", function (ev) {
         ev.stopPropagation();
         ev.preventDefault();
+        // הגנת נגיעה-כפולה: שתי לחיצות לפני שה-popstate הגיע היו מורידות שתי רמות
+        // (או סוגרות את המודול כולו דרך ה-✕ של רשימת הספרים)
+        if (Date.now() - (modal.__luxXAt || 0) < 600) return;
+        modal.__luxXAt = Date.now();
         // ה-X מתנהג כמו "חזור" — צעד אחד אחורה בלבד, לא סגירת הכל.
         // אם לפופאפ יש כפתור חזרה נראה (תצוגת-משנה כמו קורא ספרים) — מפעילים
         // אותו: זהו מסלול הצעד-האחד המקורי של הפופאפ עצמו.
@@ -5240,6 +5532,11 @@
           });
         } catch (e) {}
         if (backBtn) { backBtn.click(); return; }
+        // תצוגת-משנה בלי כפתור חזרה (כפתורי "← חזרה" הוסרו — ה-X הוא ה"חזור"):
+        // script.js יודע אם ראש המחסנית הוא תת-תצוגה של המודול וחוזר צעד אחד
+        try {
+          if (modal.id && typeof window._luxModalStepBack === "function" && window._luxModalStepBack(modal.id)) return;
+        } catch (e) {}
         // אין תצוגת-משנה — מנגנון הסגירה המקורי של הפופאפ (משחרר נעילות/היסטוריה)
         var own = closeCandidates(modal)[0];
         if (own) { own.click(); return; }
@@ -5333,6 +5630,7 @@
     }
     // סריקה מיד כשמתווסף/נגרע פופאפ + קצב קבוע כרשת ביטחון (זול: רק כשיש שכבה פתוחה)
     var pend = null;
+    window.__luxUxTick = function () { try { schedTick(); } catch (e) {} };
     function schedTick() {
       if (pend) return;
       pend = setTimeout(function () { pend = null; tick(); }, 120);

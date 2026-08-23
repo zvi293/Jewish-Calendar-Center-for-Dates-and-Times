@@ -497,6 +497,13 @@ window.addEventListener("popstate", function (e) {
     } else if (modalId === "donation-modal" || modalId === "contact-modal" || modalId === "chapter-nav-popup" || modalId === "cal-month-year-picker") {
       var _popupEl = document.getElementById(modalId);
       if (_popupEl) _popupEl.remove();
+      // בחירת פריט בתוכן העניינים: הפעולה (גלילה/פתיחת פרק) רצה רק אחרי שהפופאפ
+      // ירד מהמחסנית — כך קוראים שדוחפים מצב משלהם לא יוצרים רשומה כפולה
+      if (modalId === "chapter-nav-popup" && window._chapterNavPending) {
+        var _cnpFn = window._chapterNavPending;
+        window._chapterNavPending = null;
+        setTimeout(_cnpFn, 0);
+      }
     } else {
       removeModalById(modalId);
     }
@@ -684,7 +691,14 @@ function applyTranslations() {
     const key = el.getAttribute("data-i18n-key");
     if (t[key]) {
       if (el.tagName === "INPUT") el.placeholder = t[key];
-      else el.textContent = t[key];
+      else if (el.children.length) {
+        // אלמנט עם ילדים (למשל כותרת "זמני היום" שמכילה את כפתורי שתף/הדפס/שעון הלכתי
+        // ו-#zmanim-source-badge שמוזרקים אליה): textContent היה מוחק את כל הילדים —
+        // זה היה שורש הבאג "הכפתורים נעלמים עד רענון". מעדכנים רק את צומת הטקסט.
+        let tn = Array.prototype.find.call(el.childNodes, (n) => n.nodeType === 3 && n.textContent.trim());
+        if (!tn) { tn = document.createTextNode(""); el.insertBefore(tn, el.firstChild); }
+        if (tn.textContent.trim() !== t[key]) tn.textContent = t[key] + " ";
+      } else if (el.textContent !== t[key]) el.textContent = t[key];
     }
     return;
     // stripped stray alert
@@ -1840,7 +1854,10 @@ const _CHOK_VERSE_LABEL_SECTIONS = new Set(['תורה', 'נביאים', 'כתו�
 // ── שיבוץ פירושים בתוך הטקסט עצמו ──
 // מזהה את הדיבור-המתחיל של כל פירוש ומשבץ את הפירוש מיד אחרי המילים
 // שעליהן הוא נאמר. פירוש שלא נמצא לו מיקום — מוצג בסוף אותו קטע.
-// אפשרויות: { label, emoji, color, diburColor, textColor }
+// אפשרויות: { label, emoji, color, diburColor, textColor, boldDibur }
+//   boldDibur: הדיבור-המתחיל הוא הטקסט המודגש <b>…</b> בתחילת הפירוש (כף החיים /
+//   קול יעקב / ביאור הלכה / ט"ז / ש"ך וכו'); לפניו יכולים לבוא סימון ס"ק "א)",
+//   "[סעיף א']" ו-"שם." (= אותו דיבור כמו הפירוש הקודם).
 function _buildTextWithInlineComments(sourceHtml, comments, opts) {
   if (!comments || !comments.length) return sourceHtml;
   opts = opts || {};
@@ -1858,12 +1875,71 @@ function _buildTextWithInlineComments(sourceHtml, comments, opts) {
   const blockBase = 'display:block;margin:0.6rem 0;padding:0.45rem 0.75rem;' +
     `background:${rgba(0.08)};border:2px solid ${rgba(0.25)};border-right:4px solid ${color};border-radius:0.4rem;` +
     'font-size:0.82em;line-height:1.7;text-align:right;';
+  // סימון סוף בלוק-פירוש — מאפשר לדלג על התאמות שנופלות בתוך פירוש שכבר שובץ
+  // (כשכמה שכבות פעילות יחד, המילים של הדיבור מופיעות גם בתוך פירושי השכבה הקודמת)
+  const BLK_OPEN = '<div class="chok-cm-blk" style="';
+  const BLK_END = '<!--/cm-->';
+  const countIn = (s, needle) => { let n = 0, p = 0; while ((p = s.indexOf(needle, p)) >= 0) { n++; p += needle.length; } return n; };
+  // בשכבות boldDibur (נושאי כלים של השו"ע) הפירושים מסודרים בקפדנות לפי סדר הטקסט —
+  // מחפשים קודם אחרי הבלוק האחרון ששובץ (מונע תפיסה של מילה נפוצה שמופיעה מוקדם
+  // יותר), ורק אם אין — מתחילת הקטע. בשאר הקוראים (רש"י/גמרא) נשמרת ההתנהגות הישנה.
+  let lastPos = 0;
+  // מחזיר את ההתאמה הראשונה של rx (מ-from) שאינה בתוך בלוק-פירוש קיים (או null)
+  const findOutsideFrom = (rx, from) => {
+    const g = new RegExp(rx.source, 'g');
+    g.lastIndex = from;
+    let mm;
+    while ((mm = g.exec(result))) {
+      const before = result.slice(0, mm.index);
+      if (countIn(before, BLK_OPEN) <= countIn(before, BLK_END)) return mm;
+      if (!mm[0].length) g.lastIndex++;
+    }
+    return null;
+  };
+  const findOutside = (rx) => (opts.boldDibur && lastPos > 0 ? findOutsideFrom(rx, lastPos) : null) || findOutsideFrom(rx, 0);
+  const insertAfterMatch = (mm, html) => {
+    const at = mm.index + mm[0].length;
+    result = result.slice(0, at) + html + result.slice(at);
+    lastPos = at + html.length;
+  };
 
   const buildInner = (t) => {
+    let inner, dibur = null;
+    if (opts.boldDibur) {
+      let s = t
+        // כותרת טקסט לפני שורה חדשה + סימון ס"ק מודגש בודד (קול יעקב: 'הלכות ס"ת … <br><b>א)</b> <br>')
+        .replace(/^\s*(?:[^<]{0,80}<br\s*\/?>\s*)?(?:<b>\s*[א-ת]{1,3}\)\s*<\/b>\s*(?:<br\s*\/?>)?\s*)?/, '')
+        // סימון ס"ק מחוץ להדגשה: 'קעז) <b>שם …</b>' / '[חף) <b>…'
+        .replace(/^\s*(?:<br\s*\/?>)*\s*\[?\s*(?:[א-ת]{1,3}\)\s*)?(?=<b>)/, '')
+        .replace(/^\s*(?:<br\s*\/?>)*\s*/, '');
+      // <b> [ס"ק] [סעיף X] [שם] [בהג"ה] דיבור </b> [מפריד] טקסט
+      const bm = s.match(/^<b>\s*(?:\[?\(?(?!שם)[א-ת]{1,3}\)\s*)?(?:[\[(]?\s*סעי(?:ף|'|׳)?\s*[א-ת"'׳״]{1,6}\s*[\])]?[.,]?\s*)?(\(?שם\)?[.,]?\s*)?(?:בהג["״]?ה[.,]?\s*)?([^<]*?)\s*<\/b>\s*([-–—:.]?)\s*/);
+      if (bm) {
+        let dib = bm[2].replace(/(^|\s)ו?כו'?[.,]?\s*$/, '$1').replace(/[.:,]$/, '').trim();
+        const rest = s.slice(bm[0].length).trim();
+        // כותרת בלבד (למשל "<b>ספר קול יעקב</b>") — אין מה לשבץ
+        if (!rest) return { inner: null, dibur: null, skip: true };
+        const restSpan = `<span class="chok-rashi-rest" style="color:${textColor} !important;">${rest}</span>`;
+        // "שם." בלבד — אותו מקום כמו הפירוש הקודם (משובץ מיד אחריו)
+        if (dib === 'שם' || (!dib && bm[1])) return { inner: restSpan, dibur: null, reuse: true };
+        // הדגשה שמכילה רק סימון (ט"ז חו"מ: "<b>(סעיף א)</b> אם הוא מודה במקצת. …") — הדיבור בטקסט הרגיל
+        if (dib.length < 2) { t = rest; }
+        else {
+          inner = `<span class="chok-rashi-dibur" style="color:${diburColor} !important;">${dib}</span>` +
+                  `<span class="chok-rashi-sep"> — </span>` + restSpan;
+          // "שם + דיבור" → אחרי הקודם; מילה בודדת מודגשת ללא מפריד ("<b>ד) סופר</b> שכתב…") =
+          // המשך נקודה קודמת — מעדיפים לשבץ אחרי הפירוש הקודם, ואם אין — לפי הדיבור
+          const hasSep = !!bm[3] || /[.:,]\s*$/.test(bm[2]);
+          const same = !!bm[1] || (!hasSep && !/\s/.test(dib));
+          return { inner, dibur: dib, reuse: same };
+        }
+      } else {
+        t = s;
+      }
+    }
     // ניקוי סימוני ס"ק כמו "(א)" בתחילת פירוש (משנה ברורה / באר היטב)
     const cleaned = t.replace(/^\s*(?:<b>)?\(([א-ת]{1,3})\)(?:<\/b>)?\s*/, '');
     const m = cleaned.match(/^([^.־:–—\-]{2,40})[.־:–—\-]/);
-    let inner, dibur = null;
     if (m) {
       dibur = m[1].replace(/<[^>]*>/g, '').trim();
       const rest = cleaned.slice(m[0].length).trim();
@@ -1876,53 +1952,86 @@ function _buildTextWithInlineComments(sourceHtml, comments, opts) {
     return { inner, dibur };
   };
 
+  let lastCommentHtml = null;  // הבלוק האחרון ששובץ — עבור פירושי "שם"
   for (const commentText of comments) {
     if (!commentText || typeof commentText !== 'string') continue;
-    const { inner, dibur } = buildInner(commentText);
-    const commentHtml = `<div style="${blockBase}"><span class="chok-rashi-label" style="color:${color} !important;">${emoji} ${label}</span>${inner}</div>`;
+    const built = buildInner(commentText);
+    if (built.skip) continue;
+    const { inner, dibur } = built;
+    const commentHtml = `${BLK_OPEN}${blockBase}"><span class="chok-rashi-label" style="color:${color} !important;">${emoji} ${label}</span>${inner}</div>${BLK_END}`;
+
+    if (built.reuse && lastCommentHtml) {
+      const p = result.indexOf(lastCommentHtml);
+      if (p >= 0) {
+        const at = p + lastCommentHtml.length;
+        result = result.slice(0, at) + commentHtml + result.slice(at);
+        lastPos = at + commentHtml.length;
+        lastCommentHtml = commentHtml;
+        continue;
+      }
+    }
 
     if (dibur) {
       // דיוק: מסירים "וכו'" וגרשיים ואת הניקוד מהדיבור לפני חיפוש
       const cleanDibur = dibur
-        .replace(/\s*וכו'?\s*$/, '')
+        .replace(/(^|\s)ו?כו'?\s*$/, '$1')
         .replace(/["'׳״]/g, '')
         .replace(/[֑-ׇ]/g, '')
         .trim();
       // התאמה עיוורת-ניקוד: בין אות לאות מותרים סימני ניקוד/טעמים,
-      // ורווח בדיבור מתאים גם למקף (־) בטקסט המקור
+      // ורווח בדיבור מתאים גם למקף (־) בטקסט המקור, וגם לתגיות ריקות
+      // (עוגני <i data-commentator> של ספריא יושבים בין המילים בשולחן ערוך)
       const nikudify = (s) =>
         s
           .split('')
           .map((ch) => {
-            if (ch === ' ') return '[\\s\\u05BE]+';
+            if (ch === ' ') return '(?:[\\s\\u05BE]|<[^>]*>)+';
             const esc = ch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            return /[א-ת]/.test(ch) ? esc + '[\\u0591-\\u05C7]*' : esc;
+            // ͏ = Combining Grapheme Joiner — מופיע בטקסטי התנ"ך של ספריא בתוך מילים
+            return /[א-ת]/.test(ch) ? esc + '[\\u0591-\\u05C7\\u034F]*' : esc;
           })
           .join('');
-      // (?![^<]*>) prevents matching inside an HTML attribute
-      const rx = new RegExp('(' + nikudify(cleanDibur) + ')(?![^<]*>)', '');
-      if (cleanDibur.length >= 2 && rx.test(result)) {
-        result = result.replace(rx, '$1' + commentHtml);
+      // (?![^<]*>) prevents matching inside an HTML attribute;
+      // TAIL — סוף מילה: לא משבצים באמצע מילה ("תהו" בתוך "תהום")
+      const TAIL = '(?![\u0591-\u05C7\u034F]*[א-ת])(?![^<]*>)';
+      const rx = new RegExp('(' + nikudify(cleanDibur) + ')' + TAIL, '');
+      let mm = cleanDibur.length >= 2 ? findOutside(rx) : null;
+      if (mm) {
+        insertAfterMatch(mm, commentHtml);
+        lastCommentHtml = commentHtml;
         continue;
       }
-      // Fallback: try first word only (min 3 chars)
+      // Fallback 1: דיבור שמכיל "כו'" באמצע (ש"ך: "וכן אם הוא כו' ועד אחד") — החלק שלפני ה"כו'"
+      const cutAt = cleanDibur.search(/\s+ו?כו(?![א-ת])/);
+      if (cutAt >= 2) {
+        const head = cleanDibur.slice(0, cutAt).trim();
+        if (head.length >= 2) {
+          mm = findOutside(new RegExp('(' + nikudify(head) + ')' + TAIL, ''));
+          if (mm) { insertAfterMatch(mm, commentHtml); lastCommentHtml = commentHtml; continue; }
+        }
+      }
+      // Fallback 2: try first word only (min 3 chars)
       const firstWord = cleanDibur.split(/\s+/)[0] || '';
       if (firstWord.length >= 3) {
-        const rxWord = new RegExp('(' + nikudify(firstWord) + ')(?![^<]*>)', '');
-        if (rxWord.test(result)) {
-          result = result.replace(rxWord, '$1' + commentHtml);
+        const rxWord = new RegExp('(' + nikudify(firstWord) + ')' + TAIL, '');
+        mm = findOutside(rxWord);
+        if (mm) {
+          insertAfterMatch(mm, commentHtml);
+          lastCommentHtml = commentHtml;
           continue;
         }
       }
     }
     unmatched.push(commentText);
+    lastCommentHtml = null;
   }
 
   // Any comment whose dibur wasn't found — each gets its own styled card at the end
   if (unmatched.length) {
     result += unmatched.map((t) => {
-      const { inner } = buildInner(t);
-      return `<div style="${blockBase}"><span class="chok-rashi-label" style="color:${color} !important;">${emoji} ${label}</span>${inner}</div>`;
+      const b = buildInner(t);
+      if (b.skip) return '';
+      return `${BLK_OPEN}${blockBase}"><span class="chok-rashi-label" style="color:${color} !important;">${emoji} ${label}</span>${b.inner}</div>${BLK_END}`;
     }).join('');
   }
   return result;
@@ -1993,7 +2102,7 @@ function renderChokContent() {
         const _plainLen = src.outsideText.replace(/<[^>]*>/g, '').trim().length;
         if (/<small>/i.test(src.outsideText) || _plainLen < 120) {
           // הערת הוראה קצרה (כוונות וכד') — מוצגת מעומעמת ומוקטנת
-          html += `<div style="margin:0.4rem auto 0.6rem;color:#94a3b8;font-size:0.78rem;max-width:32rem;">${cleaned}</div>`;
+          html += `<div class="chok-meta" style="margin:0.4rem auto 0.6rem;font-size:0.78rem;max-width:32rem;">${cleaned}</div>`;
         } else {
           // טקסט לימוד מלא שהגיע כטקסט חופשי — בגיליונות חוק לישראל זהו ביאור
           // הזוהר בלשון הקודש. גודל כתב מלא כמו שאר התוכן (מושפע מכפתורי הגודל),
@@ -2009,7 +2118,7 @@ function renderChokContent() {
       const heHtml = sanitizeExternalHtml(src.text.he);
       html += `<div style="margin-bottom:1.4rem;padding:0.9rem 1rem;border-radius:0.75rem;border:1px solid rgba(0,0,0,0.06);background:rgba(0,0,0,0.01);">`;
       if (src.heRef) {
-        html += `<div style="font-size:0.68rem;color:#94a3b8;font-weight:600;margin-bottom:0.4rem;">${escapeHtml(src.heRef)}</div>`;
+        html += `<div class="chok-meta" style="font-size:0.68rem;font-weight:600;margin-bottom:0.4rem;">${escapeHtml(src.heRef)}</div>`;
       }
 
       // רש״י משובץ בתוך הטקסט — גמרא, תורה, נביאים וכתובים
@@ -2062,11 +2171,11 @@ function renderChokContent() {
   }
   html += '</div>';
   // קרדיט בסוף הטקסט
-  html += '<div style="margin-top:2rem;padding-top:0.85rem;border-top:1px solid rgba(0,0,0,0.08);color:#94a3b8;font-size:0.72rem;text-align:center;direction:rtl;">מקור הטקסט: <a href="https://www.sefaria.org/collections/%D7%97%D7%A7-%D7%9C%D7%99%D7%A9%D7%A8%D7%90%D7%9C" target="_blank" rel="noopener" style="color:#3b82f6;">Sefaria.org</a> · ברישיון פתוח</div>';
+  html += '<div class="chok-meta" style="margin-top:2rem;padding-top:0.85rem;border-top:1px solid rgba(0,0,0,0.08);font-size:0.72rem;text-align:center;direction:rtl;">מקור הטקסט: <a href="https://www.sefaria.org/collections/%D7%97%D7%A7-%D7%9C%D7%99%D7%A9%D7%A8%D7%90%D7%9C" target="_blank" rel="noopener" style="color:#3b82f6;">Sefaria.org</a> · ברישיון פתוח</div>';
   contentEl.innerHTML = html || '<p class="text-center text-slate-500 py-10">לא נמצא תוכן</p>';
   // Force Rashi colors via JS setProperty (overrides .holy-text-style inheritance reliably)
   contentEl.querySelectorAll('.chok-rashi-dibur').forEach(el => el.style.setProperty('color', '#b45309', 'important'));
-  contentEl.querySelectorAll('.chok-rashi-sep').forEach(el => el.style.setProperty('color', '#6b7280', 'important'));
+  contentEl.querySelectorAll('.chok-rashi-sep').forEach(el => el.style.setProperty('color', '#374151', 'important'));
   contentEl.querySelectorAll('.chok-rashi-rest').forEach(el => el.style.setProperty('color', '#4c1d95', 'important'));
   contentEl.querySelectorAll('.chok-rashi-label').forEach(el => el.style.setProperty('color', '#7c3aed', 'important'));
   applyPrayerFontSize('#chok-israel-modal-content');
@@ -2605,6 +2714,7 @@ async function fetchLiveCalendarData() {
         e.preventDefault();
         openSefariaModal(displayDaf, dafEvent.title, { daf: true });
       };
+      document.getElementById("daf-yomi-link").dataset.ready = "1"; // סרגל הניווט התחתון בודק את זה
     }
 
     // טעינת חוק לישראל (fire-and-forget)
@@ -2686,6 +2796,7 @@ async function fetchLiveCalendarData() {
           e.preventDefault();
           openShnayimMikraModal(smDisplay, eTitle);
         };
+        smBtn.dataset.ready = "1"; // סרגל הניווט התחתון בודק את זה
       }
     } else if (smEl) {
       smEl.textContent = p;
@@ -3151,11 +3262,16 @@ function showDashboard() {
     el.__luxLowTicks = 0;
   });
   setTimeout(() => {
-    dash.classList.remove("opacity-0");
-    banner.classList.remove("opacity-0");
-    btn.classList.remove("opacity-0");
-    if (btnShulMikve) btnShulMikve.classList.remove("opacity-0");
-    if (prayerWrap) prayerWrap.classList.remove("opacity-0");
+    // חשיפה בלי מעבר CSS: מעבר opacity חד-פעמי קופא כשהדפדפן משהה רינדור
+    // (PWA ברקע/מסך כבוי) והאלמנטים "נעלמים" עד רענון — בלי מעבר אין מה שיקפא.
+    [dash, banner, btn, btnShulMikve, prayerWrap].forEach((el) => {
+      if (!el) return;
+      el.classList.remove("transition-opacity", "duration-500");
+      el.style.transition = "none";
+      el.classList.remove("opacity-0");
+      void el.offsetWidth; // מקבע את ה-opacity החדש לפני שמחזירים מעברי hover לכפתורים
+      el.style.transition = "";
+    });
   }, 50);
   // ביטחון: אם מעבר ה-opacity קפא (לשונית ברקע / PWA מוקפא בנייד) האלמנטים
   // נשארים שקופים לנצח — כופים חשיפה מלאה אחרי שחלון האנימציה הסתיים
@@ -3194,10 +3310,18 @@ function _forceRevealHeroEls() {
     }
   });
 }
+// חזרה לחזית / שחזור מ-bfcache — מאפסים את זיכרון "כבר אושר כגלוי" כדי שהסריקה
+// תבדוק שוב את כל האלמנטים (זה בדיוק הרגע שבו מעבר/שכבת-קומפוזיטור עלולים להיתקע)
+function _resetHeroRevealMemo() {
+  ["dashboard-state", "halacha-banner", "btn-open-calendar", "btn-shul-mikve", "prayer-grid-wrap", "lux-greeting"].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) { el.__luxRevealOk = false; el.__luxLowTicks = 0; }
+  });
+}
 document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "visible") setTimeout(_forceRevealHeroEls, 700);
+  if (document.visibilityState === "visible") { _resetHeroRevealMemo(); setTimeout(_forceRevealHeroEls, 700); }
 });
-window.addEventListener("pageshow", () => setTimeout(_forceRevealHeroEls, 700));
+window.addEventListener("pageshow", () => { _resetHeroRevealMemo(); setTimeout(_forceRevealHeroEls, 700); });
 // סריקה מחזורית זולה — אף אלמנט בית לא נשאר תקוע שקוף, לא משנה מתי קפא המעבר.
 // מדלגים כשהטאב ברקע או כשפופאפ פתוח (visibilitychange והטיק שאחרי הסגירה משלימים)
 setInterval(() => {
@@ -4593,6 +4717,24 @@ function openCalendar() {
   lockBodyScroll();
   pushModalState("calendar-modal");
 }
+// פתיחת הלוח החודשי ישירות בחודש של תאריך נתון (YYYY-MM-DD) עם הדגשת היום —
+// משמש את גלגל השנה ("פתח בלוח השנה"). opts.openDay פותח גם את פופאפ היום.
+async function openCalendarAt(dateStr, opts) {
+  const m = document.getElementById("calendar-modal");
+  const tgt = new Date(String(dateStr) + "T12:00:00");
+  if (!m || isNaN(tgt.getTime())) { openCalendar(); return; }
+  if (m.classList.contains("hidden")) openCalendar(); // נעילה + רשומת היסטוריה קורות שם
+  CALENDAR_DISPLAY_DATE = new Date(tgt.getFullYear(), tgt.getMonth(), 1);
+  try { await ensureYearFetched(tgt.getFullYear()); } catch (e) {}
+  buildMonthCalendar();
+  const cell = document.querySelector("#cal-days-grid [data-date=\"" + dateStr + "\"]");
+  if (cell) {
+    cell.classList.add("cal-day-focus");
+    try { cell.scrollIntoView({ block: "center", behavior: "smooth" }); } catch (e) {}
+  }
+  if (opts && opts.openDay) setTimeout(() => { try { openCalendarDay(dateStr); } catch (e) {} }, 380);
+}
+window.openCalendarAt = openCalendarAt;
 function closeCalendar() {
   const m = document.getElementById("calendar-modal");
   if (!m || m.classList.contains("hidden")) return;
@@ -4893,7 +5035,7 @@ function buildMonthCalendar() {
     const ariaLabel = `${formatLocalizedDate(cDate, { day: "2-digit", month: "long", year: "numeric" })}${hebrewDate ? ` | ${hebrewDate}` : ""}`;
 
     grid.innerHTML += `
-                    <div class="min-h-[4.5rem] sm:h-20 md:h-28 p-1 sm:p-1.5 md:p-2.5 bg-white dark:bg-slate-800 rounded-lg md:rounded-xl border ${isToday ? "border-blue-500 ring-2 ring-blue-500/20 shadow-md" : "border-slate-200 dark:border-slate-700"} flex flex-col transition-all md:overflow-hidden" role="button" tabindex="0" aria-haspopup="dialog" aria-label="${ariaLabel}" onclick="openCalendarDay('${dStr}')" onkeydown="handleCalendarDayKeydown(event, '${dStr}')">
+                    <div class="min-h-[4.5rem] sm:h-20 md:h-28 p-1 sm:p-1.5 md:p-2.5 bg-white dark:bg-slate-800 rounded-lg md:rounded-xl border ${isToday ? "border-blue-500 ring-2 ring-blue-500/20 shadow-md" : "border-slate-200 dark:border-slate-700"} flex flex-col transition-all md:overflow-hidden" role="button" tabindex="0" aria-haspopup="dialog" data-date="${dStr}" aria-label="${ariaLabel}" onclick="openCalendarDay('${dStr}')" onkeydown="handleCalendarDayKeydown(event, '${dStr}')">
                         <div class="flex justify-between items-start mb-0.5 sm:mb-1 px-0.5 sm:px-1">
                             <span class="text-[10px] sm:text-xs md:text-sm font-bold text-blue-800 dark:text-blue-400" aria-label="תאריך עברי ${hebDayStr}">${hebDayStr}</span>
                             <span class="text-xs sm:text-sm md:text-base font-black ${isToday ? "text-blue-600 dark:text-blue-400" : "text-slate-700 dark:text-slate-300"}" aria-label="תאריך לועזי ${i}">${i}</span>
@@ -5955,11 +6097,15 @@ function _getMotzeiOccasion() {
 }
 
 function openMotzeiShabbatModal(activeTab) {
-  const alreadyOpen = _motzeiShabbatModalOpen;
-  document.getElementById("motzei-shabbat-modal")?.remove();
+  const existingOverlay = document.getElementById("motzei-shabbat-modal");
+  const alreadyOpen = _motzeiShabbatModalOpen && !!existingOverlay;
+  // אם המודאל כבר פתוח — לא בונים אותו מחדש (הבנייה-מחדש בכל לחיצת לשונית
+  // גרמה לקפיצות: ה-X האוניברסלי הוזרק/הוסר וכתב padding, והגלילה התאפסה);
+  // רק התוכן והלשונית הפעילה מתעדכנים למטה.
+  if (!alreadyOpen && existingOverlay) existingOverlay.remove();
   _motzeiShabbatModalOpen = true;
 
-  const tab = activeTab || "veyiten";
+  const tab = activeTab || "tefillah";
   const occasion  = _getMotzeiOccasion();
   // Shabbat-combined types (Shabbat+YomTov / Shabbat+YomKippur) use the
   // full motzei-shabbat nusach (with besamim and fire), since shabbat
@@ -5976,18 +6122,22 @@ function openMotzeiShabbatModal(activeTab) {
 
   const story = BESHT_STORIES[Math.floor(Math.random() * BESHT_STORIES.length)];
 
+  // סדר הלשוניות לפי בקשת בעל האתר: תפילה, הבדלה, ויתן לך, סעודה רביעית, בעש"ט
+  // (ברכה אחרונה נשארת כלשונית שישית בסוף)
   const tabs = [
-    { id: "veyiten",  label: "🌿 ויתן לך" },
-    { id: "havdalah", label: "✡️ הבדלה" },
-    { id: "bracha",   label: "🍇 ברכה אחרונה" },
-    { id: "seuda4",   label: "🍞 סעודה רביעית" },
-    { id: "tefillah", label: "🙏 תפילה" },
-    { id: "besht",    label: "📖 בעש\"ט" }
+    { id: "tefillah", icon: "🙏", label: "תפילה" },
+    { id: "havdalah", icon: "✡️", label: "הבדלה" },
+    { id: "veyiten",  icon: "🌿", label: "ויתן לך" },
+    { id: "seuda4",   icon: "🍞", label: "סעודה רביעית" },
+    { id: "besht",    icon: "📖", label: "בעש\"ט" },
+    { id: "bracha",   icon: "🍇", label: "ברכה אחרונה" }
   ];
 
-  function tabBtn(id, label) {
-    const active = id === tab;
-    return `<button onclick="openMotzeiShabbatModal('${id}')" style="flex:1;padding:8px 4px;border:none;border-radius:10px;font-size:0.75rem;font-weight:700;cursor:pointer;transition:all .2s;background:${active ? "rgba(255,255,255,0.2)" : "transparent"};color:${active ? "#fff" : "rgba(255,255,255,0.5)"};">${label}</button>`;
+  function tabBtn(t) {
+    const active = t.id === tab;
+    // min-width:0 + גלישת מילים: שש לשוניות לעולם לא גולשות אופקית (הגלישה
+    // האופקית של הכרטיס הייתה אחד ממקורות ה"בריחה" של המודאל לצד)
+    return `<button type="button" data-motzei-tab="${t.id}" onclick="openMotzeiShabbatModal('${t.id}')" style="flex:1;min-width:0;padding:7px 2px;border:none;border-radius:10px;font-size:0.72rem;font-weight:700;line-height:1.25;cursor:pointer;transition:background .2s,color .2s;white-space:normal;overflow:hidden;background:${active ? "rgba(255,255,255,0.2)" : "transparent"};color:${active ? "#fff" : "rgba(255,255,255,0.5)"};"><span style="display:block;font-size:1.05rem;line-height:1.2;margin-bottom:2px;">${t.icon}</span>${t.label}</button>`;
   }
 
   function block(titleHtml, bodyHtml, accent) {
@@ -5996,13 +6146,13 @@ function openMotzeiShabbatModal(activeTab) {
       : "background:rgba(255,255,255,0.07);";
     const titleColor = accent ? "#a5b4fc" : "#fbbf24";
     return `<div style="${bg}border-radius:14px;padding:14px;margin-bottom:10px;">
-      <div style="font-size:0.7rem;color:${titleColor};font-weight:700;margin-bottom:8px;">${titleHtml}</div>
-      <p style="font-size:0.84rem;line-height:1.95;color:rgba(255,255,255,0.95);">${bodyHtml}</p>
+      <div style="font-size:0.7em;color:${titleColor};font-weight:700;margin-bottom:8px;">${titleHtml}</div>
+      <p style="font-size:0.84em;line-height:1.95;color:rgba(255,255,255,0.95);">${bodyHtml}</p>
     </div>`;
   }
 
   function noteBox(text) {
-    return `<div style="background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.3);border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:0.72rem;color:rgba(251,191,36,0.85);line-height:1.7;">${text}</div>`;
+    return `<div style="background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.3);border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:0.72em;color:rgba(251,191,36,0.85);line-height:1.7;">${text}</div>`;
   }
 
   // ── הבדלה — nusach-aware, occasion-aware ──────────────────────────────────
@@ -6030,7 +6180,7 @@ function openMotzeiShabbatModal(activeTab) {
   // Small note for compound occasions (shabbat + chag together)
   if (isShabbatYomTov || isShabbatYomKippur) {
     havdalahText +=
-      `<span style="font-size:0.72rem;color:rgba(251,191,36,0.85);">⚠️ ${
+      `<span style="font-size:0.86em;color:rgba(251,191,36,0.85);">⚠️ ${
         isShabbatYomKippur
           ? "מוצאי שבת ויום הכיפורים: מברכים על הבשמים ועל הנר כרגיל במוצאי שבת — שבת מחייבת."
           : `מוצאי שבת ו${occasion.chagName || "יום טוב"}: הנוסח כמוצאי שבת רגיל, כולל בשמים ונר — שבת מחייבת.`
@@ -6041,23 +6191,23 @@ function openMotzeiShabbatModal(activeTab) {
     // ══ נוסח עדות המזרח ══
     if (isShabbat) {
       havdalahText +=
-        `<span style="font-size:0.73rem;color:rgba(255,255,255,0.45);">בְּמוֹצָ״שׁ קֹדֶם שֶׁיַּפְרִישׁ מִמֶּנּוּ אוֹר הַנְּשָׁמָה הַיְתֵרָה, וְיַחֲזֹר לִלְבּוֹשׁ אֶת בִּגְדֵי הַחוֹל שֶׁלּוֹ, יַבְדִּיל עַל הַיַּיִן, כְּלוֹמַר יַעֲשֶׂה הֶפְרֵשׁ בֵּין תַּעֲנוּגֵי שַׁבָּת וּבֵין תַּעֲנוּגֵי חוֹל. וְאִם עָשָׂה כֵּן, הֲרֵי הוּא מִנּוֹחֲלֵי עוֹלָם הַבָּא (סֵפֶר הַחַיִּים לַאֲחִי הַמַּהֲרַ״ל).</span><br><br>` +
+        `<span style="font-size:0.87em;color:rgba(255,255,255,0.45);">בְּמוֹצָ״שׁ קֹדֶם שֶׁיַּפְרִישׁ מִמֶּנּוּ אוֹר הַנְּשָׁמָה הַיְתֵרָה, וְיַחֲזֹר לִלְבּוֹשׁ אֶת בִּגְדֵי הַחוֹל שֶׁלּוֹ, יַבְדִּיל עַל הַיַּיִן, כְּלוֹמַר יַעֲשֶׂה הֶפְרֵשׁ בֵּין תַּעֲנוּגֵי שַׁבָּת וּבֵין תַּעֲנוּגֵי חוֹל. וְאִם עָשָׂה כֵּן, הֲרֵי הוּא מִנּוֹחֲלֵי עוֹלָם הַבָּא (סֵפֶר הַחַיִּים לַאֲחִי הַמַּהֲרַ״ל).</span><br><br>` +
         `רִאשׁוֹן לְצִיּוֹן הִנֵּה הִנָּם, וְלִירוּשָׁלַיִם מְבַשֵּׂר אֶתֵּן: אַל־תִּשְׂמְחִי אֹיַבְתִּי לִי כִּי נָפַלְתִּי קַמְתִּי, כִּי־אֵשֵׁב בַּחֹשֶׁךְ יהוה אוֹר לִי: לַיְּהוּדִים הָיְתָה אוֹרָה וְשִׂמְחָה, וְשָׂשֹׂן וִיקָר: וַיְהִי דָוִד לְכָל־דְּרָכָו מַשְׂכִּיל וַיהוָה עִמּוֹ: וְנֹחַ מָצָא חֵן בְּעֵינֵי יהוה: כֵּן נִמְצָא חֵן (וְתִמְצְאוּ חֵן) וְשֵׂכֶל טוֹב בְּעֵינֵי אֱלֹהִים וְאָדָם:<br><br>` +
         `קוּמִי אוֹרִי כִּי בָא אוֹרֵךְ, וּכְבוֹד יהוה עָלַיִךְ זָרָח: כִּי־הִנֵּה הַחֹשֶׁךְ יְכַסֶּה־אֶרֶץ וַעֲרָפֶל לַאֻמִּים, וְעָלַיִךְ יִזְרַח יהוה וּכְבוֹדוֹ עָלַיִךְ יֵרָאֶה:<br><br>` +
-        `<span style="font-size:0.73rem;color:rgba(255,255,255,0.45);">יִקַּח הַכּוֹס בְּיָדוֹ וְיֹאמַר:</span><br>` +
+        `<span style="font-size:0.87em;color:rgba(255,255,255,0.45);">יִקַּח הַכּוֹס בְּיָדוֹ וְיֹאמַר:</span><br>` +
         `כּוֹס־יְשׁוּעוֹת אֶשָּׂא וּבְשֵׁם יהוה אֶקְרָא:<br>` +
-        `אָנָּא יהוה הוֹשִׁיעָה נָּא <span style="font-size:0.73rem;color:rgba(255,255,255,0.45);">(שתי פעמים)</span>,<br>` +
-        `אָנָּא יהוה הַצְלִיחָה נָּא <span style="font-size:0.73rem;color:rgba(255,255,255,0.45);">(שתי פעמים)</span>:<br>` +
+        `אָנָּא יהוה הוֹשִׁיעָה נָּא <span style="font-size:0.87em;color:rgba(255,255,255,0.45);">(שתי פעמים)</span>,<br>` +
+        `אָנָּא יהוה הַצְלִיחָה נָּא <span style="font-size:0.87em;color:rgba(255,255,255,0.45);">(שתי פעמים)</span>:<br>` +
         `הַצְלִיחֵנוּ, הַצְלִיחַ דְּרָכֵינוּ, הַצְלִיחַ לִמּוּדֵינוּ, וּשְׁלַח בְּרָכָה רְוָחָה וְהַצְלָחָה בְּכָל־מַעֲשֵׂה יָדֵינוּ, כִּדְכְתִיב: יִשָּׂא בְרָכָה מֵאֵת יהוה וּצְדָקָה מֵאֱלֹהֵי יִשְׁעוֹ: לַיְּהוּדִים הָיְתָה אוֹרָה וְשִׂמְחָה, וְשָׂשֹׂן וִיקָר: וּכְתִיב: וַיְהִי דָוִד לְכָל־דְּרָכָו מַשְׂכִּיל, וַיהוָה עִמּוֹ: כֵּן יִהְיֶה עִמָּנוּ תָּמִיד:<br><br>` +
-        `סַבְרִי מָרָנָן. <span style="font-size:0.73rem;color:rgba(255,255,255,0.45);">וְעוֹנִים:</span> לְחַיִּים.<br><br>` +
+        `סַבְרִי מָרָנָן. <span style="font-size:0.87em;color:rgba(255,255,255,0.45);">וְעוֹנִים:</span> לְחַיִּים.<br><br>` +
         `בָּרוּךְ אַתָּה יהוה, אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, בּוֹרֵא פְּרִי הַגָּפֶן:<br><br>` +
-        `<span style="font-size:0.73rem;color:rgba(255,255,255,0.45);">בְּמוֹצָאֵי יוֹ״ט שֶׁאֵינוֹ מוֹצָ״שׁ אֵין מְבָרְכִים עַל הַבְּשָׂמִים וְעַל הַנֵּר.</span><br>` +
-        `<span style="font-size:0.73rem;color:rgba(255,255,255,0.45);">טַעַם הַבְּשָׂמִים לְהַבְדָּלָה מִפְּנֵי שֶׁבְּשַׁבָּת יֵשׁ נְשָׁמָה יְתֵירָה, וּבְמוֹצָ״שׁ הוֹלֶכֶת מֵהָאָדָם, וְיֵשׁ כָּאן חֲלִישׁוּת הַדַּעַת, וְהַבְּשָׂמִים מְחַזְּקִים הַנֶּפֶשׁ, שֶׁכָּל רֵיחַ טוֹב מַחֲזִיק הַנֶּפֶשׁ (ערה״ש).</span><br>` +
+        `<span style="font-size:0.87em;color:rgba(255,255,255,0.45);">בְּמוֹצָאֵי יוֹ״ט שֶׁאֵינוֹ מוֹצָ״שׁ אֵין מְבָרְכִים עַל הַבְּשָׂמִים וְעַל הַנֵּר.</span><br>` +
+        `<span style="font-size:0.87em;color:rgba(255,255,255,0.45);">טַעַם הַבְּשָׂמִים לְהַבְדָּלָה מִפְּנֵי שֶׁבְּשַׁבָּת יֵשׁ נְשָׁמָה יְתֵירָה, וּבְמוֹצָ״שׁ הוֹלֶכֶת מֵהָאָדָם, וְיֵשׁ כָּאן חֲלִישׁוּת הַדַּעַת, וְהַבְּשָׂמִים מְחַזְּקִים הַנֶּפֶשׁ, שֶׁכָּל רֵיחַ טוֹב מַחֲזִיק הַנֶּפֶשׁ (ערה״ש).</span><br>` +
         `בָּרוּךְ אַתָּה יהוה, אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, בּוֹרֵא עֲצֵי (עִשְׂבֵּי) (מִינֵי) בְשָׂמִים:<br><br>` +
-        `<span style="font-size:0.73rem;color:rgba(255,255,255,0.45);">מְבָרְכִין עַל הָאוֹר בְּמוֹצָ״שׁ, הוֹאִיל וּתְחִלַּת בְּרִיָתוֹ הוּא, שֶׁאָז נָתַן הַקָּבָּ״ה דֵּעָה בָּאָדָם הָרִאשׁוֹן וְהֵבִיא שְׁנֵי אֲבָנִים וּטְחָנָן זוֹ בְּזוֹ וְיָצָא מֵהֶן אוֹר (פְּסָחִים נג). וּמַבִּיטִים בַּצִּפָּרְנַיִם לְפִי שֶׁבְּכָךְ זוֹכְרִין אֶת צִפָּרְנָיו שֶׁל אָדָם הָרִאשׁוֹן, שֶׁהָיוּ מְאִירִים בְּיוֹתֵר, דְּעַקְבוֹ מַכְהֶה גַּלְגַּל חַמָּה, שְׁאָר גּוּפוֹ לֹא כָּל שֶׁכֵּן (מִרְדְּכַי יוֹמָא).</span><br>` +
+        `<span style="font-size:0.87em;color:rgba(255,255,255,0.45);">מְבָרְכִין עַל הָאוֹר בְּמוֹצָ״שׁ, הוֹאִיל וּתְחִלַּת בְּרִיָתוֹ הוּא, שֶׁאָז נָתַן הַקָּבָּ״ה דֵּעָה בָּאָדָם הָרִאשׁוֹן וְהֵבִיא שְׁנֵי אֲבָנִים וּטְחָנָן זוֹ בְּזוֹ וְיָצָא מֵהֶן אוֹר (פְּסָחִים נג). וּמַבִּיטִים בַּצִּפָּרְנַיִם לְפִי שֶׁבְּכָךְ זוֹכְרִין אֶת צִפָּרְנָיו שֶׁל אָדָם הָרִאשׁוֹן, שֶׁהָיוּ מְאִירִים בְּיוֹתֵר, דְּעַקְבוֹ מַכְהֶה גַּלְגַּל חַמָּה, שְׁאָר גּוּפוֹ לֹא כָּל שֶׁכֵּן (מִרְדְּכַי יוֹמָא).</span><br>` +
         `בָּרוּךְ אַתָּה יהוה, אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, בּוֹרֵא מְאוֹרֵי הָאֵשׁ:<br><br>` +
         `בָּרוּךְ אַתָּה יהוה, אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, הַמַּבְדִּיל בֵּין קֹדֶשׁ לְחוֹל וּבֵין אוֹר לְחֹשֶׁךְ וּבֵין יִשְׂרָאֵל לָעַמִּים וּבֵין יוֹם הַשְּׁבִיעִי לְשֵׁשֶׁת יְמֵי הַמַּעֲשֶׂה. בָּרוּךְ אַתָּה יהוה, הַמַּבְדִּיל בֵּין קֹדֶשׁ לְחוֹל:<br><br>` +
-        `<span style="font-size:0.73rem;color:rgba(255,255,255,0.45);">סיום הפסוקים שלאחר מכן:</span><br>` +
+        `<span style="font-size:0.87em;color:rgba(255,255,255,0.45);">סיום הפסוקים שלאחר מכן:</span><br>` +
         `אַתֶּם לַיהוָה, עֹשֵׂה שָׁמַיִם וָאָרֶץ: בָּרוּךְ הַגֶּבֶר אֲשֶׁר יִבְטַח בַּיהוָה, וְהָיָה יהוה מִבְטַחוֹ: יהוה עֹז לְעַמּוֹ יִתֵּן, יהוה יְבָרֵךְ אֶת־עַמּוֹ בַשָּׁלוֹם: עֹשֶׂה שָׁלוֹם בִּמְרוֹמָיו הוּא בְרַחֲמָיו יַעֲשֶׂה שָׁלוֹם עָלֵינוּ, וְעַל כָּל־עַמּוֹ יִשְׂרָאֵל, וְאִמְרוּ אָמֵן:`;
     } else if (isYomKippur) {
       havdalahText +=
@@ -6067,7 +6217,7 @@ function openMotzeiShabbatModal(activeTab) {
         `בָּרוּךְ אַתָּה יְהֹוָה אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, הַמַּבְדִּיל בֵּין קֹדֶשׁ לְחוֹל, וּבֵין אוֹר לְחֹשֶׁךְ, וּבֵין יִשְׂרָאֵל לָעַמִּים, וּבֵין יוֹם הַשְּׁבִיעִי לְשֵׁשֶׁת יְמֵי הַמַּעֲשֶׂה. בָּרוּךְ אַתָּה יְהֹוָה, הַמַּבְדִּיל בֵּין קֹדֶשׁ לְחוֹל.`;
     } else {
       havdalahText +=
-        `<span style="font-size:0.72rem;color:rgba(251,191,36,0.8);">⚠️ במוצאי יום טוב: אין מברכים על הבשמים ועל הנר.</span><br><br>` +
+        `<span style="font-size:0.86em;color:rgba(251,191,36,0.8);">⚠️ במוצאי יום טוב: אין מברכים על הבשמים ועל הנר.</span><br><br>` +
         `סַבְרִי מָרָנָן וְרַבּוֹתַי — עוֹנִים: לְחַיִּים!<br><br>` +
         `בָּרוּךְ אַתָּה יְהֹוָה אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, בּוֹרֵא פְּרִי הַגָּפֶן.<br><br>` +
         `בָּרוּךְ אַתָּה יְהֹוָה אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, הַמַּבְדִּיל בֵּין קֹדֶשׁ לְחוֹל, וּבֵין אוֹר לְחֹשֶׁךְ, וּבֵין יִשְׂרָאֵל לָעַמִּים, וּבֵין יוֹם הַשְּׁבִיעִי לְשֵׁשֶׁת יְמֵי הַמַּעֲשֶׂה. בָּרוּךְ אַתָּה יְהֹוָה, הַמַּבְדִּיל בֵּין קֹדֶשׁ לְחוֹל.`;
@@ -6091,7 +6241,7 @@ function openMotzeiShabbatModal(activeTab) {
         `בָּרוּךְ אַתָּה יְהֹוָה אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, הַמַּבְדִּיל בֵּין קֹדֶשׁ לְחוֹל, בֵּין אוֹר לְחֹשֶׁךְ, בֵּין יִשְׂרָאֵל לָעַמִּים, בֵּין יוֹם הַשְּׁבִיעִי לְשֵׁשֶׁת יְמֵי הַמַּעֲשֶׂה. בָּרוּךְ אַתָּה יְהֹוָה, הַמַּבְדִּיל בֵּין קֹדֶשׁ לְחוֹל.`;
     } else {
       havdalahText +=
-        `<span style="font-size:0.72rem;color:rgba(251,191,36,0.8);">⚠️ במוצאי יום טוב: אין מברכים על הבשמים ועל הנר.</span><br><br>` +
+        `<span style="font-size:0.86em;color:rgba(251,191,36,0.8);">⚠️ במוצאי יום טוב: אין מברכים על הבשמים ועל הנר.</span><br><br>` +
         `סַבְרִי מָרָנָן וְרַבּוֹתַי — עוֹנִים: לְחַיִּים!<br><br>` +
         `בָּרוּךְ אַתָּה יְהֹוָה אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, בּוֹרֵא פְּרִי הַגָּפֶן.<br><br>` +
         `בָּרוּךְ אַתָּה יְהֹוָה אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, הַמַּבְדִּיל בֵּין קֹדֶשׁ לְחוֹל, בֵּין אוֹר לְחֹשֶׁךְ, בֵּין יִשְׂרָאֵל לָעַמִּים, בֵּין יוֹם הַשְּׁבִיעִי לְשֵׁשֶׁת יְמֵי הַמַּעֲשֶׂה. בָּרוּךְ אַתָּה יְהֹוָה, הַמַּבְדִּיל בֵּין קֹדֶשׁ לְחוֹל.`;
@@ -6099,9 +6249,9 @@ function openMotzeiShabbatModal(activeTab) {
   }
 
   const havdalahHTML = `<div style="direction:rtl;text-align:right;">
-    <p style="font-size:0.75rem;color:rgba(255,255,255,0.5);margin-bottom:12px;line-height:1.6;text-align:center;">${titleLine}<br><span style="color:rgba(255,255,255,0.3);">נוסח: ${nusachLabel}</span></p>
+    <p style="font-size:0.75em;color:rgba(255,255,255,0.5);margin-bottom:12px;line-height:1.6;text-align:center;">${titleLine}<br><span style="color:rgba(255,255,255,0.3);">נוסח: ${nusachLabel}</span></p>
     <div style="background:rgba(255,255,255,0.07);border-radius:14px;padding:16px;margin-bottom:10px;">
-      <p style="font-size:0.84rem;line-height:2.1;color:rgba(255,255,255,0.95);">${havdalahText}</p>
+      <p style="font-size:0.84em;line-height:2.1;color:rgba(255,255,255,0.95);">${havdalahText}</p>
     </div>
   </div>`;
 
@@ -6124,9 +6274,9 @@ function openMotzeiShabbatModal(activeTab) {
   }
 
   const brachaHTML = `<div style="direction:rtl;text-align:right;">
-    <p style="font-size:0.75rem;color:rgba(255,255,255,0.5);margin-bottom:12px;line-height:1.6;text-align:center;">ברכת מעין שלוש (על הגפן) — נאמרת לאחר שתיית יין או ענבים</p>
+    <p style="font-size:0.75em;color:rgba(255,255,255,0.5);margin-bottom:12px;line-height:1.6;text-align:center;">ברכת מעין שלוש (על הגפן) — נאמרת לאחר שתיית יין או ענבים</p>
     <div style="background:rgba(255,255,255,0.07);border-radius:14px;padding:16px;margin-bottom:10px;">
-      <p style="font-size:0.84rem;line-height:2.1;color:rgba(255,255,255,0.95);">${brachaText}</p>
+      <p style="font-size:0.84em;line-height:2.1;color:rgba(255,255,255,0.95);">${brachaText}</p>
     </div>
   </div>`;
 
@@ -6137,24 +6287,24 @@ function openMotzeiShabbatModal(activeTab) {
       `לְשֵׁם יִחוּד קוּדְשָׁא בְּרִיךְ הוּא וּשְׁכִינְתֵּיהּ, בִּדְחִילוּ וּרְחִימוּ, וּרְחִימוּ וּדְחִילוּ, לְיַחֲדָא שֵׁם יוֹד הֵא בְּוָאו הֵא בְּיִחוּדָא שְׁלִים, בְּשֵׁם כָּל יִשְׂרָאֵל, הִנֵּה אֲנִי בָּא לִסְעוֹד סְעוּדָה רְבִיעִית שֶׁל שַׁבָּת, שֶׁהִיא סְעוּדַת דָּוִד הַמֶּלֶךְ עָלָיו הַשָּׁלוֹם, לְתַקֵּן אֶת שָׁרְשָׁהּ בְּמָקוֹם עֶלְיוֹן, וּלְהַמְשִׁיךְ עָלֶיהָ קְדֻשָּׁה מִקְדֻשַּׁת סְעוּדָה רִאשׁוֹנָה, שְׁנִיָּה וּשְׁלִישִׁית, וּלְגָרֵשׁ אֶת הַחִיצוֹנִים בְּכֹחַ הַשֵּׁם הַמְּרֻמָּז בְּרָאשֵׁי תֵבֹת: "אֱלֹהִים יְבָרְכֵנוּ וְיִירְאוּ אֹתוֹ כָּל אַפְסֵי אָרֶץ". וִיהִי רָצוֹן מִלְּפָנֶיךָ ה' אֱלֹהַי וֵאלֹהֵי אֲבוֹתַי, שֶׁיַּעֲלֶה לְפָנֶיךָ כְּאִלּוּ כִּוַּנְתִּי בְּכָל הַכַּוָּנוֹת שֶׁכִּוְּנוּ רַבּוֹתֵינוּ בִּסְעוּדָה זוֹ. וִיהִי נֹעַם אֲדֹנָי אֱלֹהֵינוּ עָלֵינוּ, וּמַעֲשֵׂה יָדֵינוּ כּוֹנְנָה עָלֵינוּ, וּמַעֲשֵׂה יָדֵינוּ כּוֹנְנֵהוּ.`
     )}
     <div style="background:rgba(255,255,255,0.07);border-radius:14px;padding:14px;margin-bottom:10px;">
-      <div style="font-size:0.7rem;color:#fbbf24;font-weight:700;margin-bottom:6px;">מלווה מלכה — סעודה רביעית</div>
-      <p style="font-size:0.8rem;line-height:1.8;color:rgba(255,255,255,0.8);">מנהג ישראל קדוש לאכול "מלווה מלכה" במוצאי שבת — לכבוד המלכה שבת, כשם שמלווים מלך היוצא. האכילה במוצאי שבת מסייעת לנשמה להיפרד בנחת.</p>
+      <div style="font-size:0.7em;color:#fbbf24;font-weight:700;margin-bottom:6px;">מלווה מלכה — סעודה רביעית</div>
+      <p style="font-size:0.8em;line-height:1.8;color:rgba(255,255,255,0.8);">מנהג ישראל קדוש לאכול "מלווה מלכה" במוצאי שבת — לכבוד המלכה שבת, כשם שמלווים מלך היוצא. האכילה במוצאי שבת מסייעת לנשמה להיפרד בנחת.</p>
     </div>
     <div style="background:rgba(255,255,255,0.07);border-radius:14px;padding:14px;margin-bottom:10px;">
-      <div style="font-size:0.7rem;color:#fbbf24;font-weight:700;margin-bottom:8px;">המבדיל</div>
-      <p style="font-size:0.85rem;line-height:2.1;color:rgba(255,255,255,0.95);">הַמַּבְדִּיל בֵּין קֹדֶשׁ לְחֹל, חַטֹּאתֵינוּ הוּא יִמְחֹל,<br>זַרְעֵנוּ וְכַסְפֵּנוּ יַרְבֶּה כַחוֹל, וְכַכּוֹכָבִים בַּלָּיְלָה.<br><br>שָׁבוּעַ טוֹב! 🌟</p>
+      <div style="font-size:0.7em;color:#fbbf24;font-weight:700;margin-bottom:8px;">המבדיל</div>
+      <p style="font-size:0.85em;line-height:2.1;color:rgba(255,255,255,0.95);">הַמַּבְדִּיל בֵּין קֹדֶשׁ לְחֹל, חַטֹּאתֵינוּ הוּא יִמְחֹל,<br>זַרְעֵנוּ וְכַסְפֵּנוּ יַרְבֶּה כַחוֹל, וְכַכּוֹכָבִים בַּלָּיְלָה.<br><br>שָׁבוּעַ טוֹב! 🌟</p>
     </div>
     <div style="background:rgba(255,255,255,0.07);border-radius:14px;padding:14px;margin-bottom:14px;">
-      <div style="font-size:0.7rem;color:#fbbf24;font-weight:700;margin-bottom:8px;">אליהו הנביא</div>
-      <p style="font-size:0.85rem;line-height:2.1;color:rgba(255,255,255,0.95);">אֵלִיָּהוּ הַנָּבִיא, אֵלִיָּהוּ הַתִּשְׁבִּי,<br>אֵלִיָּהוּ הַגִּלְעָדִי —<br>בִּמְהֵרָה בְּיָמֵינוּ יָבֹא אֵלֵינוּ,<br>עִם מָשִׁיחַ בֶּן דָּוִד. 🕊️</p>
+      <div style="font-size:0.7em;color:#fbbf24;font-weight:700;margin-bottom:8px;">אליהו הנביא</div>
+      <p style="font-size:0.85em;line-height:2.1;color:rgba(255,255,255,0.95);">אֵלִיָּהוּ הַנָּבִיא, אֵלִיָּהוּ הַתִּשְׁבִּי,<br>אֵלִיָּהוּ הַגִּלְעָדִי —<br>בִּמְהֵרָה בְּיָמֵינוּ יָבֹא אֵלֵינוּ,<br>עִם מָשִׁיחַ בֶּן דָּוִד. 🕊️</p>
     </div>
     <div style="display:flex;gap:10px;margin-bottom:10px;">
       <button onclick="window._motzeiGoTo(function(){openPrayer('birkat-hamazon','ברכת המזון','Birkat Hamazon')})"
-        style="flex:1;padding:12px 8px;border:none;border-radius:14px;background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;font-size:0.82rem;font-weight:800;cursor:pointer;">
+        style="flex:1;padding:12px 8px;border:none;border-radius:14px;background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;font-size:0.82em;font-weight:800;cursor:pointer;">
         🍞 ברכת המזון
       </button>
       <button onclick="window._motzeiGoTo(function(){openPrayer('al-hamichya','ברכת מעין שלוש','Al HaMichya')})"
-        style="flex:1;padding:12px 8px;border:none;border-radius:14px;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;font-size:0.82rem;font-weight:800;cursor:pointer;">
+        style="flex:1;padding:12px 8px;border:none;border-radius:14px;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;font-size:0.82em;font-weight:800;cursor:pointer;">
         🍇 ברכת מעין שלוש
       </button>
     </div>
@@ -6172,10 +6322,10 @@ function openMotzeiShabbatModal(activeTab) {
   // ── בעש"ט ──────────────────────────────────────────────────────────────────
   const beshtHTML = `<div style="direction:rtl;text-align:right;">
     <div style="background:rgba(255,255,255,0.07);border-radius:14px;padding:16px;margin-bottom:12px;">
-      <div style="font-size:0.78rem;color:#fbbf24;font-weight:800;margin-bottom:10px;">✨ ${story.title}</div>
-      <p style="font-size:0.82rem;line-height:1.9;color:rgba(255,255,255,0.9);">${story.text}</p>
+      <div style="font-size:0.78em;color:#fbbf24;font-weight:800;margin-bottom:10px;">✨ ${story.title}</div>
+      <p style="font-size:0.82em;line-height:1.9;color:rgba(255,255,255,0.9);">${story.text}</p>
     </div>
-    <button onclick="openMotzeiShabbatModal('besht')" style="width:100%;padding:10px;border:1px solid rgba(255,255,255,0.15);border-radius:12px;background:transparent;color:rgba(255,255,255,0.55);font-size:0.8rem;font-weight:700;cursor:pointer;transition:all .2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='transparent'">🔄 סיפור אחר</button>
+    <button onclick="openMotzeiShabbatModal('besht')" style="width:100%;padding:10px;border:1px solid rgba(255,255,255,0.15);border-radius:12px;background:transparent;color:rgba(255,255,255,0.55);font-size:0.8em;font-weight:700;cursor:pointer;transition:all .2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='transparent'">🔄 סיפור אחר</button>
   </div>`;
 
   // ── ויתן לך — פסוקי ברכה הנאמרים במוצאי שבת ─────────────────────────────────
@@ -6255,9 +6405,9 @@ function openMotzeiShabbatModal(activeTab) {
     `וּרְאֵה בָנִים לְבָנֶיךָ, שָׁלוֹם עַל יִשְׂרָאֵל:`;
 
   const veyitenHTML = `<div style="direction:rtl;text-align:right;">
-    <p style="font-size:0.75rem;color:rgba(255,255,255,0.5);margin-bottom:12px;line-height:1.6;text-align:center;">"וְיִתֶּן לְךָ" — פסוקי ברכה הנאמרים במוצאי שבת</p>
+    <p style="font-size:0.75em;color:rgba(255,255,255,0.5);margin-bottom:12px;line-height:1.6;text-align:center;">"וְיִתֶּן לְךָ" — פסוקי ברכה הנאמרים במוצאי שבת</p>
     <div style="background:rgba(255,255,255,0.07);border-radius:14px;padding:16px;margin-bottom:10px;">
-      <p style="font-size:0.86rem;line-height:2.1;color:rgba(255,255,255,0.95);">${veyitenText}</p>
+      <p style="font-size:0.86em;line-height:2.1;color:rgba(255,255,255,0.95);">${veyitenText}</p>
     </div>
   </div>`;
 
@@ -6270,23 +6420,46 @@ function openMotzeiShabbatModal(activeTab) {
     besht:    beshtHTML
   };
 
+  // ── המודאל כבר פתוח: עדכון תוכן ולשונית בלבד ─────────────────────────
+  if (alreadyOpen) {
+    const contentEl = existingOverlay.querySelector("#motzei-tab-content");
+    if (contentEl) { contentEl.innerHTML = contentMap[tab] || ""; contentEl.scrollTop = 0; }
+    existingOverlay.querySelectorAll("[data-motzei-tab]").forEach((b) => {
+      const on = b.getAttribute("data-motzei-tab") === tab;
+      b.style.background = on ? "rgba(255,255,255,0.2)" : "transparent";
+      b.style.color = on ? "#fff" : "rgba(255,255,255,0.5)";
+    });
+    _applyMotzeiFont();
+    return;
+  }
+
   const overlay = document.createElement("div");
   overlay.id = "motzei-shabbat-modal";
   overlay.style.cssText = "position:fixed;inset:0;z-index:500;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);";
 
+  // מבנה: כרטיס flex-column — כותרת+לשוניות קבועות (ה-X נשאר תמיד ברצועה העליונה,
+  // כך ה-X האוניברסלי לא מוזרק ולא כותב padding), אזור תוכן גולל, ושורת גודל-כתב.
+  // margin:auto + overflow-x:hidden — הכרטיס לעולם לא "בורח" לצד גם אם פריסת ה-flex מופרת.
   overlay.innerHTML = `
-    <div style="background:linear-gradient(160deg,#1a1f3a,#0f1628);border:1px solid rgba(255,255,255,0.1);border-radius:24px 24px 0 0;padding:20px 20px 36px;width:100%;max-width:480px;max-height:82vh;overflow-y:auto;color:#fff;box-shadow:0 -20px 60px rgba(0,0,0,0.5);position:relative;">
-      <button onclick="window._closePopupViaBack('motzei-shabbat-modal')"
-        style="position:absolute;top:14px;left:16px;background:rgba(255,255,255,0.1);border:none;color:rgba(255,255,255,0.7);font-size:1.2rem;cursor:pointer;border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;" aria-label="סגור">×</button>
-      <div style="text-align:center;margin-bottom:16px;padding-top:4px;">
-        <div style="font-size:1.4rem;margin-bottom:4px;">✨</div>
-        <div style="font-size:1.05rem;font-weight:800;color:#fde68a;">סדר מוצאי שבת וחג</div>
+    <div id="motzei-card" style="background:linear-gradient(160deg,#1a1f3a,#0f1628);border:1px solid rgba(255,255,255,0.1);border-radius:24px 24px 0 0;width:100%;max-width:480px;margin:0 auto;box-sizing:border-box;max-height:82vh;display:flex;flex-direction:column;overflow:hidden;color:#fff;box-shadow:0 -20px 60px rgba(0,0,0,0.5);position:relative;direction:rtl;">
+      <div style="flex-shrink:0;padding:16px 20px 0;position:relative;">
+        <button type="button" onclick="window._closePopupViaBack('motzei-shabbat-modal')"
+          style="position:absolute;top:14px;left:16px;background:rgba(255,255,255,0.1);border:none;color:rgba(255,255,255,0.7);font-size:1.2rem;cursor:pointer;border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;" aria-label="סגור">×</button>
+        <div style="text-align:center;margin-bottom:12px;padding-top:2px;">
+          <div style="font-size:1.4rem;margin-bottom:2px;">✨</div>
+          <div style="font-size:1.05rem;font-weight:800;color:#fde68a;">סדר מוצאי שבת וחג</div>
+        </div>
+        <div style="display:flex;gap:3px;background:rgba(255,255,255,0.07);padding:4px;border-radius:12px;margin-bottom:12px;overflow:hidden;">
+          ${tabs.map(tabBtn).join("")}
+        </div>
       </div>
-      <div style="display:flex;gap:4px;background:rgba(255,255,255,0.07);padding:4px;border-radius:12px;margin-bottom:16px;">
-        ${tabs.map(t => tabBtn(t.id, t.label)).join("")}
-      </div>
-      <div id="motzei-tab-content">
+      <div id="motzei-tab-content" style="flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding:0 20px 18px;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;">
         ${contentMap[tab] || ""}
+      </div>
+      <div id="motzei-font-bar" style="flex-shrink:0;display:flex;align-items:center;justify-content:center;gap:0.6rem;padding:8px 12px calc(10px + env(safe-area-inset-bottom, 0px));border-top:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.04);">
+        <button type="button" onclick="window._motzeiFont(-10)" aria-label="הקטנת כתב" title="הקטנת כתב" style="width:36px;height:36px;border-radius:50%;border:1px solid rgba(251,191,36,0.35);background:rgba(251,191,36,0.1);color:#fde68a;font-size:1.1rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;">−</button>
+        <span id="motzei-font-label" style="font-size:0.72rem;color:rgba(255,255,255,0.6);font-weight:700;min-width:5.5rem;text-align:center;">גודל כתב</span>
+        <button type="button" onclick="window._motzeiFont(10)" aria-label="הגדלת כתב" title="הגדלת כתב" style="width:36px;height:36px;border-radius:50%;border:1px solid rgba(251,191,36,0.35);background:rgba(251,191,36,0.1);color:#fde68a;font-size:1.1rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;">+</button>
       </div>
     </div>`;
 
@@ -6295,12 +6468,29 @@ function openMotzeiShabbatModal(activeTab) {
   });
 
   document.body.appendChild(overlay);
+  _applyMotzeiFont();
 
-  if (!alreadyOpen) {
-    pushModalState("motzei-shabbat-modal");
-    lockBodyScroll();
-  }
+  pushModalState("motzei-shabbat-modal");
+  lockBodyScroll();
 }
+
+// גודל כתב בסדר מוצאי שבת — אותו מפתח מאוחד כמו כל הקוראים (moadim_prayer_font_size),
+// אבל בסיס 16px (לא 25px של הקוראים הגדולים) כי הכרטיס קומפקטי — ב-100% נראה כמו היום.
+function _applyMotzeiFont() {
+  const el = document.getElementById("motzei-tab-content");
+  if (!el) return;
+  _syncPrayerFontFromStorage();
+  el.style.setProperty("font-size", ((_prayerFontSize / 100) * 16).toFixed(2) + "px", "important");
+  const lbl = document.getElementById("motzei-font-label");
+  if (lbl) lbl.textContent = "גודל כתב · " + _prayerFontSize + "%";
+}
+window._motzeiFont = function (delta) {
+  _syncPrayerFontFromStorage();
+  _prayerFontSize = Math.max(60, Math.min(200, _prayerFontSize + (delta || 0)));
+  try { localStorage.setItem(FONT_SIZE_KEY, String(_prayerFontSize)); } catch (e) {}
+  _applyMotzeiFont();
+  if (window._btnToastVal) window._btnToastVal("גודל כתב: " + _prayerFontSize + "%");
+};
 
 // ═══════════════════════════════════════════════════════
 // ✦  OMER PROGRESS RING UPDATE
@@ -7669,7 +7859,7 @@ function buildAlHamichyaPayload() {
   const parts = [];
 
   // ── כותרת ──
-  parts.push('<h2 style="text-align:center;font-size:1.35em;font-weight:900;color:#1e40af;margin:0 0 1rem;padding-bottom:0.6rem;border-bottom:2px solid #c7d2fe;letter-spacing:0.01em;">ברכת מעין שלוש ובורא נפשות</h2>');
+  parts.push('<h2 class="prayer-h2-oneline" style="text-align:center;font-size:min(1.35em,5.4vw);white-space:nowrap;line-height:1.5;font-weight:900;color:#1e40af;margin:0 0 1rem;padding-bottom:0.6rem;border-bottom:2px solid #c7d2fe;letter-spacing:0;">ברכת מעין שלוש ובורא נפשות</h2>');
 
   // ── פתיחה ──
   parts.push(p("בָּרוּךְ אַתָּה יְהֹוָה, אֱלֹהֵֽינוּ מֶֽלֶךְ הָעוֹלָם"));
@@ -15195,7 +15385,8 @@ window._closePopupViaBack = function(modalId) {
         } else {
           still.remove();
         }
-        unlockBodyScroll();
+        // פופאפים קלים שלא נעלו גלילה (תוכן עניינים, תרומה...) — אסור לגנוב את נעילת ההורה
+        if (["donation-modal","contact-modal","chapter-nav-popup","cal-month-year-picker"].indexOf(modalId) === -1) unlockBodyScroll();
       }, 1000);
     }
     history.back();
@@ -15219,6 +15410,37 @@ window._closePopupViaBack = function(modalId) {
       if (_idx !== -1 && _noLock.indexOf(modalId) === -1) unlockBodyScroll();
     }
   }
+};
+// צעד-אחד-אחורה לתצוגות-משנה בתוך מודול (קורא הספרים / בן איש חי / תהילים):
+// ה-X האוניברסלי (lux.js) קורא לזה לפני שהוא מנסה לסגור את המודאל כולו —
+// כך "X" בתוך ספר מחזיר לרשימת הסימנים, ולא מפיל את כל המודול ומשאיר
+// רשומות יתומות במחסנית. מחזיר true אם טופל.
+window._luxModalStepBack = function(modalId) {
+  var SUB = {
+    "sn-modal": ["sn-reader-pane", "sn-sections-view", "sn-subbook-view", "sn-search-view"],
+    "ben-ish-hai-modal": ["bih-reading-pane"],
+    "tehillim-modal": ["tehillim-psalm-pane"]
+  };
+  // פופאפ קל (תוכן עניינים / בוחר חודש / תרומה) פתוח מעל המודול — ה-X סוגר אותו בלבד
+  var topNow = _activeModals[_activeModals.length - 1];
+  if (["chapter-nav-popup", "cal-month-year-picker", "donation-modal", "contact-modal"].indexOf(topNow) !== -1 && document.getElementById(topNow)) {
+    window._closePopupViaBack(topNow);
+    return true;
+  }
+  var subs = SUB[modalId];
+  if (!subs) return false;
+  if (modalId === "ben-ish-hai-modal") {
+    // חיפוש בבן איש חי אינו דוחף מצב היסטוריה — סוגרים אותו ישירות
+    var so = document.getElementById("bih-search-overlay");
+    if (so && so.style.display !== "none" && typeof window._bihCloseSearch === "function") { window._bihCloseSearch(); return true; }
+  }
+  var top = _activeModals[_activeModals.length - 1];
+  if (subs.indexOf(top) === -1) return false;
+  // הגנת כניסה-חוזרת: נגיעה כפולה לפני שה-popstate הגיע — back() שני היה מוריד שתי רמות
+  if (Date.now() - (window._luxStepBackAt || 0) < 600) return true;
+  window._luxStepBackAt = Date.now();
+  history.back();
+  return true;
 };
 window.openDonationModal = function() {
   var existing = document.getElementById('donation-modal');
@@ -15453,11 +15675,23 @@ window.openDonationModal = function() {
   // חשיפה לתאימות אחורה / דיבאג
   window._autoScrollState = state;
   window._AUTO_SCROLL_SPEEDS = SPEEDS;
+  // עצירה חיצונית (תוכן עניינים קופץ למקום אחר — הגלילה האוטומטית לא נלחמת בקפיצה)
+  window._stopAutoScroll = function() {
+    if (!state.rafId) return;
+    stopAuto();
+    if (window._btnToastOff) window._btnToastOff("גלילה אוטומטית");
+  };
 })();
 
-// ── פופ-אפ ניווט פרקים גנרי ─────────────────────────────────────
+// ── פופ-אפ ניווט פרקים / תוכן עניינים גנרי ───────────────────────
+// עיצוב "לילה מלכותי וזהב" (כללי .cnp-* ב-style.css). סגירה — תמיד דרך
+// ההיסטוריה: X/רקע → _closePopupViaBack; בחירת פריט → history.back() ואז
+// הפעולה רצה אחרי ה-popstate (window._chapterNavPending). כך לא נשארת
+// רשומת היסטוריה יתומה בכל לחיצה (הגרסה הקודמת עשתה replaceState והשאירה
+// רשומה עודפת בכל שימוש — המחסנית התבלבלה אחרי כמה פעמים).
+window._chapterNavPending = null;
 window._openChapterNavPopup = function(opts) {
-  // opts: { title:string, subtitle?:string, items: [{label, onClick, isActive?}], color?:string }
+  // opts: { title, subtitle?, items:[{label, onClick, isActive?, sub?}], color?, icon? }
   var prev = document.getElementById('chapter-nav-popup');
   if (prev) {
     // ghost-tap בנייד: מתעלמים מפתיחה כפולה מיידית; אחרת סוגרים נקי כולל רשומת המחסנית
@@ -15467,48 +15701,96 @@ window._openChapterNavPopup = function(opts) {
       _activeModals.pop();
   }
   var color = opts.color || '#6366f1';
+  var items = opts.items || [];
   var overlay = document.createElement('div');
   overlay.id = 'chapter-nav-popup';
   overlay.__openedAt = Date.now();
-  overlay.style.cssText = 'position:fixed;inset:0;z-index:10050;background:rgba(2,6,23,0.65);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:1rem;';
+  overlay.style.setProperty('--cnp-accent', color);
   overlay.addEventListener('click', function(e) { if (e.target === overlay) window._closePopupViaBack('chapter-nav-popup'); });
   var card = document.createElement('div');
-  card.style.cssText = 'background:#ffffff;border-radius:1.25rem;box-shadow:0 25px 60px rgba(0,0,0,0.5);width:100%;max-width:560px;max-height:85vh;display:flex;flex-direction:column;overflow:hidden;direction:rtl;';
-  var headerHtml = '<div style="display:flex;align-items:center;justify-content:space-between;padding:0.9rem 1.1rem;border-bottom:1px solid rgba(0,0,0,0.08);flex-shrink:0;background:linear-gradient(135deg,' + color + '12,' + color + '04);">'+
-    '<div style="min-width:0;flex:1;">'+
-      '<h3 style="color:#0f172a;font-size:1.05rem;font-weight:900;margin:0;">'+ (opts.title || 'פרקים') +'</h3>'+
-      (opts.subtitle ? '<p style="color:#64748b;font-size:0.78rem;margin:0.15rem 0 0;">'+ opts.subtitle +'</p>' : '')+
-    '</div>'+
-    '<button onclick="window._closePopupViaBack(\'chapter-nav-popup\');" style="background:rgba(0,0,0,0.06);border:none;color:#475569;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:1.05rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-right:0.5rem;" aria-label="סגור">✕</button>'+
-  '</div>';
-  var grid = document.createElement('div');
-  grid.style.cssText = 'overflow-y:auto;padding:0.85rem;flex:1;';
-  var inner = document.createElement('div');
-  inner.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:0.5rem;';
-  (opts.items || []).forEach(function(it, idx) {
+  card.className = 'cnp-card';
+  card.setAttribute('role', 'dialog');
+  card.setAttribute('aria-modal', 'true');
+  card.setAttribute('aria-label', opts.title || 'תוכן העניינים');
+  // כותרת: ידית גרירה (מובייל), כותרת בסריף, תת-כותרת, ומונה פריטים
+  var rawTitle = String(opts.title || 'פרקים');
+  var emojiM = rawTitle.match(/^(\p{Extended_Pictographic}️?)\s*/u);
+  var titleIcon = opts.icon || (emojiM ? emojiM[1] : '📑');
+  var titleText = emojiM ? rawTitle.slice(emojiM[0].length) : rawTitle;
+  card.innerHTML =
+    '<div class="cnp-handle" aria-hidden="true"></div>' +
+    '<div class="cnp-head">' +
+      '<div class="cnp-icon" aria-hidden="true">' + titleIcon + '</div>' +
+      '<div class="cnp-titles">' +
+        '<h3 class="cnp-title">' + escapeHtml(titleText) + '</h3>' +
+        (opts.subtitle ? '<p class="cnp-sub">' + escapeHtml(opts.subtitle) + '</p>' : '') +
+      '</div>' +
+      '<button type="button" class="cnp-x" onclick="window._closePopupViaBack(\'chapter-nav-popup\');" aria-label="סגור">✕</button>' +
+    '</div>' +
+    (items.length > 12 ? '<div class="cnp-search"><input type="search" class="cnp-search-in" placeholder="סינון מהיר…" aria-label="סינון רשימת הפרקים" autocomplete="off"></div>' : '') +
+    '<div class="cnp-list"><div class="cnp-grid"></div></div>' +
+    '<div class="cnp-foot">' + items.length + ' פריטים · לחיצה קופצת למקום בטקסט</div>';
+  var inner = card.querySelector('.cnp-grid');
+  // טקסט ארוך (כותרות סעיפים) → עמודה אחת; תוויות קצרות (פרק א, סימן קכ) → רשת
+  var longest = 0;
+  items.forEach(function(it) { longest = Math.max(longest, String(it.label || '').length); });
+  if (longest > 16) inner.classList.add('cnp-grid-long');
+  var activeBtn = null;
+  items.forEach(function(it, idx) {
     var btn = document.createElement('button');
-    var active = !!it.isActive;
-    btn.style.cssText = 'background:' + (active ? color : 'rgba(0,0,0,0.04)') + ';color:' + (active ? '#fff' : '#1e293b') + ';border:1.5px solid ' + (active ? color : 'rgba(0,0,0,0.08)') + ';border-radius:0.85rem;padding:0.7rem 0.55rem;font-size:0.82rem;font-weight:800;cursor:pointer;text-align:center;line-height:1.25;transition:transform 0.12s ease, background 0.12s ease;direction:rtl;';
-    btn.onmouseenter = function() { if (!active) btn.style.background = color + '18'; };
-    btn.onmouseleave = function() { if (!active) btn.style.background = 'rgba(0,0,0,0.04)'; };
-    btn.textContent = it.label;
+    btn.type = 'button';
+    var lbl = String(it.label || '');
+    var isSub = !!it.sub || /^·\s/.test(lbl);
+    btn.className = 'cnp-item' + (it.isActive ? ' is-active' : '') + (isSub ? ' is-sub' : '');
+    btn.textContent = lbl.replace(/^·\s*/, '');
+    btn.setAttribute('data-cnp-idx', String(idx));
+    if (it.isActive) { btn.setAttribute('aria-current', 'true'); activeBtn = btn; }
     btn.addEventListener('click', function() {
-      // הוצא את ה-state של הפופ-אפ ידנית כדי שלא ישבש את הניווט להלן
-      if (_activeModals[_activeModals.length-1] === 'chapter-nav-popup') {
-        _activeModals.pop();
-        try { history.replaceState({modal: _activeModals[_activeModals.length-1] || null}, ""); } catch(e){}
+      // ghost-tap: לחיצה שנחתה על פריט מיד עם הפתיחה (אצבע שעוד על המסך)
+      if (Date.now() - (overlay.__openedAt || 0) < 350) return;
+      if (overlay.__done) return;
+      overlay.__done = true;
+      overlay.classList.add('cnp-out');
+      var run = function() { try { if (typeof it.onClick === 'function') it.onClick(idx); } catch (e) {} };
+      if (_activeModals[_activeModals.length - 1] === 'chapter-nav-popup') {
+        // הפעולה תרוץ אחרי שה-popstate הוציא את הפופאפ מהמחסנית — חשוב לקוראים
+        // שדוחפים מצב משלהם (תהילים/בן איש חי) כדי שלא ייווצר כפל רשומות
+        window._chapterNavPending = run;
+        overlay.remove();
+        history.back();
+        setTimeout(function() {
+          if (window._chapterNavPending !== run) return;
+          window._chapterNavPending = null;
+          var i2 = _activeModals.lastIndexOf('chapter-nav-popup');
+          if (i2 !== -1) _activeModals.splice(i2, 1);
+          run();
+        }, 700);
+      } else {
+        overlay.remove();
+        run();
       }
-      overlay.remove();
-      try { if (typeof it.onClick === 'function') it.onClick(idx); } catch(e){}
     });
     inner.appendChild(btn);
   });
-  grid.appendChild(inner);
-  card.innerHTML = headerHtml;
-  card.appendChild(grid);
+  // סינון מהיר ברשימות ארוכות (תהילים 150 פרקים, סימני שו"ע)
+  var searchIn = card.querySelector('.cnp-search-in');
+  if (searchIn) {
+    searchIn.addEventListener('input', function() {
+      var q = (searchIn.value || '').replace(/[֑-ׇ]/g, '').trim();
+      var btns = inner.querySelectorAll('.cnp-item');
+      for (var i = 0; i < btns.length; i++) {
+        var t = (btns[i].textContent || '').replace(/[֑-ׇ]/g, '');
+        btns[i].style.display = (!q || t.indexOf(q) !== -1) ? '' : 'none';
+      }
+    });
+  }
   overlay.appendChild(card);
   document.body.appendChild(overlay);
   pushModalState('chapter-nav-popup');
+  // הפריט הפעיל נכנס לתצוגה (רשימות ארוכות)
+  if (activeBtn) {
+    try { var lst = card.querySelector('.cnp-list'); lst.scrollTop = Math.max(0, (activeBtn.offsetTop - lst.offsetTop) - lst.clientHeight / 2 + activeBtn.offsetHeight / 2); } catch (e) {}
+  }
 };
 
 function createFontSizeBar(targetSelector, scrollTargetSelector) {
@@ -16455,7 +16737,7 @@ function openBenIshHaiPage() {
     sectionsDiv.appendChild(section);
     contentArea.scrollTop = 0;
     if (scrollToHalacha !== undefined) {
-      setTimeout(() => { document.getElementById("bih-h-"+parshaIdx+"-"+scrollToHalacha)?.scrollIntoView({behavior:"smooth",block:"start"}); }, 150);
+      setTimeout(() => { document.getElementById("bih-h-"+parshaIdx+"-"+scrollToHalacha)?.scrollIntoView({behavior:"auto",block:"start"}); }, 150);
     }
     setupScrollLoader(contentArea);
     // אם הגענו לכאן מחיפוש — קפיצה והדגשה של המילה
@@ -16711,7 +16993,7 @@ window.openPrayerNavPopup = function () {
             if (!el) return;
             var container = _findScrollContainer();
             if (!container) {
-              if (el.scrollIntoView) el.scrollIntoView({ behavior: "smooth", block: "start" });
+              if (el.scrollIntoView) el.scrollIntoView({ behavior: "auto", block: "start" });
               return;
             }
             try {
@@ -16719,7 +17001,7 @@ window.openPrayerNavPopup = function () {
               if (targetTop < 0) targetTop = 0;
               container.scrollTo({ top: targetTop, behavior: "smooth" });
             } catch (e) {
-              if (el.scrollIntoView) el.scrollIntoView({ behavior: "smooth", block: "start" });
+              if (el.scrollIntoView) el.scrollIntoView({ behavior: "auto", block: "start" });
             }
           }
           // דחיית הגלילה לאחר שהפופ-אפ יוסר וה-layout יתייצב
@@ -17208,7 +17490,7 @@ openTehillimPage = function () {
     if (lp.v) {
       setTimeout(function() {
         var el = document.getElementById("psalm-" + lp.ch + "-v" + lp.v);
-        if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+        if (el) el.scrollIntoView({ behavior: "auto", block: "start" });
       }, 600);
     }
   };
@@ -21502,14 +21784,18 @@ function openSefarimNosafimPage(_pageMode) {
       return he.map(function(vArr, i) {
         var chapNum = startChap + i;
         var vStart = (i === 0) ? startVerse : 1;
+        // פירושים לפי פסוק: inlineNotes[i] הוא מערך [פסוק]→html — משובץ בתוך ה-<p> מיד אחרי הפסוק
+        // (בלוקי <span display:block>, כדי לא לשבור את פסקת הפרק ואת sn-para-*/data-sn-chap)
+        var chNotes = (inlineNotes && Array.isArray(inlineNotes[i])) ? inlineNotes[i] : null;
         var verses = vArr.map(function(vs, j) {
           var t = String(vs || "");
           if (!t.trim()) return "";
-          return "<span style=\"color:" + color + ";font-size:0.73em;font-weight:700;margin-left:0.35rem;\">[" + toHN(vStart + j) + "]</span>" + t;
+          return "<span style=\"color:" + color + ";font-size:0.73em;font-weight:700;margin-left:0.35rem;\">[" + toHN(vStart + j) + "]</span>" + t +
+            ((chNotes && chNotes[j]) ? chNotes[j] : "");
         }).filter(Boolean).join(" ");
         if (!verses) return "";
         var paraBM = (typeof secIdx === "number") ? _snParaBMHtml(secIdx, i) : "";
-        var note = (inlineNotes && inlineNotes[i]) ? inlineNotes[i] : "";
+        var note = (inlineNotes && !chNotes && inlineNotes[i]) ? inlineNotes[i] : "";
         return "<h4 data-sn-chap=\"" + chapNum + "\" style=\"color:" + color + ";font-size:1.02rem;font-weight:900;margin:1.4rem 0 0.75rem;text-align:center;border-bottom:1.5px solid " + color + "44;padding-bottom:0.35rem;\">פרק " + toHN(chapNum) + "</h4>" +
           paraBM + "<p id=\"sn-para-" + secIdx + "-" + i + "\" data-sn-para=\"" + i + "\" style=\"margin:0 0 1.4rem;line-height:2.3;\">" + verses + "</p>" + note;
       }).filter(Boolean).join("");
@@ -21732,41 +22018,163 @@ function openSefarimNosafimPage(_pageMode) {
     return BOOKS.filter(function(b){ return _MODE_CAT_IDS.indexOf(b.cat) >= 0; });
   }
 
+  // ─────────────────────────────────────────────────────────────────────
+  // ── נושאי כלים על השולחן ערוך — שכבות פירוש (לא ספרים עצמאיים) ──
+  // parts: לכל חלק (oc/yd/eh/cm) פונקציה סימן→ref ב-Sefaria, או null אם אין כיסוי לסימן.
+  // boldDibur: הדיבור-המתחיל הוא הטקסט המודגש <b>…</b> (ראו _buildTextWithInlineComments).
+  // הפורמטים אומתו מול ה-API החי של Sefaria (23/08/2026).
+  // שער הציון ושתילי זיתים — אינם קיימים ב-Sefaria (ולא בשום API אחר); להוסיף כאן כשיעלו.
+  // ─────────────────────────────────────────────────────────────────────
+  var _KY_OC = [32,33,34,35,36,39,42];                                        // כה"ח או"ח = stub → קול יעקב
+  var _KY_YD = [270,271,272,273,274,275,276,277,278,279,280,281,288,290,291]; // (רפ"ב ריק בשני המקורות)
+  var _SA_PART_REF = { oc:"Orach_Chayim", yd:"Yoreh_De'ah", eh:"Even_HaEzer", cm:"Choshen_Mishpat" };
+  function _saPartFn(prefix, partsList) {
+    var o = {};
+    partsList.forEach(function(p){ o[p] = function(n){ return prefix + _SA_PART_REF[p] + "." + n; }; });
+    return o;
+  }
+  var SA_COMMENTARIES = [
+    { id:"mb",  he:"משנה ברורה",  short:"מ״ב",  emoji:"📖", color:"#7c3aed", diburColor:"#b45309", textColor:"#4c1d95",
+      parts:{ oc:function(n){ return "Mishnah_Berurah." + n; } } },
+    { id:"bhl", he:"ביאור הלכה",  short:"בה״ל", emoji:"🔎", color:"#0f766e", diburColor:"#b45309", textColor:"#134e4a",
+      parts:{ oc:function(n){ return "Biur_Halacha." + n; } }, boldDibur:true },
+    { id:"bh",  he:"באר היטב",    short:"בה״ט", emoji:"🖋️", color:"#d97706", diburColor:"#b45309", textColor:"#7c2d12",
+      parts:_saPartFn("Ba'er_Hetev_on_Shulchan_Arukh,_", ["oc","yd","eh","cm"]) },
+    { id:"kh",  he:"כף החיים",    short:"כה״ח", emoji:"📘", color:"#0e7490", diburColor:"#b45309", textColor:"#164e63",
+      parts:{
+        oc:function(n){ return _KY_OC.indexOf(n) >= 0 ? "Kol_Yaakov,_Orach_Chayim." + n : "Kaf_HaChayim_on_Shulchan_Arukh,_Orach_Chayim." + n; },
+        // כף החיים על יורה דעה קיים בסימנים א-קיט; הלכות סת"ם (ער ואילך) נמצאות
+        // בספר "קול יעקב" של אותו מחבר — לפי הכיסוי בפועל ב-Sefaria
+        yd:function(n){ if (n <= 119) return "Kaf_HaChayim_on_Shulchan_Arukh,_Yoreh_De'ah." + n; return _KY_YD.indexOf(n) >= 0 ? "Kol_Yaakov,_Yoreh_De'ah." + n : null; }
+      },
+      boldDibur:true,
+      labelFor:function(ref){ return ref.indexOf("Kol_Yaakov") === 0 ? "כף החיים (קול יעקב)" : "כף החיים"; } },
+    // ── הקלאסיים (תווית מקוצרת בכפתור; השם המלא ב-title) ──
+    { id:"taz", he:"טורי זהב (ט״ז)", short:"ט״ז", color:"#b91c1c", diburColor:"#b45309", textColor:"#7f1d1d",
+      parts:_saPartFn("Turei_Zahav_on_Shulchan_Arukh,_", ["oc","yd","eh","cm"]), boldDibur:true },
+    { id:"ma",  he:"מגן אברהם", short:"מג״א", color:"#4d7c0f", diburColor:"#b45309", textColor:"#365314",
+      parts:{ oc:function(n){ return "Magen_Avraham." + n; } }, boldDibur:true },
+    { id:"shach", he:"שפתי כהן (ש״ך)", short:"ש״ך", color:"#9333ea", diburColor:"#b45309", textColor:"#581c87",
+      parts:_saPartFn("Siftei_Kohen_on_Shulchan_Arukh,_", ["yd","cm"]), boldDibur:true },
+    { id:"pt",  he:"פתחי תשובה", short:"פת״ש", color:"#0369a1", diburColor:"#b45309", textColor:"#0c4a6e",
+      parts:_saPartFn("Pitchei_Teshuva_on_Shulchan_Arukh,_", ["yd","eh","cm"]), boldDibur:true },
+    { id:"sma", he:"מאירת עיניים (סמ״ע)", short:"סמ״ע", color:"#a16207", diburColor:"#b45309", textColor:"#713f12",
+      parts:_saPartFn("Me'irat_Einayim_on_Shulchan_Arukh,_", ["cm"]), boldDibur:true },
+    { id:"ktz", he:"קצות החושן", short:"קצות", color:"#be185d", diburColor:"#b45309", textColor:"#831843",
+      parts:_saPartFn("Ketzot_HaChoshen_on_Shulchan_Arukh,_", ["cm"]), boldDibur:true },
+    { id:"chm", he:"חלקת מחוקק", short:"ח״מ", color:"#15803d", diburColor:"#b45309", textColor:"#14532d",
+      parts:{ eh:function(n){ return "Chelkat_Mechokek." + n; } }, boldDibur:true },
+    { id:"bs",  he:"בית שמואל", short:"ב״ש", color:"#c2410c", diburColor:"#b45309", textColor:"#7c2d12",
+      parts:{ eh:function(n){ return "Beit_Shmuel." + n; } }, boldDibur:true }
+  ];
+  // ממיר את הרשומה לפורמט commentaries של הקורא הכללי, עבור חלק נתון (oc/yd/eh/cm)
+  function saCms(part, exclude) {
+    return SA_COMMENTARIES.filter(function(c){ return c.parts[part] && (!exclude || exclude.indexOf(c.id) < 0); }).map(function(c){
+      return { id:"sa-" + c.id, he:c.he, short:c.short, emoji:c.emoji, color:c.color, diburColor:c.diburColor, textColor:c.textColor,
+        inline:"dibur", boldDibur:!!c.boldDibur, labelFor:c.labelFor,
+        // ה-ref של הפירוש נגזר ממספר הסימן של הטקסט הבסיסי (עובד גם על Mishnah_Berurah.N)
+        refFn:function(secRef){ var n = parseInt((String(secRef).match(/\.(\d+)$/) || [])[1], 10); return n ? c.parts[part](n) : null; } };
+    });
+  }
+
+  // ─────────────────────────────────────────────────────────────────────
+  // ── תנ"ך: טבלת מפרשים משותפת לכל 39 הספרים ──
+  // כל רשומה: { id, he, short?, color, group, title(book) } — title מחזירה את כותרת
+  // האינדקס של ספריא עבור שם הספר האנגלי (מתוך _snSplitRef), או null כשאין לאותו
+  // מפרש פירוש על הספר (ואז הצ'יפ לא מוצג בכלל). הכותרות אומתו מול ה-API v3 (08/2026).
+  // הפירוש נשלף ב-v3 כ-"<title> <loc>" ומיושר לפי אינדקס לפסוקי הטקסט הראשי.
+  // ─────────────────────────────────────────────────────────────────────
+  var _TN_TORAH  = ["Genesis","Exodus","Leviticus","Numbers","Deuteronomy"];
+  var _TN_NEVIIM = ["Joshua","Judges","I Samuel","II Samuel","I Kings","II Kings","Isaiah","Jeremiah","Ezekiel",
+                    "Hosea","Joel","Amos","Obadiah","Jonah","Micah","Nahum","Habakkuk","Zephaniah","Haggai","Zechariah","Malachi"];
+  var _TN_TREI_ASAR = _TN_NEVIIM.slice(9);
+  var _TN_MEGILLOT_ETC = ["Psalms","Proverbs","Job","Song of Songs","Ruth","Lamentations","Ecclesiastes","Esther"];
+  var _TN_METZUDOT = _TN_NEVIIM.concat(["Psalms","Proverbs","Job","Song of Songs","Ecclesiastes","Daniel","Ezra","Nehemiah","I Chronicles","II Chronicles"]); // לא: רות, איכה, אסתר
+  var _TN_HE_NODE = { Genesis:"Bereshit", Exodus:"Shemot", Leviticus:"Vayikra", Numbers:"Bamidbar", Deuteronomy:"Devarim" };
+  // בונה title(book): prefix + book רק כשהספר ברשימה (null = ללא רשימה → כל הספרים)
+  function _tnTitle(prefix, books) {
+    return function(book){ return (!books || books.indexOf(book) >= 0) ? prefix + book : null; };
+  }
+  var SN_TANAKH_CM = [
+    // ── תרגומים ──
+    { id:"onkelos",        he:"אונקלוס",       color:"#0f766e", group:"targum",
+      title:_tnTitle("Onkelos ", _TN_TORAH) },                                   // בלי "on"
+    { id:"targum-yonatan", he:"תרגום יונתן",   color:"#0e7490", group:"targum",
+      title:_tnTitle("Targum Jonathan on ", _TN_TORAH.concat(_TN_NEVIIM)) },
+    { id:"targum",         he:"תרגום",         color:"#155e75", group:"targum",
+      title:function(book){
+        if (book === "I Chronicles" || book === "II Chronicles") return "Targum of " + book;
+        return _TN_MEGILLOT_ETC.indexOf(book) >= 0 ? "Aramaic Targum to " + book : null;
+      } },
+    // ── ראשונים ──
+    { id:"rashi",          he:"רש\"י",         color:"#7c2d12", group:"rishonim",
+      title:_tnTitle("Rashi on ", null) },
+    { id:"rashbam",        he:"רשב\"ם",        color:"#9a3412", group:"rishonim",
+      title:_tnTitle("Rashbam on ", _TN_TORAH) },
+    { id:"ibn-ezra",       he:"אבן עזרא",      color:"#a16207", group:"rishonim",
+      title:_tnTitle("Ibn Ezra on ", _TN_TORAH.concat(["Isaiah"], _TN_TREI_ASAR, _TN_MEGILLOT_ETC, ["Daniel","Ezra","Nehemiah"])) },
+    { id:"radak",          he:"רד\"ק",         color:"#4d7c0f", group:"rishonim",
+      title:_tnTitle("Radak on ", ["Genesis","Joshua","Judges","I Samuel","II Samuel","I Kings","II Kings","Isaiah","Jeremiah","Ezekiel"].concat(_TN_TREI_ASAR, ["Psalms","I Chronicles","II Chronicles"])) },
+    { id:"ramban",         he:"רמב\"ן",        color:"#b91c1c", group:"rishonim",
+      title:_tnTitle("Ramban on ", _TN_TORAH.concat(["Job"])) },
+    { id:"chizkuni",       he:"חזקוני",        color:"#c2410c", group:"rishonim",
+      title:_tnTitle("Chizkuni, ", _TN_TORAH) },                                 // פסיק — אינדקס מורכב
+    { id:"rabbeinu-bahya", he:"רבנו בחיי",     color:"#15803d", group:"rishonim",
+      title:function(book){ return _TN_HE_NODE[book] ? "Rabbeinu Bahya, " + _TN_HE_NODE[book] : null; } },
+    { id:"daat-zekenim",   he:"דעת זקנים",     color:"#0369a1", group:"rishonim",
+      title:_tnTitle("Da'at Zekenim on ", _TN_TORAH) },
+    { id:"baal-haturim",   he:"בעל הטורים",    color:"#6d28d9", group:"rishonim",
+      title:_tnTitle("Kitzur Ba'al HaTurim on ", _TN_TORAH) },
+    { id:"ralbag",         he:"רלב\"ג",        color:"#be185d", group:"rishonim",
+      title:function(book){
+        if (book === "Ruth" || book === "Esther") return "Ralbag " + book;        // בלי "on"
+        return ["Joshua","Judges","I Samuel","II Samuel","I Kings","II Kings","Proverbs","Job","Song of Songs","Ecclesiastes","Ezra","Nehemiah","I Chronicles","II Chronicles"].indexOf(book) >= 0 ? "Ralbag on " + book : null;
+      } },
+    { id:"sforno",         he:"ספורנו",        color:"#1d4ed8", group:"rishonim",
+      title:_tnTitle("Sforno on ", _TN_TORAH.concat(["Song of Songs"])) },
+    { id:"abarbanel",      he:"אברבנאל",       color:"#7e22ce", group:"rishonim",
+      title:_tnTitle("Abarbanel on ", _TN_NEVIIM) },                             // על התורה — אינדקס מורכב, לא נתמך
+    // ── אחרונים ──
+    { id:"or-hachaim",     he:"אור החיים",     color:"#d97706", group:"acharonim",
+      title:_tnTitle("Or HaChaim on ", _TN_TORAH) },
+    { id:"kli-yakar",      he:"כלי יקר",       color:"#ca8a04", group:"acharonim",
+      title:_tnTitle("Kli Yakar on ", _TN_TORAH) },
+    { id:"siftei-chakhamim", he:"שפתי חכמים",  color:"#65a30d", group:"acharonim",
+      title:function(book){
+        if (book === "Song of Songs") return "Siftei Chakhamim on Song of Songs";
+        return _TN_TORAH.indexOf(book) >= 0 ? "Siftei Chakhamim, " + book : null;
+      } },
+    { id:"haamek-davar",   he:"העמק דבר",      color:"#0d9488", group:"acharonim",
+      title:_tnTitle("Haamek Davar on ", _TN_TORAH) },
+    { id:"metzudat-david", he:"מצודת דוד",     color:"#1e40af", group:"acharonim",
+      title:_tnTitle("Metzudat David on ", _TN_METZUDOT) },
+    { id:"metzudat-zion",  he:"מצודת ציון",    color:"#1e3a8a", group:"acharonim",
+      title:_tnTitle("Metzudat Zion on ", _TN_METZUDOT) },
+    { id:"malbim",         he:"מלבי\"ם",       color:"#9333ea", group:"acharonim",
+      title:_tnTitle("Malbim on ", _TN_TORAH.concat(_TN_NEVIIM, ["Psalms","Proverbs","Job","Song of Songs","Ruth","Esther","Daniel","Ezra","Nehemiah","I Chronicles","II Chronicles"])) } // לא: איכה, קהלת
+  ];
+  var SN_TANAKH_CM_GROUPS = [ { id:"targum", he:"תרגומים" }, { id:"rishonim", he:"ראשונים" }, { id:"acharonim", he:"אחרונים" } ];
+
   var BOOKS = [
     { id:"shulchan-aruch", he:"שולחן ערוך", subtitle:"רבי יוסף קארו",
       cat:"halakha", color:"#1d4ed8", icon:"📜",
-      credit:"הטקסט מ-Sefaria.org — נחלת הכלל",
+      credit:"הטקסט מ-Sefaria.org — נחלת הכלל · נושאי כלים, כף החיים/קול יעקב — Sefaria",
       creditUrl:"https://www.sefaria.org/Shulchan_Arukh",
       type:"multi",
       subBooks:[
-        {id:"oc",he:"אורח חיים", sections:secs(697,function(i){return "סימן "+toHN(i);},function(i){return "Shulchan_Arukh,_Orach_Chayim."+i;})},
-        {id:"yd",he:"יורה דעה",  sections:secs(403,function(i){return "סימן "+toHN(i);},function(i){return "Shulchan_Arukh,_Yoreh_Deah."+i;})},
-        {id:"eh",he:"אבן העזר",  sections:secs(178,function(i){return "סימן "+toHN(i);},function(i){return "Shulchan_Arukh,_Even_HaEzer."+i;})},
-        {id:"cm",he:"חושן משפט", sections:secs(427,function(i){return "סימן "+toHN(i);},function(i){return "Shulchan_Arukh,_Choshen_Mishpat."+i;})}
+        {id:"oc",he:"אורח חיים", sections:secs(697,function(i){return "סימן "+toHN(i);},function(i){return "Shulchan_Arukh,_Orach_Chayim."+i;}), commentaries:saCms("oc")},
+        {id:"yd",he:"יורה דעה",  sections:secs(403,function(i){return "סימן "+toHN(i);},function(i){return "Shulchan_Arukh,_Yoreh_Deah."+i;}), commentaries:saCms("yd")},
+        {id:"eh",he:"אבן העזר",  sections:secs(178,function(i){return "סימן "+toHN(i);},function(i){return "Shulchan_Arukh,_Even_HaEzer."+i;}), commentaries:saCms("eh")},
+        {id:"cm",he:"חושן משפט", sections:secs(427,function(i){return "סימן "+toHN(i);},function(i){return "Shulchan_Arukh,_Choshen_Mishpat."+i;}), commentaries:saCms("cm")}
       ]},
     { id:"mishna-berura", he:"משנה ברורה", subtitle:"החפץ חיים — רבי ישראל מאיר הכהן",
       cat:"halakha", color:"#2563eb", icon:"📖",
-      credit:"הטקסט מ-Sefaria.org — נחלת הכלל",
+      credit:"הטקסט מ-Sefaria.org — נחלת הכלל · נושאי כלים, כף החיים/קול יעקב — Sefaria",
       creditUrl:"https://www.sefaria.org/Mishnah_Berurah",
       type:"flat",
-      sections:secs(697,function(i){return "סימן "+toHN(i);},function(i){return "Mishnah_Berurah."+i;})},
-    { id:"kaf-hachaim", he:"כף החיים", subtitle:"רבי יעקב חיים סופר",
-      cat:"halakha", color:"#0e7490", icon:"📘",
-      credit:"הטקסט מ-Sefaria.org — נחלת הכלל",
-      creditUrl:"https://www.sefaria.org/Kaf_HaChayim_on_Shulchan_Arukh,_Orach_Chayim",
-      type:"multi",
-      subBooks:[
-        {id:"oc",he:"אורח חיים", sections:secs(697,function(i){return "סימן "+toHN(i);},function(i){return "Kaf_HaChayim_on_Shulchan_Arukh,_Orach_Chayim."+i;})},
-        // כף החיים על יורה דעה קיים בסימנים א-קיט; הלכות סת"ם (ער ואילך) נמצאות
-        // בספר "קול יעקב" של אותו מחבר — לפי הכיסוי בפועל ב-Sefaria
-        {id:"yd",he:"יורה דעה", sections:(function(){
-          var out = [];
-          for (var n = 1; n <= 119; n++) out.push({ he: "סימן " + toHN(n), ref: "Kaf_HaChayim_on_Shulchan_Arukh,_Yoreh_De'ah." + n });
-          var ky = [270,271,272,273,274,275,276,277,278,279,280,281,288,290,291];
-          for (var k = 0; k < ky.length; k++) out.push({ he: "סימן " + toHN(ky[k]) + " (קול יעקב)", ref: "Kol_Yaakov,_Yoreh_De'ah." + ky[k] });
-          return out;
-        })()}
-      ]},
+      sections:secs(697,function(i){return "סימן "+toHN(i);},function(i){return "Mishnah_Berurah."+i;}),
+      // נושאי הכלים משובצים בבלוק השולחן ערוך שמעל המשנה ברורה (המ"ב עצמה היא גוף הטקסט)
+      commentaries:saCms("oc", ["mb"])},
     { id:"sefer-hamidot", he:"ספר המידות", subtitle:"רבי נחמן מברסלב",
       cat:"emunah", color:"#16a34a", icon:"🌿",
       credit:"הטקסט מ-Sefaria.org — נחלת הכלל",
@@ -22902,45 +23310,45 @@ function openSefarimNosafimPage(_pageMode) {
       creditUrl:"https://www.sefaria.org/Tanakh",
       type:"multi",
       subBooks:[
-        {id:"genesis",he:"בראשית",color:"#dc2626",commentaries:[{id:"rashi",he:"רש\"י",color:"#7c2d12",refPrefix:"Rashi on "}],sections:[{he:"בראשית",ref:"Genesis 1:1-6:8"},{he:"נח",ref:"Genesis 6:9-11:32"},{he:"לך לך",ref:"Genesis 12:1-17:27"},{he:"וירא",ref:"Genesis 18:1-22:24"},{he:"חיי שרה",ref:"Genesis 23:1-25:18"},{he:"תולדות",ref:"Genesis 25:19-28:9"},{he:"ויצא",ref:"Genesis 28:10-32:3"},{he:"וישלח",ref:"Genesis 32:4-36:43"},{he:"וישב",ref:"Genesis 37:1-40:23"},{he:"מקץ",ref:"Genesis 41:1-44:17"},{he:"ויגש",ref:"Genesis 44:18-47:27"},{he:"ויחי",ref:"Genesis 47:28-50:26"}]},
-        {id:"exodus",he:"שמות",color:"#ea580c",commentaries:[{id:"rashi",he:"רש\"י",color:"#7c2d12",refPrefix:"Rashi on "}],sections:[{he:"שמות",ref:"Exodus 1:1-6:1"},{he:"וארא",ref:"Exodus 6:2-9:35"},{he:"בא",ref:"Exodus 10:1-13:16"},{he:"בשלח",ref:"Exodus 13:17-17:16"},{he:"יתרו",ref:"Exodus 18:1-20:23"},{he:"משפטים",ref:"Exodus 21:1-24:18"},{he:"תרומה",ref:"Exodus 25:1-27:19"},{he:"תצוה",ref:"Exodus 27:20-30:10"},{he:"כי תשא",ref:"Exodus 30:11-34:35"},{he:"ויקהל",ref:"Exodus 35:1-38:20"},{he:"פקודי",ref:"Exodus 38:21-40:38"}]},
-        {id:"leviticus",he:"ויקרא",color:"#d97706",commentaries:[{id:"rashi",he:"רש\"י",color:"#7c2d12",refPrefix:"Rashi on "}],sections:[{he:"ויקרא",ref:"Leviticus 1:1-5:26"},{he:"צו",ref:"Leviticus 6:1-8:36"},{he:"שמיני",ref:"Leviticus 9:1-11:47"},{he:"תזריע",ref:"Leviticus 12:1-13:59"},{he:"מצורע",ref:"Leviticus 14:1-15:33"},{he:"אחרי מות",ref:"Leviticus 16:1-18:30"},{he:"קדושים",ref:"Leviticus 19:1-20:27"},{he:"אמור",ref:"Leviticus 21:1-24:23"},{he:"בהר",ref:"Leviticus 25:1-26:2"},{he:"בחוקתי",ref:"Leviticus 26:3-27:34"}]},
-        {id:"numbers",he:"במדבר",color:"#65a30d",commentaries:[{id:"rashi",he:"רש\"י",color:"#7c2d12",refPrefix:"Rashi on "}],sections:[{he:"במדבר",ref:"Numbers 1:1-4:20"},{he:"נשא",ref:"Numbers 4:21-7:89"},{he:"בהעלותך",ref:"Numbers 8:1-12:16"},{he:"שלח",ref:"Numbers 13:1-15:41"},{he:"קרח",ref:"Numbers 16:1-18:32"},{he:"חקת",ref:"Numbers 19:1-22:1"},{he:"בלק",ref:"Numbers 22:2-25:9"},{he:"פנחס",ref:"Numbers 25:10-30:1"},{he:"מטות",ref:"Numbers 30:2-32:42"},{he:"מסעי",ref:"Numbers 33:1-36:13"}]},
-        {id:"deuteronomy",he:"דברים",color:"#059669",commentaries:[{id:"rashi",he:"רש\"י",color:"#7c2d12",refPrefix:"Rashi on "}],sections:[{he:"דברים",ref:"Deuteronomy 1:1-3:22"},{he:"ואתחנן",ref:"Deuteronomy 3:23-7:11"},{he:"עקב",ref:"Deuteronomy 7:12-11:25"},{he:"ראה",ref:"Deuteronomy 11:26-16:17"},{he:"שופטים",ref:"Deuteronomy 16:18-21:9"},{he:"כי תצא",ref:"Deuteronomy 21:10-25:19"},{he:"כי תבוא",ref:"Deuteronomy 26:1-29:8"},{he:"נצבים",ref:"Deuteronomy 29:9-30:20"},{he:"וילך",ref:"Deuteronomy 31:1-30"},{he:"האזינו",ref:"Deuteronomy 32:1-52"},{he:"וזאת הברכה",ref:"Deuteronomy 33:1-34:12"}]},
-        {id:"joshua",he:"יהושע",color:"#0d9488",commentaries:[{id:"rashi",he:"רש\"י",color:"#7c2d12",refPrefix:"Rashi on "},{id:"metzudat-david",he:"מצודת דוד",color:"#1e40af",refPrefix:"Metzudat David on "}],sections:[{he:"פרק "+toHN(1)+" — יהושע",ref:"Joshua.1"},{he:"פרק "+toHN(2)+" — יהושע",ref:"Joshua.2"},{he:"פרק "+toHN(3)+" — יהושע",ref:"Joshua.3"},{he:"פרק "+toHN(4)+" — יהושע",ref:"Joshua.4"},{he:"פרק "+toHN(5)+" — יהושע",ref:"Joshua.5"},{he:"פרק "+toHN(6)+" — יהושע",ref:"Joshua.6"},{he:"פרק "+toHN(7)+" — יהושע",ref:"Joshua.7"},{he:"פרק "+toHN(8)+" — יהושע",ref:"Joshua.8"},{he:"פרק "+toHN(9)+" — יהושע",ref:"Joshua.9"},{he:"פרק "+toHN(10)+" — יהושע",ref:"Joshua.10"},{he:"פרק "+toHN(11)+" — יהושע",ref:"Joshua.11"},{he:"פרק "+toHN(12)+" — יהושע",ref:"Joshua.12"},{he:"פרק "+toHN(13)+" — יהושע",ref:"Joshua.13"},{he:"פרק "+toHN(14)+" — יהושע",ref:"Joshua.14"},{he:"פרק "+toHN(15)+" — יהושע",ref:"Joshua.15"},{he:"פרק "+toHN(16)+" — יהושע",ref:"Joshua.16"},{he:"פרק "+toHN(17)+" — יהושע",ref:"Joshua.17"},{he:"פרק "+toHN(18)+" — יהושע",ref:"Joshua.18"},{he:"פרק "+toHN(19)+" — יהושע",ref:"Joshua.19"},{he:"פרק "+toHN(20)+" — יהושע",ref:"Joshua.20"},{he:"פרק "+toHN(21)+" — יהושע",ref:"Joshua.21"},{he:"פרק "+toHN(22)+" — יהושע",ref:"Joshua.22"},{he:"פרק "+toHN(23)+" — יהושע",ref:"Joshua.23"},{he:"פרק "+toHN(24)+" — יהושע",ref:"Joshua.24"}]},
-        {id:"judges",he:"שופטים",color:"#0891b2",commentaries:[{id:"rashi",he:"רש\"י",color:"#7c2d12",refPrefix:"Rashi on "},{id:"metzudat-david",he:"מצודת דוד",color:"#1e40af",refPrefix:"Metzudat David on "}],sections:[{he:"פרק "+toHN(1)+" — שופטים",ref:"Judges.1"},{he:"פרק "+toHN(2)+" — שופטים",ref:"Judges.2"},{he:"פרק "+toHN(3)+" — שופטים",ref:"Judges.3"},{he:"פרק "+toHN(4)+" — שופטים",ref:"Judges.4"},{he:"פרק "+toHN(5)+" — שופטים",ref:"Judges.5"},{he:"פרק "+toHN(6)+" — שופטים",ref:"Judges.6"},{he:"פרק "+toHN(7)+" — שופטים",ref:"Judges.7"},{he:"פרק "+toHN(8)+" — שופטים",ref:"Judges.8"},{he:"פרק "+toHN(9)+" — שופטים",ref:"Judges.9"},{he:"פרק "+toHN(10)+" — שופטים",ref:"Judges.10"},{he:"פרק "+toHN(11)+" — שופטים",ref:"Judges.11"},{he:"פרק "+toHN(12)+" — שופטים",ref:"Judges.12"},{he:"פרק "+toHN(13)+" — שופטים",ref:"Judges.13"},{he:"פרק "+toHN(14)+" — שופטים",ref:"Judges.14"},{he:"פרק "+toHN(15)+" — שופטים",ref:"Judges.15"},{he:"פרק "+toHN(16)+" — שופטים",ref:"Judges.16"},{he:"פרק "+toHN(17)+" — שופטים",ref:"Judges.17"},{he:"פרק "+toHN(18)+" — שופטים",ref:"Judges.18"},{he:"פרק "+toHN(19)+" — שופטים",ref:"Judges.19"},{he:"פרק "+toHN(20)+" — שופטים",ref:"Judges.20"},{he:"פרק "+toHN(21)+" — שופטים",ref:"Judges.21"}]},
-        {id:"i-samuel",he:"שמואל א",color:"#0284c7",commentaries:[{id:"rashi",he:"רש\"י",color:"#7c2d12",refPrefix:"Rashi on "},{id:"metzudat-david",he:"מצודת דוד",color:"#1e40af",refPrefix:"Metzudat David on "}],sections:[{he:"פרק "+toHN(1)+" — שמואל א",ref:"I_Samuel.1"},{he:"פרק "+toHN(2)+" — שמואל א",ref:"I_Samuel.2"},{he:"פרק "+toHN(3)+" — שמואל א",ref:"I_Samuel.3"},{he:"פרק "+toHN(4)+" — שמואל א",ref:"I_Samuel.4"},{he:"פרק "+toHN(5)+" — שמואל א",ref:"I_Samuel.5"},{he:"פרק "+toHN(6)+" — שמואל א",ref:"I_Samuel.6"},{he:"פרק "+toHN(7)+" — שמואל א",ref:"I_Samuel.7"},{he:"פרק "+toHN(8)+" — שמואל א",ref:"I_Samuel.8"},{he:"פרק "+toHN(9)+" — שמואל א",ref:"I_Samuel.9"},{he:"פרק "+toHN(10)+" — שמואל א",ref:"I_Samuel.10"},{he:"פרק "+toHN(11)+" — שמואל א",ref:"I_Samuel.11"},{he:"פרק "+toHN(12)+" — שמואל א",ref:"I_Samuel.12"},{he:"פרק "+toHN(13)+" — שמואל א",ref:"I_Samuel.13"},{he:"פרק "+toHN(14)+" — שמואל א",ref:"I_Samuel.14"},{he:"פרק "+toHN(15)+" — שמואל א",ref:"I_Samuel.15"},{he:"פרק "+toHN(16)+" — שמואל א",ref:"I_Samuel.16"},{he:"פרק "+toHN(17)+" — שמואל א",ref:"I_Samuel.17"},{he:"פרק "+toHN(18)+" — שמואל א",ref:"I_Samuel.18"},{he:"פרק "+toHN(19)+" — שמואל א",ref:"I_Samuel.19"},{he:"פרק "+toHN(20)+" — שמואל א",ref:"I_Samuel.20"},{he:"פרק "+toHN(21)+" — שמואל א",ref:"I_Samuel.21"},{he:"פרק "+toHN(22)+" — שמואל א",ref:"I_Samuel.22"},{he:"פרק "+toHN(23)+" — שמואל א",ref:"I_Samuel.23"},{he:"פרק "+toHN(24)+" — שמואל א",ref:"I_Samuel.24"},{he:"פרק "+toHN(25)+" — שמואל א",ref:"I_Samuel.25"},{he:"פרק "+toHN(26)+" — שמואל א",ref:"I_Samuel.26"},{he:"פרק "+toHN(27)+" — שמואל א",ref:"I_Samuel.27"},{he:"פרק "+toHN(28)+" — שמואל א",ref:"I_Samuel.28"},{he:"פרק "+toHN(29)+" — שמואל א",ref:"I_Samuel.29"},{he:"פרק "+toHN(30)+" — שמואל א",ref:"I_Samuel.30"},{he:"פרק "+toHN(31)+" — שמואל א",ref:"I_Samuel.31"}]},
-        {id:"ii-samuel",he:"שמואל ב",color:"#2563eb",commentaries:[{id:"rashi",he:"רש\"י",color:"#7c2d12",refPrefix:"Rashi on "},{id:"metzudat-david",he:"מצודת דוד",color:"#1e40af",refPrefix:"Metzudat David on "}],sections:[{he:"פרק "+toHN(1)+" — שמואל ב",ref:"II_Samuel.1"},{he:"פרק "+toHN(2)+" — שמואל ב",ref:"II_Samuel.2"},{he:"פרק "+toHN(3)+" — שמואל ב",ref:"II_Samuel.3"},{he:"פרק "+toHN(4)+" — שמואל ב",ref:"II_Samuel.4"},{he:"פרק "+toHN(5)+" — שמואל ב",ref:"II_Samuel.5"},{he:"פרק "+toHN(6)+" — שמואל ב",ref:"II_Samuel.6"},{he:"פרק "+toHN(7)+" — שמואל ב",ref:"II_Samuel.7"},{he:"פרק "+toHN(8)+" — שמואל ב",ref:"II_Samuel.8"},{he:"פרק "+toHN(9)+" — שמואל ב",ref:"II_Samuel.9"},{he:"פרק "+toHN(10)+" — שמואל ב",ref:"II_Samuel.10"},{he:"פרק "+toHN(11)+" — שמואל ב",ref:"II_Samuel.11"},{he:"פרק "+toHN(12)+" — שמואל ב",ref:"II_Samuel.12"},{he:"פרק "+toHN(13)+" — שמואל ב",ref:"II_Samuel.13"},{he:"פרק "+toHN(14)+" — שמואל ב",ref:"II_Samuel.14"},{he:"פרק "+toHN(15)+" — שמואל ב",ref:"II_Samuel.15"},{he:"פרק "+toHN(16)+" — שמואל ב",ref:"II_Samuel.16"},{he:"פרק "+toHN(17)+" — שמואל ב",ref:"II_Samuel.17"},{he:"פרק "+toHN(18)+" — שמואל ב",ref:"II_Samuel.18"},{he:"פרק "+toHN(19)+" — שמואל ב",ref:"II_Samuel.19"},{he:"פרק "+toHN(20)+" — שמואל ב",ref:"II_Samuel.20"},{he:"פרק "+toHN(21)+" — שמואל ב",ref:"II_Samuel.21"},{he:"פרק "+toHN(22)+" — שמואל ב",ref:"II_Samuel.22"},{he:"פרק "+toHN(23)+" — שמואל ב",ref:"II_Samuel.23"},{he:"פרק "+toHN(24)+" — שמואל ב",ref:"II_Samuel.24"}]},
-        {id:"i-kings",he:"מלכים א",color:"#4f46e5",commentaries:[{id:"rashi",he:"רש\"י",color:"#7c2d12",refPrefix:"Rashi on "},{id:"metzudat-david",he:"מצודת דוד",color:"#1e40af",refPrefix:"Metzudat David on "}],sections:[{he:"פרק "+toHN(1)+" — מלכים א",ref:"I_Kings.1"},{he:"פרק "+toHN(2)+" — מלכים א",ref:"I_Kings.2"},{he:"פרק "+toHN(3)+" — מלכים א",ref:"I_Kings.3"},{he:"פרק "+toHN(4)+" — מלכים א",ref:"I_Kings.4"},{he:"פרק "+toHN(5)+" — מלכים א",ref:"I_Kings.5"},{he:"פרק "+toHN(6)+" — מלכים א",ref:"I_Kings.6"},{he:"פרק "+toHN(7)+" — מלכים א",ref:"I_Kings.7"},{he:"פרק "+toHN(8)+" — מלכים א",ref:"I_Kings.8"},{he:"פרק "+toHN(9)+" — מלכים א",ref:"I_Kings.9"},{he:"פרק "+toHN(10)+" — מלכים א",ref:"I_Kings.10"},{he:"פרק "+toHN(11)+" — מלכים א",ref:"I_Kings.11"},{he:"פרק "+toHN(12)+" — מלכים א",ref:"I_Kings.12"},{he:"פרק "+toHN(13)+" — מלכים א",ref:"I_Kings.13"},{he:"פרק "+toHN(14)+" — מלכים א",ref:"I_Kings.14"},{he:"פרק "+toHN(15)+" — מלכים א",ref:"I_Kings.15"},{he:"פרק "+toHN(16)+" — מלכים א",ref:"I_Kings.16"},{he:"פרק "+toHN(17)+" — מלכים א",ref:"I_Kings.17"},{he:"פרק "+toHN(18)+" — מלכים א",ref:"I_Kings.18"},{he:"פרק "+toHN(19)+" — מלכים א",ref:"I_Kings.19"},{he:"פרק "+toHN(20)+" — מלכים א",ref:"I_Kings.20"},{he:"פרק "+toHN(21)+" — מלכים א",ref:"I_Kings.21"},{he:"פרק "+toHN(22)+" — מלכים א",ref:"I_Kings.22"}]},
-        {id:"ii-kings",he:"מלכים ב",color:"#7c3aed",commentaries:[{id:"rashi",he:"רש\"י",color:"#7c2d12",refPrefix:"Rashi on "},{id:"metzudat-david",he:"מצודת דוד",color:"#1e40af",refPrefix:"Metzudat David on "}],sections:[{he:"פרק "+toHN(1)+" — מלכים ב",ref:"II_Kings.1"},{he:"פרק "+toHN(2)+" — מלכים ב",ref:"II_Kings.2"},{he:"פרק "+toHN(3)+" — מלכים ב",ref:"II_Kings.3"},{he:"פרק "+toHN(4)+" — מלכים ב",ref:"II_Kings.4"},{he:"פרק "+toHN(5)+" — מלכים ב",ref:"II_Kings.5"},{he:"פרק "+toHN(6)+" — מלכים ב",ref:"II_Kings.6"},{he:"פרק "+toHN(7)+" — מלכים ב",ref:"II_Kings.7"},{he:"פרק "+toHN(8)+" — מלכים ב",ref:"II_Kings.8"},{he:"פרק "+toHN(9)+" — מלכים ב",ref:"II_Kings.9"},{he:"פרק "+toHN(10)+" — מלכים ב",ref:"II_Kings.10"},{he:"פרק "+toHN(11)+" — מלכים ב",ref:"II_Kings.11"},{he:"פרק "+toHN(12)+" — מלכים ב",ref:"II_Kings.12"},{he:"פרק "+toHN(13)+" — מלכים ב",ref:"II_Kings.13"},{he:"פרק "+toHN(14)+" — מלכים ב",ref:"II_Kings.14"},{he:"פרק "+toHN(15)+" — מלכים ב",ref:"II_Kings.15"},{he:"פרק "+toHN(16)+" — מלכים ב",ref:"II_Kings.16"},{he:"פרק "+toHN(17)+" — מלכים ב",ref:"II_Kings.17"},{he:"פרק "+toHN(18)+" — מלכים ב",ref:"II_Kings.18"},{he:"פרק "+toHN(19)+" — מלכים ב",ref:"II_Kings.19"},{he:"פרק "+toHN(20)+" — מלכים ב",ref:"II_Kings.20"},{he:"פרק "+toHN(21)+" — מלכים ב",ref:"II_Kings.21"},{he:"פרק "+toHN(22)+" — מלכים ב",ref:"II_Kings.22"},{he:"פרק "+toHN(23)+" — מלכים ב",ref:"II_Kings.23"},{he:"פרק "+toHN(24)+" — מלכים ב",ref:"II_Kings.24"},{he:"פרק "+toHN(25)+" — מלכים ב",ref:"II_Kings.25"}]},
-        {id:"isaiah",he:"ישעיהו",color:"#9333ea",commentaries:[{id:"rashi",he:"רש\"י",color:"#7c2d12",refPrefix:"Rashi on "},{id:"metzudat-david",he:"מצודת דוד",color:"#1e40af",refPrefix:"Metzudat David on "}],sections:[{he:"פרק "+toHN(1)+" — ישעיהו",ref:"Isaiah.1"},{he:"פרק "+toHN(2)+" — ישעיהו",ref:"Isaiah.2"},{he:"פרק "+toHN(3)+" — ישעיהו",ref:"Isaiah.3"},{he:"פרק "+toHN(4)+" — ישעיהו",ref:"Isaiah.4"},{he:"פרק "+toHN(5)+" — ישעיהו",ref:"Isaiah.5"},{he:"פרק "+toHN(6)+" — ישעיהו",ref:"Isaiah.6"},{he:"פרק "+toHN(7)+" — ישעיהו",ref:"Isaiah.7"},{he:"פרק "+toHN(8)+" — ישעיהו",ref:"Isaiah.8"},{he:"פרק "+toHN(9)+" — ישעיהו",ref:"Isaiah.9"},{he:"פרק "+toHN(10)+" — ישעיהו",ref:"Isaiah.10"},{he:"פרק "+toHN(11)+" — ישעיהו",ref:"Isaiah.11"},{he:"פרק "+toHN(12)+" — ישעיהו",ref:"Isaiah.12"},{he:"פרק "+toHN(13)+" — ישעיהו",ref:"Isaiah.13"},{he:"פרק "+toHN(14)+" — ישעיהו",ref:"Isaiah.14"},{he:"פרק "+toHN(15)+" — ישעיהו",ref:"Isaiah.15"},{he:"פרק "+toHN(16)+" — ישעיהו",ref:"Isaiah.16"},{he:"פרק "+toHN(17)+" — ישעיהו",ref:"Isaiah.17"},{he:"פרק "+toHN(18)+" — ישעיהו",ref:"Isaiah.18"},{he:"פרק "+toHN(19)+" — ישעיהו",ref:"Isaiah.19"},{he:"פרק "+toHN(20)+" — ישעיהו",ref:"Isaiah.20"},{he:"פרק "+toHN(21)+" — ישעיהו",ref:"Isaiah.21"},{he:"פרק "+toHN(22)+" — ישעיהו",ref:"Isaiah.22"},{he:"פרק "+toHN(23)+" — ישעיהו",ref:"Isaiah.23"},{he:"פרק "+toHN(24)+" — ישעיהו",ref:"Isaiah.24"},{he:"פרק "+toHN(25)+" — ישעיהו",ref:"Isaiah.25"},{he:"פרק "+toHN(26)+" — ישעיהו",ref:"Isaiah.26"},{he:"פרק "+toHN(27)+" — ישעיהו",ref:"Isaiah.27"},{he:"פרק "+toHN(28)+" — ישעיהו",ref:"Isaiah.28"},{he:"פרק "+toHN(29)+" — ישעיהו",ref:"Isaiah.29"},{he:"פרק "+toHN(30)+" — ישעיהו",ref:"Isaiah.30"},{he:"פרק "+toHN(31)+" — ישעיהו",ref:"Isaiah.31"},{he:"פרק "+toHN(32)+" — ישעיהו",ref:"Isaiah.32"},{he:"פרק "+toHN(33)+" — ישעיהו",ref:"Isaiah.33"},{he:"פרק "+toHN(34)+" — ישעיהו",ref:"Isaiah.34"},{he:"פרק "+toHN(35)+" — ישעיהו",ref:"Isaiah.35"},{he:"פרק "+toHN(36)+" — ישעיהו",ref:"Isaiah.36"},{he:"פרק "+toHN(37)+" — ישעיהו",ref:"Isaiah.37"},{he:"פרק "+toHN(38)+" — ישעיהו",ref:"Isaiah.38"},{he:"פרק "+toHN(39)+" — ישעיהו",ref:"Isaiah.39"},{he:"פרק "+toHN(40)+" — ישעיהו",ref:"Isaiah.40"},{he:"פרק "+toHN(41)+" — ישעיהו",ref:"Isaiah.41"},{he:"פרק "+toHN(42)+" — ישעיהו",ref:"Isaiah.42"},{he:"פרק "+toHN(43)+" — ישעיהו",ref:"Isaiah.43"},{he:"פרק "+toHN(44)+" — ישעיהו",ref:"Isaiah.44"},{he:"פרק "+toHN(45)+" — ישעיהו",ref:"Isaiah.45"},{he:"פרק "+toHN(46)+" — ישעיהו",ref:"Isaiah.46"},{he:"פרק "+toHN(47)+" — ישעיהו",ref:"Isaiah.47"},{he:"פרק "+toHN(48)+" — ישעיהו",ref:"Isaiah.48"},{he:"פרק "+toHN(49)+" — ישעיהו",ref:"Isaiah.49"},{he:"פרק "+toHN(50)+" — ישעיהו",ref:"Isaiah.50"},{he:"פרק "+toHN(51)+" — ישעיהו",ref:"Isaiah.51"},{he:"פרק "+toHN(52)+" — ישעיהו",ref:"Isaiah.52"},{he:"פרק "+toHN(53)+" — ישעיהו",ref:"Isaiah.53"},{he:"פרק "+toHN(54)+" — ישעיהו",ref:"Isaiah.54"},{he:"פרק "+toHN(55)+" — ישעיהו",ref:"Isaiah.55"},{he:"פרק "+toHN(56)+" — ישעיהו",ref:"Isaiah.56"},{he:"פרק "+toHN(57)+" — ישעיהו",ref:"Isaiah.57"},{he:"פרק "+toHN(58)+" — ישעיהו",ref:"Isaiah.58"},{he:"פרק "+toHN(59)+" — ישעיהו",ref:"Isaiah.59"},{he:"פרק "+toHN(60)+" — ישעיהו",ref:"Isaiah.60"},{he:"פרק "+toHN(61)+" — ישעיהו",ref:"Isaiah.61"},{he:"פרק "+toHN(62)+" — ישעיהו",ref:"Isaiah.62"},{he:"פרק "+toHN(63)+" — ישעיהו",ref:"Isaiah.63"},{he:"פרק "+toHN(64)+" — ישעיהו",ref:"Isaiah.64"},{he:"פרק "+toHN(65)+" — ישעיהו",ref:"Isaiah.65"},{he:"פרק "+toHN(66)+" — ישעיהו",ref:"Isaiah.66"}]},
-        {id:"jeremiah",he:"ירמיהו",color:"#a21caf",commentaries:[{id:"rashi",he:"רש\"י",color:"#7c2d12",refPrefix:"Rashi on "},{id:"metzudat-david",he:"מצודת דוד",color:"#1e40af",refPrefix:"Metzudat David on "}],sections:[{he:"פרק "+toHN(1)+" — ירמיהו",ref:"Jeremiah.1"},{he:"פרק "+toHN(2)+" — ירמיהו",ref:"Jeremiah.2"},{he:"פרק "+toHN(3)+" — ירמיהו",ref:"Jeremiah.3"},{he:"פרק "+toHN(4)+" — ירמיהו",ref:"Jeremiah.4"},{he:"פרק "+toHN(5)+" — ירמיהו",ref:"Jeremiah.5"},{he:"פרק "+toHN(6)+" — ירמיהו",ref:"Jeremiah.6"},{he:"פרק "+toHN(7)+" — ירמיהו",ref:"Jeremiah.7"},{he:"פרק "+toHN(8)+" — ירמיהו",ref:"Jeremiah.8"},{he:"פרק "+toHN(9)+" — ירמיהו",ref:"Jeremiah.9"},{he:"פרק "+toHN(10)+" — ירמיהו",ref:"Jeremiah.10"},{he:"פרק "+toHN(11)+" — ירמיהו",ref:"Jeremiah.11"},{he:"פרק "+toHN(12)+" — ירמיהו",ref:"Jeremiah.12"},{he:"פרק "+toHN(13)+" — ירמיהו",ref:"Jeremiah.13"},{he:"פרק "+toHN(14)+" — ירמיהו",ref:"Jeremiah.14"},{he:"פרק "+toHN(15)+" — ירמיהו",ref:"Jeremiah.15"},{he:"פרק "+toHN(16)+" — ירמיהו",ref:"Jeremiah.16"},{he:"פרק "+toHN(17)+" — ירמיהו",ref:"Jeremiah.17"},{he:"פרק "+toHN(18)+" — ירמיהו",ref:"Jeremiah.18"},{he:"פרק "+toHN(19)+" — ירמיהו",ref:"Jeremiah.19"},{he:"פרק "+toHN(20)+" — ירמיהו",ref:"Jeremiah.20"},{he:"פרק "+toHN(21)+" — ירמיהו",ref:"Jeremiah.21"},{he:"פרק "+toHN(22)+" — ירמיהו",ref:"Jeremiah.22"},{he:"פרק "+toHN(23)+" — ירמיהו",ref:"Jeremiah.23"},{he:"פרק "+toHN(24)+" — ירמיהו",ref:"Jeremiah.24"},{he:"פרק "+toHN(25)+" — ירמיהו",ref:"Jeremiah.25"},{he:"פרק "+toHN(26)+" — ירמיהו",ref:"Jeremiah.26"},{he:"פרק "+toHN(27)+" — ירמיהו",ref:"Jeremiah.27"},{he:"פרק "+toHN(28)+" — ירמיהו",ref:"Jeremiah.28"},{he:"פרק "+toHN(29)+" — ירמיהו",ref:"Jeremiah.29"},{he:"פרק "+toHN(30)+" — ירמיהו",ref:"Jeremiah.30"},{he:"פרק "+toHN(31)+" — ירמיהו",ref:"Jeremiah.31"},{he:"פרק "+toHN(32)+" — ירמיהו",ref:"Jeremiah.32"},{he:"פרק "+toHN(33)+" — ירמיהו",ref:"Jeremiah.33"},{he:"פרק "+toHN(34)+" — ירמיהו",ref:"Jeremiah.34"},{he:"פרק "+toHN(35)+" — ירמיהו",ref:"Jeremiah.35"},{he:"פרק "+toHN(36)+" — ירמיהו",ref:"Jeremiah.36"},{he:"פרק "+toHN(37)+" — ירמיהו",ref:"Jeremiah.37"},{he:"פרק "+toHN(38)+" — ירמיהו",ref:"Jeremiah.38"},{he:"פרק "+toHN(39)+" — ירמיהו",ref:"Jeremiah.39"},{he:"פרק "+toHN(40)+" — ירמיהו",ref:"Jeremiah.40"},{he:"פרק "+toHN(41)+" — ירמיהו",ref:"Jeremiah.41"},{he:"פרק "+toHN(42)+" — ירמיהו",ref:"Jeremiah.42"},{he:"פרק "+toHN(43)+" — ירמיהו",ref:"Jeremiah.43"},{he:"פרק "+toHN(44)+" — ירמיהו",ref:"Jeremiah.44"},{he:"פרק "+toHN(45)+" — ירמיהו",ref:"Jeremiah.45"},{he:"פרק "+toHN(46)+" — ירמיהו",ref:"Jeremiah.46"},{he:"פרק "+toHN(47)+" — ירמיהו",ref:"Jeremiah.47"},{he:"פרק "+toHN(48)+" — ירמיהו",ref:"Jeremiah.48"},{he:"פרק "+toHN(49)+" — ירמיהו",ref:"Jeremiah.49"},{he:"פרק "+toHN(50)+" — ירמיהו",ref:"Jeremiah.50"},{he:"פרק "+toHN(51)+" — ירמיהו",ref:"Jeremiah.51"},{he:"פרק "+toHN(52)+" — ירמיהו",ref:"Jeremiah.52"}]},
-        {id:"ezekiel",he:"יחזקאל",color:"#c026d3",commentaries:[{id:"rashi",he:"רש\"י",color:"#7c2d12",refPrefix:"Rashi on "},{id:"metzudat-david",he:"מצודת דוד",color:"#1e40af",refPrefix:"Metzudat David on "}],sections:[{he:"פרק "+toHN(1)+" — יחזקאל",ref:"Ezekiel.1"},{he:"פרק "+toHN(2)+" — יחזקאל",ref:"Ezekiel.2"},{he:"פרק "+toHN(3)+" — יחזקאל",ref:"Ezekiel.3"},{he:"פרק "+toHN(4)+" — יחזקאל",ref:"Ezekiel.4"},{he:"פרק "+toHN(5)+" — יחזקאל",ref:"Ezekiel.5"},{he:"פרק "+toHN(6)+" — יחזקאל",ref:"Ezekiel.6"},{he:"פרק "+toHN(7)+" — יחזקאל",ref:"Ezekiel.7"},{he:"פרק "+toHN(8)+" — יחזקאל",ref:"Ezekiel.8"},{he:"פרק "+toHN(9)+" — יחזקאל",ref:"Ezekiel.9"},{he:"פרק "+toHN(10)+" — יחזקאל",ref:"Ezekiel.10"},{he:"פרק "+toHN(11)+" — יחזקאל",ref:"Ezekiel.11"},{he:"פרק "+toHN(12)+" — יחזקאל",ref:"Ezekiel.12"},{he:"פרק "+toHN(13)+" — יחזקאל",ref:"Ezekiel.13"},{he:"פרק "+toHN(14)+" — יחזקאל",ref:"Ezekiel.14"},{he:"פרק "+toHN(15)+" — יחזקאל",ref:"Ezekiel.15"},{he:"פרק "+toHN(16)+" — יחזקאל",ref:"Ezekiel.16"},{he:"פרק "+toHN(17)+" — יחזקאל",ref:"Ezekiel.17"},{he:"פרק "+toHN(18)+" — יחזקאל",ref:"Ezekiel.18"},{he:"פרק "+toHN(19)+" — יחזקאל",ref:"Ezekiel.19"},{he:"פרק "+toHN(20)+" — יחזקאל",ref:"Ezekiel.20"},{he:"פרק "+toHN(21)+" — יחזקאל",ref:"Ezekiel.21"},{he:"פרק "+toHN(22)+" — יחזקאל",ref:"Ezekiel.22"},{he:"פרק "+toHN(23)+" — יחזקאל",ref:"Ezekiel.23"},{he:"פרק "+toHN(24)+" — יחזקאל",ref:"Ezekiel.24"},{he:"פרק "+toHN(25)+" — יחזקאל",ref:"Ezekiel.25"},{he:"פרק "+toHN(26)+" — יחזקאל",ref:"Ezekiel.26"},{he:"פרק "+toHN(27)+" — יחזקאל",ref:"Ezekiel.27"},{he:"פרק "+toHN(28)+" — יחזקאל",ref:"Ezekiel.28"},{he:"פרק "+toHN(29)+" — יחזקאל",ref:"Ezekiel.29"},{he:"פרק "+toHN(30)+" — יחזקאל",ref:"Ezekiel.30"},{he:"פרק "+toHN(31)+" — יחזקאל",ref:"Ezekiel.31"},{he:"פרק "+toHN(32)+" — יחזקאל",ref:"Ezekiel.32"},{he:"פרק "+toHN(33)+" — יחזקאל",ref:"Ezekiel.33"},{he:"פרק "+toHN(34)+" — יחזקאל",ref:"Ezekiel.34"},{he:"פרק "+toHN(35)+" — יחזקאל",ref:"Ezekiel.35"},{he:"פרק "+toHN(36)+" — יחזקאל",ref:"Ezekiel.36"},{he:"פרק "+toHN(37)+" — יחזקאל",ref:"Ezekiel.37"},{he:"פרק "+toHN(38)+" — יחזקאל",ref:"Ezekiel.38"},{he:"פרק "+toHN(39)+" — יחזקאל",ref:"Ezekiel.39"},{he:"פרק "+toHN(40)+" — יחזקאל",ref:"Ezekiel.40"},{he:"פרק "+toHN(41)+" — יחזקאל",ref:"Ezekiel.41"},{he:"פרק "+toHN(42)+" — יחזקאל",ref:"Ezekiel.42"},{he:"פרק "+toHN(43)+" — יחזקאל",ref:"Ezekiel.43"},{he:"פרק "+toHN(44)+" — יחזקאל",ref:"Ezekiel.44"},{he:"פרק "+toHN(45)+" — יחזקאל",ref:"Ezekiel.45"},{he:"פרק "+toHN(46)+" — יחזקאל",ref:"Ezekiel.46"},{he:"פרק "+toHN(47)+" — יחזקאל",ref:"Ezekiel.47"},{he:"פרק "+toHN(48)+" — יחזקאל",ref:"Ezekiel.48"}]},
-        {id:"hosea",he:"הושע",color:"#db2777",commentaries:[{id:"rashi",he:"רש\"י",color:"#7c2d12",refPrefix:"Rashi on "},{id:"metzudat-david",he:"מצודת דוד",color:"#1e40af",refPrefix:"Metzudat David on "}],sections:[{he:"פרק "+toHN(1)+" — הושע",ref:"Hosea.1"},{he:"פרק "+toHN(2)+" — הושע",ref:"Hosea.2"},{he:"פרק "+toHN(3)+" — הושע",ref:"Hosea.3"},{he:"פרק "+toHN(4)+" — הושע",ref:"Hosea.4"},{he:"פרק "+toHN(5)+" — הושע",ref:"Hosea.5"},{he:"פרק "+toHN(6)+" — הושע",ref:"Hosea.6"},{he:"פרק "+toHN(7)+" — הושע",ref:"Hosea.7"},{he:"פרק "+toHN(8)+" — הושע",ref:"Hosea.8"},{he:"פרק "+toHN(9)+" — הושע",ref:"Hosea.9"},{he:"פרק "+toHN(10)+" — הושע",ref:"Hosea.10"},{he:"פרק "+toHN(11)+" — הושע",ref:"Hosea.11"},{he:"פרק "+toHN(12)+" — הושע",ref:"Hosea.12"},{he:"פרק "+toHN(13)+" — הושע",ref:"Hosea.13"},{he:"פרק "+toHN(14)+" — הושע",ref:"Hosea.14"}]},
-        {id:"joel",he:"יואל",color:"#e11d48",commentaries:[{id:"rashi",he:"רש\"י",color:"#7c2d12",refPrefix:"Rashi on "},{id:"metzudat-david",he:"מצודת דוד",color:"#1e40af",refPrefix:"Metzudat David on "}],sections:[{he:"פרק "+toHN(1)+" — יואל",ref:"Joel.1"},{he:"פרק "+toHN(2)+" — יואל",ref:"Joel.2"},{he:"פרק "+toHN(3)+" — יואל",ref:"Joel.3"},{he:"פרק "+toHN(4)+" — יואל",ref:"Joel.4"}]},
-        {id:"amos",he:"עמוס",color:"#dc2626",commentaries:[{id:"rashi",he:"רש\"י",color:"#7c2d12",refPrefix:"Rashi on "},{id:"metzudat-david",he:"מצודת דוד",color:"#1e40af",refPrefix:"Metzudat David on "}],sections:[{he:"פרק "+toHN(1)+" — עמוס",ref:"Amos.1"},{he:"פרק "+toHN(2)+" — עמוס",ref:"Amos.2"},{he:"פרק "+toHN(3)+" — עמוס",ref:"Amos.3"},{he:"פרק "+toHN(4)+" — עמוס",ref:"Amos.4"},{he:"פרק "+toHN(5)+" — עמוס",ref:"Amos.5"},{he:"פרק "+toHN(6)+" — עמוס",ref:"Amos.6"},{he:"פרק "+toHN(7)+" — עמוס",ref:"Amos.7"},{he:"פרק "+toHN(8)+" — עמוס",ref:"Amos.8"},{he:"פרק "+toHN(9)+" — עמוס",ref:"Amos.9"}]},
-        {id:"obadiah",he:"עובדיה",color:"#ea580c",commentaries:[{id:"rashi",he:"רש\"י",color:"#7c2d12",refPrefix:"Rashi on "},{id:"metzudat-david",he:"מצודת דוד",color:"#1e40af",refPrefix:"Metzudat David on "}],sections:[{he:"פרק "+toHN(1)+" — עובדיה",ref:"Obadiah.1"}]},
-        {id:"jonah",he:"יונה",color:"#d97706",commentaries:[{id:"rashi",he:"רש\"י",color:"#7c2d12",refPrefix:"Rashi on "},{id:"metzudat-david",he:"מצודת דוד",color:"#1e40af",refPrefix:"Metzudat David on "}],sections:[{he:"פרק "+toHN(1)+" — יונה",ref:"Jonah.1"},{he:"פרק "+toHN(2)+" — יונה",ref:"Jonah.2"},{he:"פרק "+toHN(3)+" — יונה",ref:"Jonah.3"},{he:"פרק "+toHN(4)+" — יונה",ref:"Jonah.4"}]},
-        {id:"micah",he:"מיכה",color:"#65a30d",commentaries:[{id:"rashi",he:"רש\"י",color:"#7c2d12",refPrefix:"Rashi on "},{id:"metzudat-david",he:"מצודת דוד",color:"#1e40af",refPrefix:"Metzudat David on "}],sections:[{he:"פרק "+toHN(1)+" — מיכה",ref:"Micah.1"},{he:"פרק "+toHN(2)+" — מיכה",ref:"Micah.2"},{he:"פרק "+toHN(3)+" — מיכה",ref:"Micah.3"},{he:"פרק "+toHN(4)+" — מיכה",ref:"Micah.4"},{he:"פרק "+toHN(5)+" — מיכה",ref:"Micah.5"},{he:"פרק "+toHN(6)+" — מיכה",ref:"Micah.6"},{he:"פרק "+toHN(7)+" — מיכה",ref:"Micah.7"}]},
-        {id:"nahum",he:"נחום",color:"#059669",commentaries:[{id:"rashi",he:"רש\"י",color:"#7c2d12",refPrefix:"Rashi on "},{id:"metzudat-david",he:"מצודת דוד",color:"#1e40af",refPrefix:"Metzudat David on "}],sections:[{he:"פרק "+toHN(1)+" — נחום",ref:"Nahum.1"},{he:"פרק "+toHN(2)+" — נחום",ref:"Nahum.2"},{he:"פרק "+toHN(3)+" — נחום",ref:"Nahum.3"}]},
-        {id:"habakkuk",he:"חבקוק",color:"#0d9488",commentaries:[{id:"rashi",he:"רש\"י",color:"#7c2d12",refPrefix:"Rashi on "},{id:"metzudat-david",he:"מצודת דוד",color:"#1e40af",refPrefix:"Metzudat David on "}],sections:[{he:"פרק "+toHN(1)+" — חבקוק",ref:"Habakkuk.1"},{he:"פרק "+toHN(2)+" — חבקוק",ref:"Habakkuk.2"},{he:"פרק "+toHN(3)+" — חבקוק",ref:"Habakkuk.3"}]},
-        {id:"zephaniah",he:"צפניה",color:"#0891b2",commentaries:[{id:"rashi",he:"רש\"י",color:"#7c2d12",refPrefix:"Rashi on "},{id:"metzudat-david",he:"מצודת דוד",color:"#1e40af",refPrefix:"Metzudat David on "}],sections:[{he:"פרק "+toHN(1)+" — צפניה",ref:"Zephaniah.1"},{he:"פרק "+toHN(2)+" — צפניה",ref:"Zephaniah.2"},{he:"פרק "+toHN(3)+" — צפניה",ref:"Zephaniah.3"}]},
-        {id:"haggai",he:"חגי",color:"#0284c7",commentaries:[{id:"rashi",he:"רש\"י",color:"#7c2d12",refPrefix:"Rashi on "},{id:"metzudat-david",he:"מצודת דוד",color:"#1e40af",refPrefix:"Metzudat David on "}],sections:[{he:"פרק "+toHN(1)+" — חגי",ref:"Haggai.1"},{he:"פרק "+toHN(2)+" — חגי",ref:"Haggai.2"}]},
-        {id:"zechariah",he:"זכריה",color:"#2563eb",commentaries:[{id:"rashi",he:"רש\"י",color:"#7c2d12",refPrefix:"Rashi on "},{id:"metzudat-david",he:"מצודת דוד",color:"#1e40af",refPrefix:"Metzudat David on "}],sections:[{he:"פרק "+toHN(1)+" — זכריה",ref:"Zechariah.1"},{he:"פרק "+toHN(2)+" — זכריה",ref:"Zechariah.2"},{he:"פרק "+toHN(3)+" — זכריה",ref:"Zechariah.3"},{he:"פרק "+toHN(4)+" — זכריה",ref:"Zechariah.4"},{he:"פרק "+toHN(5)+" — זכריה",ref:"Zechariah.5"},{he:"פרק "+toHN(6)+" — זכריה",ref:"Zechariah.6"},{he:"פרק "+toHN(7)+" — זכריה",ref:"Zechariah.7"},{he:"פרק "+toHN(8)+" — זכריה",ref:"Zechariah.8"},{he:"פרק "+toHN(9)+" — זכריה",ref:"Zechariah.9"},{he:"פרק "+toHN(10)+" — זכריה",ref:"Zechariah.10"},{he:"פרק "+toHN(11)+" — זכריה",ref:"Zechariah.11"},{he:"פרק "+toHN(12)+" — זכריה",ref:"Zechariah.12"},{he:"פרק "+toHN(13)+" — זכריה",ref:"Zechariah.13"},{he:"פרק "+toHN(14)+" — זכריה",ref:"Zechariah.14"}]},
-        {id:"malachi",he:"מלאכי",color:"#4f46e5",commentaries:[{id:"rashi",he:"רש\"י",color:"#7c2d12",refPrefix:"Rashi on "},{id:"metzudat-david",he:"מצודת דוד",color:"#1e40af",refPrefix:"Metzudat David on "}],sections:[{he:"פרק "+toHN(1)+" — מלאכי",ref:"Malachi.1"},{he:"פרק "+toHN(2)+" — מלאכי",ref:"Malachi.2"},{he:"פרק "+toHN(3)+" — מלאכי",ref:"Malachi.3"},{he:"פרק "+toHN(4)+" — מלאכי",ref:"Malachi.4"}]},
-        {id:"psalms",he:"תהילים",color:"#7c3aed",commentaries:[{id:"rashi",he:"רש\"י",color:"#7c2d12",refPrefix:"Rashi on "},{id:"metzudat-david",he:"מצודת דוד",color:"#1e40af",refPrefix:"Metzudat David on "}],sections:[{he:"פרק "+toHN(1)+" — תהילים",ref:"Psalms.1"},{he:"פרק "+toHN(2)+" — תהילים",ref:"Psalms.2"},{he:"פרק "+toHN(3)+" — תהילים",ref:"Psalms.3"},{he:"פרק "+toHN(4)+" — תהילים",ref:"Psalms.4"},{he:"פרק "+toHN(5)+" — תהילים",ref:"Psalms.5"},{he:"פרק "+toHN(6)+" — תהילים",ref:"Psalms.6"},{he:"פרק "+toHN(7)+" — תהילים",ref:"Psalms.7"},{he:"פרק "+toHN(8)+" — תהילים",ref:"Psalms.8"},{he:"פרק "+toHN(9)+" — תהילים",ref:"Psalms.9"},{he:"פרק "+toHN(10)+" — תהילים",ref:"Psalms.10"},{he:"פרק "+toHN(11)+" — תהילים",ref:"Psalms.11"},{he:"פרק "+toHN(12)+" — תהילים",ref:"Psalms.12"},{he:"פרק "+toHN(13)+" — תהילים",ref:"Psalms.13"},{he:"פרק "+toHN(14)+" — תהילים",ref:"Psalms.14"},{he:"פרק "+toHN(15)+" — תהילים",ref:"Psalms.15"},{he:"פרק "+toHN(16)+" — תהילים",ref:"Psalms.16"},{he:"פרק "+toHN(17)+" — תהילים",ref:"Psalms.17"},{he:"פרק "+toHN(18)+" — תהילים",ref:"Psalms.18"},{he:"פרק "+toHN(19)+" — תהילים",ref:"Psalms.19"},{he:"פרק "+toHN(20)+" — תהילים",ref:"Psalms.20"},{he:"פרק "+toHN(21)+" — תהילים",ref:"Psalms.21"},{he:"פרק "+toHN(22)+" — תהילים",ref:"Psalms.22"},{he:"פרק "+toHN(23)+" — תהילים",ref:"Psalms.23"},{he:"פרק "+toHN(24)+" — תהילים",ref:"Psalms.24"},{he:"פרק "+toHN(25)+" — תהילים",ref:"Psalms.25"},{he:"פרק "+toHN(26)+" — תהילים",ref:"Psalms.26"},{he:"פרק "+toHN(27)+" — תהילים",ref:"Psalms.27"},{he:"פרק "+toHN(28)+" — תהילים",ref:"Psalms.28"},{he:"פרק "+toHN(29)+" — תהילים",ref:"Psalms.29"},{he:"פרק "+toHN(30)+" — תהילים",ref:"Psalms.30"},{he:"פרק "+toHN(31)+" — תהילים",ref:"Psalms.31"},{he:"פרק "+toHN(32)+" — תהילים",ref:"Psalms.32"},{he:"פרק "+toHN(33)+" — תהילים",ref:"Psalms.33"},{he:"פרק "+toHN(34)+" — תהילים",ref:"Psalms.34"},{he:"פרק "+toHN(35)+" — תהילים",ref:"Psalms.35"},{he:"פרק "+toHN(36)+" — תהילים",ref:"Psalms.36"},{he:"פרק "+toHN(37)+" — תהילים",ref:"Psalms.37"},{he:"פרק "+toHN(38)+" — תהילים",ref:"Psalms.38"},{he:"פרק "+toHN(39)+" — תהילים",ref:"Psalms.39"},{he:"פרק "+toHN(40)+" — תהילים",ref:"Psalms.40"},{he:"פרק "+toHN(41)+" — תהילים",ref:"Psalms.41"},{he:"פרק "+toHN(42)+" — תהילים",ref:"Psalms.42"},{he:"פרק "+toHN(43)+" — תהילים",ref:"Psalms.43"},{he:"פרק "+toHN(44)+" — תהילים",ref:"Psalms.44"},{he:"פרק "+toHN(45)+" — תהילים",ref:"Psalms.45"},{he:"פרק "+toHN(46)+" — תהילים",ref:"Psalms.46"},{he:"פרק "+toHN(47)+" — תהילים",ref:"Psalms.47"},{he:"פרק "+toHN(48)+" — תהילים",ref:"Psalms.48"},{he:"פרק "+toHN(49)+" — תהילים",ref:"Psalms.49"},{he:"פרק "+toHN(50)+" — תהילים",ref:"Psalms.50"},{he:"פרק "+toHN(51)+" — תהילים",ref:"Psalms.51"},{he:"פרק "+toHN(52)+" — תהילים",ref:"Psalms.52"},{he:"פרק "+toHN(53)+" — תהילים",ref:"Psalms.53"},{he:"פרק "+toHN(54)+" — תהילים",ref:"Psalms.54"},{he:"פרק "+toHN(55)+" — תהילים",ref:"Psalms.55"},{he:"פרק "+toHN(56)+" — תהילים",ref:"Psalms.56"},{he:"פרק "+toHN(57)+" — תהילים",ref:"Psalms.57"},{he:"פרק "+toHN(58)+" — תהילים",ref:"Psalms.58"},{he:"פרק "+toHN(59)+" — תהילים",ref:"Psalms.59"},{he:"פרק "+toHN(60)+" — תהילים",ref:"Psalms.60"},{he:"פרק "+toHN(61)+" — תהילים",ref:"Psalms.61"},{he:"פרק "+toHN(62)+" — תהילים",ref:"Psalms.62"},{he:"פרק "+toHN(63)+" — תהילים",ref:"Psalms.63"},{he:"פרק "+toHN(64)+" — תהילים",ref:"Psalms.64"},{he:"פרק "+toHN(65)+" — תהילים",ref:"Psalms.65"},{he:"פרק "+toHN(66)+" — תהילים",ref:"Psalms.66"},{he:"פרק "+toHN(67)+" — תהילים",ref:"Psalms.67"},{he:"פרק "+toHN(68)+" — תהילים",ref:"Psalms.68"},{he:"פרק "+toHN(69)+" — תהילים",ref:"Psalms.69"},{he:"פרק "+toHN(70)+" — תהילים",ref:"Psalms.70"},{he:"פרק "+toHN(71)+" — תהילים",ref:"Psalms.71"},{he:"פרק "+toHN(72)+" — תהילים",ref:"Psalms.72"},{he:"פרק "+toHN(73)+" — תהילים",ref:"Psalms.73"},{he:"פרק "+toHN(74)+" — תהילים",ref:"Psalms.74"},{he:"פרק "+toHN(75)+" — תהילים",ref:"Psalms.75"},{he:"פרק "+toHN(76)+" — תהילים",ref:"Psalms.76"},{he:"פרק "+toHN(77)+" — תהילים",ref:"Psalms.77"},{he:"פרק "+toHN(78)+" — תהילים",ref:"Psalms.78"},{he:"פרק "+toHN(79)+" — תהילים",ref:"Psalms.79"},{he:"פרק "+toHN(80)+" — תהילים",ref:"Psalms.80"},{he:"פרק "+toHN(81)+" — תהילים",ref:"Psalms.81"},{he:"פרק "+toHN(82)+" — תהילים",ref:"Psalms.82"},{he:"פרק "+toHN(83)+" — תהילים",ref:"Psalms.83"},{he:"פרק "+toHN(84)+" — תהילים",ref:"Psalms.84"},{he:"פרק "+toHN(85)+" — תהילים",ref:"Psalms.85"},{he:"פרק "+toHN(86)+" — תהילים",ref:"Psalms.86"},{he:"פרק "+toHN(87)+" — תהילים",ref:"Psalms.87"},{he:"פרק "+toHN(88)+" — תהילים",ref:"Psalms.88"},{he:"פרק "+toHN(89)+" — תהילים",ref:"Psalms.89"},{he:"פרק "+toHN(90)+" — תהילים",ref:"Psalms.90"},{he:"פרק "+toHN(91)+" — תהילים",ref:"Psalms.91"},{he:"פרק "+toHN(92)+" — תהילים",ref:"Psalms.92"},{he:"פרק "+toHN(93)+" — תהילים",ref:"Psalms.93"},{he:"פרק "+toHN(94)+" — תהילים",ref:"Psalms.94"},{he:"פרק "+toHN(95)+" — תהילים",ref:"Psalms.95"},{he:"פרק "+toHN(96)+" — תהילים",ref:"Psalms.96"},{he:"פרק "+toHN(97)+" — תהילים",ref:"Psalms.97"},{he:"פרק "+toHN(98)+" — תהילים",ref:"Psalms.98"},{he:"פרק "+toHN(99)+" — תהילים",ref:"Psalms.99"},{he:"פרק "+toHN(100)+" — תהילים",ref:"Psalms.100"},{he:"פרק "+toHN(101)+" — תהילים",ref:"Psalms.101"},{he:"פרק "+toHN(102)+" — תהילים",ref:"Psalms.102"},{he:"פרק "+toHN(103)+" — תהילים",ref:"Psalms.103"},{he:"פרק "+toHN(104)+" — תהילים",ref:"Psalms.104"},{he:"פרק "+toHN(105)+" — תהילים",ref:"Psalms.105"},{he:"פרק "+toHN(106)+" — תהילים",ref:"Psalms.106"},{he:"פרק "+toHN(107)+" — תהילים",ref:"Psalms.107"},{he:"פרק "+toHN(108)+" — תהילים",ref:"Psalms.108"},{he:"פרק "+toHN(109)+" — תהילים",ref:"Psalms.109"},{he:"פרק "+toHN(110)+" — תהילים",ref:"Psalms.110"},{he:"פרק "+toHN(111)+" — תהילים",ref:"Psalms.111"},{he:"פרק "+toHN(112)+" — תהילים",ref:"Psalms.112"},{he:"פרק "+toHN(113)+" — תהילים",ref:"Psalms.113"},{he:"פרק "+toHN(114)+" — תהילים",ref:"Psalms.114"},{he:"פרק "+toHN(115)+" — תהילים",ref:"Psalms.115"},{he:"פרק "+toHN(116)+" — תהילים",ref:"Psalms.116"},{he:"פרק "+toHN(117)+" — תהילים",ref:"Psalms.117"},{he:"פרק "+toHN(118)+" — תהילים",ref:"Psalms.118"},{he:"פרק "+toHN(119)+" — תהילים",ref:"Psalms.119"},{he:"פרק "+toHN(120)+" — תהילים",ref:"Psalms.120"},{he:"פרק "+toHN(121)+" — תהילים",ref:"Psalms.121"},{he:"פרק "+toHN(122)+" — תהילים",ref:"Psalms.122"},{he:"פרק "+toHN(123)+" — תהילים",ref:"Psalms.123"},{he:"פרק "+toHN(124)+" — תהילים",ref:"Psalms.124"},{he:"פרק "+toHN(125)+" — תהילים",ref:"Psalms.125"},{he:"פרק "+toHN(126)+" — תהילים",ref:"Psalms.126"},{he:"פרק "+toHN(127)+" — תהילים",ref:"Psalms.127"},{he:"פרק "+toHN(128)+" — תהילים",ref:"Psalms.128"},{he:"פרק "+toHN(129)+" — תהילים",ref:"Psalms.129"},{he:"פרק "+toHN(130)+" — תהילים",ref:"Psalms.130"},{he:"פרק "+toHN(131)+" — תהילים",ref:"Psalms.131"},{he:"פרק "+toHN(132)+" — תהילים",ref:"Psalms.132"},{he:"פרק "+toHN(133)+" — תהילים",ref:"Psalms.133"},{he:"פרק "+toHN(134)+" — תהילים",ref:"Psalms.134"},{he:"פרק "+toHN(135)+" — תהילים",ref:"Psalms.135"},{he:"פרק "+toHN(136)+" — תהילים",ref:"Psalms.136"},{he:"פרק "+toHN(137)+" — תהילים",ref:"Psalms.137"},{he:"פרק "+toHN(138)+" — תהילים",ref:"Psalms.138"},{he:"פרק "+toHN(139)+" — תהילים",ref:"Psalms.139"},{he:"פרק "+toHN(140)+" — תהילים",ref:"Psalms.140"},{he:"פרק "+toHN(141)+" — תהילים",ref:"Psalms.141"},{he:"פרק "+toHN(142)+" — תהילים",ref:"Psalms.142"},{he:"פרק "+toHN(143)+" — תהילים",ref:"Psalms.143"},{he:"פרק "+toHN(144)+" — תהילים",ref:"Psalms.144"},{he:"פרק "+toHN(145)+" — תהילים",ref:"Psalms.145"},{he:"פרק "+toHN(146)+" — תהילים",ref:"Psalms.146"},{he:"פרק "+toHN(147)+" — תהילים",ref:"Psalms.147"},{he:"פרק "+toHN(148)+" — תהילים",ref:"Psalms.148"},{he:"פרק "+toHN(149)+" — תהילים",ref:"Psalms.149"},{he:"פרק "+toHN(150)+" — תהילים",ref:"Psalms.150"}]},
-        {id:"proverbs",he:"משלי",color:"#9333ea",commentaries:[{id:"rashi",he:"רש\"י",color:"#7c2d12",refPrefix:"Rashi on "},{id:"metzudat-david",he:"מצודת דוד",color:"#1e40af",refPrefix:"Metzudat David on "}],sections:[{he:"פרק "+toHN(1)+" — משלי",ref:"Proverbs.1"},{he:"פרק "+toHN(2)+" — משלי",ref:"Proverbs.2"},{he:"פרק "+toHN(3)+" — משלי",ref:"Proverbs.3"},{he:"פרק "+toHN(4)+" — משלי",ref:"Proverbs.4"},{he:"פרק "+toHN(5)+" — משלי",ref:"Proverbs.5"},{he:"פרק "+toHN(6)+" — משלי",ref:"Proverbs.6"},{he:"פרק "+toHN(7)+" — משלי",ref:"Proverbs.7"},{he:"פרק "+toHN(8)+" — משלי",ref:"Proverbs.8"},{he:"פרק "+toHN(9)+" — משלי",ref:"Proverbs.9"},{he:"פרק "+toHN(10)+" — משלי",ref:"Proverbs.10"},{he:"פרק "+toHN(11)+" — משלי",ref:"Proverbs.11"},{he:"פרק "+toHN(12)+" — משלי",ref:"Proverbs.12"},{he:"פרק "+toHN(13)+" — משלי",ref:"Proverbs.13"},{he:"פרק "+toHN(14)+" — משלי",ref:"Proverbs.14"},{he:"פרק "+toHN(15)+" — משלי",ref:"Proverbs.15"},{he:"פרק "+toHN(16)+" — משלי",ref:"Proverbs.16"},{he:"פרק "+toHN(17)+" — משלי",ref:"Proverbs.17"},{he:"פרק "+toHN(18)+" — משלי",ref:"Proverbs.18"},{he:"פרק "+toHN(19)+" — משלי",ref:"Proverbs.19"},{he:"פרק "+toHN(20)+" — משלי",ref:"Proverbs.20"},{he:"פרק "+toHN(21)+" — משלי",ref:"Proverbs.21"},{he:"פרק "+toHN(22)+" — משלי",ref:"Proverbs.22"},{he:"פרק "+toHN(23)+" — משלי",ref:"Proverbs.23"},{he:"פרק "+toHN(24)+" — משלי",ref:"Proverbs.24"},{he:"פרק "+toHN(25)+" — משלי",ref:"Proverbs.25"},{he:"פרק "+toHN(26)+" — משלי",ref:"Proverbs.26"},{he:"פרק "+toHN(27)+" — משלי",ref:"Proverbs.27"},{he:"פרק "+toHN(28)+" — משלי",ref:"Proverbs.28"},{he:"פרק "+toHN(29)+" — משלי",ref:"Proverbs.29"},{he:"פרק "+toHN(30)+" — משלי",ref:"Proverbs.30"},{he:"פרק "+toHN(31)+" — משלי",ref:"Proverbs.31"}]},
-        {id:"job",he:"איוב",color:"#a21caf",commentaries:[{id:"rashi",he:"רש\"י",color:"#7c2d12",refPrefix:"Rashi on "},{id:"metzudat-david",he:"מצודת דוד",color:"#1e40af",refPrefix:"Metzudat David on "}],sections:[{he:"פרק "+toHN(1)+" — איוב",ref:"Job.1"},{he:"פרק "+toHN(2)+" — איוב",ref:"Job.2"},{he:"פרק "+toHN(3)+" — איוב",ref:"Job.3"},{he:"פרק "+toHN(4)+" — איוב",ref:"Job.4"},{he:"פרק "+toHN(5)+" — איוב",ref:"Job.5"},{he:"פרק "+toHN(6)+" — איוב",ref:"Job.6"},{he:"פרק "+toHN(7)+" — איוב",ref:"Job.7"},{he:"פרק "+toHN(8)+" — איוב",ref:"Job.8"},{he:"פרק "+toHN(9)+" — איוב",ref:"Job.9"},{he:"פרק "+toHN(10)+" — איוב",ref:"Job.10"},{he:"פרק "+toHN(11)+" — איוב",ref:"Job.11"},{he:"פרק "+toHN(12)+" — איוב",ref:"Job.12"},{he:"פרק "+toHN(13)+" — איוב",ref:"Job.13"},{he:"פרק "+toHN(14)+" — איוב",ref:"Job.14"},{he:"פרק "+toHN(15)+" — איוב",ref:"Job.15"},{he:"פרק "+toHN(16)+" — איוב",ref:"Job.16"},{he:"פרק "+toHN(17)+" — איוב",ref:"Job.17"},{he:"פרק "+toHN(18)+" — איוב",ref:"Job.18"},{he:"פרק "+toHN(19)+" — איוב",ref:"Job.19"},{he:"פרק "+toHN(20)+" — איוב",ref:"Job.20"},{he:"פרק "+toHN(21)+" — איוב",ref:"Job.21"},{he:"פרק "+toHN(22)+" — איוב",ref:"Job.22"},{he:"פרק "+toHN(23)+" — איוב",ref:"Job.23"},{he:"פרק "+toHN(24)+" — איוב",ref:"Job.24"},{he:"פרק "+toHN(25)+" — איוב",ref:"Job.25"},{he:"פרק "+toHN(26)+" — איוב",ref:"Job.26"},{he:"פרק "+toHN(27)+" — איוב",ref:"Job.27"},{he:"פרק "+toHN(28)+" — איוב",ref:"Job.28"},{he:"פרק "+toHN(29)+" — איוב",ref:"Job.29"},{he:"פרק "+toHN(30)+" — איוב",ref:"Job.30"},{he:"פרק "+toHN(31)+" — איוב",ref:"Job.31"},{he:"פרק "+toHN(32)+" — איוב",ref:"Job.32"},{he:"פרק "+toHN(33)+" — איוב",ref:"Job.33"},{he:"פרק "+toHN(34)+" — איוב",ref:"Job.34"},{he:"פרק "+toHN(35)+" — איוב",ref:"Job.35"},{he:"פרק "+toHN(36)+" — איוב",ref:"Job.36"},{he:"פרק "+toHN(37)+" — איוב",ref:"Job.37"},{he:"פרק "+toHN(38)+" — איוב",ref:"Job.38"},{he:"פרק "+toHN(39)+" — איוב",ref:"Job.39"},{he:"פרק "+toHN(40)+" — איוב",ref:"Job.40"},{he:"פרק "+toHN(41)+" — איוב",ref:"Job.41"},{he:"פרק "+toHN(42)+" — איוב",ref:"Job.42"}]},
-        {id:"song-of-songs",he:"שיר השירים",color:"#c026d3",commentaries:[{id:"rashi",he:"רש\"י",color:"#7c2d12",refPrefix:"Rashi on "},{id:"metzudat-david",he:"מצודת דוד",color:"#1e40af",refPrefix:"Metzudat David on "}],sections:[{he:"פרק "+toHN(1)+" — שיר השירים",ref:"Song_of_Songs.1"},{he:"פרק "+toHN(2)+" — שיר השירים",ref:"Song_of_Songs.2"},{he:"פרק "+toHN(3)+" — שיר השירים",ref:"Song_of_Songs.3"},{he:"פרק "+toHN(4)+" — שיר השירים",ref:"Song_of_Songs.4"},{he:"פרק "+toHN(5)+" — שיר השירים",ref:"Song_of_Songs.5"},{he:"פרק "+toHN(6)+" — שיר השירים",ref:"Song_of_Songs.6"},{he:"פרק "+toHN(7)+" — שיר השירים",ref:"Song_of_Songs.7"},{he:"פרק "+toHN(8)+" — שיר השירים",ref:"Song_of_Songs.8"}]},
-        {id:"ruth",he:"רות",color:"#db2777",commentaries:[{id:"rashi",he:"רש\"י",color:"#7c2d12",refPrefix:"Rashi on "},{id:"metzudat-david",he:"מצודת דוד",color:"#1e40af",refPrefix:"Metzudat David on "}],sections:[{he:"פרק "+toHN(1)+" — רות",ref:"Ruth.1"},{he:"פרק "+toHN(2)+" — רות",ref:"Ruth.2"},{he:"פרק "+toHN(3)+" — רות",ref:"Ruth.3"},{he:"פרק "+toHN(4)+" — רות",ref:"Ruth.4"}]},
-        {id:"lamentations",he:"איכה",color:"#e11d48",commentaries:[{id:"rashi",he:"רש\"י",color:"#7c2d12",refPrefix:"Rashi on "},{id:"metzudat-david",he:"מצודת דוד",color:"#1e40af",refPrefix:"Metzudat David on "}],sections:[{he:"פרק "+toHN(1)+" — איכה",ref:"Lamentations.1"},{he:"פרק "+toHN(2)+" — איכה",ref:"Lamentations.2"},{he:"פרק "+toHN(3)+" — איכה",ref:"Lamentations.3"},{he:"פרק "+toHN(4)+" — איכה",ref:"Lamentations.4"},{he:"פרק "+toHN(5)+" — איכה",ref:"Lamentations.5"}]},
-        {id:"ecclesiastes",he:"קהלת",color:"#dc2626",commentaries:[{id:"rashi",he:"רש\"י",color:"#7c2d12",refPrefix:"Rashi on "},{id:"metzudat-david",he:"מצודת דוד",color:"#1e40af",refPrefix:"Metzudat David on "}],sections:[{he:"פרק "+toHN(1)+" — קהלת",ref:"Ecclesiastes.1"},{he:"פרק "+toHN(2)+" — קהלת",ref:"Ecclesiastes.2"},{he:"פרק "+toHN(3)+" — קהלת",ref:"Ecclesiastes.3"},{he:"פרק "+toHN(4)+" — קהלת",ref:"Ecclesiastes.4"},{he:"פרק "+toHN(5)+" — קהלת",ref:"Ecclesiastes.5"},{he:"פרק "+toHN(6)+" — קהלת",ref:"Ecclesiastes.6"},{he:"פרק "+toHN(7)+" — קהלת",ref:"Ecclesiastes.7"},{he:"פרק "+toHN(8)+" — קהלת",ref:"Ecclesiastes.8"},{he:"פרק "+toHN(9)+" — קהלת",ref:"Ecclesiastes.9"},{he:"פרק "+toHN(10)+" — קהלת",ref:"Ecclesiastes.10"},{he:"פרק "+toHN(11)+" — קהלת",ref:"Ecclesiastes.11"},{he:"פרק "+toHN(12)+" — קהלת",ref:"Ecclesiastes.12"}]},
-        {id:"esther",he:"אסתר",color:"#ea580c",commentaries:[{id:"rashi",he:"רש\"י",color:"#7c2d12",refPrefix:"Rashi on "},{id:"metzudat-david",he:"מצודת דוד",color:"#1e40af",refPrefix:"Metzudat David on "}],sections:[{he:"פרק "+toHN(1)+" — אסתר",ref:"Esther.1"},{he:"פרק "+toHN(2)+" — אסתר",ref:"Esther.2"},{he:"פרק "+toHN(3)+" — אסתר",ref:"Esther.3"},{he:"פרק "+toHN(4)+" — אסתר",ref:"Esther.4"},{he:"פרק "+toHN(5)+" — אסתר",ref:"Esther.5"},{he:"פרק "+toHN(6)+" — אסתר",ref:"Esther.6"},{he:"פרק "+toHN(7)+" — אסתר",ref:"Esther.7"},{he:"פרק "+toHN(8)+" — אסתר",ref:"Esther.8"},{he:"פרק "+toHN(9)+" — אסתר",ref:"Esther.9"},{he:"פרק "+toHN(10)+" — אסתר",ref:"Esther.10"}]},
-        {id:"daniel",he:"דניאל",color:"#d97706",commentaries:[{id:"rashi",he:"רש\"י",color:"#7c2d12",refPrefix:"Rashi on "},{id:"metzudat-david",he:"מצודת דוד",color:"#1e40af",refPrefix:"Metzudat David on "}],sections:[{he:"פרק "+toHN(1)+" — דניאל",ref:"Daniel.1"},{he:"פרק "+toHN(2)+" — דניאל",ref:"Daniel.2"},{he:"פרק "+toHN(3)+" — דניאל",ref:"Daniel.3"},{he:"פרק "+toHN(4)+" — דניאל",ref:"Daniel.4"},{he:"פרק "+toHN(5)+" — דניאל",ref:"Daniel.5"},{he:"פרק "+toHN(6)+" — דניאל",ref:"Daniel.6"},{he:"פרק "+toHN(7)+" — דניאל",ref:"Daniel.7"},{he:"פרק "+toHN(8)+" — דניאל",ref:"Daniel.8"},{he:"פרק "+toHN(9)+" — דניאל",ref:"Daniel.9"},{he:"פרק "+toHN(10)+" — דניאל",ref:"Daniel.10"},{he:"פרק "+toHN(11)+" — דניאל",ref:"Daniel.11"},{he:"פרק "+toHN(12)+" — דניאל",ref:"Daniel.12"}]},
-        {id:"ezra",he:"עזרא",color:"#65a30d",commentaries:[{id:"rashi",he:"רש\"י",color:"#7c2d12",refPrefix:"Rashi on "},{id:"metzudat-david",he:"מצודת דוד",color:"#1e40af",refPrefix:"Metzudat David on "}],sections:[{he:"פרק "+toHN(1)+" — עזרא",ref:"Ezra.1"},{he:"פרק "+toHN(2)+" — עזרא",ref:"Ezra.2"},{he:"פרק "+toHN(3)+" — עזרא",ref:"Ezra.3"},{he:"פרק "+toHN(4)+" — עזרא",ref:"Ezra.4"},{he:"פרק "+toHN(5)+" — עזרא",ref:"Ezra.5"},{he:"פרק "+toHN(6)+" — עזרא",ref:"Ezra.6"},{he:"פרק "+toHN(7)+" — עזרא",ref:"Ezra.7"},{he:"פרק "+toHN(8)+" — עזרא",ref:"Ezra.8"},{he:"פרק "+toHN(9)+" — עזרא",ref:"Ezra.9"},{he:"פרק "+toHN(10)+" — עזרא",ref:"Ezra.10"}]},
-        {id:"nehemiah",he:"נחמיה",color:"#059669",commentaries:[{id:"rashi",he:"רש\"י",color:"#7c2d12",refPrefix:"Rashi on "},{id:"metzudat-david",he:"מצודת דוד",color:"#1e40af",refPrefix:"Metzudat David on "}],sections:[{he:"פרק "+toHN(1)+" — נחמיה",ref:"Nehemiah.1"},{he:"פרק "+toHN(2)+" — נחמיה",ref:"Nehemiah.2"},{he:"פרק "+toHN(3)+" — נחמיה",ref:"Nehemiah.3"},{he:"פרק "+toHN(4)+" — נחמיה",ref:"Nehemiah.4"},{he:"פרק "+toHN(5)+" — נחמיה",ref:"Nehemiah.5"},{he:"פרק "+toHN(6)+" — נחמיה",ref:"Nehemiah.6"},{he:"פרק "+toHN(7)+" — נחמיה",ref:"Nehemiah.7"},{he:"פרק "+toHN(8)+" — נחמיה",ref:"Nehemiah.8"},{he:"פרק "+toHN(9)+" — נחמיה",ref:"Nehemiah.9"},{he:"פרק "+toHN(10)+" — נחמיה",ref:"Nehemiah.10"},{he:"פרק "+toHN(11)+" — נחמיה",ref:"Nehemiah.11"},{he:"פרק "+toHN(12)+" — נחמיה",ref:"Nehemiah.12"},{he:"פרק "+toHN(13)+" — נחמיה",ref:"Nehemiah.13"}]},
-        {id:"i-chronicles",he:"דברי הימים א",color:"#0d9488",commentaries:[{id:"rashi",he:"רש\"י",color:"#7c2d12",refPrefix:"Rashi on "},{id:"metzudat-david",he:"מצודת דוד",color:"#1e40af",refPrefix:"Metzudat David on "}],sections:[{he:"פרק "+toHN(1)+" — דברי הימים א",ref:"I_Chronicles.1"},{he:"פרק "+toHN(2)+" — דברי הימים א",ref:"I_Chronicles.2"},{he:"פרק "+toHN(3)+" — דברי הימים א",ref:"I_Chronicles.3"},{he:"פרק "+toHN(4)+" — דברי הימים א",ref:"I_Chronicles.4"},{he:"פרק "+toHN(5)+" — דברי הימים א",ref:"I_Chronicles.5"},{he:"פרק "+toHN(6)+" — דברי הימים א",ref:"I_Chronicles.6"},{he:"פרק "+toHN(7)+" — דברי הימים א",ref:"I_Chronicles.7"},{he:"פרק "+toHN(8)+" — דברי הימים א",ref:"I_Chronicles.8"},{he:"פרק "+toHN(9)+" — דברי הימים א",ref:"I_Chronicles.9"},{he:"פרק "+toHN(10)+" — דברי הימים א",ref:"I_Chronicles.10"},{he:"פרק "+toHN(11)+" — דברי הימים א",ref:"I_Chronicles.11"},{he:"פרק "+toHN(12)+" — דברי הימים א",ref:"I_Chronicles.12"},{he:"פרק "+toHN(13)+" — דברי הימים א",ref:"I_Chronicles.13"},{he:"פרק "+toHN(14)+" — דברי הימים א",ref:"I_Chronicles.14"},{he:"פרק "+toHN(15)+" — דברי הימים א",ref:"I_Chronicles.15"},{he:"פרק "+toHN(16)+" — דברי הימים א",ref:"I_Chronicles.16"},{he:"פרק "+toHN(17)+" — דברי הימים א",ref:"I_Chronicles.17"},{he:"פרק "+toHN(18)+" — דברי הימים א",ref:"I_Chronicles.18"},{he:"פרק "+toHN(19)+" — דברי הימים א",ref:"I_Chronicles.19"},{he:"פרק "+toHN(20)+" — דברי הימים א",ref:"I_Chronicles.20"},{he:"פרק "+toHN(21)+" — דברי הימים א",ref:"I_Chronicles.21"},{he:"פרק "+toHN(22)+" — דברי הימים א",ref:"I_Chronicles.22"},{he:"פרק "+toHN(23)+" — דברי הימים א",ref:"I_Chronicles.23"},{he:"פרק "+toHN(24)+" — דברי הימים א",ref:"I_Chronicles.24"},{he:"פרק "+toHN(25)+" — דברי הימים א",ref:"I_Chronicles.25"},{he:"פרק "+toHN(26)+" — דברי הימים א",ref:"I_Chronicles.26"},{he:"פרק "+toHN(27)+" — דברי הימים א",ref:"I_Chronicles.27"},{he:"פרק "+toHN(28)+" — דברי הימים א",ref:"I_Chronicles.28"},{he:"פרק "+toHN(29)+" — דברי הימים א",ref:"I_Chronicles.29"}]},
-        {id:"ii-chronicles",he:"דברי הימים ב",color:"#0891b2",commentaries:[{id:"rashi",he:"רש\"י",color:"#7c2d12",refPrefix:"Rashi on "},{id:"metzudat-david",he:"מצודת דוד",color:"#1e40af",refPrefix:"Metzudat David on "}],sections:[{he:"פרק "+toHN(1)+" — דברי הימים ב",ref:"II_Chronicles.1"},{he:"פרק "+toHN(2)+" — דברי הימים ב",ref:"II_Chronicles.2"},{he:"פרק "+toHN(3)+" — דברי הימים ב",ref:"II_Chronicles.3"},{he:"פרק "+toHN(4)+" — דברי הימים ב",ref:"II_Chronicles.4"},{he:"פרק "+toHN(5)+" — דברי הימים ב",ref:"II_Chronicles.5"},{he:"פרק "+toHN(6)+" — דברי הימים ב",ref:"II_Chronicles.6"},{he:"פרק "+toHN(7)+" — דברי הימים ב",ref:"II_Chronicles.7"},{he:"פרק "+toHN(8)+" — דברי הימים ב",ref:"II_Chronicles.8"},{he:"פרק "+toHN(9)+" — דברי הימים ב",ref:"II_Chronicles.9"},{he:"פרק "+toHN(10)+" — דברי הימים ב",ref:"II_Chronicles.10"},{he:"פרק "+toHN(11)+" — דברי הימים ב",ref:"II_Chronicles.11"},{he:"פרק "+toHN(12)+" — דברי הימים ב",ref:"II_Chronicles.12"},{he:"פרק "+toHN(13)+" — דברי הימים ב",ref:"II_Chronicles.13"},{he:"פרק "+toHN(14)+" — דברי הימים ב",ref:"II_Chronicles.14"},{he:"פרק "+toHN(15)+" — דברי הימים ב",ref:"II_Chronicles.15"},{he:"פרק "+toHN(16)+" — דברי הימים ב",ref:"II_Chronicles.16"},{he:"פרק "+toHN(17)+" — דברי הימים ב",ref:"II_Chronicles.17"},{he:"פרק "+toHN(18)+" — דברי הימים ב",ref:"II_Chronicles.18"},{he:"פרק "+toHN(19)+" — דברי הימים ב",ref:"II_Chronicles.19"},{he:"פרק "+toHN(20)+" — דברי הימים ב",ref:"II_Chronicles.20"},{he:"פרק "+toHN(21)+" — דברי הימים ב",ref:"II_Chronicles.21"},{he:"פרק "+toHN(22)+" — דברי הימים ב",ref:"II_Chronicles.22"},{he:"פרק "+toHN(23)+" — דברי הימים ב",ref:"II_Chronicles.23"},{he:"פרק "+toHN(24)+" — דברי הימים ב",ref:"II_Chronicles.24"},{he:"פרק "+toHN(25)+" — דברי הימים ב",ref:"II_Chronicles.25"},{he:"פרק "+toHN(26)+" — דברי הימים ב",ref:"II_Chronicles.26"},{he:"פרק "+toHN(27)+" — דברי הימים ב",ref:"II_Chronicles.27"},{he:"פרק "+toHN(28)+" — דברי הימים ב",ref:"II_Chronicles.28"},{he:"פרק "+toHN(29)+" — דברי הימים ב",ref:"II_Chronicles.29"},{he:"פרק "+toHN(30)+" — דברי הימים ב",ref:"II_Chronicles.30"},{he:"פרק "+toHN(31)+" — דברי הימים ב",ref:"II_Chronicles.31"},{he:"פרק "+toHN(32)+" — דברי הימים ב",ref:"II_Chronicles.32"},{he:"פרק "+toHN(33)+" — דברי הימים ב",ref:"II_Chronicles.33"},{he:"פרק "+toHN(34)+" — דברי הימים ב",ref:"II_Chronicles.34"},{he:"פרק "+toHN(35)+" — דברי הימים ב",ref:"II_Chronicles.35"},{he:"פרק "+toHN(36)+" — דברי הימים ב",ref:"II_Chronicles.36"}]}
+        {id:"genesis",he:"בראשית",color:"#dc2626",commentaries:SN_TANAKH_CM,sections:[{he:"בראשית",ref:"Genesis 1:1-6:8"},{he:"נח",ref:"Genesis 6:9-11:32"},{he:"לך לך",ref:"Genesis 12:1-17:27"},{he:"וירא",ref:"Genesis 18:1-22:24"},{he:"חיי שרה",ref:"Genesis 23:1-25:18"},{he:"תולדות",ref:"Genesis 25:19-28:9"},{he:"ויצא",ref:"Genesis 28:10-32:3"},{he:"וישלח",ref:"Genesis 32:4-36:43"},{he:"וישב",ref:"Genesis 37:1-40:23"},{he:"מקץ",ref:"Genesis 41:1-44:17"},{he:"ויגש",ref:"Genesis 44:18-47:27"},{he:"ויחי",ref:"Genesis 47:28-50:26"}]},
+        {id:"exodus",he:"שמות",color:"#ea580c",commentaries:SN_TANAKH_CM,sections:[{he:"שמות",ref:"Exodus 1:1-6:1"},{he:"וארא",ref:"Exodus 6:2-9:35"},{he:"בא",ref:"Exodus 10:1-13:16"},{he:"בשלח",ref:"Exodus 13:17-17:16"},{he:"יתרו",ref:"Exodus 18:1-20:23"},{he:"משפטים",ref:"Exodus 21:1-24:18"},{he:"תרומה",ref:"Exodus 25:1-27:19"},{he:"תצוה",ref:"Exodus 27:20-30:10"},{he:"כי תשא",ref:"Exodus 30:11-34:35"},{he:"ויקהל",ref:"Exodus 35:1-38:20"},{he:"פקודי",ref:"Exodus 38:21-40:38"}]},
+        {id:"leviticus",he:"ויקרא",color:"#d97706",commentaries:SN_TANAKH_CM,sections:[{he:"ויקרא",ref:"Leviticus 1:1-5:26"},{he:"צו",ref:"Leviticus 6:1-8:36"},{he:"שמיני",ref:"Leviticus 9:1-11:47"},{he:"תזריע",ref:"Leviticus 12:1-13:59"},{he:"מצורע",ref:"Leviticus 14:1-15:33"},{he:"אחרי מות",ref:"Leviticus 16:1-18:30"},{he:"קדושים",ref:"Leviticus 19:1-20:27"},{he:"אמור",ref:"Leviticus 21:1-24:23"},{he:"בהר",ref:"Leviticus 25:1-26:2"},{he:"בחוקתי",ref:"Leviticus 26:3-27:34"}]},
+        {id:"numbers",he:"במדבר",color:"#65a30d",commentaries:SN_TANAKH_CM,sections:[{he:"במדבר",ref:"Numbers 1:1-4:20"},{he:"נשא",ref:"Numbers 4:21-7:89"},{he:"בהעלותך",ref:"Numbers 8:1-12:16"},{he:"שלח",ref:"Numbers 13:1-15:41"},{he:"קרח",ref:"Numbers 16:1-18:32"},{he:"חקת",ref:"Numbers 19:1-22:1"},{he:"בלק",ref:"Numbers 22:2-25:9"},{he:"פנחס",ref:"Numbers 25:10-30:1"},{he:"מטות",ref:"Numbers 30:2-32:42"},{he:"מסעי",ref:"Numbers 33:1-36:13"}]},
+        {id:"deuteronomy",he:"דברים",color:"#059669",commentaries:SN_TANAKH_CM,sections:[{he:"דברים",ref:"Deuteronomy 1:1-3:22"},{he:"ואתחנן",ref:"Deuteronomy 3:23-7:11"},{he:"עקב",ref:"Deuteronomy 7:12-11:25"},{he:"ראה",ref:"Deuteronomy 11:26-16:17"},{he:"שופטים",ref:"Deuteronomy 16:18-21:9"},{he:"כי תצא",ref:"Deuteronomy 21:10-25:19"},{he:"כי תבוא",ref:"Deuteronomy 26:1-29:8"},{he:"נצבים",ref:"Deuteronomy 29:9-30:20"},{he:"וילך",ref:"Deuteronomy 31:1-30"},{he:"האזינו",ref:"Deuteronomy 32:1-52"},{he:"וזאת הברכה",ref:"Deuteronomy 33:1-34:12"}]},
+        {id:"joshua",he:"יהושע",color:"#0d9488",commentaries:SN_TANAKH_CM,sections:[{he:"פרק "+toHN(1)+" — יהושע",ref:"Joshua.1"},{he:"פרק "+toHN(2)+" — יהושע",ref:"Joshua.2"},{he:"פרק "+toHN(3)+" — יהושע",ref:"Joshua.3"},{he:"פרק "+toHN(4)+" — יהושע",ref:"Joshua.4"},{he:"פרק "+toHN(5)+" — יהושע",ref:"Joshua.5"},{he:"פרק "+toHN(6)+" — יהושע",ref:"Joshua.6"},{he:"פרק "+toHN(7)+" — יהושע",ref:"Joshua.7"},{he:"פרק "+toHN(8)+" — יהושע",ref:"Joshua.8"},{he:"פרק "+toHN(9)+" — יהושע",ref:"Joshua.9"},{he:"פרק "+toHN(10)+" — יהושע",ref:"Joshua.10"},{he:"פרק "+toHN(11)+" — יהושע",ref:"Joshua.11"},{he:"פרק "+toHN(12)+" — יהושע",ref:"Joshua.12"},{he:"פרק "+toHN(13)+" — יהושע",ref:"Joshua.13"},{he:"פרק "+toHN(14)+" — יהושע",ref:"Joshua.14"},{he:"פרק "+toHN(15)+" — יהושע",ref:"Joshua.15"},{he:"פרק "+toHN(16)+" — יהושע",ref:"Joshua.16"},{he:"פרק "+toHN(17)+" — יהושע",ref:"Joshua.17"},{he:"פרק "+toHN(18)+" — יהושע",ref:"Joshua.18"},{he:"פרק "+toHN(19)+" — יהושע",ref:"Joshua.19"},{he:"פרק "+toHN(20)+" — יהושע",ref:"Joshua.20"},{he:"פרק "+toHN(21)+" — יהושע",ref:"Joshua.21"},{he:"פרק "+toHN(22)+" — יהושע",ref:"Joshua.22"},{he:"פרק "+toHN(23)+" — יהושע",ref:"Joshua.23"},{he:"פרק "+toHN(24)+" — יהושע",ref:"Joshua.24"}]},
+        {id:"judges",he:"שופטים",color:"#0891b2",commentaries:SN_TANAKH_CM,sections:[{he:"פרק "+toHN(1)+" — שופטים",ref:"Judges.1"},{he:"פרק "+toHN(2)+" — שופטים",ref:"Judges.2"},{he:"פרק "+toHN(3)+" — שופטים",ref:"Judges.3"},{he:"פרק "+toHN(4)+" — שופטים",ref:"Judges.4"},{he:"פרק "+toHN(5)+" — שופטים",ref:"Judges.5"},{he:"פרק "+toHN(6)+" — שופטים",ref:"Judges.6"},{he:"פרק "+toHN(7)+" — שופטים",ref:"Judges.7"},{he:"פרק "+toHN(8)+" — שופטים",ref:"Judges.8"},{he:"פרק "+toHN(9)+" — שופטים",ref:"Judges.9"},{he:"פרק "+toHN(10)+" — שופטים",ref:"Judges.10"},{he:"פרק "+toHN(11)+" — שופטים",ref:"Judges.11"},{he:"פרק "+toHN(12)+" — שופטים",ref:"Judges.12"},{he:"פרק "+toHN(13)+" — שופטים",ref:"Judges.13"},{he:"פרק "+toHN(14)+" — שופטים",ref:"Judges.14"},{he:"פרק "+toHN(15)+" — שופטים",ref:"Judges.15"},{he:"פרק "+toHN(16)+" — שופטים",ref:"Judges.16"},{he:"פרק "+toHN(17)+" — שופטים",ref:"Judges.17"},{he:"פרק "+toHN(18)+" — שופטים",ref:"Judges.18"},{he:"פרק "+toHN(19)+" — שופטים",ref:"Judges.19"},{he:"פרק "+toHN(20)+" — שופטים",ref:"Judges.20"},{he:"פרק "+toHN(21)+" — שופטים",ref:"Judges.21"}]},
+        {id:"i-samuel",he:"שמואל א",color:"#0284c7",commentaries:SN_TANAKH_CM,sections:[{he:"פרק "+toHN(1)+" — שמואל א",ref:"I_Samuel.1"},{he:"פרק "+toHN(2)+" — שמואל א",ref:"I_Samuel.2"},{he:"פרק "+toHN(3)+" — שמואל א",ref:"I_Samuel.3"},{he:"פרק "+toHN(4)+" — שמואל א",ref:"I_Samuel.4"},{he:"פרק "+toHN(5)+" — שמואל א",ref:"I_Samuel.5"},{he:"פרק "+toHN(6)+" — שמואל א",ref:"I_Samuel.6"},{he:"פרק "+toHN(7)+" — שמואל א",ref:"I_Samuel.7"},{he:"פרק "+toHN(8)+" — שמואל א",ref:"I_Samuel.8"},{he:"פרק "+toHN(9)+" — שמואל א",ref:"I_Samuel.9"},{he:"פרק "+toHN(10)+" — שמואל א",ref:"I_Samuel.10"},{he:"פרק "+toHN(11)+" — שמואל א",ref:"I_Samuel.11"},{he:"פרק "+toHN(12)+" — שמואל א",ref:"I_Samuel.12"},{he:"פרק "+toHN(13)+" — שמואל א",ref:"I_Samuel.13"},{he:"פרק "+toHN(14)+" — שמואל א",ref:"I_Samuel.14"},{he:"פרק "+toHN(15)+" — שמואל א",ref:"I_Samuel.15"},{he:"פרק "+toHN(16)+" — שמואל א",ref:"I_Samuel.16"},{he:"פרק "+toHN(17)+" — שמואל א",ref:"I_Samuel.17"},{he:"פרק "+toHN(18)+" — שמואל א",ref:"I_Samuel.18"},{he:"פרק "+toHN(19)+" — שמואל א",ref:"I_Samuel.19"},{he:"פרק "+toHN(20)+" — שמואל א",ref:"I_Samuel.20"},{he:"פרק "+toHN(21)+" — שמואל א",ref:"I_Samuel.21"},{he:"פרק "+toHN(22)+" — שמואל א",ref:"I_Samuel.22"},{he:"פרק "+toHN(23)+" — שמואל א",ref:"I_Samuel.23"},{he:"פרק "+toHN(24)+" — שמואל א",ref:"I_Samuel.24"},{he:"פרק "+toHN(25)+" — שמואל א",ref:"I_Samuel.25"},{he:"פרק "+toHN(26)+" — שמואל א",ref:"I_Samuel.26"},{he:"פרק "+toHN(27)+" — שמואל א",ref:"I_Samuel.27"},{he:"פרק "+toHN(28)+" — שמואל א",ref:"I_Samuel.28"},{he:"פרק "+toHN(29)+" — שמואל א",ref:"I_Samuel.29"},{he:"פרק "+toHN(30)+" — שמואל א",ref:"I_Samuel.30"},{he:"פרק "+toHN(31)+" — שמואל א",ref:"I_Samuel.31"}]},
+        {id:"ii-samuel",he:"שמואל ב",color:"#2563eb",commentaries:SN_TANAKH_CM,sections:[{he:"פרק "+toHN(1)+" — שמואל ב",ref:"II_Samuel.1"},{he:"פרק "+toHN(2)+" — שמואל ב",ref:"II_Samuel.2"},{he:"פרק "+toHN(3)+" — שמואל ב",ref:"II_Samuel.3"},{he:"פרק "+toHN(4)+" — שמואל ב",ref:"II_Samuel.4"},{he:"פרק "+toHN(5)+" — שמואל ב",ref:"II_Samuel.5"},{he:"פרק "+toHN(6)+" — שמואל ב",ref:"II_Samuel.6"},{he:"פרק "+toHN(7)+" — שמואל ב",ref:"II_Samuel.7"},{he:"פרק "+toHN(8)+" — שמואל ב",ref:"II_Samuel.8"},{he:"פרק "+toHN(9)+" — שמואל ב",ref:"II_Samuel.9"},{he:"פרק "+toHN(10)+" — שמואל ב",ref:"II_Samuel.10"},{he:"פרק "+toHN(11)+" — שמואל ב",ref:"II_Samuel.11"},{he:"פרק "+toHN(12)+" — שמואל ב",ref:"II_Samuel.12"},{he:"פרק "+toHN(13)+" — שמואל ב",ref:"II_Samuel.13"},{he:"פרק "+toHN(14)+" — שמואל ב",ref:"II_Samuel.14"},{he:"פרק "+toHN(15)+" — שמואל ב",ref:"II_Samuel.15"},{he:"פרק "+toHN(16)+" — שמואל ב",ref:"II_Samuel.16"},{he:"פרק "+toHN(17)+" — שמואל ב",ref:"II_Samuel.17"},{he:"פרק "+toHN(18)+" — שמואל ב",ref:"II_Samuel.18"},{he:"פרק "+toHN(19)+" — שמואל ב",ref:"II_Samuel.19"},{he:"פרק "+toHN(20)+" — שמואל ב",ref:"II_Samuel.20"},{he:"פרק "+toHN(21)+" — שמואל ב",ref:"II_Samuel.21"},{he:"פרק "+toHN(22)+" — שמואל ב",ref:"II_Samuel.22"},{he:"פרק "+toHN(23)+" — שמואל ב",ref:"II_Samuel.23"},{he:"פרק "+toHN(24)+" — שמואל ב",ref:"II_Samuel.24"}]},
+        {id:"i-kings",he:"מלכים א",color:"#4f46e5",commentaries:SN_TANAKH_CM,sections:[{he:"פרק "+toHN(1)+" — מלכים א",ref:"I_Kings.1"},{he:"פרק "+toHN(2)+" — מלכים א",ref:"I_Kings.2"},{he:"פרק "+toHN(3)+" — מלכים א",ref:"I_Kings.3"},{he:"פרק "+toHN(4)+" — מלכים א",ref:"I_Kings.4"},{he:"פרק "+toHN(5)+" — מלכים א",ref:"I_Kings.5"},{he:"פרק "+toHN(6)+" — מלכים א",ref:"I_Kings.6"},{he:"פרק "+toHN(7)+" — מלכים א",ref:"I_Kings.7"},{he:"פרק "+toHN(8)+" — מלכים א",ref:"I_Kings.8"},{he:"פרק "+toHN(9)+" — מלכים א",ref:"I_Kings.9"},{he:"פרק "+toHN(10)+" — מלכים א",ref:"I_Kings.10"},{he:"פרק "+toHN(11)+" — מלכים א",ref:"I_Kings.11"},{he:"פרק "+toHN(12)+" — מלכים א",ref:"I_Kings.12"},{he:"פרק "+toHN(13)+" — מלכים א",ref:"I_Kings.13"},{he:"פרק "+toHN(14)+" — מלכים א",ref:"I_Kings.14"},{he:"פרק "+toHN(15)+" — מלכים א",ref:"I_Kings.15"},{he:"פרק "+toHN(16)+" — מלכים א",ref:"I_Kings.16"},{he:"פרק "+toHN(17)+" — מלכים א",ref:"I_Kings.17"},{he:"פרק "+toHN(18)+" — מלכים א",ref:"I_Kings.18"},{he:"פרק "+toHN(19)+" — מלכים א",ref:"I_Kings.19"},{he:"פרק "+toHN(20)+" — מלכים א",ref:"I_Kings.20"},{he:"פרק "+toHN(21)+" — מלכים א",ref:"I_Kings.21"},{he:"פרק "+toHN(22)+" — מלכים א",ref:"I_Kings.22"}]},
+        {id:"ii-kings",he:"מלכים ב",color:"#7c3aed",commentaries:SN_TANAKH_CM,sections:[{he:"פרק "+toHN(1)+" — מלכים ב",ref:"II_Kings.1"},{he:"פרק "+toHN(2)+" — מלכים ב",ref:"II_Kings.2"},{he:"פרק "+toHN(3)+" — מלכים ב",ref:"II_Kings.3"},{he:"פרק "+toHN(4)+" — מלכים ב",ref:"II_Kings.4"},{he:"פרק "+toHN(5)+" — מלכים ב",ref:"II_Kings.5"},{he:"פרק "+toHN(6)+" — מלכים ב",ref:"II_Kings.6"},{he:"פרק "+toHN(7)+" — מלכים ב",ref:"II_Kings.7"},{he:"פרק "+toHN(8)+" — מלכים ב",ref:"II_Kings.8"},{he:"פרק "+toHN(9)+" — מלכים ב",ref:"II_Kings.9"},{he:"פרק "+toHN(10)+" — מלכים ב",ref:"II_Kings.10"},{he:"פרק "+toHN(11)+" — מלכים ב",ref:"II_Kings.11"},{he:"פרק "+toHN(12)+" — מלכים ב",ref:"II_Kings.12"},{he:"פרק "+toHN(13)+" — מלכים ב",ref:"II_Kings.13"},{he:"פרק "+toHN(14)+" — מלכים ב",ref:"II_Kings.14"},{he:"פרק "+toHN(15)+" — מלכים ב",ref:"II_Kings.15"},{he:"פרק "+toHN(16)+" — מלכים ב",ref:"II_Kings.16"},{he:"פרק "+toHN(17)+" — מלכים ב",ref:"II_Kings.17"},{he:"פרק "+toHN(18)+" — מלכים ב",ref:"II_Kings.18"},{he:"פרק "+toHN(19)+" — מלכים ב",ref:"II_Kings.19"},{he:"פרק "+toHN(20)+" — מלכים ב",ref:"II_Kings.20"},{he:"פרק "+toHN(21)+" — מלכים ב",ref:"II_Kings.21"},{he:"פרק "+toHN(22)+" — מלכים ב",ref:"II_Kings.22"},{he:"פרק "+toHN(23)+" — מלכים ב",ref:"II_Kings.23"},{he:"פרק "+toHN(24)+" — מלכים ב",ref:"II_Kings.24"},{he:"פרק "+toHN(25)+" — מלכים ב",ref:"II_Kings.25"}]},
+        {id:"isaiah",he:"ישעיהו",color:"#9333ea",commentaries:SN_TANAKH_CM,sections:[{he:"פרק "+toHN(1)+" — ישעיהו",ref:"Isaiah.1"},{he:"פרק "+toHN(2)+" — ישעיהו",ref:"Isaiah.2"},{he:"פרק "+toHN(3)+" — ישעיהו",ref:"Isaiah.3"},{he:"פרק "+toHN(4)+" — ישעיהו",ref:"Isaiah.4"},{he:"פרק "+toHN(5)+" — ישעיהו",ref:"Isaiah.5"},{he:"פרק "+toHN(6)+" — ישעיהו",ref:"Isaiah.6"},{he:"פרק "+toHN(7)+" — ישעיהו",ref:"Isaiah.7"},{he:"פרק "+toHN(8)+" — ישעיהו",ref:"Isaiah.8"},{he:"פרק "+toHN(9)+" — ישעיהו",ref:"Isaiah.9"},{he:"פרק "+toHN(10)+" — ישעיהו",ref:"Isaiah.10"},{he:"פרק "+toHN(11)+" — ישעיהו",ref:"Isaiah.11"},{he:"פרק "+toHN(12)+" — ישעיהו",ref:"Isaiah.12"},{he:"פרק "+toHN(13)+" — ישעיהו",ref:"Isaiah.13"},{he:"פרק "+toHN(14)+" — ישעיהו",ref:"Isaiah.14"},{he:"פרק "+toHN(15)+" — ישעיהו",ref:"Isaiah.15"},{he:"פרק "+toHN(16)+" — ישעיהו",ref:"Isaiah.16"},{he:"פרק "+toHN(17)+" — ישעיהו",ref:"Isaiah.17"},{he:"פרק "+toHN(18)+" — ישעיהו",ref:"Isaiah.18"},{he:"פרק "+toHN(19)+" — ישעיהו",ref:"Isaiah.19"},{he:"פרק "+toHN(20)+" — ישעיהו",ref:"Isaiah.20"},{he:"פרק "+toHN(21)+" — ישעיהו",ref:"Isaiah.21"},{he:"פרק "+toHN(22)+" — ישעיהו",ref:"Isaiah.22"},{he:"פרק "+toHN(23)+" — ישעיהו",ref:"Isaiah.23"},{he:"פרק "+toHN(24)+" — ישעיהו",ref:"Isaiah.24"},{he:"פרק "+toHN(25)+" — ישעיהו",ref:"Isaiah.25"},{he:"פרק "+toHN(26)+" — ישעיהו",ref:"Isaiah.26"},{he:"פרק "+toHN(27)+" — ישעיהו",ref:"Isaiah.27"},{he:"פרק "+toHN(28)+" — ישעיהו",ref:"Isaiah.28"},{he:"פרק "+toHN(29)+" — ישעיהו",ref:"Isaiah.29"},{he:"פרק "+toHN(30)+" — ישעיהו",ref:"Isaiah.30"},{he:"פרק "+toHN(31)+" — ישעיהו",ref:"Isaiah.31"},{he:"פרק "+toHN(32)+" — ישעיהו",ref:"Isaiah.32"},{he:"פרק "+toHN(33)+" — ישעיהו",ref:"Isaiah.33"},{he:"פרק "+toHN(34)+" — ישעיהו",ref:"Isaiah.34"},{he:"פרק "+toHN(35)+" — ישעיהו",ref:"Isaiah.35"},{he:"פרק "+toHN(36)+" — ישעיהו",ref:"Isaiah.36"},{he:"פרק "+toHN(37)+" — ישעיהו",ref:"Isaiah.37"},{he:"פרק "+toHN(38)+" — ישעיהו",ref:"Isaiah.38"},{he:"פרק "+toHN(39)+" — ישעיהו",ref:"Isaiah.39"},{he:"פרק "+toHN(40)+" — ישעיהו",ref:"Isaiah.40"},{he:"פרק "+toHN(41)+" — ישעיהו",ref:"Isaiah.41"},{he:"פרק "+toHN(42)+" — ישעיהו",ref:"Isaiah.42"},{he:"פרק "+toHN(43)+" — ישעיהו",ref:"Isaiah.43"},{he:"פרק "+toHN(44)+" — ישעיהו",ref:"Isaiah.44"},{he:"פרק "+toHN(45)+" — ישעיהו",ref:"Isaiah.45"},{he:"פרק "+toHN(46)+" — ישעיהו",ref:"Isaiah.46"},{he:"פרק "+toHN(47)+" — ישעיהו",ref:"Isaiah.47"},{he:"פרק "+toHN(48)+" — ישעיהו",ref:"Isaiah.48"},{he:"פרק "+toHN(49)+" — ישעיהו",ref:"Isaiah.49"},{he:"פרק "+toHN(50)+" — ישעיהו",ref:"Isaiah.50"},{he:"פרק "+toHN(51)+" — ישעיהו",ref:"Isaiah.51"},{he:"פרק "+toHN(52)+" — ישעיהו",ref:"Isaiah.52"},{he:"פרק "+toHN(53)+" — ישעיהו",ref:"Isaiah.53"},{he:"פרק "+toHN(54)+" — ישעיהו",ref:"Isaiah.54"},{he:"פרק "+toHN(55)+" — ישעיהו",ref:"Isaiah.55"},{he:"פרק "+toHN(56)+" — ישעיהו",ref:"Isaiah.56"},{he:"פרק "+toHN(57)+" — ישעיהו",ref:"Isaiah.57"},{he:"פרק "+toHN(58)+" — ישעיהו",ref:"Isaiah.58"},{he:"פרק "+toHN(59)+" — ישעיהו",ref:"Isaiah.59"},{he:"פרק "+toHN(60)+" — ישעיהו",ref:"Isaiah.60"},{he:"פרק "+toHN(61)+" — ישעיהו",ref:"Isaiah.61"},{he:"פרק "+toHN(62)+" — ישעיהו",ref:"Isaiah.62"},{he:"פרק "+toHN(63)+" — ישעיהו",ref:"Isaiah.63"},{he:"פרק "+toHN(64)+" — ישעיהו",ref:"Isaiah.64"},{he:"פרק "+toHN(65)+" — ישעיהו",ref:"Isaiah.65"},{he:"פרק "+toHN(66)+" — ישעיהו",ref:"Isaiah.66"}]},
+        {id:"jeremiah",he:"ירמיהו",color:"#a21caf",commentaries:SN_TANAKH_CM,sections:[{he:"פרק "+toHN(1)+" — ירמיהו",ref:"Jeremiah.1"},{he:"פרק "+toHN(2)+" — ירמיהו",ref:"Jeremiah.2"},{he:"פרק "+toHN(3)+" — ירמיהו",ref:"Jeremiah.3"},{he:"פרק "+toHN(4)+" — ירמיהו",ref:"Jeremiah.4"},{he:"פרק "+toHN(5)+" — ירמיהו",ref:"Jeremiah.5"},{he:"פרק "+toHN(6)+" — ירמיהו",ref:"Jeremiah.6"},{he:"פרק "+toHN(7)+" — ירמיהו",ref:"Jeremiah.7"},{he:"פרק "+toHN(8)+" — ירמיהו",ref:"Jeremiah.8"},{he:"פרק "+toHN(9)+" — ירמיהו",ref:"Jeremiah.9"},{he:"פרק "+toHN(10)+" — ירמיהו",ref:"Jeremiah.10"},{he:"פרק "+toHN(11)+" — ירמיהו",ref:"Jeremiah.11"},{he:"פרק "+toHN(12)+" — ירמיהו",ref:"Jeremiah.12"},{he:"פרק "+toHN(13)+" — ירמיהו",ref:"Jeremiah.13"},{he:"פרק "+toHN(14)+" — ירמיהו",ref:"Jeremiah.14"},{he:"פרק "+toHN(15)+" — ירמיהו",ref:"Jeremiah.15"},{he:"פרק "+toHN(16)+" — ירמיהו",ref:"Jeremiah.16"},{he:"פרק "+toHN(17)+" — ירמיהו",ref:"Jeremiah.17"},{he:"פרק "+toHN(18)+" — ירמיהו",ref:"Jeremiah.18"},{he:"פרק "+toHN(19)+" — ירמיהו",ref:"Jeremiah.19"},{he:"פרק "+toHN(20)+" — ירמיהו",ref:"Jeremiah.20"},{he:"פרק "+toHN(21)+" — ירמיהו",ref:"Jeremiah.21"},{he:"פרק "+toHN(22)+" — ירמיהו",ref:"Jeremiah.22"},{he:"פרק "+toHN(23)+" — ירמיהו",ref:"Jeremiah.23"},{he:"פרק "+toHN(24)+" — ירמיהו",ref:"Jeremiah.24"},{he:"פרק "+toHN(25)+" — ירמיהו",ref:"Jeremiah.25"},{he:"פרק "+toHN(26)+" — ירמיהו",ref:"Jeremiah.26"},{he:"פרק "+toHN(27)+" — ירמיהו",ref:"Jeremiah.27"},{he:"פרק "+toHN(28)+" — ירמיהו",ref:"Jeremiah.28"},{he:"פרק "+toHN(29)+" — ירמיהו",ref:"Jeremiah.29"},{he:"פרק "+toHN(30)+" — ירמיהו",ref:"Jeremiah.30"},{he:"פרק "+toHN(31)+" — ירמיהו",ref:"Jeremiah.31"},{he:"פרק "+toHN(32)+" — ירמיהו",ref:"Jeremiah.32"},{he:"פרק "+toHN(33)+" — ירמיהו",ref:"Jeremiah.33"},{he:"פרק "+toHN(34)+" — ירמיהו",ref:"Jeremiah.34"},{he:"פרק "+toHN(35)+" — ירמיהו",ref:"Jeremiah.35"},{he:"פרק "+toHN(36)+" — ירמיהו",ref:"Jeremiah.36"},{he:"פרק "+toHN(37)+" — ירמיהו",ref:"Jeremiah.37"},{he:"פרק "+toHN(38)+" — ירמיהו",ref:"Jeremiah.38"},{he:"פרק "+toHN(39)+" — ירמיהו",ref:"Jeremiah.39"},{he:"פרק "+toHN(40)+" — ירמיהו",ref:"Jeremiah.40"},{he:"פרק "+toHN(41)+" — ירמיהו",ref:"Jeremiah.41"},{he:"פרק "+toHN(42)+" — ירמיהו",ref:"Jeremiah.42"},{he:"פרק "+toHN(43)+" — ירמיהו",ref:"Jeremiah.43"},{he:"פרק "+toHN(44)+" — ירמיהו",ref:"Jeremiah.44"},{he:"פרק "+toHN(45)+" — ירמיהו",ref:"Jeremiah.45"},{he:"פרק "+toHN(46)+" — ירמיהו",ref:"Jeremiah.46"},{he:"פרק "+toHN(47)+" — ירמיהו",ref:"Jeremiah.47"},{he:"פרק "+toHN(48)+" — ירמיהו",ref:"Jeremiah.48"},{he:"פרק "+toHN(49)+" — ירמיהו",ref:"Jeremiah.49"},{he:"פרק "+toHN(50)+" — ירמיהו",ref:"Jeremiah.50"},{he:"פרק "+toHN(51)+" — ירמיהו",ref:"Jeremiah.51"},{he:"פרק "+toHN(52)+" — ירמיהו",ref:"Jeremiah.52"}]},
+        {id:"ezekiel",he:"יחזקאל",color:"#c026d3",commentaries:SN_TANAKH_CM,sections:[{he:"פרק "+toHN(1)+" — יחזקאל",ref:"Ezekiel.1"},{he:"פרק "+toHN(2)+" — יחזקאל",ref:"Ezekiel.2"},{he:"פרק "+toHN(3)+" — יחזקאל",ref:"Ezekiel.3"},{he:"פרק "+toHN(4)+" — יחזקאל",ref:"Ezekiel.4"},{he:"פרק "+toHN(5)+" — יחזקאל",ref:"Ezekiel.5"},{he:"פרק "+toHN(6)+" — יחזקאל",ref:"Ezekiel.6"},{he:"פרק "+toHN(7)+" — יחזקאל",ref:"Ezekiel.7"},{he:"פרק "+toHN(8)+" — יחזקאל",ref:"Ezekiel.8"},{he:"פרק "+toHN(9)+" — יחזקאל",ref:"Ezekiel.9"},{he:"פרק "+toHN(10)+" — יחזקאל",ref:"Ezekiel.10"},{he:"פרק "+toHN(11)+" — יחזקאל",ref:"Ezekiel.11"},{he:"פרק "+toHN(12)+" — יחזקאל",ref:"Ezekiel.12"},{he:"פרק "+toHN(13)+" — יחזקאל",ref:"Ezekiel.13"},{he:"פרק "+toHN(14)+" — יחזקאל",ref:"Ezekiel.14"},{he:"פרק "+toHN(15)+" — יחזקאל",ref:"Ezekiel.15"},{he:"פרק "+toHN(16)+" — יחזקאל",ref:"Ezekiel.16"},{he:"פרק "+toHN(17)+" — יחזקאל",ref:"Ezekiel.17"},{he:"פרק "+toHN(18)+" — יחזקאל",ref:"Ezekiel.18"},{he:"פרק "+toHN(19)+" — יחזקאל",ref:"Ezekiel.19"},{he:"פרק "+toHN(20)+" — יחזקאל",ref:"Ezekiel.20"},{he:"פרק "+toHN(21)+" — יחזקאל",ref:"Ezekiel.21"},{he:"פרק "+toHN(22)+" — יחזקאל",ref:"Ezekiel.22"},{he:"פרק "+toHN(23)+" — יחזקאל",ref:"Ezekiel.23"},{he:"פרק "+toHN(24)+" — יחזקאל",ref:"Ezekiel.24"},{he:"פרק "+toHN(25)+" — יחזקאל",ref:"Ezekiel.25"},{he:"פרק "+toHN(26)+" — יחזקאל",ref:"Ezekiel.26"},{he:"פרק "+toHN(27)+" — יחזקאל",ref:"Ezekiel.27"},{he:"פרק "+toHN(28)+" — יחזקאל",ref:"Ezekiel.28"},{he:"פרק "+toHN(29)+" — יחזקאל",ref:"Ezekiel.29"},{he:"פרק "+toHN(30)+" — יחזקאל",ref:"Ezekiel.30"},{he:"פרק "+toHN(31)+" — יחזקאל",ref:"Ezekiel.31"},{he:"פרק "+toHN(32)+" — יחזקאל",ref:"Ezekiel.32"},{he:"פרק "+toHN(33)+" — יחזקאל",ref:"Ezekiel.33"},{he:"פרק "+toHN(34)+" — יחזקאל",ref:"Ezekiel.34"},{he:"פרק "+toHN(35)+" — יחזקאל",ref:"Ezekiel.35"},{he:"פרק "+toHN(36)+" — יחזקאל",ref:"Ezekiel.36"},{he:"פרק "+toHN(37)+" — יחזקאל",ref:"Ezekiel.37"},{he:"פרק "+toHN(38)+" — יחזקאל",ref:"Ezekiel.38"},{he:"פרק "+toHN(39)+" — יחזקאל",ref:"Ezekiel.39"},{he:"פרק "+toHN(40)+" — יחזקאל",ref:"Ezekiel.40"},{he:"פרק "+toHN(41)+" — יחזקאל",ref:"Ezekiel.41"},{he:"פרק "+toHN(42)+" — יחזקאל",ref:"Ezekiel.42"},{he:"פרק "+toHN(43)+" — יחזקאל",ref:"Ezekiel.43"},{he:"פרק "+toHN(44)+" — יחזקאל",ref:"Ezekiel.44"},{he:"פרק "+toHN(45)+" — יחזקאל",ref:"Ezekiel.45"},{he:"פרק "+toHN(46)+" — יחזקאל",ref:"Ezekiel.46"},{he:"פרק "+toHN(47)+" — יחזקאל",ref:"Ezekiel.47"},{he:"פרק "+toHN(48)+" — יחזקאל",ref:"Ezekiel.48"}]},
+        {id:"hosea",he:"הושע",color:"#db2777",commentaries:SN_TANAKH_CM,sections:[{he:"פרק "+toHN(1)+" — הושע",ref:"Hosea.1"},{he:"פרק "+toHN(2)+" — הושע",ref:"Hosea.2"},{he:"פרק "+toHN(3)+" — הושע",ref:"Hosea.3"},{he:"פרק "+toHN(4)+" — הושע",ref:"Hosea.4"},{he:"פרק "+toHN(5)+" — הושע",ref:"Hosea.5"},{he:"פרק "+toHN(6)+" — הושע",ref:"Hosea.6"},{he:"פרק "+toHN(7)+" — הושע",ref:"Hosea.7"},{he:"פרק "+toHN(8)+" — הושע",ref:"Hosea.8"},{he:"פרק "+toHN(9)+" — הושע",ref:"Hosea.9"},{he:"פרק "+toHN(10)+" — הושע",ref:"Hosea.10"},{he:"פרק "+toHN(11)+" — הושע",ref:"Hosea.11"},{he:"פרק "+toHN(12)+" — הושע",ref:"Hosea.12"},{he:"פרק "+toHN(13)+" — הושע",ref:"Hosea.13"},{he:"פרק "+toHN(14)+" — הושע",ref:"Hosea.14"}]},
+        {id:"joel",he:"יואל",color:"#e11d48",commentaries:SN_TANAKH_CM,sections:[{he:"פרק "+toHN(1)+" — יואל",ref:"Joel.1"},{he:"פרק "+toHN(2)+" — יואל",ref:"Joel.2"},{he:"פרק "+toHN(3)+" — יואל",ref:"Joel.3"},{he:"פרק "+toHN(4)+" — יואל",ref:"Joel.4"}]},
+        {id:"amos",he:"עמוס",color:"#dc2626",commentaries:SN_TANAKH_CM,sections:[{he:"פרק "+toHN(1)+" — עמוס",ref:"Amos.1"},{he:"פרק "+toHN(2)+" — עמוס",ref:"Amos.2"},{he:"פרק "+toHN(3)+" — עמוס",ref:"Amos.3"},{he:"פרק "+toHN(4)+" — עמוס",ref:"Amos.4"},{he:"פרק "+toHN(5)+" — עמוס",ref:"Amos.5"},{he:"פרק "+toHN(6)+" — עמוס",ref:"Amos.6"},{he:"פרק "+toHN(7)+" — עמוס",ref:"Amos.7"},{he:"פרק "+toHN(8)+" — עמוס",ref:"Amos.8"},{he:"פרק "+toHN(9)+" — עמוס",ref:"Amos.9"}]},
+        {id:"obadiah",he:"עובדיה",color:"#ea580c",commentaries:SN_TANAKH_CM,sections:[{he:"פרק "+toHN(1)+" — עובדיה",ref:"Obadiah.1"}]},
+        {id:"jonah",he:"יונה",color:"#d97706",commentaries:SN_TANAKH_CM,sections:[{he:"פרק "+toHN(1)+" — יונה",ref:"Jonah.1"},{he:"פרק "+toHN(2)+" — יונה",ref:"Jonah.2"},{he:"פרק "+toHN(3)+" — יונה",ref:"Jonah.3"},{he:"פרק "+toHN(4)+" — יונה",ref:"Jonah.4"}]},
+        {id:"micah",he:"מיכה",color:"#65a30d",commentaries:SN_TANAKH_CM,sections:[{he:"פרק "+toHN(1)+" — מיכה",ref:"Micah.1"},{he:"פרק "+toHN(2)+" — מיכה",ref:"Micah.2"},{he:"פרק "+toHN(3)+" — מיכה",ref:"Micah.3"},{he:"פרק "+toHN(4)+" — מיכה",ref:"Micah.4"},{he:"פרק "+toHN(5)+" — מיכה",ref:"Micah.5"},{he:"פרק "+toHN(6)+" — מיכה",ref:"Micah.6"},{he:"פרק "+toHN(7)+" — מיכה",ref:"Micah.7"}]},
+        {id:"nahum",he:"נחום",color:"#059669",commentaries:SN_TANAKH_CM,sections:[{he:"פרק "+toHN(1)+" — נחום",ref:"Nahum.1"},{he:"פרק "+toHN(2)+" — נחום",ref:"Nahum.2"},{he:"פרק "+toHN(3)+" — נחום",ref:"Nahum.3"}]},
+        {id:"habakkuk",he:"חבקוק",color:"#0d9488",commentaries:SN_TANAKH_CM,sections:[{he:"פרק "+toHN(1)+" — חבקוק",ref:"Habakkuk.1"},{he:"פרק "+toHN(2)+" — חבקוק",ref:"Habakkuk.2"},{he:"פרק "+toHN(3)+" — חבקוק",ref:"Habakkuk.3"}]},
+        {id:"zephaniah",he:"צפניה",color:"#0891b2",commentaries:SN_TANAKH_CM,sections:[{he:"פרק "+toHN(1)+" — צפניה",ref:"Zephaniah.1"},{he:"פרק "+toHN(2)+" — צפניה",ref:"Zephaniah.2"},{he:"פרק "+toHN(3)+" — צפניה",ref:"Zephaniah.3"}]},
+        {id:"haggai",he:"חגי",color:"#0284c7",commentaries:SN_TANAKH_CM,sections:[{he:"פרק "+toHN(1)+" — חגי",ref:"Haggai.1"},{he:"פרק "+toHN(2)+" — חגי",ref:"Haggai.2"}]},
+        {id:"zechariah",he:"זכריה",color:"#2563eb",commentaries:SN_TANAKH_CM,sections:[{he:"פרק "+toHN(1)+" — זכריה",ref:"Zechariah.1"},{he:"פרק "+toHN(2)+" — זכריה",ref:"Zechariah.2"},{he:"פרק "+toHN(3)+" — זכריה",ref:"Zechariah.3"},{he:"פרק "+toHN(4)+" — זכריה",ref:"Zechariah.4"},{he:"פרק "+toHN(5)+" — זכריה",ref:"Zechariah.5"},{he:"פרק "+toHN(6)+" — זכריה",ref:"Zechariah.6"},{he:"פרק "+toHN(7)+" — זכריה",ref:"Zechariah.7"},{he:"פרק "+toHN(8)+" — זכריה",ref:"Zechariah.8"},{he:"פרק "+toHN(9)+" — זכריה",ref:"Zechariah.9"},{he:"פרק "+toHN(10)+" — זכריה",ref:"Zechariah.10"},{he:"פרק "+toHN(11)+" — זכריה",ref:"Zechariah.11"},{he:"פרק "+toHN(12)+" — זכריה",ref:"Zechariah.12"},{he:"פרק "+toHN(13)+" — זכריה",ref:"Zechariah.13"},{he:"פרק "+toHN(14)+" — זכריה",ref:"Zechariah.14"}]},
+        {id:"malachi",he:"מלאכי",color:"#4f46e5",commentaries:SN_TANAKH_CM,sections:[{he:"פרק "+toHN(1)+" — מלאכי",ref:"Malachi.1"},{he:"פרק "+toHN(2)+" — מלאכי",ref:"Malachi.2"},{he:"פרק "+toHN(3)+" — מלאכי",ref:"Malachi.3"},{he:"פרק "+toHN(4)+" — מלאכי",ref:"Malachi.4"}]},
+        {id:"psalms",he:"תהילים",color:"#7c3aed",commentaries:SN_TANAKH_CM,sections:[{he:"פרק "+toHN(1)+" — תהילים",ref:"Psalms.1"},{he:"פרק "+toHN(2)+" — תהילים",ref:"Psalms.2"},{he:"פרק "+toHN(3)+" — תהילים",ref:"Psalms.3"},{he:"פרק "+toHN(4)+" — תהילים",ref:"Psalms.4"},{he:"פרק "+toHN(5)+" — תהילים",ref:"Psalms.5"},{he:"פרק "+toHN(6)+" — תהילים",ref:"Psalms.6"},{he:"פרק "+toHN(7)+" — תהילים",ref:"Psalms.7"},{he:"פרק "+toHN(8)+" — תהילים",ref:"Psalms.8"},{he:"פרק "+toHN(9)+" — תהילים",ref:"Psalms.9"},{he:"פרק "+toHN(10)+" — תהילים",ref:"Psalms.10"},{he:"פרק "+toHN(11)+" — תהילים",ref:"Psalms.11"},{he:"פרק "+toHN(12)+" — תהילים",ref:"Psalms.12"},{he:"פרק "+toHN(13)+" — תהילים",ref:"Psalms.13"},{he:"פרק "+toHN(14)+" — תהילים",ref:"Psalms.14"},{he:"פרק "+toHN(15)+" — תהילים",ref:"Psalms.15"},{he:"פרק "+toHN(16)+" — תהילים",ref:"Psalms.16"},{he:"פרק "+toHN(17)+" — תהילים",ref:"Psalms.17"},{he:"פרק "+toHN(18)+" — תהילים",ref:"Psalms.18"},{he:"פרק "+toHN(19)+" — תהילים",ref:"Psalms.19"},{he:"פרק "+toHN(20)+" — תהילים",ref:"Psalms.20"},{he:"פרק "+toHN(21)+" — תהילים",ref:"Psalms.21"},{he:"פרק "+toHN(22)+" — תהילים",ref:"Psalms.22"},{he:"פרק "+toHN(23)+" — תהילים",ref:"Psalms.23"},{he:"פרק "+toHN(24)+" — תהילים",ref:"Psalms.24"},{he:"פרק "+toHN(25)+" — תהילים",ref:"Psalms.25"},{he:"פרק "+toHN(26)+" — תהילים",ref:"Psalms.26"},{he:"פרק "+toHN(27)+" — תהילים",ref:"Psalms.27"},{he:"פרק "+toHN(28)+" — תהילים",ref:"Psalms.28"},{he:"פרק "+toHN(29)+" — תהילים",ref:"Psalms.29"},{he:"פרק "+toHN(30)+" — תהילים",ref:"Psalms.30"},{he:"פרק "+toHN(31)+" — תהילים",ref:"Psalms.31"},{he:"פרק "+toHN(32)+" — תהילים",ref:"Psalms.32"},{he:"פרק "+toHN(33)+" — תהילים",ref:"Psalms.33"},{he:"פרק "+toHN(34)+" — תהילים",ref:"Psalms.34"},{he:"פרק "+toHN(35)+" — תהילים",ref:"Psalms.35"},{he:"פרק "+toHN(36)+" — תהילים",ref:"Psalms.36"},{he:"פרק "+toHN(37)+" — תהילים",ref:"Psalms.37"},{he:"פרק "+toHN(38)+" — תהילים",ref:"Psalms.38"},{he:"פרק "+toHN(39)+" — תהילים",ref:"Psalms.39"},{he:"פרק "+toHN(40)+" — תהילים",ref:"Psalms.40"},{he:"פרק "+toHN(41)+" — תהילים",ref:"Psalms.41"},{he:"פרק "+toHN(42)+" — תהילים",ref:"Psalms.42"},{he:"פרק "+toHN(43)+" — תהילים",ref:"Psalms.43"},{he:"פרק "+toHN(44)+" — תהילים",ref:"Psalms.44"},{he:"פרק "+toHN(45)+" — תהילים",ref:"Psalms.45"},{he:"פרק "+toHN(46)+" — תהילים",ref:"Psalms.46"},{he:"פרק "+toHN(47)+" — תהילים",ref:"Psalms.47"},{he:"פרק "+toHN(48)+" — תהילים",ref:"Psalms.48"},{he:"פרק "+toHN(49)+" — תהילים",ref:"Psalms.49"},{he:"פרק "+toHN(50)+" — תהילים",ref:"Psalms.50"},{he:"פרק "+toHN(51)+" — תהילים",ref:"Psalms.51"},{he:"פרק "+toHN(52)+" — תהילים",ref:"Psalms.52"},{he:"פרק "+toHN(53)+" — תהילים",ref:"Psalms.53"},{he:"פרק "+toHN(54)+" — תהילים",ref:"Psalms.54"},{he:"פרק "+toHN(55)+" — תהילים",ref:"Psalms.55"},{he:"פרק "+toHN(56)+" — תהילים",ref:"Psalms.56"},{he:"פרק "+toHN(57)+" — תהילים",ref:"Psalms.57"},{he:"פרק "+toHN(58)+" — תהילים",ref:"Psalms.58"},{he:"פרק "+toHN(59)+" — תהילים",ref:"Psalms.59"},{he:"פרק "+toHN(60)+" — תהילים",ref:"Psalms.60"},{he:"פרק "+toHN(61)+" — תהילים",ref:"Psalms.61"},{he:"פרק "+toHN(62)+" — תהילים",ref:"Psalms.62"},{he:"פרק "+toHN(63)+" — תהילים",ref:"Psalms.63"},{he:"פרק "+toHN(64)+" — תהילים",ref:"Psalms.64"},{he:"פרק "+toHN(65)+" — תהילים",ref:"Psalms.65"},{he:"פרק "+toHN(66)+" — תהילים",ref:"Psalms.66"},{he:"פרק "+toHN(67)+" — תהילים",ref:"Psalms.67"},{he:"פרק "+toHN(68)+" — תהילים",ref:"Psalms.68"},{he:"פרק "+toHN(69)+" — תהילים",ref:"Psalms.69"},{he:"פרק "+toHN(70)+" — תהילים",ref:"Psalms.70"},{he:"פרק "+toHN(71)+" — תהילים",ref:"Psalms.71"},{he:"פרק "+toHN(72)+" — תהילים",ref:"Psalms.72"},{he:"פרק "+toHN(73)+" — תהילים",ref:"Psalms.73"},{he:"פרק "+toHN(74)+" — תהילים",ref:"Psalms.74"},{he:"פרק "+toHN(75)+" — תהילים",ref:"Psalms.75"},{he:"פרק "+toHN(76)+" — תהילים",ref:"Psalms.76"},{he:"פרק "+toHN(77)+" — תהילים",ref:"Psalms.77"},{he:"פרק "+toHN(78)+" — תהילים",ref:"Psalms.78"},{he:"פרק "+toHN(79)+" — תהילים",ref:"Psalms.79"},{he:"פרק "+toHN(80)+" — תהילים",ref:"Psalms.80"},{he:"פרק "+toHN(81)+" — תהילים",ref:"Psalms.81"},{he:"פרק "+toHN(82)+" — תהילים",ref:"Psalms.82"},{he:"פרק "+toHN(83)+" — תהילים",ref:"Psalms.83"},{he:"פרק "+toHN(84)+" — תהילים",ref:"Psalms.84"},{he:"פרק "+toHN(85)+" — תהילים",ref:"Psalms.85"},{he:"פרק "+toHN(86)+" — תהילים",ref:"Psalms.86"},{he:"פרק "+toHN(87)+" — תהילים",ref:"Psalms.87"},{he:"פרק "+toHN(88)+" — תהילים",ref:"Psalms.88"},{he:"פרק "+toHN(89)+" — תהילים",ref:"Psalms.89"},{he:"פרק "+toHN(90)+" — תהילים",ref:"Psalms.90"},{he:"פרק "+toHN(91)+" — תהילים",ref:"Psalms.91"},{he:"פרק "+toHN(92)+" — תהילים",ref:"Psalms.92"},{he:"פרק "+toHN(93)+" — תהילים",ref:"Psalms.93"},{he:"פרק "+toHN(94)+" — תהילים",ref:"Psalms.94"},{he:"פרק "+toHN(95)+" — תהילים",ref:"Psalms.95"},{he:"פרק "+toHN(96)+" — תהילים",ref:"Psalms.96"},{he:"פרק "+toHN(97)+" — תהילים",ref:"Psalms.97"},{he:"פרק "+toHN(98)+" — תהילים",ref:"Psalms.98"},{he:"פרק "+toHN(99)+" — תהילים",ref:"Psalms.99"},{he:"פרק "+toHN(100)+" — תהילים",ref:"Psalms.100"},{he:"פרק "+toHN(101)+" — תהילים",ref:"Psalms.101"},{he:"פרק "+toHN(102)+" — תהילים",ref:"Psalms.102"},{he:"פרק "+toHN(103)+" — תהילים",ref:"Psalms.103"},{he:"פרק "+toHN(104)+" — תהילים",ref:"Psalms.104"},{he:"פרק "+toHN(105)+" — תהילים",ref:"Psalms.105"},{he:"פרק "+toHN(106)+" — תהילים",ref:"Psalms.106"},{he:"פרק "+toHN(107)+" — תהילים",ref:"Psalms.107"},{he:"פרק "+toHN(108)+" — תהילים",ref:"Psalms.108"},{he:"פרק "+toHN(109)+" — תהילים",ref:"Psalms.109"},{he:"פרק "+toHN(110)+" — תהילים",ref:"Psalms.110"},{he:"פרק "+toHN(111)+" — תהילים",ref:"Psalms.111"},{he:"פרק "+toHN(112)+" — תהילים",ref:"Psalms.112"},{he:"פרק "+toHN(113)+" — תהילים",ref:"Psalms.113"},{he:"פרק "+toHN(114)+" — תהילים",ref:"Psalms.114"},{he:"פרק "+toHN(115)+" — תהילים",ref:"Psalms.115"},{he:"פרק "+toHN(116)+" — תהילים",ref:"Psalms.116"},{he:"פרק "+toHN(117)+" — תהילים",ref:"Psalms.117"},{he:"פרק "+toHN(118)+" — תהילים",ref:"Psalms.118"},{he:"פרק "+toHN(119)+" — תהילים",ref:"Psalms.119"},{he:"פרק "+toHN(120)+" — תהילים",ref:"Psalms.120"},{he:"פרק "+toHN(121)+" — תהילים",ref:"Psalms.121"},{he:"פרק "+toHN(122)+" — תהילים",ref:"Psalms.122"},{he:"פרק "+toHN(123)+" — תהילים",ref:"Psalms.123"},{he:"פרק "+toHN(124)+" — תהילים",ref:"Psalms.124"},{he:"פרק "+toHN(125)+" — תהילים",ref:"Psalms.125"},{he:"פרק "+toHN(126)+" — תהילים",ref:"Psalms.126"},{he:"פרק "+toHN(127)+" — תהילים",ref:"Psalms.127"},{he:"פרק "+toHN(128)+" — תהילים",ref:"Psalms.128"},{he:"פרק "+toHN(129)+" — תהילים",ref:"Psalms.129"},{he:"פרק "+toHN(130)+" — תהילים",ref:"Psalms.130"},{he:"פרק "+toHN(131)+" — תהילים",ref:"Psalms.131"},{he:"פרק "+toHN(132)+" — תהילים",ref:"Psalms.132"},{he:"פרק "+toHN(133)+" — תהילים",ref:"Psalms.133"},{he:"פרק "+toHN(134)+" — תהילים",ref:"Psalms.134"},{he:"פרק "+toHN(135)+" — תהילים",ref:"Psalms.135"},{he:"פרק "+toHN(136)+" — תהילים",ref:"Psalms.136"},{he:"פרק "+toHN(137)+" — תהילים",ref:"Psalms.137"},{he:"פרק "+toHN(138)+" — תהילים",ref:"Psalms.138"},{he:"פרק "+toHN(139)+" — תהילים",ref:"Psalms.139"},{he:"פרק "+toHN(140)+" — תהילים",ref:"Psalms.140"},{he:"פרק "+toHN(141)+" — תהילים",ref:"Psalms.141"},{he:"פרק "+toHN(142)+" — תהילים",ref:"Psalms.142"},{he:"פרק "+toHN(143)+" — תהילים",ref:"Psalms.143"},{he:"פרק "+toHN(144)+" — תהילים",ref:"Psalms.144"},{he:"פרק "+toHN(145)+" — תהילים",ref:"Psalms.145"},{he:"פרק "+toHN(146)+" — תהילים",ref:"Psalms.146"},{he:"פרק "+toHN(147)+" — תהילים",ref:"Psalms.147"},{he:"פרק "+toHN(148)+" — תהילים",ref:"Psalms.148"},{he:"פרק "+toHN(149)+" — תהילים",ref:"Psalms.149"},{he:"פרק "+toHN(150)+" — תהילים",ref:"Psalms.150"}]},
+        {id:"proverbs",he:"משלי",color:"#9333ea",commentaries:SN_TANAKH_CM,sections:[{he:"פרק "+toHN(1)+" — משלי",ref:"Proverbs.1"},{he:"פרק "+toHN(2)+" — משלי",ref:"Proverbs.2"},{he:"פרק "+toHN(3)+" — משלי",ref:"Proverbs.3"},{he:"פרק "+toHN(4)+" — משלי",ref:"Proverbs.4"},{he:"פרק "+toHN(5)+" — משלי",ref:"Proverbs.5"},{he:"פרק "+toHN(6)+" — משלי",ref:"Proverbs.6"},{he:"פרק "+toHN(7)+" — משלי",ref:"Proverbs.7"},{he:"פרק "+toHN(8)+" — משלי",ref:"Proverbs.8"},{he:"פרק "+toHN(9)+" — משלי",ref:"Proverbs.9"},{he:"פרק "+toHN(10)+" — משלי",ref:"Proverbs.10"},{he:"פרק "+toHN(11)+" — משלי",ref:"Proverbs.11"},{he:"פרק "+toHN(12)+" — משלי",ref:"Proverbs.12"},{he:"פרק "+toHN(13)+" — משלי",ref:"Proverbs.13"},{he:"פרק "+toHN(14)+" — משלי",ref:"Proverbs.14"},{he:"פרק "+toHN(15)+" — משלי",ref:"Proverbs.15"},{he:"פרק "+toHN(16)+" — משלי",ref:"Proverbs.16"},{he:"פרק "+toHN(17)+" — משלי",ref:"Proverbs.17"},{he:"פרק "+toHN(18)+" — משלי",ref:"Proverbs.18"},{he:"פרק "+toHN(19)+" — משלי",ref:"Proverbs.19"},{he:"פרק "+toHN(20)+" — משלי",ref:"Proverbs.20"},{he:"פרק "+toHN(21)+" — משלי",ref:"Proverbs.21"},{he:"פרק "+toHN(22)+" — משלי",ref:"Proverbs.22"},{he:"פרק "+toHN(23)+" — משלי",ref:"Proverbs.23"},{he:"פרק "+toHN(24)+" — משלי",ref:"Proverbs.24"},{he:"פרק "+toHN(25)+" — משלי",ref:"Proverbs.25"},{he:"פרק "+toHN(26)+" — משלי",ref:"Proverbs.26"},{he:"פרק "+toHN(27)+" — משלי",ref:"Proverbs.27"},{he:"פרק "+toHN(28)+" — משלי",ref:"Proverbs.28"},{he:"פרק "+toHN(29)+" — משלי",ref:"Proverbs.29"},{he:"פרק "+toHN(30)+" — משלי",ref:"Proverbs.30"},{he:"פרק "+toHN(31)+" — משלי",ref:"Proverbs.31"}]},
+        {id:"job",he:"איוב",color:"#a21caf",commentaries:SN_TANAKH_CM,sections:[{he:"פרק "+toHN(1)+" — איוב",ref:"Job.1"},{he:"פרק "+toHN(2)+" — איוב",ref:"Job.2"},{he:"פרק "+toHN(3)+" — איוב",ref:"Job.3"},{he:"פרק "+toHN(4)+" — איוב",ref:"Job.4"},{he:"פרק "+toHN(5)+" — איוב",ref:"Job.5"},{he:"פרק "+toHN(6)+" — איוב",ref:"Job.6"},{he:"פרק "+toHN(7)+" — איוב",ref:"Job.7"},{he:"פרק "+toHN(8)+" — איוב",ref:"Job.8"},{he:"פרק "+toHN(9)+" — איוב",ref:"Job.9"},{he:"פרק "+toHN(10)+" — איוב",ref:"Job.10"},{he:"פרק "+toHN(11)+" — איוב",ref:"Job.11"},{he:"פרק "+toHN(12)+" — איוב",ref:"Job.12"},{he:"פרק "+toHN(13)+" — איוב",ref:"Job.13"},{he:"פרק "+toHN(14)+" — איוב",ref:"Job.14"},{he:"פרק "+toHN(15)+" — איוב",ref:"Job.15"},{he:"פרק "+toHN(16)+" — איוב",ref:"Job.16"},{he:"פרק "+toHN(17)+" — איוב",ref:"Job.17"},{he:"פרק "+toHN(18)+" — איוב",ref:"Job.18"},{he:"פרק "+toHN(19)+" — איוב",ref:"Job.19"},{he:"פרק "+toHN(20)+" — איוב",ref:"Job.20"},{he:"פרק "+toHN(21)+" — איוב",ref:"Job.21"},{he:"פרק "+toHN(22)+" — איוב",ref:"Job.22"},{he:"פרק "+toHN(23)+" — איוב",ref:"Job.23"},{he:"פרק "+toHN(24)+" — איוב",ref:"Job.24"},{he:"פרק "+toHN(25)+" — איוב",ref:"Job.25"},{he:"פרק "+toHN(26)+" — איוב",ref:"Job.26"},{he:"פרק "+toHN(27)+" — איוב",ref:"Job.27"},{he:"פרק "+toHN(28)+" — איוב",ref:"Job.28"},{he:"פרק "+toHN(29)+" — איוב",ref:"Job.29"},{he:"פרק "+toHN(30)+" — איוב",ref:"Job.30"},{he:"פרק "+toHN(31)+" — איוב",ref:"Job.31"},{he:"פרק "+toHN(32)+" — איוב",ref:"Job.32"},{he:"פרק "+toHN(33)+" — איוב",ref:"Job.33"},{he:"פרק "+toHN(34)+" — איוב",ref:"Job.34"},{he:"פרק "+toHN(35)+" — איוב",ref:"Job.35"},{he:"פרק "+toHN(36)+" — איוב",ref:"Job.36"},{he:"פרק "+toHN(37)+" — איוב",ref:"Job.37"},{he:"פרק "+toHN(38)+" — איוב",ref:"Job.38"},{he:"פרק "+toHN(39)+" — איוב",ref:"Job.39"},{he:"פרק "+toHN(40)+" — איוב",ref:"Job.40"},{he:"פרק "+toHN(41)+" — איוב",ref:"Job.41"},{he:"פרק "+toHN(42)+" — איוב",ref:"Job.42"}]},
+        {id:"song-of-songs",he:"שיר השירים",color:"#c026d3",commentaries:SN_TANAKH_CM,sections:[{he:"פרק "+toHN(1)+" — שיר השירים",ref:"Song_of_Songs.1"},{he:"פרק "+toHN(2)+" — שיר השירים",ref:"Song_of_Songs.2"},{he:"פרק "+toHN(3)+" — שיר השירים",ref:"Song_of_Songs.3"},{he:"פרק "+toHN(4)+" — שיר השירים",ref:"Song_of_Songs.4"},{he:"פרק "+toHN(5)+" — שיר השירים",ref:"Song_of_Songs.5"},{he:"פרק "+toHN(6)+" — שיר השירים",ref:"Song_of_Songs.6"},{he:"פרק "+toHN(7)+" — שיר השירים",ref:"Song_of_Songs.7"},{he:"פרק "+toHN(8)+" — שיר השירים",ref:"Song_of_Songs.8"}]},
+        {id:"ruth",he:"רות",color:"#db2777",commentaries:SN_TANAKH_CM,sections:[{he:"פרק "+toHN(1)+" — רות",ref:"Ruth.1"},{he:"פרק "+toHN(2)+" — רות",ref:"Ruth.2"},{he:"פרק "+toHN(3)+" — רות",ref:"Ruth.3"},{he:"פרק "+toHN(4)+" — רות",ref:"Ruth.4"}]},
+        {id:"lamentations",he:"איכה",color:"#e11d48",commentaries:SN_TANAKH_CM,sections:[{he:"פרק "+toHN(1)+" — איכה",ref:"Lamentations.1"},{he:"פרק "+toHN(2)+" — איכה",ref:"Lamentations.2"},{he:"פרק "+toHN(3)+" — איכה",ref:"Lamentations.3"},{he:"פרק "+toHN(4)+" — איכה",ref:"Lamentations.4"},{he:"פרק "+toHN(5)+" — איכה",ref:"Lamentations.5"}]},
+        {id:"ecclesiastes",he:"קהלת",color:"#dc2626",commentaries:SN_TANAKH_CM,sections:[{he:"פרק "+toHN(1)+" — קהלת",ref:"Ecclesiastes.1"},{he:"פרק "+toHN(2)+" — קהלת",ref:"Ecclesiastes.2"},{he:"פרק "+toHN(3)+" — קהלת",ref:"Ecclesiastes.3"},{he:"פרק "+toHN(4)+" — קהלת",ref:"Ecclesiastes.4"},{he:"פרק "+toHN(5)+" — קהלת",ref:"Ecclesiastes.5"},{he:"פרק "+toHN(6)+" — קהלת",ref:"Ecclesiastes.6"},{he:"פרק "+toHN(7)+" — קהלת",ref:"Ecclesiastes.7"},{he:"פרק "+toHN(8)+" — קהלת",ref:"Ecclesiastes.8"},{he:"פרק "+toHN(9)+" — קהלת",ref:"Ecclesiastes.9"},{he:"פרק "+toHN(10)+" — קהלת",ref:"Ecclesiastes.10"},{he:"פרק "+toHN(11)+" — קהלת",ref:"Ecclesiastes.11"},{he:"פרק "+toHN(12)+" — קהלת",ref:"Ecclesiastes.12"}]},
+        {id:"esther",he:"אסתר",color:"#ea580c",commentaries:SN_TANAKH_CM,sections:[{he:"פרק "+toHN(1)+" — אסתר",ref:"Esther.1"},{he:"פרק "+toHN(2)+" — אסתר",ref:"Esther.2"},{he:"פרק "+toHN(3)+" — אסתר",ref:"Esther.3"},{he:"פרק "+toHN(4)+" — אסתר",ref:"Esther.4"},{he:"פרק "+toHN(5)+" — אסתר",ref:"Esther.5"},{he:"פרק "+toHN(6)+" — אסתר",ref:"Esther.6"},{he:"פרק "+toHN(7)+" — אסתר",ref:"Esther.7"},{he:"פרק "+toHN(8)+" — אסתר",ref:"Esther.8"},{he:"פרק "+toHN(9)+" — אסתר",ref:"Esther.9"},{he:"פרק "+toHN(10)+" — אסתר",ref:"Esther.10"}]},
+        {id:"daniel",he:"דניאל",color:"#d97706",commentaries:SN_TANAKH_CM,sections:[{he:"פרק "+toHN(1)+" — דניאל",ref:"Daniel.1"},{he:"פרק "+toHN(2)+" — דניאל",ref:"Daniel.2"},{he:"פרק "+toHN(3)+" — דניאל",ref:"Daniel.3"},{he:"פרק "+toHN(4)+" — דניאל",ref:"Daniel.4"},{he:"פרק "+toHN(5)+" — דניאל",ref:"Daniel.5"},{he:"פרק "+toHN(6)+" — דניאל",ref:"Daniel.6"},{he:"פרק "+toHN(7)+" — דניאל",ref:"Daniel.7"},{he:"פרק "+toHN(8)+" — דניאל",ref:"Daniel.8"},{he:"פרק "+toHN(9)+" — דניאל",ref:"Daniel.9"},{he:"פרק "+toHN(10)+" — דניאל",ref:"Daniel.10"},{he:"פרק "+toHN(11)+" — דניאל",ref:"Daniel.11"},{he:"פרק "+toHN(12)+" — דניאל",ref:"Daniel.12"}]},
+        {id:"ezra",he:"עזרא",color:"#65a30d",commentaries:SN_TANAKH_CM,sections:[{he:"פרק "+toHN(1)+" — עזרא",ref:"Ezra.1"},{he:"פרק "+toHN(2)+" — עזרא",ref:"Ezra.2"},{he:"פרק "+toHN(3)+" — עזרא",ref:"Ezra.3"},{he:"פרק "+toHN(4)+" — עזרא",ref:"Ezra.4"},{he:"פרק "+toHN(5)+" — עזרא",ref:"Ezra.5"},{he:"פרק "+toHN(6)+" — עזרא",ref:"Ezra.6"},{he:"פרק "+toHN(7)+" — עזרא",ref:"Ezra.7"},{he:"פרק "+toHN(8)+" — עזרא",ref:"Ezra.8"},{he:"פרק "+toHN(9)+" — עזרא",ref:"Ezra.9"},{he:"פרק "+toHN(10)+" — עזרא",ref:"Ezra.10"}]},
+        {id:"nehemiah",he:"נחמיה",color:"#059669",commentaries:SN_TANAKH_CM,sections:[{he:"פרק "+toHN(1)+" — נחמיה",ref:"Nehemiah.1"},{he:"פרק "+toHN(2)+" — נחמיה",ref:"Nehemiah.2"},{he:"פרק "+toHN(3)+" — נחמיה",ref:"Nehemiah.3"},{he:"פרק "+toHN(4)+" — נחמיה",ref:"Nehemiah.4"},{he:"פרק "+toHN(5)+" — נחמיה",ref:"Nehemiah.5"},{he:"פרק "+toHN(6)+" — נחמיה",ref:"Nehemiah.6"},{he:"פרק "+toHN(7)+" — נחמיה",ref:"Nehemiah.7"},{he:"פרק "+toHN(8)+" — נחמיה",ref:"Nehemiah.8"},{he:"פרק "+toHN(9)+" — נחמיה",ref:"Nehemiah.9"},{he:"פרק "+toHN(10)+" — נחמיה",ref:"Nehemiah.10"},{he:"פרק "+toHN(11)+" — נחמיה",ref:"Nehemiah.11"},{he:"פרק "+toHN(12)+" — נחמיה",ref:"Nehemiah.12"},{he:"פרק "+toHN(13)+" — נחמיה",ref:"Nehemiah.13"}]},
+        {id:"i-chronicles",he:"דברי הימים א",color:"#0d9488",commentaries:SN_TANAKH_CM,sections:[{he:"פרק "+toHN(1)+" — דברי הימים א",ref:"I_Chronicles.1"},{he:"פרק "+toHN(2)+" — דברי הימים א",ref:"I_Chronicles.2"},{he:"פרק "+toHN(3)+" — דברי הימים א",ref:"I_Chronicles.3"},{he:"פרק "+toHN(4)+" — דברי הימים א",ref:"I_Chronicles.4"},{he:"פרק "+toHN(5)+" — דברי הימים א",ref:"I_Chronicles.5"},{he:"פרק "+toHN(6)+" — דברי הימים א",ref:"I_Chronicles.6"},{he:"פרק "+toHN(7)+" — דברי הימים א",ref:"I_Chronicles.7"},{he:"פרק "+toHN(8)+" — דברי הימים א",ref:"I_Chronicles.8"},{he:"פרק "+toHN(9)+" — דברי הימים א",ref:"I_Chronicles.9"},{he:"פרק "+toHN(10)+" — דברי הימים א",ref:"I_Chronicles.10"},{he:"פרק "+toHN(11)+" — דברי הימים א",ref:"I_Chronicles.11"},{he:"פרק "+toHN(12)+" — דברי הימים א",ref:"I_Chronicles.12"},{he:"פרק "+toHN(13)+" — דברי הימים א",ref:"I_Chronicles.13"},{he:"פרק "+toHN(14)+" — דברי הימים א",ref:"I_Chronicles.14"},{he:"פרק "+toHN(15)+" — דברי הימים א",ref:"I_Chronicles.15"},{he:"פרק "+toHN(16)+" — דברי הימים א",ref:"I_Chronicles.16"},{he:"פרק "+toHN(17)+" — דברי הימים א",ref:"I_Chronicles.17"},{he:"פרק "+toHN(18)+" — דברי הימים א",ref:"I_Chronicles.18"},{he:"פרק "+toHN(19)+" — דברי הימים א",ref:"I_Chronicles.19"},{he:"פרק "+toHN(20)+" — דברי הימים א",ref:"I_Chronicles.20"},{he:"פרק "+toHN(21)+" — דברי הימים א",ref:"I_Chronicles.21"},{he:"פרק "+toHN(22)+" — דברי הימים א",ref:"I_Chronicles.22"},{he:"פרק "+toHN(23)+" — דברי הימים א",ref:"I_Chronicles.23"},{he:"פרק "+toHN(24)+" — דברי הימים א",ref:"I_Chronicles.24"},{he:"פרק "+toHN(25)+" — דברי הימים א",ref:"I_Chronicles.25"},{he:"פרק "+toHN(26)+" — דברי הימים א",ref:"I_Chronicles.26"},{he:"פרק "+toHN(27)+" — דברי הימים א",ref:"I_Chronicles.27"},{he:"פרק "+toHN(28)+" — דברי הימים א",ref:"I_Chronicles.28"},{he:"פרק "+toHN(29)+" — דברי הימים א",ref:"I_Chronicles.29"}]},
+        {id:"ii-chronicles",he:"דברי הימים ב",color:"#0891b2",commentaries:SN_TANAKH_CM,sections:[{he:"פרק "+toHN(1)+" — דברי הימים ב",ref:"II_Chronicles.1"},{he:"פרק "+toHN(2)+" — דברי הימים ב",ref:"II_Chronicles.2"},{he:"פרק "+toHN(3)+" — דברי הימים ב",ref:"II_Chronicles.3"},{he:"פרק "+toHN(4)+" — דברי הימים ב",ref:"II_Chronicles.4"},{he:"פרק "+toHN(5)+" — דברי הימים ב",ref:"II_Chronicles.5"},{he:"פרק "+toHN(6)+" — דברי הימים ב",ref:"II_Chronicles.6"},{he:"פרק "+toHN(7)+" — דברי הימים ב",ref:"II_Chronicles.7"},{he:"פרק "+toHN(8)+" — דברי הימים ב",ref:"II_Chronicles.8"},{he:"פרק "+toHN(9)+" — דברי הימים ב",ref:"II_Chronicles.9"},{he:"פרק "+toHN(10)+" — דברי הימים ב",ref:"II_Chronicles.10"},{he:"פרק "+toHN(11)+" — דברי הימים ב",ref:"II_Chronicles.11"},{he:"פרק "+toHN(12)+" — דברי הימים ב",ref:"II_Chronicles.12"},{he:"פרק "+toHN(13)+" — דברי הימים ב",ref:"II_Chronicles.13"},{he:"פרק "+toHN(14)+" — דברי הימים ב",ref:"II_Chronicles.14"},{he:"פרק "+toHN(15)+" — דברי הימים ב",ref:"II_Chronicles.15"},{he:"פרק "+toHN(16)+" — דברי הימים ב",ref:"II_Chronicles.16"},{he:"פרק "+toHN(17)+" — דברי הימים ב",ref:"II_Chronicles.17"},{he:"פרק "+toHN(18)+" — דברי הימים ב",ref:"II_Chronicles.18"},{he:"פרק "+toHN(19)+" — דברי הימים ב",ref:"II_Chronicles.19"},{he:"פרק "+toHN(20)+" — דברי הימים ב",ref:"II_Chronicles.20"},{he:"פרק "+toHN(21)+" — דברי הימים ב",ref:"II_Chronicles.21"},{he:"פרק "+toHN(22)+" — דברי הימים ב",ref:"II_Chronicles.22"},{he:"פרק "+toHN(23)+" — דברי הימים ב",ref:"II_Chronicles.23"},{he:"פרק "+toHN(24)+" — דברי הימים ב",ref:"II_Chronicles.24"},{he:"פרק "+toHN(25)+" — דברי הימים ב",ref:"II_Chronicles.25"},{he:"פרק "+toHN(26)+" — דברי הימים ב",ref:"II_Chronicles.26"},{he:"פרק "+toHN(27)+" — דברי הימים ב",ref:"II_Chronicles.27"},{he:"פרק "+toHN(28)+" — דברי הימים ב",ref:"II_Chronicles.28"},{he:"פרק "+toHN(29)+" — דברי הימים ב",ref:"II_Chronicles.29"},{he:"פרק "+toHN(30)+" — דברי הימים ב",ref:"II_Chronicles.30"},{he:"פרק "+toHN(31)+" — דברי הימים ב",ref:"II_Chronicles.31"},{he:"פרק "+toHN(32)+" — דברי הימים ב",ref:"II_Chronicles.32"},{he:"פרק "+toHN(33)+" — דברי הימים ב",ref:"II_Chronicles.33"},{he:"פרק "+toHN(34)+" — דברי הימים ב",ref:"II_Chronicles.34"},{he:"פרק "+toHN(35)+" — דברי הימים ב",ref:"II_Chronicles.35"},{he:"פרק "+toHN(36)+" — דברי הימים ב",ref:"II_Chronicles.36"}]}
       ]},
     { id:"mishna", he:"שישה סדרי משנה", subtitle:"זרעים · מועד · נשים · נזיקין · קדשים · טהרות",
       cat:"limmud", color:"#0e7490", icon:"📚",
@@ -23221,7 +23629,7 @@ function openSefarimNosafimPage(_pageMode) {
         "<p style=\"margin:0;\">יְהִי רָצוֹן מִלְּפָנֶיךָ יְיָ אֱלֹהַי וֵאלֹהֵי אֲבוֹתַי, שֶׁתָּכִין לִי וּלְאַנְשֵׁי בֵיתִי כָּל מַחְסוֹרֵנוּ, וְתַזְמִין לָנוּ כָּל צָרְכֵנוּ לְכָל יוֹם וָיוֹם מֵחַיֵּינוּ דֵּי מַחְסוֹרֵנוּ, וּלְכָל שָׁעָה וְשָׁעָה מִשָּׁעוֹתֵינוּ דֵּי סִפּוּקֵנוּ, וּלְכָל עֶצֶם מֵעַצְמֵינוּ דֵּי מְחִיָּתֵנוּ, כְּיָדְךָ הַטּוֹבָה וְהָרְחָבָה, וְלֹא כִּמְעוּט מִפְעָלֵינוּ וְקֹצֶר חֲסָדֵנוּ וּמִזְעַר גְּמוּלוֹתֵינוּ, וְיִהְיוּ מְזוֹנוֹתַי וּמְזוֹנוֹת אַנְשֵׁי בֵיתִי וְזַרְעִי וְזֶרַע זַרְעִי, מְסוּרִים בְּיָדְךָ וְלֹא בְיַד בָּשָׂר וָדָם:</p>"+
       "</div>"},
     { id:"segulot-tefilot", he:"סגולות ותפילות", subtitle:"ממקורות קדומים של צדיקי ישראל",
-      cat:"tefilot", color:"#7c3aed", icon:"🌟",
+      cat:"tefilot", color:"#7c3aed", icon:"🌟", autoToc:true,
       credit:"ממקורות קדומים — נחלת הכלל", creditUrl:"",
       type:"hardcoded",
       intro:"אוסף תפילות וסגולות של צדיקים — מהסידור, ליקוטי תפילות לרבי נחמן, כתבי האריז״ל, חיד״א, ומגדולי החסידות. כולל תפילות לרפואה, פרנסה, זיווג, בנים, שמירה, כפרה, עלייה רוחנית וסגולות שונות.",
@@ -23471,172 +23879,160 @@ function openSefarimNosafimPage(_pageMode) {
   window._snFontInc = function() { changePrayerFontSize(10, "#sn-reader-content"); };
   window._snFontDec = function() { changePrayerFontSize(-10, "#sn-reader-content"); };
 
-  // ── Mishnah Berurah toggle (for Shulchan Arukh — Orach Chaim only) ──
-  var SN_MB_KEY = "sn-show-mb";
-  var _snMBCache = {};  // sa-ref → null | "loading" | string[]
-  function _snGetMB() { return localStorage.getItem(SN_MB_KEY) === "true"; }
-  function _snSetMB(v) { localStorage.setItem(SN_MB_KEY, v ? "true" : "false"); }
-  function _snMBSupported() { return _bk && _bk.id === "shulchan-aruch" && _sbk && _sbk.id === "oc"; }
-  // Update MB toggle visibility based on current book/sub-book
-  window._snUpdateMBToggleVisibility = function() {
-    var btn = document.getElementById("sn-mb-toggle");
-    if (!btn) return;
-    btn.style.display = _snMBSupported() ? "flex" : "none";
-    if (_snMBSupported()) {
-      var on = _snGetMB();
-      btn.style.background = on ? "rgba(124,58,237,0.18)" : "rgba(124,58,237,0.06)";
-      btn.style.border = on ? "1.5px solid rgba(124,58,237,0.6)" : "1.5px solid rgba(124,58,237,0.25)";
-      btn.title = on ? "כבה משנה ברורה" : "הצג משנה ברורה";
-    }
-  };
-  // Toggle MB on/off
-  window._snToggleMB = function() {
-    if (!_snMBSupported()) return;
-    _snSetMB(!_snGetMB());
-    if (_snGetMB()) { if (window._btnToastOn) window._btnToastOn("נושאי כלים — משנה ברורה"); }
-    else if (window._btnToastOff) window._btnToastOff("נושאי כלים — משנה ברורה");
-    window._snUpdateMBToggleVisibility();
-    // Re-render all loaded chapters with/without MB
-    var area = document.getElementById("sn-reader-area");
-    if (area) {
-      var loaded = Array.from(_snLoadedIdx || new Set()).sort(function(a,b){return a-b;});
-      _snLoadedIdx = new Set();
-      area.innerHTML = "";
-      (async function() {
-        for (var i = 0; i < loaded.length; i++) {
-          await _snLoadChapter(loaded[i], area, false);
-        }
-      })();
-    }
-  };
-  // Fetch Mishnah Berurah for a Shulchan Arukh siman
-  async function _snFetchMB(saRef) {
-    if (_snMBCache[saRef] !== undefined) return _snMBCache[saRef];
-    _snMBCache[saRef] = "loading";
-    try {
-      // SA ref: "Shulchan_Arukh,_Orach_Chayim.1" → MB ref: "Mishnah_Berurah.1"
-      var match = saRef.match(/Shulchan_Arukh,_Orach_Chayim\.(\d+)/);
-      if (!match) { _snMBCache[saRef] = null; return null; }
-      var sim = match[1];
-      var res = await fetch("https://www.sefaria.org/api/texts/" + encodeURIComponent("Mishnah Berurah " + sim) + "?lang=he&context=0", { signal: AbortSignal.timeout(8000) });
-      var data = await res.json();
-      var he = data && data.he;
-      var flat = [];
-      function pushAll(v) {
-        if (typeof v === "string" && v.trim()) flat.push(v);
-        else if (Array.isArray(v)) v.forEach(pushAll);
-      }
-      pushAll(he);
-      _snMBCache[saRef] = flat.length ? flat : null;
-      return _snMBCache[saRef];
-    } catch(e) {
-      _snMBCache[saRef] = null;
-      return null;
-    }
-  }
-
-  // ── Be'er Hetev toggle (for Shulchan Arukh — any sub-book) ──
-  var SN_BH_KEY = "sn-show-bh";
-  var _snBHCache = {};  // sa-ref → null | "loading" | string[]
-  function _snGetBH() { return localStorage.getItem(SN_BH_KEY) === "true"; }
-  function _snSetBH(v) { localStorage.setItem(SN_BH_KEY, v ? "true" : "false"); }
-  function _snBHSupported() { return _bk && (_bk.id === "shulchan-aruch" || _bk.id === "mishna-berura"); }
-  // Update BH toggle visibility based on current book
-  window._snUpdateBHToggleVisibility = function() {
-    var btn = document.getElementById("sn-bh-toggle");
-    if (!btn) return;
-    btn.style.display = _snBHSupported() ? "flex" : "none";
-    if (_snBHSupported()) {
-      var on = _snGetBH();
-      btn.style.background = on ? "rgba(217,119,6,0.18)" : "rgba(217,119,6,0.06)";
-      btn.style.border = on ? "1.5px solid rgba(217,119,6,0.6)" : "1.5px solid rgba(217,119,6,0.25)";
-      btn.title = on ? "כבה באר היטב" : "הצג באר היטב";
-    }
-  };
-  // Toggle BH on/off
-  window._snToggleBH = function() {
-    if (!_snBHSupported()) return;
-    _snSetBH(!_snGetBH());
-    if (_snGetBH()) { if (window._btnToastOn) window._btnToastOn("נושאי כלים — באר היטב"); }
-    else if (window._btnToastOff) window._btnToastOff("נושאי כלים — באר היטב");
-    window._snUpdateBHToggleVisibility();
-    // Re-render all loaded chapters with/without BH
-    var area = document.getElementById("sn-reader-area");
-    if (area) {
-      var loaded = Array.from(_snLoadedIdx || new Set()).sort(function(a,b){return a-b;});
-      _snLoadedIdx = new Set();
-      area.innerHTML = "";
-      (async function() {
-        for (var i = 0; i < loaded.length; i++) {
-          await _snLoadChapter(loaded[i], area, false);
-        }
-      })();
-    }
-  };
-  // Fetch Be'er Hetev for a Shulchan Arukh siman
-  async function _snFetchBH(saRef) {
-    if (_snBHCache[saRef] !== undefined) return _snBHCache[saRef];
-    _snBHCache[saRef] = "loading";
-    try {
-      // SA ref: "Shulchan_Arukh,_Orach_Chayim.1" → BH ref: "Ba'er Hetev on Shulchan Arukh, Orach Chayim 1"
-      // Map SA sub-book to BH ref part
-      var bhMap = {
-        "Orach_Chayim": "Orach Chayim",
-        "Yoreh_Deah": "Yoreh Deah",
-        "Even_HaEzer": "Even HaEzer",
-        "Choshen_Mishpat": "Choshen Mishpat"
-      };
-      var match = saRef.match(/Shulchan_Arukh,_(Orach_Chayim|Yoreh_Deah|Even_HaEzer|Choshen_Mishpat)\.(\d+)/);
-      var subBook, sim;
-      if (match) {
-        subBook = bhMap[match[1]];
-        sim = match[2];
-      } else {
-        // בספר משנה ברורה — הבאר היטב מוצמד לשולחן ערוך אורח חיים של אותו סימן
-        var mbMatch = saRef.match(/Mishnah_Berurah\.(\d+)/);
-        if (!mbMatch) { _snBHCache[saRef] = null; return null; }
-        subBook = "Orach Chayim";
-        sim = mbMatch[1];
-      }
-      var bhRef = "Ba'er Hetev on Shulchan Arukh, " + subBook + " " + sim;
-      var res = await fetch("https://www.sefaria.org/api/texts/" + encodeURIComponent(bhRef) + "?lang=he&context=0", { signal: AbortSignal.timeout(8000) });
-      var data = await res.json();
-      if (data && data.error) { _snBHCache[saRef] = null; return null; }
-      var he = data && data.he;
-      var flat = [];
-      function pushAll2(v) {
-        if (typeof v === "string" && v.trim()) flat.push(v);
-        else if (Array.isArray(v)) v.forEach(pushAll2);
-      }
-      pushAll2(he);
-      _snBHCache[saRef] = flat.length ? flat : null;
-      return _snBHCache[saRef];
-    } catch(e) {
-      _snBHCache[saRef] = null;
-      return null;
-    }
-  }
-
   // ─────────────────────────────────────────────────────────────────────
-  // ── Generic commentaries (Rashi / Metzudat David / Bartenura / Tiferet Yisrael) ──
-  // Each book (or sub-book) declares: commentaries: [{id, he, color, refPrefix}]
+  // ── Generic commentaries (Rashi / Metzudat David / Bartenura / נושאי כלים של השו"ע) ──
+  // Each book (or sub-book) declares: commentaries: [{id, he, color, ...}]
+  //   verse-aligned (default): title(book) (תנ"ך, SN_TANAKH_CM) או refPrefix (משנה)
+  //     → נשלף ב-API v3 ומיושר לפי אינדקס לפסוקי הטקסט הראשי (רש"י, ברטנורא)
+  //   inline:"dibur" + refFn(secRef): משובץ בטקסט לפי דיבור-המתחיל (SA_COMMENTARIES)
   // The toggle UI is rendered dynamically based on _bk/_sbk.commentaries.
+  // NOTE (משנה, לטיפול נפרד): הכותרת "Tiferet Yisrael on <מסכת>" מפנה בספריא לספר
+  //   תפארת ישראל של המהר"ל (פרקים), לא לפירוש המשנה — הפירוש נמצא תחת
+  //   "Yachin on <מסכת>" / "Boaz on <מסכת>". הרשומות של המשנה לא שונו כאן.
   // ─────────────────────────────────────────────────────────────────────
   var _snCMCache = {};  // "{cm.id}|{ref}" → null | "loading" | string[]
 
+  // "Genesis 1:1-6:8" → {book:"Genesis", loc:"1:1-6:8"}; "I_Samuel.1" → {book:"I Samuel", loc:"1"};
+  // "Song_of_Songs.1" → {book:"Song of Songs", loc:"1"}; "Mishnah_Berakhot.1" → {book:"Mishnah Berakhot", loc:"1"}
+  function _snSplitRef(ref) {
+    var m = String(ref || "").replace(/_/g, " ").match(/^(.+?)[ .](\d.*)$/);
+    return m ? { book: m[1], loc: m[2] } : { book: String(ref || ""), loc: "" };
+  }
+  // שם הספר (אנגלית, ספריא) של התצוגה הנוכחית — מתוך ה-ref של הסעיף הראשון
+  function _snCurrentBook() {
+    var secs = (_sbk && _sbk.sections) || (_bk && _bk.sections) || [];
+    return (secs[0] && secs[0].ref) ? _snSplitRef(secs[0].ref).book : "";
+  }
+  // המפרשים הזמינים לתצוגה הנוכחית — רשומות עם title(book) מסוננות לפי זמינות בספר
   function _snActiveCommentaries() {
     if (!_bk) return [];
-    return (_sbk && _sbk.commentaries) || _bk.commentaries || [];
+    var cms = (_sbk && _sbk.commentaries) || _bk.commentaries || [];
+    if (!cms.some(function(c){ return typeof c.title === "function"; })) return cms;
+    var book = _snCurrentBook();
+    return cms.filter(function(c){ return typeof c.title !== "function" || !!(book && c.title(book)); });
   }
   function _snCMGet(id) { return localStorage.getItem("sn-show-cm-" + id) === "true"; }
   function _snCMSet(id, v) { localStorage.setItem("sn-show-cm-" + id, v ? "true" : "false"); }
+  // הגירה חד-פעמית: המתגים הישנים של משנה ברורה / באר היטב → שכבות הפירוש הגנריות
+  try {
+    if (localStorage.getItem("sn-show-mb") === "true") localStorage.setItem("sn-show-cm-sa-mb", "true");
+    if (localStorage.getItem("sn-show-bh") === "true") localStorage.setItem("sn-show-cm-sa-bh", "true");
+    localStorage.removeItem("sn-show-mb"); localStorage.removeItem("sn-show-bh");
+  } catch (eMig) {}
+
+  // hex → "rgba(r,g,b,a)" (לצביעת כפתורי/צ'יפי המפרשים)
+  function _snCMRgba(col, a) {
+    var h = String(col || "#7c3aed").replace("#", "");
+    if (h.length === 3) h = h.split("").map(function(x){ return x + x; }).join("");
+    var n = parseInt(h, 16);
+    return "rgba(" + ((n>>16)&255) + "," + ((n>>8)&255) + "," + (n&255) + "," + a + ")";
+  }
+  // תצוגת "מפרשים" מקובצת (כפתור אחד + חלונית צ'יפים) — לתנ"ך, או לכל ספר עם יותר מ-8 שכבות.
+  // בשולחן ערוך (≤8 שכבות) נשארים הכפתורים העגולים הנפרדים.
+  function _snCMUsePopover(cms) {
+    return (_bk && _bk.id === "tanakh") || cms.length > 8;
+  }
+  // חלונית בחירת המפרשים (multi-select) — נבנית דינמית בתוך #sn-reader-view
+  function _snCMPopoverEl() { return document.getElementById("sn-cm-popover"); }
+  function _snCMPopoverOpen() { var p = _snCMPopoverEl(); return !!(p && p.style.display !== "none"); }
+  function _snCMRenderPopover() {
+    var p = _snCMPopoverEl();
+    if (!p) return;
+    var cms = _snActiveCommentaries();
+    var nOn = cms.filter(function(c){ return _snCMGet(c.id); }).length;
+    var chip = function(c) {
+      var on = _snCMGet(c.id);
+      var col = c.color || "#7c3aed";
+      var heAttr = c.he.replace(/"/g, "&quot;");
+      return '<button id="sn-cm-btn-' + c.id + '" onclick="window._snToggleCommentary(\'' + c.id + '\')" ' +
+        'aria-pressed="' + (on ? 'true' : 'false') + '" title="' + (on ? 'כבה ' : 'הצג ') + heAttr + '" ' +
+        'style="padding:0.32rem 0.7rem;border-radius:999px;font-size:0.78rem;font-weight:800;cursor:pointer;line-height:1.2;white-space:nowrap;' +
+        'border:1.5px solid ' + _snCMRgba(col, on ? 0.75 : 0.3) + ';background:' + _snCMRgba(col, on ? 0.18 : 0.05) + ';color:' + col + ';' +
+        (on ? 'box-shadow:0 0 0 2px ' + _snCMRgba(col, 0.18) + ';' : '') + 'transition:all 0.15s ease;">' +
+        (on ? '✓ ' : '') + heAttr + '</button>';
+    };
+    var groupsHtml = SN_TANAKH_CM_GROUPS.map(function(g) {
+      var list = cms.filter(function(c){ return (c.group || "acharonim") === g.id; });
+      if (!list.length) return "";
+      return '<div style="margin-bottom:0.6rem;">' +
+        '<div style="color:#64748b;font-size:0.68rem;font-weight:800;margin:0 0 0.3rem;letter-spacing:0.02em;">' + g.he + '</div>' +
+        '<div style="display:flex;flex-wrap:wrap;gap:0.35rem;">' + list.map(chip).join("") + '</div></div>';
+    }).join("");
+    // ספרים בלי קיבוץ (group חסר) — כל הצ'יפים ברשימה אחת
+    if (!groupsHtml) groupsHtml = '<div style="display:flex;flex-wrap:wrap;gap:0.35rem;">' + cms.map(chip).join("") + '</div>';
+    p.innerHTML =
+      '<div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;margin-bottom:0.55rem;">' +
+        '<button onclick="window._snCMPopoverToggle(false)" aria-label="סגור" style="width:30px;height:30px;border-radius:50%;border:1px solid rgba(0,0,0,0.12);background:rgba(0,0,0,0.04);color:#475569;cursor:pointer;font-size:0.9rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✕</button>' +
+        '<div style="flex:1;text-align:center;color:#1e293b;font-weight:900;font-size:0.9rem;">📖 מפרשים' + (nOn ? ' <span style="color:#64748b;font-weight:700;font-size:0.75rem;">(' + nOn + ' פעילים)</span>' : '') + '</div>' +
+        (nOn ? '<button onclick="window._snCMClearAll()" style="padding:0.25rem 0.6rem;border-radius:999px;border:1px solid rgba(0,0,0,0.12);background:transparent;color:#64748b;cursor:pointer;font-size:0.68rem;font-weight:800;flex-shrink:0;">נקה הכל</button>' : '<span style="width:30px;flex-shrink:0;"></span>') +
+      '</div>' + groupsHtml;
+  }
+  window._snCMPopoverToggle = function(force) {
+    var view = document.getElementById("sn-reader-view");
+    if (!view) return;
+    var p = _snCMPopoverEl(), bd = document.getElementById("sn-cm-backdrop");
+    if (!p) {
+      bd = document.createElement("div");
+      bd.id = "sn-cm-backdrop";
+      bd.style.cssText = "display:none;position:absolute;inset:0;z-index:59;background:rgba(15,23,42,0.18);";
+      bd.onclick = function(){ window._snCMPopoverToggle(false); };
+      p = document.createElement("div");
+      p.id = "sn-cm-popover";
+      p.setAttribute("role", "dialog");
+      p.setAttribute("aria-label", "בחירת מפרשים");
+      p.style.cssText = "display:none;position:absolute;left:0.75rem;right:0.75rem;bottom:4.4rem;z-index:60;max-height:62%;overflow-y:auto;" +
+        "background:#fff;border:1px solid rgba(0,0,0,0.1);border-radius:1rem;padding:0.75rem 0.9rem 0.6rem;direction:rtl;text-align:right;" +
+        "box-shadow:0 12px 36px rgba(0,0,0,0.22);max-width:560px;margin:0 auto;font-family:inherit;";
+      view.appendChild(bd); view.appendChild(p);
+    }
+    var open = (typeof force === "boolean") ? force : !_snCMPopoverOpen();
+    if (open) {
+      _snCMRenderPopover();
+      // צמוד מעל הפס התחתון בפועל (במסך צר הפס נשבר לשתי שורות וגבוה יותר)
+      try {
+        var tb = document.getElementById("sn-cm-toolbar");
+        var row = tb && tb.parentElement;
+        var rowH = row ? row.getBoundingClientRect().height : 0;
+        p.style.bottom = (rowH ? rowH + 8 : 70) + "px";
+      } catch (eB) {}
+    }
+    p.style.display = open ? "" : "none";
+    bd.style.display = open ? "" : "none";
+    var mainBtn = document.getElementById("sn-cm-main-btn");
+    if (mainBtn) mainBtn.setAttribute("aria-expanded", open ? "true" : "false");
+  };
+  // כיבוי כל המפרשים הפעילים בתצוגה הנוכחית (רינדור מחדש פעם אחת)
+  window._snCMClearAll = function() {
+    var on = _snActiveCommentaries().filter(function(c){ return _snCMGet(c.id); });
+    if (!on.length) return;
+    on.forEach(function(c){ _snCMSet(c.id, false); });
+    if (window._btnToastOff) window._btnToastOff("מפרשים");
+    _snBuildCMToolbar();
+    _snCMRerenderLoaded();
+  };
 
   // Build the toggle-button HTML for all commentaries available on the current view
   function _snBuildCMToolbar() {
     var bar = document.getElementById("sn-cm-toolbar");
     if (!bar) return;
     var cms = _snActiveCommentaries();
-    if (!cms.length) { bar.innerHTML = ""; return; }
+    if (!cms.length) { bar.innerHTML = ""; if (_snCMPopoverOpen()) window._snCMPopoverToggle(false); return; }
+    if (_snCMUsePopover(cms)) {
+      // כפתור עגול אחד "📖 מפרשים" עם תג של מספר המפרשים הפעילים; הצ'יפים בחלונית
+      var nOn = cms.filter(function(c){ return _snCMGet(c.id); }).length;
+      var col = (_bk && _bk.color) || "#0e7490";
+      bar.innerHTML =
+        '<button id="sn-cm-main-btn" onclick="window._snCMPopoverToggle()" aria-haspopup="dialog" aria-expanded="' + (_snCMPopoverOpen() ? 'true' : 'false') + '" ' +
+          'style="position:relative;width:38px;height:38px;border-radius:50%;border:1.5px solid ' + _snCMRgba(col, nOn ? 0.6 : 0.25) + ';' +
+          'background:' + _snCMRgba(col, nOn ? 0.18 : 0.06) + ';color:' + col + ';font-size:0.95rem;font-weight:900;cursor:pointer;' +
+          'display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px ' + _snCMRgba(col, 0.15) + ';transition:all 0.15s ease;line-height:1;flex-shrink:0;" ' +
+          'onmouseover="this.style.transform=\'scale(1.08)\'" onmouseout="this.style.transform=\'\'" aria-label="מפרשים" title="מפרשים (' + cms.length + ' זמינים' + (nOn ? ', ' + nOn + ' פעילים' : '') + ')">📖' +
+          (nOn ? '<span style="position:absolute;top:-5px;left:-5px;min-width:17px;height:17px;padding:0 4px;box-sizing:border-box;border-radius:999px;background:' + col + ';color:#fff;font-size:0.62rem;font-weight:900;display:flex;align-items:center;justify-content:center;line-height:1;border:1.5px solid #faf9f6;">' + nOn + '</span>' : '') +
+        '</button>';
+      if (_snCMPopoverOpen()) _snCMRenderPopover();
+      return;
+    }
+    if (_snCMPopoverOpen()) window._snCMPopoverToggle(false);
     bar.innerHTML = cms.map(function(c) {
       var on = _snCMGet(c.id);
       var col = c.color || "#7c3aed";
@@ -23647,17 +24043,56 @@ function openSefarimNosafimPage(_pageMode) {
         var n = parseInt(h, 16);
         return "rgba(" + ((n>>16)&255) + "," + ((n>>8)&255) + "," + (n&255) + "," + a + ")";
       };
+      // תוכן הכפתור: אימוג'י / תווית מקוצרת / שם מלא; השם המלא תמיד ב-title
+      var face = c.emoji || c.short || c.he;
+      var fsz = c.emoji ? "0.95rem" : "0.7rem";
+      var heAttr = c.he.replace(/"/g, "&quot;");
       return '<button id="sn-cm-btn-' + c.id + '" onclick="window._snToggleCommentary(\''+c.id+'\')" ' +
         'style="width:38px;height:38px;border-radius:50%;border:1.5px solid ' + rgba(on?0.6:0.25) + ';' +
-        'background:' + rgba(on?0.18:0.06) + ';color:' + col + ';font-size:0.7rem;font-weight:900;cursor:pointer;' +
+        'background:' + rgba(on?0.18:0.06) + ';color:' + col + ';font-size:' + fsz + ';font-weight:900;cursor:pointer;' +
         'display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px ' + rgba(0.15) + ';' +
-        'transition:all 0.15s ease;line-height:1;" ' +
+        'transition:all 0.15s ease;line-height:1;flex-shrink:0;" ' +
         'onmouseover="this.style.transform=\'scale(1.08)\'" onmouseout="this.style.transform=\'\'" ' +
-        'title="' + (on?'כבה ':'הצג ') + c.he + '">' + c.he.replace(/"/g,"&quot;") + '</button>';
+        'aria-label="' + heAttr + '" title="' + (on?'כבה ':'הצג ') + heAttr + '">' + face.replace(/"/g,"&quot;") + '</button>';
     }).join("");
   }
   // expose for external triggers
   window._snBuildCMToolbar = _snBuildCMToolbar;
+
+  // רינדור מחדש של כל הפרקים הטעונים (אחרי שינוי שכבות) — תוך שמירת מיקום הגלילה
+  // (מעוגן לפרק הנראה: scrollTop יחסי לראש הפרק, כי גובה הפרקים משתנה עם הפירושים)
+  function _snCMRerenderLoaded() {
+    var area = document.getElementById("sn-reader-area");
+    if (!area) return;
+    var content = document.getElementById("sn-reader-content");
+    var anchorIdx = null, anchorOff = 0, prevTop = content ? content.scrollTop : 0;
+    if (content) {
+      var cRect = content.getBoundingClientRect();
+      var chs = area.querySelectorAll("[data-sn-idx]");
+      for (var k = 0; k < chs.length; k++) {
+        var r = chs[k].getBoundingClientRect();
+        if (r.bottom > cRect.top + 1) { anchorIdx = chs[k].getAttribute("data-sn-idx"); anchorOff = cRect.top - r.top; break; }
+      }
+    }
+    var loaded = Array.from(_snLoadedIdx || new Set()).sort(function(a,b){return a-b;});
+    _snLoadedIdx = new Set();
+    area.innerHTML = "";
+    (async function() {
+      for (var i = 0; i < loaded.length; i++) {
+        await _snLoadChapter(loaded[i], area, false);
+      }
+      if (!content) return;
+      var el = (anchorIdx !== null) ? document.getElementById("sn-chapter-" + anchorIdx) : null;
+      if (el) {
+        var cr2 = content.getBoundingClientRect(), er = el.getBoundingClientRect();
+        // מעמידים את ראש פרק-העוגן באותו מקום; ההיסט בתוך הפרק נשמר רק אם עדיין בתחום הפרק
+        var off = Math.min(anchorOff, Math.max(0, er.height - 1));
+        content.scrollTop += (er.top - cr2.top) + off;
+      } else {
+        content.scrollTop = prevTop;
+      }
+    })();
+  }
 
   // Toggle a commentary on/off and re-render visible chapters
   window._snToggleCommentary = function(id) {
@@ -23667,36 +24102,36 @@ function openSefarimNosafimPage(_pageMode) {
     if (_snCMGet(id)) { if (window._btnToastOn) window._btnToastOn(cmName); }
     else if (window._btnToastOff) window._btnToastOff(cmName);
     _snBuildCMToolbar();
-    var area = document.getElementById("sn-reader-area");
-    if (area) {
-      var loaded = Array.from(_snLoadedIdx || new Set()).sort(function(a,b){return a-b;});
-      _snLoadedIdx = new Set();
-      area.innerHTML = "";
-      (async function() {
-        for (var i = 0; i < loaded.length; i++) {
-          await _snLoadChapter(loaded[i], area, false);
-        }
-      })();
-    }
+    _snCMRerenderLoaded();
   };
 
-  // Fetch a commentary's text for a given ref (cached)
+  // Fetch a commentary's text for a given ref (cached in memory + localStorage like base texts)
+  // cm.refFn(secRef) → ref מלא (או null = אין כיסוי לסימן); אחרת refPrefix + ref.
   async function _snFetchCommentary(cm, ref) {
     var key = cm.id + "|" + ref;
     if (_snCMCache[key] !== undefined && _snCMCache[key] !== "loading") return _snCMCache[key];
     _snCMCache[key] = "loading";
     try {
-      var fullRef = (cm.refPrefix || "") + ref;
-      var url = "https://www.sefaria.org/api/texts/" + encodeURIComponent(fullRef) + "?lang=he&context=0";
-      var res = await fetch(url, { signal: AbortSignal.timeout(8000) });
-      var data = await res.json();
-      if (data && data.error) { _snCMCache[key] = null; return null; }
+      var fullRef = cm.refFn ? cm.refFn(ref) : ((cm.refPrefix || "") + ref);
+      if (!fullRef) { _snCMCache[key] = null; return null; }   // אין כיסוי לסימן זה
+      var he = _snCacheGet(fullRef);
+      if (!he) {
+        // pad=0 — בלעדיו ספריא מחזירה רק את הסעיף הראשון בספרים בעומק 3 (ביאור הלכה, כף החיים, ש"ך…)
+        var url = "https://www.sefaria.org/api/texts/" + encodeURIComponent(fullRef) + "?pad=0&lang=he&context=0";
+        var res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+        var data = await res.json();
+        if (data && data.error) { _snCMCache[key] = null; return null; }
+        he = data && data.he;
+        if (he && (Array.isArray(he) ? he.length : true)) _snCacheSet(fullRef, he);
+      }
       var flat = [];
       function pushAll(v) {
         if (typeof v === "string" && v.trim()) flat.push(v);
         else if (Array.isArray(v)) v.forEach(pushAll);
       }
-      pushAll(data && data.he);
+      pushAll(he);
+      // stub של ספריא בכף החיים ("לספר קול יעקב … לחץ כאן") — לא טקסט אמיתי
+      flat = flat.filter(function(s){ return !(/class="refLink"/.test(s) && s.indexOf("קול יעקב") >= 0); });
       _snCMCache[key] = flat.length ? flat : null;
       return _snCMCache[key];
     } catch(e) {
@@ -23706,88 +24141,91 @@ function openSefarimNosafimPage(_pageMode) {
   }
   // Make it available within the IIFE
 
-  // ── פירושים צמודי-פסוק: שמירה על מבנה הפסוקים (פסוק ← רשימת פירושים) ──
-  var _snCMVerseCache = {};  // "{cm.id}|{ref}" → null | "loading" | array-of-arrays
-  async function _snFetchCommentaryVerses(cm, ref) {
-    var key = cm.id + "|" + ref;
+  // ── פירושים צמודי-פסוק: שליפה ב-API v3 ויישור למבנה הטקסט הראשי ──
+  // v3 (Hebrew בלבד, בלי padding): פרק בודד → [פסוק] → string[] (או string בתרגומים);
+  // פרשה רב-פרקית ("Genesis 6:9-11:32") → [פרק][פסוק] → string[]. הפרק הראשון מתחיל
+  // באותו פסוק כמו הטקסט הראשי, אבל פסוקים ריקים בסוף נגזמים — לכן יישור לפי אינדקס
+  // בלבד, בלי להניח אורכים שווים. מפרשים דלילים (רשב"ם) מחזירים מערכים קצרים.
+  var _snCMVerseCache = {};  // "{cm.id}|{secRef}" → null | "loading" | aligned array
+  var _snCMNoIndex = {};     // "{cm.id}|{book}" → true כשספריא החזירה שגיאה (אין אינדקס) — לא מנסים שוב בכל פרק
+  var _SN_CM_MIRROR_MAX = 64 * 1024; // מראה ב-localStorage רק לתשובות קטנות (אור החיים/רד"ק ≈ 200KB לפרשה — היו מרוקנים את המכסה)
+
+  // ה-ref המלא של הפירוש לסעיף: title(book) (תנ"ך) / refFn (שו"ע) / refPrefix (משנה); null = אין כיסוי
+  function _snCMFullRef(cm, secRef) {
+    var p = _snSplitRef(secRef);
+    if (typeof cm.title === "function") { var t = cm.title(p.book); return t ? t + " " + p.loc : null; }
+    if (cm.refFn) return cm.refFn(secRef);
+    return (cm.refPrefix || "") + p.book + (p.loc ? " " + p.loc : "");
+  }
+  // כל ערך (מחרוזת / מערך מקונן) → string[] של הפירושים על פסוק אחד
+  function _snCMVerse(v) {
+    if (v == null) return [];
+    if (typeof v === "string") return v.trim() ? [v] : [];
+    var out = [];
+    (function push(x) {
+      if (typeof x === "string") { if (x.trim()) out.push(x); }
+      else if (Array.isArray(x)) x.forEach(push);
+    })(v);
+    return out;
+  }
+  // יישור טקסט הפירוש למבנה הטקסט הראשי: [פסוק]→string[] (פרק) או [פרק][פסוק]→string[] (פרשה)
+  function _snCMAlign(text, mainHe, isMultiChap) {
+    if (text == null) return null;
+    if (!Array.isArray(text)) text = [text];
+    var aligned;
+    if (isMultiChap) {
+      aligned = mainHe.map(function(_, ci) { return Array.isArray(text[ci]) ? text[ci].map(_snCMVerse) : []; });
+      return aligned.some(function(ch){ return ch.some(function(v){ return v.length; }); }) ? aligned : null;
+    }
+    aligned = text.map(_snCMVerse);
+    return aligned.some(function(v){ return v.length; }) ? aligned : null;
+  }
+  async function _snFetchCommentaryAligned(cm, secRef, mainHe, isMultiChap) {
+    var key = cm.id + "|" + secRef;
     if (_snCMVerseCache[key] !== undefined && _snCMVerseCache[key] !== "loading") return _snCMVerseCache[key];
+    var book = _snSplitRef(secRef).book;
+    if (_snCMNoIndex[cm.id + "|" + book]) return null;
+    var fullRef = _snCMFullRef(cm, secRef);
+    if (!fullRef) { _snCMVerseCache[key] = null; return null; }
     _snCMVerseCache[key] = "loading";
     try {
-      var fullRef = (cm.refPrefix || "") + ref;
-      var url = "https://www.sefaria.org/api/texts/" + encodeURIComponent(fullRef) + "?lang=he&context=0";
-      var res = await fetch(url, { signal: AbortSignal.timeout(8000) });
-      var data = await res.json();
-      if (!data || data.error) { _snCMVerseCache[key] = null; return null; }
-      var he = data.he;
-      if (!Array.isArray(he)) he = he ? [he] : [];
-      var verses = he.map(function(v) {
-        if (typeof v === "string") return v.trim() ? [v] : [];
-        var flat = [];
-        (function push(x) {
-          if (typeof x === "string" && x.trim()) flat.push(x);
-          else if (Array.isArray(x)) x.forEach(push);
-        })(v);
-        return flat;
-      });
-      _snCMVerseCache[key] = verses.some(function(v){ return v.length; }) ? verses : null;
+      var text = _snCacheGet("cm:" + fullRef);
+      if (!text) {
+        var url = "https://www.sefaria.org/api/v3/texts/" + encodeURIComponent(fullRef) + "?version=hebrew&return_format=strip_only_footnotes";
+        var res = await fetch(url, { signal: AbortSignal.timeout(15000) });
+        var data = await res.json();
+        if (!data || data.error || !data.versions || !data.versions.length) {
+          // אין אינדקס/גרסה עברית לספר הזה — מסמנים לכל הספר כדי לא לנסות שוב בכל פרק
+          if (!data || data.error) _snCMNoIndex[cm.id + "|" + book] = true;
+          _snCMVerseCache[key] = null;
+          return null;
+        }
+        text = data.versions[0].text;
+        try {
+          var raw = JSON.stringify(text);
+          if (raw && raw.length <= _SN_CM_MIRROR_MAX) _snCacheSet("cm:" + fullRef, text);
+        } catch (eQ) {}
+      }
+      _snCMVerseCache[key] = _snCMAlign(text, mainHe, isMultiChap);
       return _snCMVerseCache[key];
     } catch(e) {
-      _snCMVerseCache[key] = null;
+      // כשל רשת/timeout — לא שומרים null קבוע, כדי שהדלקה מחדש תנסה שוב
+      delete _snCMVerseCache[key];
       return null;
     }
   }
 
-  // בלוק פירוש קטן המוצג בתוך הטקסט, מיד אחרי הפסוק שעליו הוא נאמר
+  // בלוק פירוש קטן המוצג בתוך הטקסט, מיד אחרי הפסוק שעליו הוא נאמר.
+  // <span display:block> (ולא <div>) — כי בפרשות החומש הוא משובץ בתוך ה-<p> של הפרק, אחרי כל פסוק
   function _snInlineCMHtml(cm, texts) {
     var col = cm.color || "#7c3aed";
-    var h = col.replace("#", "");
-    if (h.length === 3) h = h.split("").map(function(x){ return x + x; }).join("");
-    var n = parseInt(h, 16);
-    var r = (n>>16)&255, g = (n>>8)&255, b = n&255;
-    return '<div style="margin:0.3rem 0 1.1rem;padding:0.5rem 0.8rem;border-radius:0.5rem;' +
-      'background:rgba(' + r + ',' + g + ',' + b + ',0.06);' +
+    return '<span style="display:block;margin:0.3rem 0 1.1rem;padding:0.5rem 0.8rem;border-radius:0.5rem;' +
+      'background:' + _snCMRgba(col, 0.06) + ';' +
       'border-right:3px solid ' + col + ';' +
       'font-size:0.85em;line-height:1.9;text-align:right;direction:rtl;">' +
       '<span style="color:' + col + ';font-weight:900;font-size:0.8em;display:block;margin-bottom:0.15rem;">📖 ' + cm.he + '</span>' +
       texts.map(function(t) { return '<span style="color:' + col + ';">' + t + '</span>'; }).join('<br>') +
-      '</div>';
-  }
-
-  // Render commentaries block for a section — async, returns HTML string
-  async function _snRenderCommentaries(secRef) {
-    var cms = _snActiveCommentaries().filter(function(c) { return _snCMGet(c.id); });
-    if (!cms.length) return "";
-    var html = "";
-    for (var i = 0; i < cms.length; i++) {
-      var cm = cms[i];
-      var col = cm.color || "#7c3aed";
-      // Convert hex to background+border colors
-      var hex = (col || "#7c3aed").replace("#","");
-      if (hex.length === 3) hex = hex.split("").map(function(x){return x+x;}).join("");
-      var n = parseInt(hex, 16);
-      var r = (n>>16)&255, g = (n>>8)&255, b = n&255;
-      var text = await _snFetchCommentary(cm, secRef);
-      if (text && text.length) {
-        html += '<div style="margin-top:1.2rem;padding:0.85rem 1rem;border-radius:0.6rem;' +
-          'background:rgba(' + r + ',' + g + ',' + b + ',0.05);' +
-          'border:1px solid rgba(' + r + ',' + g + ',' + b + ',0.22);' +
-          'text-align:right;direction:rtl;">' +
-          '<div style="font-size:0.8rem;color:' + col + ';font-weight:900;margin-bottom:0.55rem;text-align:center;">📖 ' + cm.he + '</div>' +
-          text.map(function(t, idx){
-            return '<p style="margin:0 0 0.7rem;line-height:1.95;color:' + col + ';font-size:0.92em;">' +
-              '<span style="color:' + col + ';font-weight:700;margin-left:0.35rem;opacity:0.7;">(' + toHN(idx+1) + ')</span>' +
-              t + '</p>';
-          }).join("") +
-          '</div>';
-      } else {
-        html += '<div style="margin-top:0.8rem;padding:0.45rem 0.7rem;border-radius:0.4rem;' +
-          'background:rgba(' + r + ',' + g + ',' + b + ',0.04);' +
-          'border:1px dashed rgba(' + r + ',' + g + ',' + b + ',0.25);' +
-          'color:' + col + ';font-size:0.72rem;font-style:italic;text-align:center;">' +
-          '📖 אין ' + cm.he + ' על קטע זה</div>';
-      }
-    }
-    return html;
+      '</span>';
   }
 
   // ── Bookmark panel ──
@@ -23912,6 +24350,7 @@ function openSefarimNosafimPage(_pageMode) {
     var panel = document.getElementById("sn-bm-panel");
     if (panel) panel.style.display = "none";
     if (book.type === "hardcoded") {
+      window._snSkipAutoToc = true; // שחזור מיקום — לא פותחים תוכן עניינים מעליו (נצרך מיד ב-openHardcoded)
       _sec = 0; openHardcoded(book);
       // שחזור מיקום הגלילה השמור (מיקום אחרון בספר ללא פסקאות)
       try {
@@ -23919,7 +24358,7 @@ function openSefarimNosafimPage(_pageMode) {
         if (savedEntry && typeof savedEntry.scrollTop === "number" && savedEntry.scrollTop > 0) {
           setTimeout(function() {
             var hc = document.getElementById("sn-reader-content");
-            if (hc) hc.scrollTo({ top: savedEntry.scrollTop, behavior: "smooth" });
+            if (hc) hc.scrollTop = savedEntry.scrollTop;
           }, 350);
         }
       } catch(e) {}
@@ -23929,7 +24368,7 @@ function openSefarimNosafimPage(_pageMode) {
     if (paraIdx !== null) {
       setTimeout(function() {
         var el = document.getElementById("sn-para-" + sidx + "-" + paraIdx);
-        if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+        if (el) el.scrollIntoView({ behavior: "auto", block: "start" });
       }, 700);
     }
   };
@@ -23994,6 +24433,8 @@ function openSefarimNosafimPage(_pageMode) {
   // ── View management ──
   var ALL_VIEWS = ["sn-books-view","sn-subbook-view","sn-sections-view","sn-reader-view","sn-search-view"];
   function showView(id) {
+    // ה-X האוניברסלי מוזרק לפי סריקת DOM — מעבר תצוגה לא משנה את ילדי body, אז מבקשים סריקה מיידית
+    try { if (typeof window.__luxUxTick === "function") setTimeout(window.__luxUxTick, 0); } catch (e) {}
     ALL_VIEWS.forEach(function(v) {
       var el = document.getElementById(v);
       if (el) el.style.display = v === id ? "flex" : "none";
@@ -24063,7 +24504,10 @@ function openSefarimNosafimPage(_pageMode) {
   // ── ניווט מהיר לפרקים מתוך תוך-הקורא — פופ-אפ עם רשימת סעיפים ──
   window._snGoToChapters = function() {
     if (!_bk) return;
-    if (_bk.type === "hardcoded") return; // אין סעיפים
+    if (_bk.type === "hardcoded") { // אין סעיפים — אבל יש תוכן עניינים לספרים ארוכים
+      if (typeof window._snHcOpenToc === "function") window._snHcOpenToc();
+      return;
+    }
     var sections = _sbk ? _sbk.sections : _bk.sections;
     if (!sections || !sections.length) return;
     var activeIdx = (typeof _sec === "number") ? _sec : -1;
@@ -24238,11 +24682,51 @@ function openSefarimNosafimPage(_pageMode) {
     if (prepend && area.firstChild) area.insertBefore(chapterDiv, area.firstChild);
     else area.appendChild(chapterDiv);
     var he = await fetchSec(sec.ref);
-    var needMB = _snMBSupported() && _snGetMB();
-    var needBH = _snBHSupported() && _snGetBH();
+    // הפרק הוסר בזמן הטעינה (מעבר ספר / רינדור-מחדש אחרי שינוי מפרשים) — לא ממשיכים
+    // לשלוף פירושים של ספר אחר עבור div יתום
+    if (!chapterDiv.isConnected) return;
     var isMBBook = _bk && _bk.id === "mishna-berura";
+    var activeCms = _snActiveCommentaries().filter(function(c) { return _snCMGet(c.id); });
+    // שכבות לפי דיבור-המתחיל (נושאי כלים של השו"ע) לעומת פירושים צמודי-פסוק (רש"י וכו')
+    var diburCms = activeCms.filter(function(c) { return c.inline === "dibur"; });
+    var verseCms = activeCms.filter(function(c) { return c.inline !== "dibur"; });
+    var bottomNotes = "";
 
-    // ── בספר משנה ברורה: קודם השולחן ערוך של הסימן, ומתחתיו המשנה ברורה עליו ──
+    // Show loading placeholders if needed — שורה לכל שכבה
+    if (isMBBook || activeCms.length) {
+      var loadingHtml = "";
+      var loadLine = function(emoji, col, txt) {
+        return "<div style=\"margin-top:1rem;padding-top:0.85rem;border-top:1px dashed rgba(0,0,0,0.15);color:" + col + ";font-size:0.78rem;font-style:italic;text-align:center;\">" + emoji + " " + txt + "</div>";
+      };
+      if (isMBBook) loadingHtml += loadLine("📜", "#1d4ed8", "טוען שולחן ערוך...");
+      diburCms.forEach(function(c) { loadingHtml += loadLine(c.emoji || "📖", c.color || "#64748b", "טוען " + c.he + "..."); });
+      if (verseCms.length) loadingHtml += loadLine("📖", "#64748b", "טוען פירושים...");
+      chapterDiv.innerHTML = heading + renderParagraphs(he, _bk.color, idx, null, sec.ref) + loadingHtml;
+    }
+
+    // שיבוץ כל שכבות הדיבור-המתחיל הפעילות בתוך HTML נתון (לפי סדר הרשומה)
+    async function spliceDibur(html, secRef) {
+      for (var k = 0; k < diburCms.length; k++) {
+        var cm = diburCms[k];
+        var texts = await _snFetchCommentary(cm, secRef);
+        if (texts && texts.length) {
+          var fullRef = cm.refFn ? cm.refFn(secRef) : null;
+          html = _buildTextWithInlineComments(html, texts, {
+            label: (cm.labelFor && fullRef) ? cm.labelFor(fullRef) : cm.he,
+            emoji: cm.emoji || "📖",
+            color: cm.color,
+            diburColor: cm.diburColor,
+            textColor: cm.textColor,
+            boldDibur: !!cm.boldDibur
+          });
+        } else {
+          bottomNotes += "<div style=\"margin-top:0.8rem;padding:0.45rem 0.7rem;border-radius:0.4rem;border:1px dashed rgba(0,0,0,0.2);color:" + (cm.color || "#64748b") + ";font-size:0.72rem;font-style:italic;text-align:center;\">" + (cm.emoji || "📖") + " אין " + cm.he + " על סימן זה</div>";
+        }
+      }
+      return html;
+    }
+
+    // ── בספר משנה ברורה: קודם השולחן ערוך של הסימן (עם נושאי הכלים משובצים בו), ומתחתיו המשנה ברורה עליו ──
     var saBlockHtml = "";
     if (isMBBook) {
       var mbSim = (sec.ref.match(/Mishnah_Berurah\.(\d+)/) || [])[1];
@@ -24256,19 +24740,9 @@ function openSefarimNosafimPage(_pageMode) {
             return "<p style=\"margin:0 0 0.9em;line-height:2;\"><span style=\"display:inline-block;min-width:1.5em;color:#1d4ed8;font-weight:900;font-size:0.78em;\">" + toHN(saI + 1) + "</span> " + saTxt + "</p>";
           }).filter(Boolean).join("");
           if (saParas) {
-            // באר היטב — משובץ בתוך טקסט השולחן ערוך (אם הופעל)
-            if (needBH) {
-              var bhForSA = await _snFetchBH(sec.ref);
-              if (bhForSA && bhForSA.length) {
-                saParas = _buildTextWithInlineComments(saParas, bhForSA, {
-                  label: 'באר היטב',
-                  emoji: '🖋️',
-                  color: '#d97706',
-                  diburColor: '#b45309',
-                  textColor: '#7c2d12',
-                });
-              }
-            }
+            // נושאי הכלים (באר היטב / ביאור הלכה / כף החיים…) — משובצים בתוך טקסט השולחן ערוך
+            // (ה-refFn גוזר את סימן או"ח מ-Mishnah_Berurah.N)
+            saParas = await spliceDibur(saParas, sec.ref);
             saBlockHtml =
               "<div style=\"background:rgba(29,78,216,0.045);border:1px solid rgba(29,78,216,0.18);border-radius:0.75rem;padding:0.95rem 1.05rem;margin-bottom:1.15rem;\">" +
                 "<div style=\"color:#1d4ed8;font-weight:900;font-size:0.85rem;margin-bottom:0.6rem;text-align:center;\">📜 שולחן ערוך · אורח חיים · " + sec.he + "</div>" +
@@ -24279,70 +24753,48 @@ function openSefarimNosafimPage(_pageMode) {
         } catch (_) {}
       }
     }
-    var activeCms = _snActiveCommentaries().filter(function(c) { return _snCMGet(c.id); });
-    // Show loading placeholders if needed
-    if (needMB || needBH || activeCms.length) {
-      var loadingHtml = "";
-      if (needMB) loadingHtml += "<div style=\"margin-top:1rem;padding-top:0.85rem;border-top:1px dashed rgba(124,58,237,0.35);color:#7c3aed;font-size:0.78rem;font-style:italic;text-align:center;\">📖 טוען משנה ברורה...</div>";
-      if (needBH) loadingHtml += "<div style=\"margin-top:1rem;padding-top:0.85rem;border-top:1px dashed rgba(217,119,6,0.35);color:#d97706;font-size:0.78rem;font-style:italic;text-align:center;\">🖋️ טוען באר היטב...</div>";
-      if (activeCms.length) loadingHtml += "<div style=\"margin-top:1rem;padding-top:0.85rem;border-top:1px dashed rgba(0,0,0,0.15);color:#64748b;font-size:0.78rem;font-style:italic;text-align:center;\">📖 טוען פירושים...</div>";
-      chapterDiv.innerHTML = heading + renderParagraphs(he, _bk.color, idx, null, sec.ref) + loadingHtml;
-    }
 
     // ── פירושים צמודי-פסוק (רש\"י, מצודת דוד, ברטנורא וכו') — בתוך הטקסט ──
+    // inlineNotes: [פסוק]→html (פרק) או [פרק][פסוק]→html (פרשה רב-פרקית — אותו תנאי כמו renderParagraphs)
     var inlineNotes = null;
-    var emptyCmNotes = "";
-    if (activeCms.length && Array.isArray(he)) {
-      inlineNotes = new Array(he.length);
-      for (var ci = 0; ci < activeCms.length; ci++) {
-        var cmVerses = await _snFetchCommentaryVerses(activeCms[ci], sec.ref);
-        if (!cmVerses) {
-          emptyCmNotes += "<div style=\"margin-top:0.8rem;padding:0.45rem 0.7rem;border-radius:0.4rem;border:1px dashed rgba(0,0,0,0.2);color:" + (activeCms[ci].color || "#64748b") + ";font-size:0.72rem;font-style:italic;text-align:center;\">📖 אין " + activeCms[ci].he + " על קטע זה</div>";
-          continue;
-        }
-        for (var vi = 0; vi < he.length; vi++) {
-          var vTexts = cmVerses[vi];
-          if (vTexts && vTexts.length) {
-            inlineNotes[vi] = (inlineNotes[vi] || "") + _snInlineCMHtml(activeCms[ci], vTexts);
+    if (verseCms.length && Array.isArray(he)) {
+      var mRangeC = sec.ref && String(sec.ref).match(/ (\d+):(\d+)-(\d+):(\d+)$/);
+      var isMultiChap = !!(mRangeC && he.length > 1 && he.every(function(x){ return Array.isArray(x); }));
+      // כל המפרשים הפעילים במקביל (לא אחד-אחד) — בפרשה ארוכה זה ההבדל בין שניות לעשרות שניות
+      var cmResults = await Promise.all(verseCms.map(function(c) {
+        return _snFetchCommentaryAligned(c, sec.ref, he, isMultiChap).catch(function(){ return null; });
+      }));
+      inlineNotes = isMultiChap ? he.map(function(ch){ return new Array(ch.length); }) : new Array(he.length);
+      var missingCms = [];
+      for (var ci = 0; ci < verseCms.length; ci++) {
+        var cmAl = cmResults[ci];
+        if (!cmAl) { missingCms.push(verseCms[ci]); continue; }
+        if (isMultiChap) {
+          for (var chi = 0; chi < he.length; chi++) {
+            var chAl = cmAl[chi] || [];
+            for (var vj = 0; vj < he[chi].length; vj++) {
+              var vT2 = chAl[vj];
+              if (vT2 && vT2.length) inlineNotes[chi][vj] = (inlineNotes[chi][vj] || "") + _snInlineCMHtml(verseCms[ci], vT2);
+            }
+          }
+        } else {
+          for (var vi = 0; vi < he.length; vi++) {
+            var vTexts = cmAl[vi];
+            if (vTexts && vTexts.length) inlineNotes[vi] = (inlineNotes[vi] || "") + _snInlineCMHtml(verseCms[ci], vTexts);
           }
         }
+      }
+      // הודעה אחת לפרק על המפרשים שאין להם טקסט כאן (לא שורה לכל מפרש)
+      if (missingCms.length) {
+        bottomNotes += "<div style=\"margin-top:0.8rem;padding:0.45rem 0.7rem;border-radius:0.4rem;border:1px dashed rgba(0,0,0,0.2);color:" + (missingCms.length === 1 ? (missingCms[0].color || "#64748b") : "#64748b") + ";font-size:0.72rem;font-style:italic;text-align:center;\">📖 אין " + missingCms.map(function(c){ return c.he; }).join(" · ") + " על קטע זה</div>";
       }
     }
 
     var parasHtml = renderParagraphs(he, _bk.color, idx, inlineNotes, sec.ref);
-    var bottomNotes = emptyCmNotes;
 
-    // ── משנה ברורה — משובצת בתוך הטקסט לפי דיבור המתחיל ──
-    if (needMB) {
-      var mb = await _snFetchMB(sec.ref);
-      if (mb && mb.length) {
-        parasHtml = _buildTextWithInlineComments(parasHtml, mb, {
-          label: 'משנה ברורה',
-          emoji: '📖',
-          color: '#7c3aed',
-          diburColor: '#b45309',
-          textColor: '#4c1d95',
-        });
-      } else {
-        bottomNotes += "<div style=\"margin-top:0.8rem;padding:0.45rem 0.7rem;border-radius:0.4rem;background:rgba(124,58,237,0.04);border:1px dashed rgba(124,58,237,0.25);color:#7c3aed;font-size:0.72rem;font-style:italic;text-align:center;\">📖 אין משנה ברורה על סימן זה</div>";
-      }
-    }
-    // ── באר היטב — משובץ בתוך הטקסט לפי דיבור המתחיל ──
-    // (בספר משנה ברורה הבאר היטב כבר שובץ בבלוק השולחן ערוך למעלה)
-    if (needBH && !isMBBook) {
-      var bh = await _snFetchBH(sec.ref);
-      if (bh && bh.length) {
-        parasHtml = _buildTextWithInlineComments(parasHtml, bh, {
-          label: 'באר היטב',
-          emoji: '🖋️',
-          color: '#d97706',
-          diburColor: '#b45309',
-          textColor: '#7c2d12',
-        });
-      } else {
-        bottomNotes += "<div style=\"margin-top:0.8rem;padding:0.45rem 0.7rem;border-radius:0.4rem;background:rgba(217,119,6,0.04);border:1px dashed rgba(217,119,6,0.3);color:#d97706;font-size:0.72rem;font-style:italic;text-align:center;\">🖋️ אין באר היטב על סימן זה</div>";
-      }
-    }
+    // ── נושאי כלים — משובצים בתוך טקסט השולחן ערוך לפי דיבור המתחיל ──
+    // (בספר משנה ברורה הם כבר שובצו בבלוק השולחן ערוך למעלה)
+    if (!isMBBook && diburCms.length) parasHtml = await spliceDibur(parasHtml, sec.ref);
 
     chapterDiv.innerHTML = heading + saBlockHtml + parasHtml + bottomNotes;
   }
@@ -24427,15 +24879,15 @@ function openSefarimNosafimPage(_pageMode) {
     var hlWords = window._snPendingHighlight || null;
     window._snPendingHighlight = null;
     var content = document.getElementById("sn-reader-content");
-    var title   = document.getElementById("sn-reader-title");
-    if (!content || !title) return;
-    title.textContent = (_sbk ? _sbk.he + " — " : "") + sec.he;
+    var title   = document.getElementById("sn-reader-title"); // הוסר מהכותרת — פס המיקום מחליף אותו
+    if (!content) return;
+    if (title) title.textContent = (_sbk ? _sbk.he + " — " : "") + sec.he;
     _snUpdateLocationBar();
-    applyFS(); updateBMBtn(); _snBuildCMToolbar();
+    applyFS(); updateBMBtn();
+    if (_snCMPopoverOpen()) window._snCMPopoverToggle(false);   // חלונית המפרשים נסגרת במעבר סעיף/ספר
+    _snBuildCMToolbar();
     var chBtn = document.getElementById("sn-chapters-btn");
     if (chBtn) chBtn.style.display = "";
-    if (window._snUpdateMBToggleVisibility) window._snUpdateMBToggleVisibility();
-    if (window._snUpdateBHToggleVisibility) window._snUpdateBHToggleVisibility();
     content.onscroll = null;
     content.innerHTML = "<div style=\"text-align:center;padding:3rem 1rem;\"><div style=\"width:36px;height:36px;border:3px solid " + _bk.color + ";border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 1rem;\"></div><p style=\"color:#94a3b8;\">טוען...</p></div>";
     showView("sn-reader-view");
@@ -24523,7 +24975,7 @@ function openSefarimNosafimPage(_pageMode) {
           if (!isNaN(num) && num !== _sec) {
             _sec = num;
             var s = sections[num];
-            if (s) title.textContent = (_sbk ? _sbk.he + " — " : "") + s.he;
+            if (s && title) title.textContent = (_sbk ? _sbk.he + " — " : "") + s.he;
             _snUpdateLocationBar();
             updateBMBtn();
           }
@@ -24555,17 +25007,21 @@ function openSefarimNosafimPage(_pageMode) {
   // ── Hardcoded reader ──
   function openHardcoded(book) {
     var content = document.getElementById("sn-reader-content");
-    var title   = document.getElementById("sn-reader-title");
-    if (!content || !title) return;
-    title.textContent = book.he;
+    var title   = document.getElementById("sn-reader-title"); // הוסר מהכותרת — פס המיקום מחליף אותו
+    if (!content) return;
+    if (title) title.textContent = book.he;
     // ניקוי מאזין גלילה של ספר קודם — אחרת פס המיקום ימשיך להציג את הספר הישן
     content.onscroll = null;
     var locBar = document.getElementById("sn-location-bar");
     if (locBar) { locBar.textContent = book.he; locBar.style.display = ""; }
-    applyFS(); updateBMBtn(); _snBuildCMToolbar();
-    // לספר "hardcoded" אין פרקים — כפתור ניווט הפרקים מיותר ומוסתר
+    applyFS(); updateBMBtn();
+    if (_snCMPopoverOpen()) window._snCMPopoverToggle(false);   // חלונית המפרשים נסגרת במעבר סעיף/ספר
+    _snBuildCMToolbar();
+    // לספר "hardcoded" אין פרקים — כפתור ניווט הפרקים מוסתר (יופעל מחדש למטה אם יש תוכן עניינים)
     var chBtn = document.getElementById("sn-chapters-btn");
     if (chBtn) chBtn.style.display = "none";
+    window._snHcOpenToc = null;
+    var tocBtn = null;
     content.innerHTML =
       "<div style=\"max-width:680px;margin:0 auto;padding:1.5rem 1rem 0.5rem;font-family:\'Frank Ruhl Libre\',\'David Libre\',serif;direction:rtl;color:#1e293b;\">" +
       "<div style=\"background:#fef3c7;border:1.5px solid rgba(245,158,11,0.4);border-radius:1rem;padding:1rem 1.25rem;margin-bottom:1.75rem;line-height:1.9;font-size:0.9em;color:#78350f;\">" + book.intro + "</div>" +
@@ -24601,26 +25057,49 @@ function openSefarimNosafimPage(_pageMode) {
           var hcText = book.he + (hcCur ? " · " + hcCur.textContent.trim() : "");
           if (hcBar.textContent !== hcText) hcBar.textContent = hcText;
         };
-        var tocBtn = document.createElement("button");
+        tocBtn = document.createElement("button");
         tocBtn.id = "sn-hc-toc-btn";
         tocBtn.type = "button";
         tocBtn.style.cssText = "display:flex;align-items:center;justify-content:center;gap:0.45rem;margin:0 auto 1.25rem;padding:0.6rem 1.4rem;border-radius:999px;border:1.5px solid " + book.color + "55;background:linear-gradient(135deg," + book.color + "14," + book.color + "28);color:" + book.color + ";font-weight:900;font-size:0.9rem;cursor:pointer;box-shadow:0 3px 10px " + book.color + "22;";
         tocBtn.innerHTML = "📑 תוכן העניינים <span style=\"font-size:0.72rem;font-weight:700;opacity:0.75;\">(" + heads.length + " פרקים)</span>";
-        tocBtn.addEventListener("click", function() {
-          if (typeof window._openChapterNavPopup === "function") {
-            window._openChapterNavPopup({
-              title: "📑 " + book.he,
-              subtitle: "בחרו נושא כדי לקפוץ אליו",
-              color: book.color,
-              items: tocItems.map(function(it) {
-                return { label: it.label, onClick: function() {
-                  var el = document.getElementById(it._hid);
-                  if (el) el.scrollIntoView({ block: "start", behavior: "smooth" });
-                } };
-              })
-            });
-          }
-        });
+        var openHcToc = function() {
+          if (typeof window._openChapterNavPopup !== "function") return;
+          // הכותרת הנוכחית (לפי הגלילה) מסומנת כפעילה בפופאפ
+          var curIdx = -1;
+          try {
+            var cTop = content.getBoundingClientRect().top;
+            for (var hq = 0; hq < heads.length; hq++) {
+              if (heads[hq].getBoundingClientRect().top - cTop <= 120) curIdx = hq; else break;
+            }
+          } catch (eCur) {}
+          window._openChapterNavPopup({
+            title: "📑 " + book.he,
+            subtitle: "בחרו נושא כדי לקפוץ אליו",
+            color: book.color,
+            items: tocItems.map(function(it, ti) {
+              return { label: it.label, isActive: ti === curIdx, onClick: function() {
+                var el = document.getElementById(it._hid);
+                var c = document.getElementById("sn-reader-content");
+                if (!el || !c) return;
+                // עצירת גלילה אוטומטית פעילה — אחרת היא נלחמת בקפיצה
+                try { if (window._autoScrollState && window._autoScrollState.rafId && typeof window._stopAutoScroll === "function") window._stopAutoScroll(); } catch (eAs) {}
+                // גלילה מיידית של מיכל הקריאה בלבד. לא scrollIntoView "חלק": הוא מגלגל
+                // גם את כל האבות (כולל ה-body הנעול) בגלילה מרובת-שלבים שקפאה בנייד —
+                // זה היה "האפליקציה נתקעת אחרי הבחירה השנייה בתוכן העניינים"
+                var top = el.getBoundingClientRect().top - c.getBoundingClientRect().top + c.scrollTop - 12;
+                c.scrollTop = Math.max(0, top);
+                try {
+                  el.classList.add("sn-hc-jump");
+                  setTimeout(function() { el.classList.remove("sn-hc-jump"); }, 1400);
+                } catch (eJ) {}
+              } };
+            })
+          });
+        };
+        tocBtn.addEventListener("click", openHcToc);
+        window._snHcOpenToc = openHcToc;
+        // כפתור 📑 בכותרת הדביקה פועל גם לספר כזה — אפשר לפתוח את תוכן העניינים מכל מקום
+        if (chBtn) chBtn.style.display = "";
         var inner = content.firstChild;
         if (inner) inner.insertBefore(tocBtn, inner.firstChild);
       }
@@ -24632,8 +25111,19 @@ function openSefarimNosafimPage(_pageMode) {
     // אם הגיע מחיפוש — קפיצה למיקום של המילים בטקסט
     var hlW = window._snPendingHighlight;
     window._snPendingHighlight = null;
+    var skipAutoToc = !!window._snSkipAutoToc; // שחזור סימנייה/מיקום אחרון — לא מכסים אותו בתוכן העניינים
+    window._snSkipAutoToc = false;
     if (hlW && hlW.length) {
       setTimeout(function() { window._snHighlightAndScrollToMatch(content, hlW); }, 100);
+    }
+    // ספר עם autoToc (סגולות ותפילות): תוכן העניינים נפתח מיד בכניסה —
+    // אפשר לסגור ולדפדף ידנית, והכפתור נשאר במקומו לפתיחה חוזרת
+    if (book.autoToc && tocBtn && !skipAutoToc && !(hlW && hlW.length)) {
+      setTimeout(function() {
+        if (_bk !== book || document.getElementById("chapter-nav-popup")) return;
+        if (_activeModals[_activeModals.length - 1] !== "sn-reader-pane") return;
+        tocBtn.click();
+      }, 160);
     }
   }
 
@@ -24923,7 +25413,7 @@ function openSefarimNosafimPage(_pageMode) {
     "</div>",
     "<div id=\"sn-subbook-view\" style=\"display:none;position:absolute;inset:0;flex-direction:column;overflow:hidden;\">",
       "<div style=\"display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;\">",
-        "<button onclick=\"history.back();\" style=\"background:rgba(255,255,255,0.08);border:none;color:#e2e8f0;padding:0.4rem 0.8rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;flex-shrink:0;\">← חזרה</button>",
+        "<div style=\"width:38px;flex-shrink:0;\"></div>",
         "<h2 id=\"sn-subbook-title\" style=\"color:#f1f5f9;font-size:1.1rem;font-weight:900;margin:0;flex:1;text-align:center;\"></h2>",
         "<button onclick=\"window._snOpenSearch();\" style=\"background:rgba(255,255,255,0.08);border:none;color:#e2e8f0;padding:0.4rem 0.8rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;flex-shrink:0;margin-left:0.4rem;\" title=\"חיפוש\">🔍 חיפוש</button>",
         "<button onclick=\"window._snToggleBookBMPanel();\" style=\"background:rgba(255,255,255,0.08);border:none;color:#e2e8f0;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:0.95rem;flex-shrink:0;margin-left:0.4rem;\" title=\"סימניות הספר\">📌</button>",
@@ -24934,8 +25424,7 @@ function openSefarimNosafimPage(_pageMode) {
       "</div>",
     "</div>",
     "<div id=\"sn-sections-view\" style=\"display:none;position:absolute;inset:0;flex-direction:column;overflow:hidden;\">",
-      "<div style=\"display:flex;align-items:center;justify-content:space-between;padding:0.75rem 1rem;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;gap:0.5rem;\">",
-        "<button onclick=\"history.back();\" style=\"background:rgba(255,255,255,0.08);border:none;color:#e2e8f0;padding:0.4rem 0.75rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;flex-shrink:0;\">← חזרה</button>",
+      "<div style=\"display:flex;align-items:center;justify-content:space-between;padding:0.75rem 1rem 0.75rem 3.6rem;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;gap:0.5rem;\">",
         "<div style=\"flex:1;min-width:0;text-align:center;\">",
           "<h3 id=\"sn-sections-title\" style=\"color:#f1f5f9;font-size:0.9rem;font-weight:900;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;\"></h3>",
           "<span id=\"sn-sections-subtitle\" style=\"color:#6366f1;font-size:0.7rem;\"></span>",
@@ -24950,9 +25439,7 @@ function openSefarimNosafimPage(_pageMode) {
     "</div>",
     "<div id=\"sn-reader-view\" style=\"display:none;position:absolute;inset:0;background:#faf9f6;flex-direction:column;overflow:hidden;\">",
       "<div style=\"display:flex;align-items:center;justify-content:space-between;padding:0.7rem 1rem;border-bottom:1px solid rgba(0,0,0,0.09);background:#faf9f6;flex-shrink:0;gap:0.5rem;\">",
-        "<button onclick=\"history.back();\" style=\"background:rgba(0,0,0,0.06);border:none;color:#1e293b;padding:0.4rem 0.75rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;white-space:nowrap;flex-shrink:0;\">← חזרה</button>",
-        "<h3 id=\"sn-reader-title\" style=\"color:#1e293b;font-size:0.9rem;font-weight:900;margin:0;text-align:center;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:rtl;\"></h3>",
-        "<div style=\"display:flex;gap:0.35rem;flex-shrink:0;\">",
+        "<div id=\"sn-reader-tools\" style=\"display:flex;gap:0.35rem;flex-shrink:0;\">",
           "<button id=\"sn-chapters-btn\" onclick=\"window._snGoToChapters();\" style=\"background:rgba(0,0,0,0.06);border:none;color:#1e293b;padding:0.4rem 0.55rem;border-radius:999px;cursor:pointer;font-size:0.82rem;\" title=\"כל הפרקים\">📑</button>",
           "<button id=\"sn-reader-bm-btn\" onclick=\"window._snToggleBookmark();\" style=\"background:rgba(0,0,0,0.06);border:none;color:#1e293b;padding:0.4rem 0.55rem;border-radius:999px;cursor:pointer;font-size:0.82rem;\" title=\"סימנייה\">🔖</button>",
           "<button onclick=\"window._snToggleBookBMPanel();\" style=\"background:rgba(0,0,0,0.06);border:none;color:#1e293b;padding:0.4rem 0.55rem;border-radius:999px;cursor:pointer;font-size:0.82rem;\" title=\"סימניות הספר\">📌</button>",
@@ -24961,24 +25448,22 @@ function openSefarimNosafimPage(_pageMode) {
       "</div>",
       "<div id=\"sn-location-bar\" style=\"display:none;flex-shrink:0;text-align:center;padding:0.32rem 1rem;background:linear-gradient(180deg,rgba(224,183,79,0.16),rgba(224,183,79,0.05));border-bottom:1px solid rgba(201,153,58,0.3);color:#7c5a1e;font-size:0.78rem;font-weight:800;direction:rtl;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;\"></div>",
       "<div id=\"sn-reader-content\" style=\"overflow-y:auto;flex:1;text-align:center;direction:rtl;line-height:2;font-size:100%;\"></div>",
-      "<div style=\"display:flex;align-items:center;justify-content:center;gap:0.75rem;padding:0.5rem 1rem;border-top:1px solid rgba(0,0,0,0.08);background:#faf9f6;flex-shrink:0;\">",
+      "<div style=\"display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:0.5rem 0.75rem;padding:0.5rem 1rem;border-top:1px solid rgba(0,0,0,0.08);background:#faf9f6;flex-shrink:0;\">",
         "<span id=\"sn-font-group\" class=\"font-btn-group\" style=\"display:inline-flex;align-items:center;gap:0.75rem;flex-wrap:nowrap;flex-shrink:0;\">",
         "<button onclick=\"window._snFontDec();\" style=\"width:38px;height:38px;border-radius:50%;border:1.5px solid rgba(99,102,241,0.3);background:linear-gradient(135deg,#eef2ff 0%,#e0e7ff 100%);color:#4338ca;font-size:1.25rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(99,102,241,0.15);transition:transform 0.15s ease;line-height:1;\" onmouseover=\"this.style.transform='scale(1.08)'\" onmouseout=\"this.style.transform=''\">−</button>",
         "<button onclick=\"window._snFontInc();\" style=\"width:38px;height:38px;border-radius:50%;border:1.5px solid rgba(99,102,241,0.3);background:linear-gradient(135deg,#eef2ff 0%,#e0e7ff 100%);color:#4338ca;font-size:1.25rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(99,102,241,0.15);transition:transform 0.15s ease;line-height:1;\" onmouseover=\"this.style.transform='scale(1.08)'\" onmouseout=\"this.style.transform=''\">+</button>",
       "</span>",
         "<button onclick=\"window._toggleAutoScroll('#sn-reader-content', this)\" style=\"width:38px;height:38px;border-radius:50%;border:1.5px solid rgba(16,185,129,0.35);background:linear-gradient(135deg,#ecfdf5 0%,#d1fae5 100%);color:#047857;font-size:0.95rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(16,185,129,0.18);transition:transform 0.15s ease;\" onmouseover=\"this.style.transform='scale(1.08)'\" onmouseout=\"this.style.transform=''\" aria-label=\"התחל גלילה אוטומטית\">▶</button>",
         "<button class=\"auto-scroll-speed-btn\" onclick=\"window._cycleAutoScrollSpeed(this)\" style=\"font-size:0.78rem;font-weight:800;color:#047857;min-width:2.4rem;text-align:center;background:rgba(209,250,229,0.85);padding:5px 10px;border-radius:999px;border:1px solid rgba(16,185,129,0.3);cursor:pointer;\" aria-label=\"מהירות גלילה\">1x</button>",
-        "<button id=\"sn-mb-toggle\" onclick=\"window._snToggleMB();\" style=\"display:none;width:38px;height:38px;border-radius:50%;border:1.5px solid rgba(124,58,237,0.25);background:rgba(124,58,237,0.06);color:#7c3aed;font-size:0.95rem;font-weight:900;cursor:pointer;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(124,58,237,0.15);transition:all 0.15s ease;\" onmouseover=\"this.style.transform='scale(1.08)'\" onmouseout=\"this.style.transform=''\" title=\"משנה ברורה\">📖</button>",
-        "<button id=\"sn-bh-toggle\" onclick=\"window._snToggleBH();\" style=\"display:none;width:38px;height:38px;border-radius:50%;border:1.5px solid rgba(217,119,6,0.25);background:rgba(217,119,6,0.06);color:#d97706;font-size:0.95rem;font-weight:900;cursor:pointer;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(217,119,6,0.15);transition:all 0.15s ease;\" onmouseover=\"this.style.transform='scale(1.08)'\" onmouseout=\"this.style.transform=''\" title=\"באר היטב\">🖋️</button>",
-        "<span id=\"sn-cm-toolbar\" style=\"display:flex;align-items:center;gap:0.4rem;\"></span>",
+        "<span id=\"sn-cm-toolbar\" style=\"display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:0.4rem;\"></span>",
       "</div>",
     "</div>",
     "<div id=\"sn-search-view\" style=\"display:none;position:absolute;inset:0;background:linear-gradient(180deg,#eef2ff 0%,#f8fafc 40%);flex-direction:column;overflow:hidden;\">",
       "<div style=\"background:linear-gradient(135deg,#4f46e5,#7c3aed);padding:0.85rem 1rem 2.3rem;flex-shrink:0;box-shadow:0 4px 20px rgba(79,70,229,0.3);\">",
         "<div style=\"display:flex;align-items:center;justify-content:space-between;gap:0.5rem;\">",
-          "<button onclick=\"window._snCloseSearch();\" style=\"background:rgba(255,255,255,0.16);border:1px solid rgba(255,255,255,0.3);color:#fff;padding:0.4rem 0.9rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:800;flex-shrink:0;\">← חזרה</button>",
+          "<div style=\"width:38px;flex-shrink:0;\"></div>",
           "<h3 style=\"color:#fff;font-size:1.02rem;font-weight:900;margin:0;text-align:center;flex:1;text-shadow:0 1px 6px rgba(0,0,0,0.25);\">"+(_pageMode === "tefilot" ? "🔍 חיפוש בתפילות" : "🔍 חיפוש בספרים")+"</h3>",
-          "<div style=\"width:70px;flex-shrink:0;\"></div>",
+          "<button onclick=\"window._snCloseSearch();\" aria-label=\"סגור\" title=\"סגירת החיפוש\" style=\"background:rgba(255,255,255,0.16);border:1px solid rgba(255,255,255,0.3);color:#fff;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.05rem;font-weight:800;flex-shrink:0;display:flex;align-items:center;justify-content:center;\">✕</button>",
         "</div>",
       "</div>",
       "<div style=\"padding:0 1rem;margin-top:-1.5rem;flex-shrink:0;position:relative;z-index:2;display:flex;flex-direction:column;gap:0.5rem;\">",
@@ -25252,13 +25737,18 @@ function closeSefarimNosafimModal() {
   // ביצועים: תזוזת הרוחש ב-transform בלבד (ללא layout), חישובי יעד לפי
   // מלבנים מוטמנים (בלי elementFromPoint בכל תזוזה), עדכון אחד לפריים (rAF),
   // אנימציית FLIP לאריחים שזזים, וגלילת קצה אוטומטית בתוך הרשת.
-  function _poAttachDrag(grid) {
+  // opts (אופציונלי): itemSel — סלקטור הפריטים הנגררים (ברירת מחדל ".po-tile");
+  //                  onDrop(items) — נקרא אחרי גרירה אמיתית, עם הפריטים בסדר ה-DOM החדש.
+  // אחרי גרירה אמיתית נחתם grid.__poDragEndAt — צרכנים יכולים לחסום click שמגיע מיד אחריה.
+  function _poAttachDrag(grid, opts) {
+    opts = opts || {};
+    var ITEM = opts.itemSel || ".po-tile";
     var dragEl = null, ghost = null, startX = 0, startY = 0, dragging = false;
     var rects = [], tilesList = [], rafId = 0, lastX = 0, lastY = 0, pending = false;
     var scrollRaf = 0, scrollVel = 0;
 
     function measure() {
-      tilesList = Array.prototype.slice.call(grid.querySelectorAll(".po-tile"));
+      tilesList = Array.prototype.slice.call(grid.querySelectorAll(ITEM));
       rects = tilesList.map(function(t) { return t.getBoundingClientRect(); });
     }
 
@@ -25331,6 +25821,7 @@ function closeSefarimNosafimModal() {
     }
 
     function endDrag() {
+      var moved = dragging;
       if (scrollRaf) { cancelAnimationFrame(scrollRaf); scrollRaf = 0; }
       if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
       if (ghost) { ghost.remove(); ghost = null; }
@@ -25339,9 +25830,15 @@ function closeSefarimNosafimModal() {
         dragEl.classList.remove("po-dragging");
       }
       dragEl = null; dragging = false;
+      if (moved) {
+        grid.__poDragEndAt = Date.now();
+        if (typeof opts.onDrop === "function") {
+          try { opts.onDrop(Array.prototype.slice.call(grid.querySelectorAll(ITEM))); } catch(e) {}
+        }
+      }
     }
 
-    grid.querySelectorAll(".po-tile").forEach(function(tile) {
+    grid.querySelectorAll(ITEM).forEach(function(tile) {
       tile.style.touchAction = "none";
       tile.addEventListener("pointerdown", function(e) {
         dragEl = tile; startX = lastX = e.clientX; startY = lastY = e.clientY; dragging = false;
@@ -25372,6 +25869,8 @@ function closeSefarimNosafimModal() {
       tile.addEventListener("pointercancel", endDrag);
     });
   }
+  // חשיפה לשימוש חוזר (עורך סרגל הניווט ב-lux.js משתמש באותו מנוע גרירה)
+  window._poAttachDrag = _poAttachDrag;
 
   window._poSave = function() {
     var grid = document.getElementById("po-grid");

@@ -28,9 +28,17 @@
       }
       /* Chok L'Israel Rashi inline colors — must override .holy-text-style */
       .chok-rashi-dibur { color: #b45309 !important; font-weight: 700; }
-      .chok-rashi-sep   { color: #6b7280 !important; }
+      .chok-rashi-sep   { color: #374151 !important; }
       .chok-rashi-rest  { color: #4c1d95 !important; }
       .chok-rashi-label { color: #7c3aed !important; font-size: 0.75em; font-weight: 700; display: block; margin-bottom: 0.15rem; }
+      /* טקסטי-עזר בחוק לישראל (מראה-מקום, הערות, קרדיט) — היו אפור בהיר וקשה לקריאה;
+         כהה על הקלף בשני ערכות הנושא (לרקע המודאל אין גרסה כהה), אותו גודל */
+      #chok-israel-modal-content .chok-meta { color: #1f2937 !important; }
+      #chok-israel-modal-content .chok-meta a { color: #1d4ed8 !important; }
+      html.dark #chok-israel-modal.chok-dark-skin .chok-meta { color: #e2e8f0 !important; }
+      /* כותרת "ברכת מעין שלוש ובורא נפשות" — תמיד בשורה אחת (גם במובייל, גם בהגדלת כתב) */
+      .prayer-richtext h2.prayer-h2-oneline { white-space: nowrap; line-height: 1.5 !important; letter-spacing: 0; }
+      @media (max-width: 640px) { .prayer-richtext h2.prayer-h2-oneline { font-size: min(1.35em, 5.4vw) !important; } }
 
       /* Mobile-optimized prayer modal: use full width */
       .prayer-modal-body-mobile {
@@ -838,6 +846,20 @@
   border-radius: 5px;
   box-shadow: 0 0 0 3px rgba(254, 240, 138, 0.2);
 }
+/* ── כפתור מרקר 🖍️ בכותרות הקוראים (מוזרק מ-lux.js universalMarker) ── */
+.lux-mk-btn {
+  width: 38px; height: 38px; border-radius: 50%; padding: 0; line-height: 1; flex-shrink: 0;
+  border: 1.5px solid rgba(0, 0, 0, 0.08); background: rgba(0, 0, 0, 0.06); color: #1e293b;
+  font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: background .15s ease, border-color .15s ease, transform .15s ease;
+}
+.lux-mk-btn:active { transform: scale(0.94); }
+.lux-mk-btn.lux-mk-on {            /* דולק — צהוב מרקר, תואם .lux-mark-hl */
+  background: linear-gradient(135deg, #fef08a, #fde047); border-color: #ca8a04;
+  box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.35);
+}
+.lux-mk-dark { background: rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.2); color: #e2e8f0; width: 2.2rem; height: 2.2rem; }   /* .lux-sel-head */
+@media (max-width: 420px) { .lux-mk-btn { width: 34px; height: 34px; font-size: 0.92rem; } }
 /* ── אחידות גדלי אותיות בטקסטים (תפילות, ספרים, דף יומי, חוק לישראל) ──
    טקסטים מ-Sefaria מגיעים עם תגי big/small מקוננים שיוצרים אותיות ענק/זעירות.
    כאן מנרמלים: big קבוע ועדין, ומניעת הצטברות בקינון. ── */
@@ -1613,6 +1635,94 @@ footer a:hover {
   color: #94a3b8;
 }
 .lux-ne-cancel:hover { color: #475569; }
+/* ── עורך סרגל הניווט — תצוגה מקדימה חיה (אזור א') ──
+   נראית בדיוק כמו #lux-bottom-nav (רקע כהה, מבטאי זהב, RTL, 5 משבצות),
+   אבל בלי backdrop-filter (הפאנל בהיר ואין מה לטשטש). המשבצות נושאות
+   .po-tile ולכן מנוע הגרירה של סידור התפילות (script.js) עובד עליהן
+   כפי שהוא; כללי .lbn-* של הסרגל האמיתי מוגבלים ל-#lux-bottom-nav
+   ולכן משוכפלים כאן. */
+.lux-ne-bar {
+  display: flex;
+  direction: rtl;
+  justify-content: space-around;
+  align-items: stretch;
+  gap: 0.15rem;
+  margin: 0 0 1rem;
+  padding: 0.35rem 0.25rem;
+  background: rgba(9, 16, 36, 0.96);
+  border: 1px solid rgba(232, 193, 90, 0.25);
+  border-radius: 1rem;
+  box-shadow: 0 8px 24px rgba(5, 11, 26, 0.3), inset 0 1px 0 rgba(232, 193, 90, 0.12);
+}
+.lux-ne-slot {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.12rem;
+  min-height: 52px;
+  padding: 0.3rem 0.2rem;
+  border-radius: 0.9rem;
+  color: rgba(226, 232, 240, 0.85);
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  text-align: center;
+  box-sizing: border-box;
+}
+.lux-ne-slot:active {
+  background: rgba(232, 193, 90, 0.12);
+  color: #f2d98a;
+}
+.lux-ne-slot .lbn-ico {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+.lux-ne-slot .lbn-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.15;
+}
+/* תג ההסרה הקטן (span, לא button — כדי שסורק ה-X האוניברסלי לא יחשוב שזה כפתור סגירה) */
+.lux-ne-rm {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.58rem;
+  line-height: 1;
+  color: #f2d98a;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(232, 193, 90, 0.35);
+  border-radius: 50%;
+  pointer-events: none;
+}
+/* משבצת פנויה — רק המחשה של המקום שנותר (לא נגררת, לא לחיצה) */
+.lux-ne-slot-empty {
+  cursor: default;
+  color: rgba(148, 163, 184, 0.45);
+  border: 1px dashed rgba(148, 163, 184, 0.3);
+}
+.lux-ne-slot-empty:active {
+  background: none;
+  color: rgba(148, 163, 184, 0.45);
+}
+/* הרוחש של הגרירה — clone של המשבצת שמוצמד ישירות ל-body (z-index 10099 inline,
+   מעל העורך ב-10090); בלי הסרגל מאחוריו הוא צריך רקע משלו כדי להיראות מעל הפאנל הבהיר */
+body > .lux-ne-slot {
+  background: rgba(9, 16, 36, 0.96);
+  border: 1px solid rgba(232, 193, 90, 0.5);
+  z-index: 10099;
+}
 @media (max-width: 767px) {
   #lux-bottom-nav {
     display: flex;
@@ -1659,6 +1769,10 @@ footer a:hover {
     font-size: 0.62rem;
     font-weight: 700;
     letter-spacing: 0.02em;
+    line-height: 1.15;
+    text-align: center;
+    max-width: 100%;
+    overflow-wrap: anywhere;
   }
   /* פינוי מקום לניווט */
   #toast-container { bottom: 6.2rem; }
@@ -2195,6 +2309,25 @@ html.lux-royal .chip.active {
 }
 .lux-card-flash {
   animation: lux-card-flash 1.6s ease 2;
+}
+/* שתי ההנעות-לפעולה של הגלגל (ציר המועדים / לוח השנה) — זו לצד זו, נשברות לשורות במסך צר */
+#lux-yw-info .lux-yw-ctas {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.4rem;
+  margin-top: 0.2rem;
+}
+#lux-yw-info .lux-yw-ctas button { margin-top: 0.2rem; }
+#lux-yw-info #lux-yw-cal {
+  background: rgba(255, 255, 255, 0.1);
+  color: #f2d98a;
+  border: 1px solid rgba(242, 217, 138, 0.55);
+}
+/* יום שנבחר מגלגל השנה — טבעת זהב מהבהבת על תא היום בלוח החודשי */
+#cal-days-grid .cal-day-focus {
+  box-shadow: 0 0 0 3px rgba(224, 183, 79, 0.85), 0 8px 30px rgba(200, 155, 60, 0.35);
+  animation: lux-card-flash 1.6s ease 3;
 }
 
 /* ── צמצום רווחים במובייל: בין זמני היום לתיבת החיפוש ── */
@@ -4918,3 +5051,208 @@ html.lux-modal-open #pwa-install-banner * {
     animation: none !important;
   }
 }
+
+
+/* ═══════════════════════════════════════════════════════
+   ✦ פופאפ תוכן העניינים / ניווט פרקים (#chapter-nav-popup, .cnp-*)
+   עיצוב "לילה מלכותי וזהב": כרטיס נייר עם שטיפת זהב, כותרת בסריף,
+   פריטים כשבבים; במובייל — יריעה תחתונה עם ידית. ה-id נשאר (רשום
+   ב-_OVERLAY_OPEN_SELECTOR, popstate ו-_closePopupViaBack).
+   ═══════════════════════════════════════════════════════ */
+#chapter-nav-popup {
+  position: fixed;
+  inset: 0;
+  z-index: 10050;
+  background: rgba(2, 6, 23, 0.72);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  direction: rtl;
+  overscroll-behavior: contain;
+}
+/* כשתוכן העניינים פתוח יש לו X משלו — ה-X האוניברסלי של המודול שמתחתיו מוסתר */
+body:has(#chapter-nav-popup) > .lux-ux { display: none !important; }
+.cnp-card {
+  --cnp-accent: #c9993a;
+  width: min(100%, 560px);
+  max-height: min(86vh, 720px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse 140% 50% at 50% 0%, rgba(200, 155, 60, 0.10) 0%, transparent 60%),
+    var(--lux-paper, #faf8f3);
+  border: 1px solid var(--lux-hairline-strong, rgba(212, 168, 66, 0.5));
+  border-radius: 1.5rem;
+  box-shadow: 0 30px 80px rgba(5, 11, 26, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.35) inset;
+  animation: lux-yw-card-in 0.3s ease;
+  position: relative;
+}
+.cnp-card::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 1.5rem; right: 1.5rem;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--lux-gold-400, #e0b74f), transparent);
+  opacity: 0.9;
+  pointer-events: none;
+}
+.cnp-handle { display: none; }
+.cnp-head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.1rem 0.8rem;
+  border-bottom: 1px solid var(--lux-hairline, rgba(200, 155, 60, 0.28));
+  flex-shrink: 0;
+}
+.cnp-icon {
+  width: 42px; height: 42px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 0.9rem;
+  font-size: 1.25rem;
+  background: linear-gradient(135deg, rgba(242, 217, 138, 0.35), rgba(201, 153, 58, 0.18));
+  border: 1px solid rgba(201, 153, 58, 0.45);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+.cnp-titles { min-width: 0; flex: 1; }
+.cnp-title {
+  margin: 0;
+  color: #0f172a;
+  font-family: var(--lux-serif, "Frank Ruhl Libre", serif);
+  font-size: 1.2rem;
+  font-weight: 900;
+  line-height: 1.25;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.cnp-sub { margin: 0.15rem 0 0; color: #64748b; font-size: 0.8rem; font-weight: 600; }
+.cnp-x {
+  width: 38px; height: 38px; flex-shrink: 0;
+  border-radius: 50%;
+  border: 1.5px solid rgba(15, 23, 42, 0.12);
+  background: rgba(15, 23, 42, 0.06);
+  color: #334155;
+  font-size: 1.05rem;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+.cnp-x:hover { background: rgba(15, 23, 42, 0.12); }
+.cnp-x:active { transform: scale(0.92); }
+.cnp-search { padding: 0.6rem 1rem 0; flex-shrink: 0; }
+.cnp-search-in {
+  width: 100%; box-sizing: border-box;
+  padding: 0.55rem 0.9rem;
+  border: 1.5px solid rgba(148, 163, 184, 0.45);
+  border-radius: 0.9rem;
+  background: #fff; color: #0f172a;
+  font: inherit; font-size: 0.9rem; outline: none; direction: rtl;
+}
+.cnp-search-in:focus { border-color: rgba(224, 183, 79, 0.7); box-shadow: 0 0 0 3px rgba(224, 183, 79, 0.2); }
+.cnp-list {
+  overflow-y: auto;
+  padding: 0.85rem 0.9rem;
+  flex: 1;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.cnp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  gap: 0.5rem;
+}
+.cnp-grid.cnp-grid-long { grid-template-columns: 1fr; gap: 0.4rem; }
+.cnp-item {
+  background: rgba(15, 23, 42, 0.045);
+  color: #1e293b;
+  border: 1px solid rgba(200, 155, 60, 0.22);
+  border-radius: 0.9rem;
+  padding: 0.7rem 0.6rem;
+  font-size: 0.84rem;
+  font-weight: 800;
+  line-height: 1.3;
+  cursor: pointer;
+  text-align: center;
+  direction: rtl;
+  position: relative;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.12s ease, box-shadow 0.15s ease;
+}
+.cnp-grid-long .cnp-item { text-align: right; padding: 0.7rem 0.9rem; }
+.cnp-item:hover { background: rgba(242, 217, 138, 0.22); border-color: rgba(201, 153, 58, 0.55); }
+.cnp-item:active { transform: scale(0.97); }
+.cnp-item.is-sub {
+  font-weight: 700;
+  color: #334155;
+  background: transparent;
+  border-color: rgba(200, 155, 60, 0.14);
+}
+.cnp-grid-long .cnp-item.is-sub { padding-right: 1.6rem; }
+.cnp-grid-long .cnp-item.is-sub::before {
+  content: "";
+  position: absolute; right: 0.75rem; top: 50%;
+  width: 6px; height: 6px; border-radius: 50%;
+  transform: translateY(-50%);
+  background: var(--lux-gold-500, #c9993a);
+}
+.cnp-item.is-active {
+  background: linear-gradient(135deg, #f2d98a 0%, #dfb254 45%, #c9993a 100%);
+  color: #1a2547;
+  border-color: transparent;
+  box-shadow: 0 5px 16px rgba(201, 153, 58, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+.cnp-foot {
+  flex-shrink: 0;
+  padding: 0.55rem 1rem calc(0.65rem + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--lux-hairline, rgba(200, 155, 60, 0.28));
+  color: #94a3b8;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-align: center;
+}
+/* מצב כהה — כרטיס לילה */
+html.dark .cnp-card {
+  background:
+    radial-gradient(ellipse 140% 50% at 50% 0%, rgba(200, 155, 60, 0.12) 0%, transparent 60%),
+    var(--lux-navy-900, #0c1530);
+  border-color: rgba(212, 168, 66, 0.35);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+}
+html.dark .cnp-title { color: var(--lux-gold-100, #fdf3d0); }
+html.dark .cnp-sub { color: #94a3b8; }
+html.dark .cnp-x { background: rgba(255, 255, 255, 0.08); border-color: rgba(255, 255, 255, 0.18); color: #e2e8f0; }
+html.dark .cnp-search-in { background: rgba(255, 255, 255, 0.06); color: #f1f5f9; border-color: rgba(255, 255, 255, 0.18); }
+html.dark .cnp-item { background: rgba(255, 255, 255, 0.06); color: #e2e8f0; border-color: rgba(242, 217, 138, 0.18); }
+html.dark .cnp-item.is-sub { color: #cbd5e1; background: transparent; }
+html.dark .cnp-item:hover { background: rgba(242, 217, 138, 0.16); }
+html.dark .cnp-item.is-active { color: #1a2547; }
+html.dark .cnp-foot { color: #64748b; }
+/* מובייל — יריעה תחתונה עם ידית, בלי טשטוש ובלי אנימציה (ראו כללי המובייל למעלה) */
+@media (max-width: 768px) {
+  #chapter-nav-popup { align-items: flex-end; padding: 0; }
+  .cnp-card {
+    width: 100%;
+    max-width: 100%;
+    max-height: 82vh;
+    border-radius: 1.5rem 1.5rem 0 0;
+    border-bottom: none;
+    animation: none;
+  }
+  .cnp-card::before { display: none; }
+  .cnp-handle {
+    display: block;
+    width: 40px; height: 4px;
+    border-radius: 999px;
+    background: rgba(201, 153, 58, 0.6);
+    margin: 0.55rem auto 0;
+    flex-shrink: 0;
+  }
+  .cnp-head { padding-top: 0.7rem; }
+  .cnp-grid { grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); }
+}
+
+/* הכותרת שאליה קפצו מתוכן העניינים — הבזק זהב קצר כדי שהעין תמצא אותה */
+@keyframes sn-hc-jump { 0% { background: rgba(242, 217, 138, 0.55); } 100% { background: transparent; } }
+.sn-hc-jump { animation: sn-hc-jump 1.4s ease-out; border-radius: 0.4rem; }

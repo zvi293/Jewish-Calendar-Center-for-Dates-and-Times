@@ -2895,6 +2895,13 @@ async function fetchLiveCalendarData() {
       }
     });
 
+    // מפת ימי חג/צום לרצף הלימוד (lux.js §21) — יום טוב או תענית לא שוברים רצף
+    window._luxHolidayDates = window._luxHolidayDates || {};
+    [...(y0.items || []), ...y1.items, ...y2.items].forEach((ev) => {
+      if (ev.date && (ev.yomtov || ev.subcat === "fast")) {
+        window._luxHolidayDates[ev.date.substring(0, 10)] = 1;
+      }
+    });
     [...(y0.items || []), ...y1.items, ...y2.items].forEach((ev) => {
       const eventDate = new Date(ev.date);
       eventDate.setHours(0, 0, 0, 0);

@@ -1764,21 +1764,85 @@
   /* ── 21. רצף לימוד ─────────────────────────────────────────────── */
   safe("streak", function () {
     var KEY = "lux_streak";
-    function today() { return new Date().toISOString().slice(0, 10); }
+    function localIso(d) {
+      // תאריך מקומי (לא UTC) — אחרי חצות לילה בישראל toISOString עדיין ביום הקודם
+      return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+    }
+    function today() { return localIso(new Date()); }
     function get() {
       try { return JSON.parse(localStorage.getItem(KEY) || "null") || { last: null, count: 0 }; } catch (e) { return { last: null, count: 0 }; }
+    }
+    function save(s) { try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (e) {} }
+    /* ── ימים "מוגנים" שאינם שוברים רצף: שישי, שבת, חגים וצומות ──
+       מקור ראשי: לוח שנתי מ-Hebcal (window._luxHolidayDates — יום טוב/תענית);
+       גיבוי בלתי-תלוי-רשת: חישוב עברי עם Intl (ca-hebrew). */
+    var _hebFmt = null;
+    function hebDate(d) {
+      try {
+        if (!_hebFmt) _hebFmt = new Intl.DateTimeFormat("en-u-ca-hebrew", { month: "long", day: "numeric" });
+        var parts = _hebFmt.formatToParts(d), m = "", day = 0;
+        parts.forEach(function (p) { if (p.type === "month") m = p.value; if (p.type === "day") day = parseInt(p.value, 10); });
+        return { m: m, d: day };
+      } catch (e) { return null; }
+    }
+    function isHolidayIntl(d) {
+      var h = hebDate(d);
+      if (!h) return false;
+      var m = h.m, day = h.d, wd = d.getDay();
+      if (/^Tishri/.test(m)) {
+        if (day <= 2 || day === 10 || (day >= 15 && day <= 22)) return true;          // ר"ה, יו"כ, סוכות-שמח"ת
+        if (day === 3 || (day === 4 && wd === 0)) return true;                        // צום גדליה (כולל נדחה)
+      }
+      if (/^Tevet/.test(m) && day === 10) return true;                                // עשרה בטבת
+      if (/^Adar( II)?$/.test(m) && (day === 13 || day === 14 || day === 15 || (day === 11 && wd === 4))) return true; // תענית אסתר (כולל מוקדם), פורים ושושן
+      if (/^Nisan/.test(m) && day >= 15 && day <= 21) return true;                    // פסח
+      if (/^Sivan/.test(m) && day === 6) return true;                                 // שבועות
+      if (/^Tamuz/.test(m) && (day === 17 || (day === 18 && wd === 0))) return true;  // י"ז בתמוז (כולל נדחה)
+      if (/^Av/.test(m) && (day === 9 || (day === 10 && wd === 0))) return true;      // ט' באב (כולל נדחה)
+      return false;
+    }
+    function isProtectedDay(d) {
+      var wd = d.getDay();
+      if (wd === 5 || wd === 6) return true; // שישי ושבת
+      try { if (window._luxHolidayDates && window._luxHolidayDates[localIso(d)]) return true; } catch (e) {}
+      return isHolidayIntl(d);
+    }
+    // האם בין יום הלימוד האחרון להיום פוספס יום רגיל (לא מוגן)?
+    function gapBroken(lastIso) {
+      if (!lastIso) return false;
+      var t = today();
+      if (lastIso >= t) return false;
+      var d = new Date(lastIso + "T12:00:00");
+      for (var i = 0; i < 400; i++) {
+        d.setDate(d.getDate() + 1);
+        var iso = localIso(d);
+        if (iso >= t) return false; // הגענו להיום — כל הימים שפוספסו היו מוגנים
+        if (!isProtectedDay(d)) return true;
+      }
+      return true;
     }
     function record() {
       var s = get();
       var t = today();
       if (s.last === t) return s;
-      var y = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-      s.count = s.last === y ? s.count + 1 : 1;
+      // הרצף נמשך אם לא פוספס יום רגיל (שישי/שבת/חג/צום אינם שוברים)
+      s.count = (s.last && s.count > 0 && !gapBroken(s.last)) ? s.count + 1 : 1;
       s.last = t;
-      try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (e) {}
+      save(s);
       renderPill();
       if (s.count > 1 && s.count % 7 === 0) luxConfetti();
       return s;
+    }
+    // איפוס בכניסה לאפליקציה: מעל 24 שעות בלי כניסה ללימוד (ולא בגלל ימים מוגנים) — הרצף מתאפס
+    function enforceGap() {
+      var s = get();
+      if (s.count > 0 && s.last && s.last !== today() && gapBroken(s.last)) {
+        s.count = 0;
+        s.last = null;
+        save(s);
+        var el = document.getElementById("lux-streak");
+        if (el) el.remove();
+      }
     }
     function renderPill() {
       var s = get();
@@ -1803,7 +1867,11 @@
     });
     var daf = document.getElementById("daf-yomi-link");
     if (daf) daf.addEventListener("click", record);
-    setTimeout(renderPill, 3000);
+    // בדיקת האיפוס רצה גם אחרי שנתוני Hebcal נטענים (הם מגיעים כמה שניות אחרי הטעינה)
+    enforceGap();
+    setTimeout(function () { enforceGap(); renderPill(); }, 3000);
+    setTimeout(enforceGap, 12000);
+    document.addEventListener("visibilitychange", function () { if (!document.hidden) { enforceGap(); renderPill(); } });
   });
 
   /* ── 22. קיצורי PWA (?open=...) ────────────────────────────────── */

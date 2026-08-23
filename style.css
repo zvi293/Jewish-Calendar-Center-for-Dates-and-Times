@@ -5920,3 +5920,91 @@ body:not(.lux-erev) .prayer-btn.prayer-cta-highlight .prayer-icon {
   body:not(.lux-erev) .prayer-btn .prayer-icon,
   #sn-books-grid button, #sn-books-grid button > span:first-child { transition: none !important; }
 }
+
+
+/* ══════════════════════════════════════════════════════════════
+   פוליש ג' (23/08/2026) — גריד 3 בספרייה במובייל + ליטוש כלל-אתרי
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── ספרים/תפילות נוספות: שלושה ספרים בשורה במובייל ── */
+@media (max-width: 767px) {
+  #sn-books-grid div[style*="grid-template-columns"] {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 0.45rem !important;
+  }
+  #sn-books-grid button { padding: 0.6rem 0.3rem !important; }
+  #sn-books-grid button > span:first-child { font-size: 1.25rem !important; }
+  #sn-books-grid button > span:nth-child(2) { font-size: 0.72rem !important; }
+  #sn-books-grid button > span:nth-child(3) { font-size: 0.56rem !important; }
+}
+
+/* ── ה-X האוניברסלי — טבעת זהב בהובר, שפה אחת עם שאר האתר ── */
+.lux-ux:hover {
+  border-color: rgba(242, 217, 138, 0.75);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45), 0 0 16px rgba(232, 193, 90, 0.25);
+}
+
+/* ── פוטר — קו זהב עדין וכפתורים שמתחממים בהובר ── */
+footer > div { border-top-color: rgba(200, 155, 60, 0.22) !important; }
+footer a[href$=".html"] {
+  transition: transform 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease !important;
+}
+footer a[href$=".html"]:hover {
+  transform: translateY(-2px);
+  border-color: rgba(200, 155, 60, 0.55) !important;
+  color: #a16207 !important;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.12), 0 0 12px rgba(232, 193, 90, 0.12);
+}
+.dark footer a[href$=".html"]:hover { color: #f2d98a !important; }
+
+/* ── תהילים (נייר בהיר) — אריחי פרקים חמים עם הרמה ── */
+#tehillim-modal button[onclick^="window._tehillimOpenPsalm"] {
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease !important;
+}
+#tehillim-modal button[onclick^="window._tehillimOpenPsalm"]:hover {
+  transform: translateY(-2px);
+  border-color: rgba(180, 130, 40, 0.55) !important;
+  background: rgba(232, 193, 90, 0.10) !important;
+  box-shadow: 0 6px 16px rgba(120, 85, 20, 0.14);
+}
+#tehillim-modal button[onclick^="window._tehillimSwitchDay"] {
+  transition: transform 0.18s ease, box-shadow 0.18s ease !important;
+}
+#tehillim-modal button[onclick^="window._tehillimSwitchDay"]:hover { transform: translateY(-1px); }
+
+/* ── לוח השנה החודשי — טבעת זהב על יום בהובר ── */
+#cal-days-grid [data-date] { transition: box-shadow 0.15s ease, transform 0.15s ease; border-radius: 0.75rem; }
+#cal-days-grid [data-date]:hover {
+  box-shadow: inset 0 0 0 1.5px rgba(224, 183, 79, 0.65), 0 4px 12px rgba(5, 11, 26, 0.18);
+  transform: translateY(-1px);
+}
+
+/* ── לוח ההילולות — אריחים חיים ── */
+#hil-cal-grid button { transition: transform 0.15s ease, box-shadow 0.15s ease; }
+#hil-cal-grid button:hover {
+  transform: translateY(-1px);
+  box-shadow: inset 0 0 0 1.5px rgba(224, 183, 79, 0.5);
+}
+
+/* ── שדות חיפוש/סינון בכל האתר — זוהר זהב בפוקוס ── */
+input[type="search"]:focus, input[type="text"]:focus, #sn-sections-filter:focus {
+  border-color: rgba(224, 183, 79, 0.65) !important;
+  box-shadow: 0 0 0 3px rgba(224, 183, 79, 0.16) !important;
+}
+
+/* ── כפתורי חזרה-למעלה — טבעת זהב בהובר ── */
+#fab-top:hover, #scroll-top-btn:hover {
+  box-shadow: 0 6px 28px rgba(37, 99, 235, 0.55), 0 0 0 1.5px rgba(242, 217, 138, 0.55) !important;
+}
+
+/* ── באנר התקנת PWA — נגיעת זהב בקצה ── */
+#pwa-install-banner > div {
+  border: 1px solid rgba(242, 217, 138, 0.35) !important;
+  box-shadow: 0 8px 40px rgba(37, 99, 235, 0.45), 0 0 22px rgba(232, 193, 90, 0.14) !important;
+}
+
+/* ── תנועה מופחתת ── */
+@media (prefers-reduced-motion: reduce) {
+  #cal-days-grid [data-date], #hil-cal-grid button,
+  #tehillim-modal button[onclick^="window._tehillimOpenPsalm"] { transition: none !important; }
+}

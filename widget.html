@@ -125,6 +125,31 @@
       }
       .howto b { color: #fff; }
       .back { display: block; text-align: center; margin-top: 0.8rem; font-size: 0.8rem; font-weight: 700; }
+      /* ווידג'ט סדר לימוד */
+      .plan-row { padding: 0.45rem 0.1rem 0.55rem; border-bottom: 1px solid rgba(148, 180, 255, 0.10); }
+      .plan-row:last-child { border-bottom: none; }
+      .plan-top { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem; }
+      .plan-name { font-weight: 900; font-size: 0.92rem; color: #fdf3d0; }
+      .plan-pct { font-size: 0.75rem; font-weight: 800; color: #ffe9a8; }
+      .plan-bar { height: 6px; border-radius: 999px; background: rgba(255, 255, 255, 0.10); overflow: hidden; }
+      .plan-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #dfa933, #f2d98a, #fff3c4); box-shadow: 0 0 8px rgba(232, 193, 90, 0.5); }
+      .plan-meta { display: flex; justify-content: space-between; align-items: center; margin-top: 0.35rem; font-size: 0.7rem; color: rgba(191, 219, 254, 0.7); gap: 0.4rem; flex-wrap: wrap; }
+      .plan-go {
+        display: inline-flex; align-items: center; gap: 0.3rem;
+        padding: 0.26rem 0.75rem; border-radius: 999px;
+        background: linear-gradient(180deg, rgba(232, 193, 90, 0.2), rgba(232, 193, 90, 0.08));
+        border: 1px solid rgba(232, 193, 90, 0.5);
+        color: #fdf3d0; font-size: 0.72rem; font-weight: 800; text-decoration: none;
+      }
+      .streak-flame { text-align: center; font-size: 2.4rem; line-height: 1; margin-bottom: 0.2rem; filter: drop-shadow(0 0 14px rgba(251, 146, 60, 0.6)); }
+      .pearl-q { text-align: center; font-size: 1.05rem; font-weight: 800; color: #fdf9ec; line-height: 1.7; font-style: italic; }
+      .pearl-s { text-align: center; font-size: 0.75rem; color: #f2d98a; font-weight: 700; margin-top: 0.4rem; }
+      .copybtn {
+        display: inline-flex; align-items: center; gap: 0.35rem;
+        background: rgba(96, 165, 250, 0.15); border: 1px solid rgba(96, 165, 250, 0.45);
+        color: #dbeafe; border-radius: 999px; padding: 0.3rem 0.9rem;
+        font-size: 0.74rem; font-weight: 800; cursor: pointer;
+      }
       @media (prefers-reduced-motion: reduce) { * { animation: none !important; } }
     </style>
   </head>
@@ -208,14 +233,52 @@
             '<div class="mid">היום יום ' + day + " לעומר</div></div>";
         }
 
+        function wPlans() {
+          var plans = Array.isArray(d.plans) ? d.plans : [];
+          if (!plans.length) return "";
+          var rows = plans.slice(0, 4).map(function (p) {
+            var pct = p.count ? Math.min(100, Math.round((p.done / p.count) * 100)) : 0;
+            return '<div class="plan-row">' +
+              '<div class="plan-top"><span class="plan-name">🎯 ' + esc(p.he) + '</span><span class="plan-pct">' + pct + "%</span></div>" +
+              '<div class="plan-bar"><div class="plan-fill" style="width:' + pct + '%;"></div></div>' +
+              '<div class="plan-meta"><span>' + esc(p.done) + " מתוך " + esc(p.count) + " " + esc(p.unit || "יחידות") +
+                (p.doneToday ? " · ✓ נלמד היום" : "") + "</span>" +
+                '<a class="plan-go" href="/?open=plan&plan=' + encodeURIComponent(p.id) + '">המשך ללמוד ←</a></div>' +
+            "</div>";
+          }).join("");
+          return '<div class="wcard"><div class="whead">🎯 סדר הלימוד האישי שלי</div>' + rows + "</div>";
+        }
+        function wStreak() {
+          var n = d.streak || 0;
+          if (n < 2) return "";
+          return '<div class="wcard"><div class="whead">🔥 רצף לימוד</div>' +
+            '<div class="streak-flame">🔥</div>' +
+            '<div class="big gold">' + n + " ימים</div>" +
+            '<div class="mid">כל הכבוד! ממשיכים ללמוד כל יום</div></div>';
+        }
+        function wPearl() {
+          if (!d.pearl || !d.pearl.t) return "";
+          return '<div class="wcard"><div class="whead">💎 הפנינה היומית</div>' +
+            '<div class="pearl-q">"' + esc(d.pearl.t) + '"</div>' +
+            (d.pearl.s ? '<div class="pearl-s">— ' + esc(d.pearl.s) + "</div>" : "") + "</div>";
+        }
+        function wMoon() {
+          if (!d.moon || d.moon === "--") return "";
+          return '<div class="wcard"><div class="whead">🌙 ברכת הלבנה</div>' +
+            '<div class="big" style="font-size:1.15rem;">' + esc(d.moon) + "</div></div>";
+        }
         var W = {
           date:     { t: "📅 התאריך העברי", f: wDate },
           next:     { t: "⏳ הזמן הבא", f: wNext },
           zmanim:   { t: "🕰️ זמני היום", f: wZmanim },
           shabbat:  { t: "🕯️ שבת קרובה", f: wShabbat },
+          plans:    { t: "🎯 סדר לימוד אישי", f: wPlans },
+          streak:   { t: "🔥 רצף לימוד", f: wStreak },
           tehillim: { t: "📖 תהילים יומי", f: wTehillim },
           daf:      { t: "📚 הדף היומי", f: wDaf },
-          omer:     { t: "✨ ספירת העומר", f: wOmer }
+          omer:     { t: "✨ ספירת העומר", f: wOmer },
+          pearl:    { t: "💎 פנינה יומית", f: wPearl },
+          moon:     { t: "🌙 ברכת הלבנה", f: wMoon }
         };
 
         function foot() {
@@ -244,12 +307,57 @@
         app.innerHTML =
           '<h1 class="gal">✡ הווידג\'טים של הלוח היהודי</h1>' +
           '<div class="gal-sub">כל ווידג\'ט נפתח כעמוד קומפקטי משלו — מושלם לקיצור דרך במסך הבית</div>' +
-          '<div class="howto">💡 <b>איך מוסיפים למסך הבית?</b><br>' +
-            '1. לוחצים על "פתח כווידג\'ט נפרד" מתחת לווידג\'ט שרוצים<br>' +
-            '2. בתפריט הדפדפן (⋮) בוחרים <b>"הוספה למסך הבית"</b><br>' +
-            '3. הווידג\'ט יופיע כאייקון — לחיצה עליו פותחת אותו מיד, בלי לטעון את כל האתר</div>' +
+          '<div class="howto" id="howto"></div>' +
           '<div class="gal-grid">' + items + "</div>" + foot() +
           '<a class="back" href="/">→ חזרה ללוח היהודי</a>';
+
+        // ── הוראות הוספה — מותאמות לאופן הפתיחה ──
+        // בתוך האפליקציה (APK/PWA מותקן) אין תפריט דפדפן — נותנים העתקת קישור ופתיחה בכרום
+        var standalone = false;
+        try {
+          standalone = window.matchMedia("(display-mode: standalone)").matches ||
+            window.matchMedia("(display-mode: fullscreen)").matches ||
+            window.navigator.standalone === true ||
+            document.referrer.indexOf("android-app://") === 0;
+        } catch (e) {}
+        var how = document.getElementById("howto");
+        if (how) {
+          if (standalone) {
+            how.innerHTML = '💡 <b>נראה שאתם בתוך האפליקציה.</b><br>' +
+              'הוספת ווידג\'ט למסך הבית נעשית דרך דפדפן כרום:<br>' +
+              '1. לוחצים <b>"📋 העתק קישור"</b> על הווידג\'ט שרוצים 👇<br>' +
+              '2. פותחים את <b>כרום</b> ומדביקים את הקישור בשורת הכתובת<br>' +
+              '3. בתפריט ⋮ בוחרים <b>"הוספה למסך הבית"</b><br>' +
+              'האייקון שייווצר ייפתח ישירות בתוך האפליקציה, במסך מלא ✨';
+            document.querySelectorAll(".gal-open").forEach(function (g) {
+              var a = g.querySelector("a");
+              if (!a) return;
+              var url = new URL(a.getAttribute("href"), location.origin + "/").href;
+              var btn = document.createElement("button");
+              btn.className = "copybtn";
+              btn.type = "button";
+              btn.textContent = "📋 העתק קישור";
+              btn.style.marginRight = "0.45rem";
+              btn.addEventListener("click", function () {
+                function done() { btn.textContent = "✓ הועתק!"; setTimeout(function () { btn.textContent = "📋 העתק קישור"; }, 2200); }
+                function fallback() {
+                  var ta = document.createElement("textarea");
+                  ta.value = url; document.body.appendChild(ta); ta.select();
+                  try { document.execCommand("copy"); done(); } catch (e) { prompt("העתיקו את הקישור:", url); }
+                  ta.remove();
+                }
+                if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(done, fallback);
+                else fallback();
+              });
+              g.appendChild(btn);
+            });
+          } else {
+            how.innerHTML = '💡 <b>איך מוסיפים למסך הבית?</b><br>' +
+              '1. לוחצים על "פתח כווידג\'ט נפרד" מתחת לווידג\'ט שרוצים<br>' +
+              '2. בתפריט הדפדפן (⋮) בוחרים <b>"הוספה למסך הבית"</b><br>' +
+              '3. הווידג\'ט יופיע כאייקון — לחיצה עליו פותחת אותו מיד, בלי לטעון את כל האתר';
+          }
+        }
       })();
     </script>
   </body>

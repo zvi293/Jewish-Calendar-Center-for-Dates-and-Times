@@ -1894,6 +1894,16 @@
           var z = document.getElementById("halacha-banner");
           if (z) z.scrollIntoView({ behavior: "smooth", block: "center" });
         }
+        else if (target === "plan") {
+          // ?open=plan&plan=<id> — קישור עמוק מהווידג'ט של סדר הלימוד האישי
+          var pidM = location.search.match(/[?&]plan=([^&]+)/);
+          var pid = pidM ? decodeURIComponent(pidM[1]) : null;
+          var ps = jget("lux_study_plans_v1", []);
+          var has = pid && Array.isArray(ps) && ps.some(function (p) { return p && p.id === pid; });
+          if (has && typeof window.luxOpenPlanReader === "function") window.luxOpenPlanReader(pid);
+          else if (Array.isArray(ps) && ps.length && ps[0].id && typeof window.luxOpenPlanReader === "function") window.luxOpenPlanReader(ps[0].id);
+          else if (typeof window.luxOpenPlanWizard === "function") window.luxOpenPlanWizard();
+        }
       }, 600);
     }, 500);
   });
@@ -2688,7 +2698,16 @@
           zmanim: zmanim.slice(0, 12),
           nextZman: nz ? nz.textContent.replace(/^⏳\s*/, "") : "",
           tehillimDaily: { day: hebDay, range: TH_MONTHLY[Math.min(hebDay, 30)] || "" },
-          omerDay: (window.CURRENT_OMER_DAY || 0)
+          omerDay: (window.CURRENT_OMER_DAY || 0),
+          moon: ((document.getElementById("stat-moon") || {}).textContent || "").trim(),
+          pearl: (function () {
+            var el = document.getElementById("lux-pearl");
+            if (!el) return null;
+            var t = el.querySelector(".lux-pearl-text"), src = el.querySelector(".lux-pearl-src");
+            return t ? { t: t.textContent.replace(/^"|"$/g, ""), s: src ? src.textContent.replace(/^—\s*/, "") : "" } : null;
+          })(),
+          plans: (typeof window._luxPlansSummary === "function") ? window._luxPlansSummary() : [],
+          streak: (function () { try { return (JSON.parse(localStorage.getItem("lux_streak") || "null") || {}).count || 0; } catch (e) { return 0; } })()
         };
         if (data.zmanim.length || data.hebDate) jset("lux_widget_data", data);
       } catch (e) {}
@@ -5262,6 +5281,24 @@
       renderContent();
     }
     window.luxOpenPlanReader = openPlanReader;
+    // סיכום תוכניות לימוד לווידג'טים (widget.html) — שם ספר, התקדמות, יחידה
+    window._luxPlansSummary = function () {
+      try {
+        return plans().map(function (p) {
+          var bk = bookOf(p.bookId);
+          return {
+            id: p.id,
+            he: bk ? bk.he : String(p.bookId || ""),
+            done: p.done || 0,
+            count: bk ? bk.count : 0,
+            unit: bk ? bk.unit : "",
+            perDay: p.perDay || 1,
+            streak: p.streak || 0,
+            doneToday: p.lastDone === todayStr()
+          };
+        });
+      } catch (e) { return []; }
+    };
 
     /* סולם משכי סיום — מדרגות נדיבות, משבוע ועד 3 שנים */
     var DUR = [7, 10, 14, 21, 30, 45, 60, 75, 90, 105, 120, 135, 150, 165, 182, 210, 240, 270, 300, 330, 365, 425, 485, 545, 605, 665, 730, 790, 850, 910, 1000, 1095];

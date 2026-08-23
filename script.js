@@ -19323,35 +19323,33 @@ document.addEventListener("keydown", (e) => {
   function buildHilulotList(tzaddikim, key) {
     if (!tzaddikim || tzaddikim.length === 0) {
       return (
-        '<div style="text-align:center;padding:2rem 0;color:#94a3b8;">' +
-        '<div style="font-size:2.5rem;margin-bottom:0.75rem;">🌙</div>' +
-        '<p style="font-size:1rem;font-weight:600;">אין הילולות ידועות להיום</p>' +
-        '<p style="font-size:0.8rem;margin-top:0.5rem;opacity:0.7;">(' +
-        (key || "") +
-        ")</p>" +
+        '<div class="hil-empty">' +
+        '<div class="hil-empty-moon">🌙</div>' +
+        '<p class="hil-empty-t">אין הילולות ידועות ליום זה</p>' +
+        '<p class="hil-empty-s">אפשר לדפדף לימים סמוכים עם ‹ ›</p>' +
         "</div>"
       );
     }
-    return tzaddikim
-      .map(function (t) {
-        return (
-          '<div style="display:flex;align-items:flex-start;gap:0.75rem;padding:0.85rem 1rem;' +
-          "background:rgba(255,255,255,0.06);border-radius:1rem;margin-bottom:0.65rem;" +
-          'border:1px solid rgba(255,255,255,0.1);">' +
-          '<span style="font-size:1.6rem;flex-shrink:0;">' +
-          (t.icon || "🕯️") +
-          "</span>" +
-          '<div style="direction:rtl;text-align:right;">' +
-          '<div style="font-weight:700;font-size:1rem;color:#e2e8f0;margin-bottom:0.2rem;">' +
-          t.name +
-          "</div>" +
-          '<div style="font-size:0.78rem;color:#94a3b8;line-height:1.4;">' +
-          t.title +
-          "</div>" +
-          "</div></div>"
-        );
-      })
-      .join("");
+    var head =
+      '<div class="hil-count">🕯️ ' + tzaddikim.length +
+      (tzaddikim.length === 1 ? " הילולה ביום זה" : " הילולות ביום זה") + "</div>";
+    return (
+      head +
+      tzaddikim
+        .map(function (t, i) {
+          return (
+            '<div class="hil-card" style="animation-delay:' + (i * 0.07).toFixed(2) + 's;">' +
+            '<span class="hil-ico">' + (t.icon || "🕯️") + "</span>" +
+            '<div class="hil-info">' +
+            '<div class="hil-name">' + t.name + "</div>" +
+            '<div class="hil-sub">' + t.title + "</div>" +
+            "</div>" +
+            '<span class="hil-flame-mini" aria-hidden="true"></span>' +
+            "</div>"
+          );
+        })
+        .join("")
+    );
   }
 
   function refreshMainModal(offset) {
@@ -19423,7 +19421,7 @@ document.addEventListener("keydown", (e) => {
       'color:#e2e8f0;font-size:1.1rem;display:flex;align-items:center;justify-content:center;"' +
       ' aria-label="סגור">✕</button>' +
       '<div style="text-align:center;margin-bottom:1rem;">' +
-      '<div style="font-size:1.8rem;margin-bottom:0.4rem;">🕯️</div>' +
+      '<div class="hil-head-candle" aria-hidden="true"><div class="lux-sbs-candle"><div class="lux-sbs-glow"></div><div class="lux-sbs-flame"></div><div class="lux-sbs-wick"></div><div class="lux-sbs-body"></div></div></div>' +
       '<h2 id="hil-title" style="font-size:1.1rem;font-weight:700;color:#c4b5fd;margin:0 0 0.2rem;">' +
       "הילולות – " +
       info.day +
@@ -19642,39 +19640,17 @@ document.addEventListener("keydown", (e) => {
       html += "<div></div>";
     }
     g.cells.forEach(function (c) {
-      var bg = c.isToday
-        ? "background:rgba(251,191,36,0.25);border:1px solid rgba(251,191,36,0.6);"
-        : c.haH
-          ? "background:rgba(139,92,246,0.18);border:1px solid rgba(139,92,246,0.4);"
-          : "background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);";
-      var cursor = c.haH ? "cursor:pointer;" : "";
-      var onCl = c.haH
-        ? ' onclick="window._hilOpenFromCal(' + c.offset + ')"'
-        : "";
-      var dot = c.haH
-        ? '<div style="width:5px;height:5px;border-radius:50%;background:#a78bfa;margin:1px auto 0;"></div>'
-        : '<div style="height:6px;"></div>';
+      var n = c.haH ? (HD[c.key] || []).length : 0;
+      var cls = "hilc" + (c.isToday ? " hilc-today" : "") + (c.haH ? " hilc-has" : "");
       html +=
         "<div" +
-        onCl +
-        ' style="' +
-        bg +
-        cursor +
-        'border-radius:0.5rem;padding:0.25rem 0;text-align:center;min-height:2.6rem;" ' +
-        'title="' +
-        (c.haH ? c.key : "") +
-        '">' +
-        '<div style="font-size:0.75rem;color:' +
-        (c.isToday ? "#fbbf24" : c.haH ? "#c4b5fd" : "#94a3b8") +
-        ";font-weight:" +
-        (c.haH || c.isToday ? "700" : "400") +
-        ';line-height:1.2;">' +
-        c.hebLetter +
-        "</div>" +
-        '<div style="font-size:0.6rem;color:#475569;line-height:1;margin-bottom:1px;">' +
-        c.gregDay +
-        "</div>" +
-        dot +
+        (c.haH ? ' onclick="window._hilOpenFromCal(' + c.offset + ')" role="button" tabindex="0"' : "") +
+        ' class="' + cls + '" title="' + (c.haH ? c.key + " · " + n + " הילולות" : "") + '">' +
+        '<div class="hilc-heb">' + c.hebLetter + "</div>" +
+        '<div class="hilc-greg">' + c.gregDay + "</div>" +
+        (c.haH
+          ? '<div class="hilc-mark">🕯️' + (n > 1 ? '<i>' + n + "</i>" : "") + "</div>"
+          : '<div class="hilc-pad"></div>') +
         "</div>";
     });
 

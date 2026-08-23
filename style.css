@@ -6133,13 +6133,6 @@ body.lux-season-purim .gradient-bg {
     linear-gradient(165deg, #140a26 0%, #221046 45%, #2f1a5e 100%) !important;
 }
 body.lux-season-purim #lux-season-strip { border-color: rgba(217, 70, 239, 0.45); }
-body.lux-season-elul .gradient-bg,
-body.lux-season-teshuva .gradient-bg {
-  background:
-    radial-gradient(ellipse 120% 55% at 50% 110%, rgba(232, 193, 90, 0.16) 0%, transparent 60%),
-    radial-gradient(ellipse 90% 45% at 50% -5%, rgba(20, 184, 166, 0.10) 0%, transparent 55%),
-    linear-gradient(165deg, #061426 0%, #0a2038 45%, #123048 100%) !important;
-}
 /* ט' באב — עולם מושתק */
 body.lux-season-av9 .gradient-bg {
   background: linear-gradient(165deg, #0d0d10 0%, #17171c 50%, #202028 100%) !important;

@@ -6065,7 +6065,7 @@
     var force = null;
     try {
       var q = new URLSearchParams(location.search).get("season");
-      if (["chanuka", "purim", "elul", "teshuva", "av9"].indexOf(q) >= 0) force = q;
+      if (["chanuka", "purim", "av9"].indexOf(q) >= 0) force = q;
     } catch (e) {}
     var _fmt = null;
     function hebOf(d) {
@@ -6088,8 +6088,6 @@
         if (back && /^Kislev/.test(back.m) && back.d === 25) return { mood: "chanuka", night: i + 1 };
       }
       if (/^Adar/.test(h.m) && !/Adar I$/.test(h.m) && (h.d === 14 || h.d === 15)) return { mood: "purim", night: 0 };
-      if (/^Elul/.test(h.m)) return { mood: "elul", night: 0 };
-      if (/^Tishri/.test(h.m) && h.d <= 10) return { mood: "teshuva", night: 0 };
       if (/^Av/.test(h.m) && (h.d === 9 || (h.d === 10 && now.getDay() === 0))) return { mood: "av9", night: 0 };
       return null;
     }
@@ -6104,8 +6102,6 @@
           '<div class="lux-season-lbl">חנוכה שמח · נר ' + ["", "ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שביעי", "שמיני"][st.night] + "</div>";
       }
       if (st.mood === "purim") return '<div class="lux-season-lbl">🎭 פורים שמח! ונהפוך הוא 🎉</div>';
-      if (st.mood === "elul") return '<div class="lux-season-lbl">📯 חודש אלול — ימי הרחמים והסליחות</div>';
-      if (st.mood === "teshuva") return '<div class="lux-season-lbl">📯 עשרת ימי תשובה — לשנה טובה תיכתבו ותיחתמו</div>';
       if (st.mood === "av9") return '<div class="lux-season-lbl">🕯️ תשעה באב — צום קל ומועיל · יהפך לששון ולשמחה</div>';
       return "";
     }
@@ -6114,7 +6110,7 @@
       var body = document.body;
       var st = body.classList.contains("lux-erev") ? null : detect();
       var el = document.getElementById("lux-season-strip");
-      ["lux-season-chanuka", "lux-season-purim", "lux-season-elul", "lux-season-teshuva", "lux-season-av9"].forEach(function (c) {
+      ["lux-season-chanuka", "lux-season-purim", "lux-season-av9"].forEach(function (c) {
         body.classList.toggle(c, !!st && c === "lux-season-" + st.mood);
       });
       if (!st) { if (el) el.remove(); cur = ""; return; }

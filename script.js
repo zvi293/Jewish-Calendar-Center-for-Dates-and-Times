@@ -19658,8 +19658,15 @@ document.addEventListener("keydown", (e) => {
   }
 
   window._hilOpenFromCal = function (offset) {
+    // מעבר מהלוח החודשי ליום: סגירה ידנית חייבת גם לשחרר את נעילת הגלילה
+    // וגם לנקות את רשומת המחסנית — אחרת נשארת נעילת-רפאים והדף קופא
     var cm = document.getElementById("hilulot-cal-modal");
-    if (cm) cm.remove();
+    if (cm) {
+      cm.remove();
+      unlockBodyScroll();
+      if (_activeModals[_activeModals.length - 1] === "hilulot-cal-modal")
+        _activeModals.pop();
+    }
     window.openHilulotModal(offset);
   };
 

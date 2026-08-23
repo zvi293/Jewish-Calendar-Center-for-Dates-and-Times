@@ -6488,3 +6488,11 @@ body.lux-season-av9 .lux-hero-orb { opacity: 0.15; }
 @media (prefers-reduced-motion: reduce) {
   .hil-card, .hil-flame-mini { animation: none !important; }
 }
+
+/* ── כפתור "לבניית אתר פרימיום" — גדול מעט יותר במובייל ── */
+@media (max-width: 767px) {
+  .lux-premium-badge {
+    font-size: 0.86rem !important;
+    padding: 0.62rem 1.35rem !important;
+  }
+}

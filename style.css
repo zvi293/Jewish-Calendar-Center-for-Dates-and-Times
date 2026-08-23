@@ -5263,3 +5263,129 @@ html.dark .cnp-foot { color: #64748b; }
   color: inherit;
 }
 html.dark ::highlight(lux-mark) { background-color: rgba(250, 204, 21, 0.45); }
+
+/* ══════════════════════════════════════════════════════════════
+   מצב ערב שבת / ערב חג (lux.js §45) — שעה לפני הדלקת נרות
+   ══════════════════════════════════════════════════════════════ */
+/* הכותרת: סגול-מלכותי עמוק עם זוהר נרות חם בתחתית ואבק זהב */
+body.lux-erev .gradient-bg {
+  background:
+    radial-gradient(ellipse 120% 60% at 50% 108%, rgba(251, 191, 36, 0.26) 0%, rgba(217, 119, 6, 0.10) 35%, transparent 62%),
+    radial-gradient(ellipse 80% 45% at 12% 0%, rgba(167, 139, 250, 0.20) 0%, transparent 55%),
+    radial-gradient(ellipse 70% 40% at 88% 8%, rgba(232, 193, 90, 0.12) 0%, transparent 55%),
+    linear-gradient(165deg, #150826 0%, #24113f 40%, #3a1a5c 75%, #4a2459 100%) !important;
+  transition: background 1.2s ease;
+}
+body.lux-erev .gradient-bg::after { display: none; }   /* מבטל את צבעי שעת-היום */
+body.lux-erev .lux-hero-orb { opacity: 0.55; }
+/* כותרת "היהודי" — זהב במקום כחול */
+body.lux-erev #hero-section h1 span[data-i18n-key="app_title_2"] {
+  background: linear-gradient(135deg, #fde68a, #f2d98a, #e0b74f) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+}
+body.lux-erev #hero-section h1 { text-shadow: 0 0 60px rgba(251, 191, 36, 0.28) !important; }
+body.lux-erev .hero-ornament-line { background: linear-gradient(90deg, transparent, rgba(242, 217, 138, 0.75), transparent) !important; }
+/* רקע העמוד — שנהב חמים (ובכהה: סגול-לילה) */
+body.lux-erev { background-color: #fbf5e8 !important; }
+html.dark body.lux-erev { background-color: #160e20 !important; }
+body.lux-erev .wave-divider path { fill: #fbf5e8 !important; }
+html.dark body.lux-erev .wave-divider path { fill: #160e20 !important; }
+/* הבאנר/סצנה הישנים (§16/§38) לא מוצגים כפול */
+body.lux-erev #lux-shabbat-banner,
+body.lux-erev #lux-shabbat-scene { display: none !important; }
+
+/* ── פאנל הפתיחה: נרות חיים + שבת שלום + פרשה + זמנים ── */
+#lux-erev-panel {
+  position: relative;
+  max-width: 30rem;
+  margin: 0 auto 1rem;
+  padding: 1.1rem 1rem 0.9rem;
+  text-align: center;
+  border-radius: 1.5rem;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
+  border: 1px solid rgba(242, 217, 138, 0.35);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.28), 0 0 40px rgba(251, 191, 36, 0.10), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  animation: lux-erev-in 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes lux-erev-in {
+  from { opacity: 0; transform: translateY(14px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+.lux-erev-candles { display: flex; justify-content: center; gap: 3.2rem; margin: 0 0 0.6rem; }
+.lux-erev-title {
+  font-family: var(--lux-serif);
+  font-weight: 900;
+  font-size: clamp(1.9rem, 8vw, 2.6rem);
+  line-height: 1.1;
+  color: #fde8b0;
+  text-shadow: 0 0 28px rgba(251, 191, 36, 0.45), 0 2px 0 rgba(0, 0, 0, 0.25);
+  letter-spacing: 0.02em;
+}
+.lux-erev-sub {
+  margin-top: 0.2rem;
+  color: #e9d5ff;
+  font-weight: 800;
+  font-size: 1rem;
+}
+.lux-erev-times {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.4rem 1.1rem;
+  margin-top: 0.55rem;
+  color: rgba(241, 245, 249, 0.88);
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+.lux-erev-times b { color: #f2d98a; font-weight: 900; }
+.lux-erev-entered {
+  margin-top: 0.5rem;
+  color: #fde68a;
+  font-weight: 800;
+  font-size: 0.95rem;
+}
+/* הספירה לאחור — מסגרת זהב זוהרת */
+body.lux-erev #shabbat-countdown-wrap {
+  background: rgba(251, 191, 36, 0.10);
+  border: 1px solid rgba(242, 217, 138, 0.5);
+  border-radius: 1.2rem;
+  padding: 0.55rem 1.2rem;
+  box-shadow: 0 0 26px rgba(251, 191, 36, 0.22);
+}
+body.lux-erev #countdown-display { color: #fde68a !important; text-shadow: 0 0 18px rgba(251, 191, 36, 0.55); }
+body.lux-erev #countdown-label, body.lux-erev #countdown-event-type { color: #e9d5ff !important; }
+body.lux-erev #countdown-label { animation: lux-candle-flicker 2.2s ease-in-out infinite; }
+
+/* ── גריד הכפתורים של שבת מחליף את הגריד הרגיל ── */
+body.lux-erev #prayer-grid-wrap > :not(#lux-erev-grid) { display: none !important; }
+.lux-erev-grid-head {
+  text-align: center;
+  color: #f2d98a;
+  font-weight: 900;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  margin-bottom: 0.6rem;
+  opacity: 0.9;
+}
+.lux-erev-btn {
+  background: linear-gradient(165deg, rgba(251, 191, 36, 0.10) 0%, rgba(255, 255, 255, 0.03) 100%) !important;
+  border-color: rgba(242, 217, 138, 0.28) !important;
+}
+.lux-erev-btn.lux-erev-hot {
+  background: linear-gradient(165deg, rgba(251, 191, 36, 0.22) 0%, rgba(168, 85, 247, 0.16) 100%) !important;
+  border-color: rgba(242, 217, 138, 0.55) !important;
+  box-shadow: 0 0 18px rgba(251, 191, 36, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
+}
+.lux-erev-btn.lux-erev-hot .prayer-label { color: #fdf3d0; }
+.lux-erev-btn:hover {
+  background: linear-gradient(165deg, rgba(251, 191, 36, 0.30) 0%, rgba(168, 85, 247, 0.24) 100%) !important;
+  border-color: rgba(242, 217, 138, 0.8) !important;
+}
+/* כפתורי ההירו האחרים מקבלים גוון זהב עדין */
+body.lux-erev #btn-open-calendar { border-color: rgba(242, 217, 138, 0.45) !important; }
+@media (prefers-reduced-motion: reduce) {
+  #lux-erev-panel { animation: none; }
+}

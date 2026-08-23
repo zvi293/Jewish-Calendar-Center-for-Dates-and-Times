@@ -518,13 +518,13 @@
         clearArea(ar.key);
         delete marks[ar.key];
         saveAll(marks);
-        if (typeof window.showToast === "function") window.showToast("🖍️ הסימון הוסר", "info", 1500);
+        // בלי טוסט — הודעה בכל נגיעה במסך מבלבלת (הסימון עצמו הוא המשוב)
         return;
       }
       marks[ar.key] = { s: s, off: off };
       saveAll(marks);
       paintLine(ar.key, block, off);
-      if (typeof window.showToast === "function") window.showToast("🖍️ השורה סומנה — נשמר במכשיר זה", "success", 1800);
+      // בלי טוסט בכל לחיצה — הצביעה הצהובה עצמה היא המשוב
     });
     // פריסה השתנתה (סיבוב מסך / גודל כתב) — השורה מחושבת מחדש
     var _relayoutT = null;
@@ -5740,5 +5740,175 @@
     try { new MutationObserver(schedTick).observe(document.body, { childList: true }); } catch (e) {}
     setInterval(tick, 900);
     setTimeout(tick, 1200);
+  });
+  /* ── 45. מצב ערב שבת / ערב חג — שעה לפני הדלקת נרות ──────────────
+     הכותרת והרקע מתחלפים לאווירת שבת, וגריד התפילות הרגיל מוחלף בכפתורים
+     שרלוונטיים לשבת (שיר השירים, שניים מקרא, פרשה, זמנים...). הספירה לאחור
+     נשארת במקומה. המצב נמשך עד מוצאי שבת/חג (~25.5 שעות מההדלקה).
+     בדיקה ידנית: ?erev=shabbat או ?erev=chag בכתובת (?erev=0 מבטל). */
+  safe("erevShabbatMode", function () {
+    var LEAD_MS = 60 * 60000;          // שעה לפני ההדלקה
+    var AFTER_MS = 25.5 * 3600000;     // עד אחרי ההבדלה
+    var force = null;
+    try {
+      var q = new URLSearchParams(location.search).get("erev");
+      if (q === "shabbat" || q === "chag") force = q;
+    } catch (e) {}
+
+    // מחזיר {kind:"shabbat"|"chag", candles:Date, entered:bool} או null
+    function state() {
+      var now = new Date();
+      if (force) return { kind: force, candles: new Date(now.getTime() + 47 * 60000), entered: false };
+      var sc = window.SHABBAT_CANDLES_TIME, hc = window.HOLIDAY_CANDLES_TIME;
+      var best = null;
+      function consider(kind, t) {
+        if (!(t instanceof Date) || isNaN(t)) return;
+        var d = t - now;
+        if (d > LEAD_MS || d < -AFTER_MS) return;
+        if (!best || Math.abs(d) < Math.abs(best.candles - now)) best = { kind: kind, candles: t, entered: d <= 0 };
+      }
+      // שבת — רק אם ההדלקה היא ביום שישי (SHABBAT_CANDLES_TIME הוא תמיד שישי הקרוב)
+      if (sc && sc.getDay() === 5) consider("shabbat", sc);
+      if (hc) consider("chag", hc);
+      return best;
+    }
+
+    function candleHtml() {
+      return '<div class="lux-sbs-candle"><div class="lux-sbs-glow"></div><div class="lux-sbs-flame"></div><div class="lux-sbs-wick"></div><div class="lux-sbs-body"></div></div>';
+    }
+    function txt(id) { var el = document.getElementById(id); return el ? (el.textContent || "").trim() : ""; }
+    function parshaName() {
+      var p = (window.SHABBAT_PARASHA_NAME || txt("stat-parasha") || "").replace(/^פרשת\s+/, "").trim();
+      return (p && p !== "--") ? p : "";
+    }
+    function holName() { return window.HOLIDAY_NAME_HE || "חג"; }
+    function hasDvarTorah(name) {
+      try { var k = window._matchMoad && window._matchMoad(name); return !!(k && window._DT && window._DT[k]); } catch (e) { return false; }
+    }
+
+    // ── הכפתורים ──
+    function btn(icon, label, action, cls) {
+      return '<button type="button" class="prayer-btn lux-erev-btn' + (cls ? " " + cls : "") + '" data-erev="' + action + '">' +
+        '<span class="prayer-icon">' + icon + '</span><span class="prayer-label">' + esc(label) + '</span></button>';
+    }
+    var ACTIONS = {
+      shir: function () { if (typeof openShirHashirimPage === "function") openShirHashirimPage(); },
+      shnayim: function () {
+        var p = window.SHABBAT_PARASHA_NAME, e = window.SHABBAT_PARASHA_ETITLE;
+        if (e && typeof openShnayimMikraModal === "function") openShnayimMikraModal(p || e, e);
+        else { var l = document.getElementById("shnayim-mikra-link"); if (l) l.click(); }
+      },
+      parsha: function () { if (typeof window._openShabbatParasha === "function") window._openShabbatParasha(); },
+      times: function () { if (typeof openShabbatInfoModal === "function") openShabbatInfoModal(); },
+      dvar: function () { if (typeof window._openMoadByName === "function") window._openMoadByName(holName()); },
+      hamazon: function () { openPrayer("birkat-hamazon", "ברכת המזון", "Birkat Hamazon"); },
+      mincha: function () { openPrayer("mincha", "תפילת מנחה", "Mincha"); },
+      shema: function () { openPrayer("shema", "שמע ישראל", "Shema"); },
+      tehillim: function () { if (typeof openTehillimPage === "function") openTehillimPage(); },
+      birkot: function () { if (typeof openBirkotBoardPage === "function") openBirkotBoardPage(); },
+      tefilot: function () { if (typeof openTefilotNosafotPage === "function") openTefilotNosafotPage(); },
+      sefarim: function () { if (typeof openSefarimNosafimPage === "function") openSefarimNosafimPage(); },
+      motzei: function () { if (typeof openMotzeiShabbatModal === "function") openMotzeiShabbatModal(); }
+    };
+    function gridHtml(st) {
+      var b = [];
+      if (st.kind === "shabbat") {
+        var p = parshaName();
+        b.push(btn("🌹", "שיר השירים", "shir", "lux-erev-hot"));
+        b.push(btn("📜", "שניים מקרא ואחד תרגום", "shnayim", "lux-erev-hot"));
+        b.push(btn("📖", p ? "פרשת " + p : "פרשת השבוע", "parsha", "lux-erev-hot"));
+        b.push(btn("🕯️", "זמני כניסת ויציאת שבת", "times"));
+        b.push(btn("🌤️", "מנחה של ערב שבת", "mincha"));
+        b.push(btn("🍞", "ברכת המזון", "hamazon"));
+        b.push(btn("🎵", "תהילים", "tehillim"));
+        b.push(btn("🍎", "לוח ברכות הנהנין", "birkot"));
+        b.push(btn(st.entered ? "✨" : "🙏", st.entered ? "סדר מוצאי שבת" : "תפילות נוספות", st.entered ? "motzei" : "tefilot"));
+      } else {
+        var h = holName();
+        b.push(btn("🕯️", "זמני כניסת ויציאת " + h, "times", "lux-erev-hot"));
+        if (hasDvarTorah(h)) b.push(btn("📖", "דבר תורה ל" + h, "dvar", "lux-erev-hot"));
+        else b.push(btn("📖", "פרשת השבוע", "parsha", "lux-erev-hot"));
+        b.push(btn("🎵", "תהילים", "tehillim", "lux-erev-hot"));
+        b.push(btn("🌤️", "מנחה של ערב חג", "mincha"));
+        b.push(btn("🍞", "ברכת המזון", "hamazon"));
+        b.push(btn("✡️", "שמע ישראל", "shema"));
+        b.push(btn("🍎", "לוח ברכות הנהנין", "birkot"));
+        b.push(btn("🙏", "תפילות נוספות", "tefilot"));
+        b.push(btn("📚", "ספרים נוספים", "sefarim"));
+      }
+      return '<div class="lux-erev-grid-head">' +
+          (st.kind === "shabbat" ? "🕯️ לכבוד שבת קודש" : "🕯️ לכבוד " + esc(holName())) +
+        "</div>" +
+        '<div class="grid grid-cols-3 gap-2">' + b.join("") + "</div>";
+    }
+    function panelHtml(st) {
+      var isS = st.kind === "shabbat";
+      var enter = isS ? (window.SHABBAT_CANDLES_STR || txt("shabbat-enter")) : (window.HOLIDAY_CANDLES_STR || "");
+      var exit = isS ? (window.SHABBAT_HAVDALAH_STR || txt("shabbat-exit")) : (window.HOLIDAY_HAVDALAH_STR || "");
+      var p = isS ? parshaName() : "";
+      var sub = isS ? (p ? "פרשת " + p : "") : holName();
+      return '<div class="lux-erev-candles">' + candleHtml() + candleHtml() + "</div>" +
+        '<div class="lux-erev-title">' + (isS ? "שבת שלום" : "חג שמח") + "</div>" +
+        (sub ? '<div class="lux-erev-sub">' + esc(sub) + "</div>" : "") +
+        '<div class="lux-erev-times">' +
+          (enter && enter !== "--:--" ? '<span>🕯️ הדלקת נרות <b dir="ltr">' + esc(enter) + "</b></span>" : "") +
+          (exit && exit !== "--:--" ? '<span>✨ ' + (isS ? "הבדלה" : "צאת החג") + ' <b dir="ltr">' + esc(exit) + "</b></span>" : "") +
+        "</div>" +
+        (st.entered ? '<div class="lux-erev-entered">' + (isS ? "שבת שלום ומבורך 🕊️" : "מועדים לשמחה 🕊️") + "</div>" : "");
+    }
+
+    var lastKey = "";
+    function apply() {
+      var st = state();
+      var body = document.body;
+      var wrap = document.getElementById("shabbat-countdown-wrap");
+      var gridWrap = document.getElementById("prayer-grid-wrap");
+      var panel = document.getElementById("lux-erev-panel");
+      var grid = document.getElementById("lux-erev-grid");
+      if (!st) {
+        if (panel) panel.remove();
+        if (grid) grid.remove();
+        body.classList.remove("lux-erev", "lux-erev-chag", "lux-erev-entered");
+        lastKey = "";
+        return;
+      }
+      if (!wrap || !gridWrap) return;
+      body.classList.add("lux-erev");
+      body.classList.toggle("lux-erev-chag", st.kind === "chag");
+      body.classList.toggle("lux-erev-entered", !!st.entered);
+      // במצב כפוי לבדיקה — הספירה לאחור מוצגת עם ערך דמו (startShabbatCountdown מסתיר אותה כשאין יעד אמיתי)
+      if (force && wrap.classList.contains("hidden")) {
+        wrap.classList.remove("hidden");
+        wrap.style.opacity = "1";
+        var dd = document.getElementById("countdown-display"), tt = document.getElementById("countdown-event-type");
+        if (dd) dd.textContent = "00:47:12";
+        if (tt) tt.textContent = st.kind === "chag" ? "כניסת החג" : "כניסת שבת";
+      }
+      var key = [st.kind, st.entered ? 1 : 0, parshaName(), holName(), window.SHABBAT_CANDLES_STR, window.SHABBAT_HAVDALAH_STR, window.HOLIDAY_CANDLES_STR, window.HOLIDAY_HAVDALAH_STR].join("|");
+      if (panel && grid && key === lastKey) return;
+      lastKey = key;
+      if (!panel) {
+        panel = document.createElement("div");
+        panel.id = "lux-erev-panel";
+        wrap.insertAdjacentElement("beforebegin", panel);
+      }
+      panel.innerHTML = panelHtml(st);
+      if (!grid) {
+        grid = document.createElement("div");
+        grid.id = "lux-erev-grid";
+        gridWrap.insertAdjacentElement("afterbegin", grid);
+        grid.addEventListener("click", function (e) {
+          var b = e.target.closest("[data-erev]");
+          if (!b) return;
+          var fn = ACTIONS[b.getAttribute("data-erev")];
+          if (fn) { try { fn(); } catch (err) { console.warn("erev action:", err); } }
+        });
+      }
+      grid.innerHTML = gridHtml(st);
+    }
+    setTimeout(apply, 1500);
+    setInterval(apply, 30000);
+    // הנתונים מגיעים אחרי טעינת הדשבורד — בודקים בתדירות גבוהה בדקה הראשונה
+    var n = 0, fast = setInterval(function () { apply(); if (++n > 20) clearInterval(fast); }, 3000);
   });
 })();

@@ -23310,6 +23310,12 @@ function openSefarimNosafimPage(_pageMode) {
         return (this._baseTpl || "").replace("[[NUSACH]]", nh).replace("[[CORE]]", c);
       }
     },
+    { id:"shir-hashirim", he:"שיר השירים", subtitle:"שיר השירים אשר לשלמה — שמונה פרקים",
+      cat:"tefilot", color:"#be123c", icon:"🌹",
+      credit:"מאגר פנימי — נחלת הכלל", creditUrl:"",
+      type:"external",
+      _externalAction: function() { openShirHashirimPage(); }
+    },
     { id:"kiddush-levana", he:"ברכת לבנה", subtitle:"קידוש לבנה — סדר ברכת הלבנה",
       cat:"tefilot", color:"#6366f1", icon:"🌕",
       credit:"מאגר פנימי — נחלת הכלל", creditUrl:"",
@@ -25505,6 +25511,13 @@ function openTefilotNosafotPage() {
   openSefarimNosafimPage("tefilot");
 }
 
+// פותח את לוח ברכות הנהנין ישירות מהדף הראשי (דרך ספריית התפילות הנוספות)
+function openBirkotBoardPage() {
+  if (!document.getElementById("sn-modal")) openTefilotNosafotPage();
+  setTimeout(function () {
+    if (typeof window._snOpenBook === "function") window._snOpenBook("birkot-board");
+  }, 50);
+}
 // פותח חיפוש חכם גלובלי - פותח את ספריית הספרים ומיד את חלון החיפוש
 function openGlobalSmartSearch() {
   // פתח את מודאל הספרים אם הוא עדיין לא פתוח

@@ -104,6 +104,19 @@
         "."
       ],
       "port": 8147
+    },
+    {
+      "name": "site-erev",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "-y",
+        "http-server",
+        "-p",
+        "8161",
+        "-c-1",
+        "."
+      ],
+      "port": 8161
     }
   ]
 }

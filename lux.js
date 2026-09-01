@@ -597,23 +597,25 @@
     // בקוראים שבהם מוזרק ה-X האוניברסלי (ספרים נוספים / בן איש חי / תהילים) הכפתור נכנס
     // כילד ראשון של קבוצת הכפתורים השמאלית — הרחוק ביותר מה-X, ו-ensureRoomForX ממשיך לעבוד.
     var HEADS = [
-      // ספריא / שניים מקרא — [✕ ימין][כותרת שמאל]; הכפתור נצמד ל-✕ (margin-left:auto דוחף את הכותרת שמאלה)
+      // ספריא / שניים מקרא — סדר אחיד 09/2026: [כותרת ימין][✕ שמאל]; המרקר ילד ראשון = קצה ימין
       { area: "#sefaria-modal-content", resolve: function () {
           var m = document.getElementById("sefaria-modal");
           if (!m || m.classList.contains("hidden")) return null;
           var c = document.getElementById("sefaria-modal-content");
           if (c && c.querySelector(".daf-line")) { removeBtns(m, "#sefaria-modal-content"); return null; }   // דף יומי — מרקר ייעודי משלו
           var x = m.querySelector('button[onclick="closeSefariaModal()"]');
-          return x ? { row: x.parentElement, ref: x, where: "afterend", style: "margin-left:auto;margin-right:0.5rem;" } : null;
+          return x && x.parentElement ? { row: x.parentElement, ref: x.parentElement, where: "afterbegin", style: "margin-left:0.5rem;" } : null;
         } },
       { area: "#chok-israel-modal-content", resolve: function () {
           var m = document.getElementById("chok-israel-modal");
           if (!m || m.classList.contains("hidden")) return null;
           var x = m.querySelector('button[onclick="closeChokLeIsraelModal()"]');
-          return x ? { row: x.parentElement, ref: x, where: "afterend", style: "margin-left:auto;margin-right:0.5rem;" } : null;
+          return x && x.parentElement ? { row: x.parentElement, ref: x.parentElement, where: "afterbegin", style: "margin-left:0.5rem;" } : null;
         } },
-      // תפילות — שתי הפריסות (popup/fullscreen): קבוצת [☰][✕] משמאל; המרקר ראשון (מימין ל-☰)
+      // תפילות — סדר אחיד 09/2026: אשכול הפעולות (#prayer-header-actions) בצד ימין; המרקר ראשון בתוכו
       { area: "#prayer-modal-body", resolve: function () {
+          var g = document.getElementById("prayer-header-actions");
+          if (g) return { row: g, ref: g, where: "afterbegin" };
           var x = document.querySelector('#prayer-modal button[onclick="closePrayerModal()"]');
           return x && x.parentElement ? { row: x.parentElement, ref: x.parentElement, where: "afterbegin" } : null;
         } },
@@ -624,12 +626,12 @@
           var b = pane.querySelector("#th-psalm-bm-toggle-btn");
           return b && b.parentElement ? { row: b.parentElement, ref: b.parentElement, where: "afterbegin" } : null;
         } },
-      // בן איש חי — כפתורי הכותרת ילדים ישירים; נכנס מיד אחרי הכותרת (מימין ל-📑)
+      // בן איש חי — סדר אחיד 09/2026: הפעולות ראשונות (ימין), הכותרת אחרונה; המרקר לפני הכותרת = קצה שמאל של אשכול הפעולות
       { area: "#bih-content-area", resolve: function () {
           var pane = document.getElementById("bih-reading-pane");
           if (!vis(pane)) return null;
           var t = pane.querySelector("#bih-reading-title");
-          return t && t.parentElement ? { row: t.parentElement, ref: t, where: "afterend", style: "margin-left:0.35rem;" } : null;
+          return t && t.parentElement ? { row: t.parentElement, ref: t, where: "beforebegin", style: "margin-left:0.35rem;" } : null;
         } },
       // ספרים נוספים — קבוצת [📑][🔖][📌][🔍] (#sn-reader-tools, או הורה של 🔖 בגרסה הישנה); המרקר ראשון
       { area: "#sn-reader-content", resolve: function () {
@@ -639,10 +641,10 @@
           if (!g || !v.contains(g)) { var b = v.querySelector("#sn-reader-bm-btn"); g = b ? b.parentElement : null; }
           return g ? { row: g, ref: g, where: "afterbegin" } : null;
         } },
-      // קוראי lux (סליחות / מסלולים / סדר לימוד) — [✕ ימין][כותרות flex:1]; המרקר בסוף = קצה שמאל
-      { area: "#lux-sel-area", dark: true, resolve: function () { var h = document.querySelector("#lux-selichot-reader .lux-sel-head"); return h ? { row: h, ref: h, where: "beforeend" } : null; } },
-      { area: "#lux-tr-area",  dark: true, resolve: function () { var h = document.querySelector("#lux-track-reader .lux-sel-head");    return h ? { row: h, ref: h, where: "beforeend" } : null; } },
-      { area: "#lux-pl-area",  dark: true, resolve: function () { var h = document.querySelector("#lux-plan-reader .lux-sel-head");     return h ? { row: h, ref: h, where: "beforeend" } : null; } }
+      // קוראי lux (סליחות / מסלולים / סדר לימוד) — סדר אחיד 09/2026: [כותרות ימין][✕ שמאל]; המרקר ראשון = קצה ימין
+      { area: "#lux-sel-area", dark: true, resolve: function () { var h = document.querySelector("#lux-selichot-reader .lux-sel-head"); return h ? { row: h, ref: h, where: "afterbegin" } : null; } },
+      { area: "#lux-tr-area",  dark: true, resolve: function () { var h = document.querySelector("#lux-track-reader .lux-sel-head");    return h ? { row: h, ref: h, where: "afterbegin" } : null; } },
+      { area: "#lux-pl-area",  dark: true, resolve: function () { var h = document.querySelector("#lux-plan-reader .lux-sel-head");     return h ? { row: h, ref: h, where: "afterbegin" } : null; } }
       // שיר השירים (#shir-scroll-area) הושמט בכוונה — הפסוקים הם span-ים בלי בלוקים, המרקר לא פעיל שם בפועל.
     ];
     function makeBtn(entry, spot) {
@@ -3139,11 +3141,11 @@
       }
       ov.innerHTML =
         '<div class="lux-sel-head">' +
-          '<button type="button" class="lux-sel-close" aria-label="סגור">✕</button>' +
           '<div class="lux-sel-titles">' +
             '<h2>🕊️ סליחות</h2>' +
             '<p>נוסח ' + esc(nus.label) + "</p>" +
           "</div>" +
+          '<button type="button" class="lux-sel-close" aria-label="סגור">✕</button>' +
         "</div>" +
         chipsHtml +
         '<div id="lux-sel-area" class="lux-sel-area holy-text-style"><p style="text-align:center;color:#94a3b8;padding:2rem;">טוען את הסליחות...</p></div>' +
@@ -4875,11 +4877,11 @@
       ov.__luxOpenedAt = Date.now();
       ov.innerHTML =
         '<div class="lux-sel-head">' +
-          '<button type="button" class="lux-sel-close" aria-label="סגור">✕</button>' +
           '<div class="lux-sel-titles">' +
             '<h2>' + tr.icon + " " + esc(tr.he) + "</h2>" +
             '<p id="lux-tr-ref">טוען את הלימוד של היום...</p>' +
           "</div>" +
+          '<button type="button" class="lux-sel-close" aria-label="סגור">✕</button>' +
         "</div>" +
         '<div id="lux-tr-area" class="lux-sel-area holy-text-style"><p style="text-align:center;color:#94a3b8;padding:2rem;">טוען...</p></div>' +
         '<div class="lux-sel-foot">' +
@@ -5183,11 +5185,11 @@
       ov.__luxOpenedAt = Date.now();
       ov.innerHTML =
         '<div class="lux-sel-head">' +
-          '<button type="button" class="lux-sel-close" aria-label="סגור">✕</button>' +
           '<div class="lux-sel-titles">' +
             '<h2>' + bk.icon + " " + esc(bk.he) + "</h2>" +
             '<p>יום ' + dayNum + " מתוך " + totalDays + " · " + esc(bk.unit) + " " + (from + 1) + (to > from + 1 ? "–" + to : "") + "</p>" +
           "</div>" +
+          '<button type="button" class="lux-sel-close" aria-label="סגור">✕</button>' +
         "</div>" +
         '<div id="lux-pl-area" class="lux-sel-area holy-text-style"><p style="text-align:center;color:#94a3b8;padding:2rem;">טוען את הלימוד של היום...</p></div>' +
         '<div class="lux-sel-foot">' +

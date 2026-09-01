@@ -6012,6 +6012,79 @@ window._btnToastOff = function (name) { showButtonStateToast(name + " — כבו
 window._btnToastVal = function (msg) { showButtonStateToast(msg, "info", 1300); };
 
 // ═══════════════════════════════════════════════════════
+// ✦  עיצוב אחיד לפאנלי הסימניות בכל האתר (snbm) — 09/2026
+//    משותף לספרים נוספים, בן איש חי ותהילים; המחלקות .snbm-* ב-style.css
+// ═══════════════════════════════════════════════════════
+// תאריך יחסי קריא לשורת סימנייה ("היום", "אתמול", "לפני 3 ימים", תאריך מלא)
+window._bmTimeStr = function (ts) {
+  if (!ts) return "";
+  var days = Math.floor((Date.now() - ts) / 86400000);
+  if (days <= 0) return "היום";
+  if (days === 1) return "אתמול";
+  if (days < 30) return "לפני " + days + " ימים";
+  try { return new Date(ts).toLocaleDateString("he-IL"); } catch (e) { return ""; }
+};
+// שורת סימנייה אחידה
+window._bmRowHtml = function (bm, gotoJs, removeJs, subText) {
+  var isLP = !!bm.isLastPos;
+  var label = String(bm.label || "").replace(/^📍\s*/, "");
+  return "<div class=\"snbm-row" + (isLP ? " snbm-row-lp" : "") + "\">" +
+    "<button class=\"snbm-go\" onclick=\"" + gotoJs + "\">" +
+      "<span class=\"snbm-ico\">" + (isLP ? "📍" : "🔖") + "</span>" +
+      "<span class=\"snbm-txt\">" +
+        (subText ? "<span class=\"snbm-sub\">" + subText + "</span>" : "") +
+        "<span class=\"snbm-label\">" + label + "</span>" +
+        (bm.ts ? "<span class=\"snbm-time\">" + window._bmTimeStr(bm.ts) + "</span>" : "") +
+      "</span>" +
+    "</button>" +
+    "<button class=\"snbm-del\" onclick=\"" + removeJs + "\" title=\"הסרת סימנייה\">✕</button>" +
+  "</div>";
+};
+// מסך ריק אחיד; hint אופציונלי לכל קורא
+window._bmEmptyHtml = function (msg, hint) {
+  return "<div class=\"snbm-empty\"><span class=\"snbm-empty-ico\">🔖</span>" +
+    "<p>" + msg + "</p>" +
+    "<small>" + (hint || "לחצו על 🔖 שליד כותרת או פסקה כדי לשמור סימנייה,<br>או על 📌 הצף כדי לשמור את המיקום האחרון") + "</small></div>";
+};
+// כותרת פאנל אחידה: כותרת + תג מונה + ✕ סגירה
+window._bmHeadHtml = function (titleHtml, count, closeJs) {
+  return "<div class=\"snbm-head\">" +
+    "<span class=\"snbm-title\">" + titleHtml + "</span>" +
+    (count ? "<span class=\"snbm-count\">" + count + "</span>" : "") +
+    "<button class=\"snbm-close\" onclick=\"" + closeJs + "\" aria-label=\"סגירה\">✕</button>" +
+    "</div>";
+};
+// טוגל אחיד לפאנל-סימניות צף (העיצוב של ספרים נוספים — כרטיס מעוגל כהה-זהב):
+// היסטוריה-בטוח ("חזור" סוגר את הפאנל בלבד) + רקע מעומעם שנגיעה בו — בכל מקום
+// מחוץ לפאנל — סוגרת. הרקע נוצר כאח של הפאנל בתוך המיכל הממוקם של הקורא.
+window._bmStripToggle = function (id, buildFn) {
+  var p = document.getElementById(id);
+  if (!p) return;
+  var hidden = !p.style.display || p.style.display === "none";
+  if (!hidden) {
+    window._popupHistoryClose(id);
+    return;
+  }
+  if (p.parentElement && !document.getElementById(id + "-bd")) {
+    var bd = document.createElement("div");
+    bd.id = id + "-bd";
+    bd.style.cssText = "position:absolute;inset:0;z-index:49;background:rgba(2,6,23,0.45);";
+    bd.onclick = function () { window._popupHistoryClose(id); };
+    p.parentElement.insertBefore(bd, p);
+  }
+  p.style.display = "block";
+  if (buildFn) buildFn();
+  window._popupHideHandlers[id] = function () {
+    var el = document.getElementById(id);
+    if (el) el.style.display = "none";
+    var b = document.getElementById(id + "-bd");
+    if (b) b.remove();
+  };
+  pushModalState(id);
+  if (typeof window.showToast === "function") window.showToast("📌 סימניות ומיקומים אחרונים", "info", 2000);
+};
+
+// ═══════════════════════════════════════════════════════
 // ✦  CARD VISIBILITY (no entrance animation)
 // ═══════════════════════════════════════════════════════
 function setupCardObserver() {
@@ -16816,9 +16889,8 @@ function openBenIshHaiPage() {
     buildBMPanel();
   }
 
-  function buildBMPanel() {
-    const panel = document.getElementById("bih-bm-panel");
-    if (!panel) return;
+  // שורות אחידות לשני פאנלי בן איש חי — עיצוב snbm הכלל-אתרי (09/2026)
+  function _bihBMRowsHtml(fromReader) {
     const yIdx = getYIdx();
     // כל ספר (שנה א / שנה ב / דרשות) מציג רק את הסימניות והמיקום האחרון שלו
     const _bmMode = (b) => b.mode || (b.y === 2 ? "drashot" : b.y === 1 ? "y1" : "y0");
@@ -16827,70 +16899,63 @@ function openBenIshHaiPage() {
       if (_bihMode === "drashot") return _bmMode(b) === "drashot";
       return _bmMode(b) !== "drashot" && b.y === yIdx;
     });
+    // מיקום אחרון תמיד ראשון, אחריו סימניות מהחדשה לישנה
+    bms.sort(function(a, b) {
+      if (!!a.isLastPos !== !!b.isLastPos) return a.isLastPos ? -1 : 1;
+      return (b.ts || 0) - (a.ts || 0);
+    });
     const isDrashotEntry = (b) => _bmMode(b) === "drashot";
-    panel.innerHTML =
-      '<p style="color:#f59e0b;font-size:0.75rem;font-weight:900;margin:0 0 0.5rem;">📌 סימניות שמורות:</p>'+
-      (bms.length ? '<div style="display:flex;flex-direction:column;gap:0.3rem;">'+bms.map(b=>{
-        const list = isDrashotEntry(b) ? DRASHOT_PARSHIYOT : (YEARS[b.y] && YEARS[b.y].parshiyot);
-        const pr = list && list[b.p];
-        const unitLabel = isDrashotEntry(b) ? "דרשה" : "הלכה";
-        if (b.isLastPos) {
-          return '<div style="display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0.6rem;background:rgba(245,158,11,0.18);border:1.5px solid rgba(245,158,11,0.5);border-radius:0.5rem;direction:rtl;">'+
-            '<button onclick="window._bihOpenParsha('+b.p+','+b.h+')" style="background:none;border:none;color:#fde68a;cursor:pointer;font-size:0.82rem;font-weight:700;text-align:right;flex:1;padding:0;">'+ b.label + '</button>'+
-            '<button onclick="window._bihBMRemove('+b.y+','+b.p+','+b.h+')" style="background:none;border:none;color:#fde68a;cursor:pointer;font-size:0.8rem;padding:0;flex-shrink:0;" title="הסר">✕</button>'+
-          '</div>';
-        }
-        return '<div style="display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0.6rem;background:rgba(255,255,255,0.06);border-radius:0.5rem;direction:rtl;">'+
-          '<button onclick="window._bihOpenParsha('+b.p+','+b.h+')" style="background:none;border:none;color:#e2e8f0;cursor:pointer;font-size:0.8rem;text-align:right;flex:1;padding:0;">🔖 '+(pr?pr.he:"?")+' — '+unitLabel+' '+toHeb(b.h+1)+'</button>'+
-          '<button onclick="window._bihBMRemove('+b.y+','+b.p+','+b.h+')" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:0.8rem;padding:0;flex-shrink:0;" title="הסר">✕</button>'+
-        '</div>';
-      }).join("")+'</div>'
-      : '<p style="color:#94a3b8;font-size:0.78rem;text-align:center;margin:0;">אין סימניות עדיין</p>');
+    const fr = fromReader ? 1 : 0;
+    return { count: bms.length, html: bms.map(b => {
+      const list = isDrashotEntry(b) ? DRASHOT_PARSHIYOT : (YEARS[b.y] && YEARS[b.y].parshiyot);
+      const pr = list && list[b.p];
+      const unitLabel = isDrashotEntry(b) ? "דרשה" : "הלכה";
+      const gotoJs = "window._bihBMPanelGo(" + b.p + "," + b.h + "," + fr + ")";
+      const removeJs = "window._bihBMRemove(" + b.y + "," + b.p + "," + b.h + ")";
+      if (b.isLastPos) {
+        return window._bmRowHtml({ label: b.label, isLastPos: true, ts: b.ts }, gotoJs, removeJs, "");
+      }
+      return window._bmRowHtml(
+        { label: unitLabel + " " + toHeb(b.h + 1), ts: b.ts },
+        gotoJs, removeJs, pr ? pr.he : ""
+      );
+    }).join("") };
   }
-
-  window._bihToggleBMPanel = () => {
+  // ניווט משורת פאנל: סוגרים את הפאנל (סינכרונית — בלי race) ואז פותחים
+  window._bihBMPanelGo = function(p, h, fromReader) {
+    const pid = fromReader ? "bih-reader-bm-panel" : "bih-bm-panel";
+    window._popupSyncDismiss(pid);
+    const hider = window._popupHideHandlers[pid];
+    if (hider) { try { hider(); } catch (e) {} }
+    else { const el = document.getElementById(pid); if (el) el.style.display = "none"; }
+    window._bihOpenParsha(p, h);
+  };
+  function buildBMPanel() {
     const panel = document.getElementById("bih-bm-panel");
     if (!panel) return;
-    if (panel.style.display === "none") {
-      buildBMPanel();
-      panel.style.display = "block";
-      if (typeof window.showToast === "function") window.showToast("📌 סימניות ומיקומים אחרונים", "info", 2000);
-    } else {
-      panel.style.display = "none";
-    }
+    const rows = _bihBMRowsHtml(0);
+    panel.innerHTML =
+      window._bmHeadHtml("🔖 סימניות <small>בן איש חי</small>", rows.count, "window._bihToggleBMPanel();") +
+      (rows.count ? rows.html
+        : window._bmEmptyHtml("אין סימניות שמורות עדיין",
+            "לחצו על 🔖 שליד הלכה או דרשה כדי לסמן,<br>או על 📌 הצף כדי לשמור את המיקום האחרון"));
+  }
+
+  // היסטוריה-בטוח + נגיעה-בחוץ סוגרת — דרך הטוגל האחיד (09/2026)
+  window._bihToggleBMPanel = () => {
+    window._bmStripToggle("bih-bm-panel", buildBMPanel, '[onclick*="_bihToggleBMPanel"]');
   };
 
-  // ── פאנל סימניות בתוך מסך הקריאה (רקע בהיר) ──
+  // ── פאנל סימניות בתוך מסך הקריאה — אותו עיצוב snbm אחיד ──
   function buildReaderBMPanel() {
     const panel = document.getElementById("bih-reader-bm-panel");
     if (!panel) return;
-    const yIdx = getYIdx();
-    const _bmMode = (b) => b.mode || (b.y === 2 ? "drashot" : b.y === 1 ? "y1" : "y0");
-    const bms = loadBMs().filter(b => {
-      if (b.isLastPos) return _bmMode(b) === _bihMode;
-      if (_bihMode === "drashot") return _bmMode(b) === "drashot";
-      return _bmMode(b) !== "drashot" && b.y === yIdx;
-    });
-    const isDrashotEntry = (b) => _bmMode(b) === "drashot";
+    const rows = _bihBMRowsHtml(1);
     panel.innerHTML =
-      '<p style="color:#92400e;font-size:0.75rem;font-weight:900;margin:0 0 0.5rem;">📌 סימניות שמורות:</p>'+
-      (bms.length ? '<div style="display:flex;flex-direction:column;gap:0.3rem;">'+bms.map(b=>{
-        const list = isDrashotEntry(b) ? DRASHOT_PARSHIYOT : (YEARS[b.y] && YEARS[b.y].parshiyot);
-        const pr = list && list[b.p];
-        const unitLabel = isDrashotEntry(b) ? "דרשה" : "הלכה";
-        const goto = 'window._bihOpenParsha('+b.p+','+b.h+');document.getElementById(\'bih-reader-bm-panel\').style.display=\'none\';';
-        if (b.isLastPos) {
-          return '<div style="display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0.6rem;background:rgba(245,158,11,0.16);border:1.5px solid rgba(245,158,11,0.45);border-radius:0.5rem;">'+
-            '<button onclick="'+goto+'" style="background:none;border:none;color:#92400e;cursor:pointer;font-size:0.82rem;font-weight:700;text-align:right;flex:1;padding:0;">'+ b.label + '</button>'+
-            '<button onclick="window._bihBMRemove('+b.y+','+b.p+','+b.h+');window._bihRefreshReaderBMPanel();" style="background:none;border:none;color:#b45309;cursor:pointer;font-size:0.8rem;padding:0;flex-shrink:0;" title="הסר">✕</button>'+
-          '</div>';
-        }
-        return '<div style="display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0.6rem;background:rgba(0,0,0,0.04);border-radius:0.5rem;">'+
-          '<button onclick="'+goto+'" style="background:none;border:none;color:#1e293b;cursor:pointer;font-size:0.8rem;text-align:right;flex:1;padding:0;">🔖 '+(pr?pr.he:"?")+' — '+unitLabel+' '+toHeb(b.h+1)+'</button>'+
-          '<button onclick="window._bihBMRemove('+b.y+','+b.p+','+b.h+');window._bihRefreshReaderBMPanel();" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:0.8rem;padding:0;flex-shrink:0;" title="הסר">✕</button>'+
-        '</div>';
-      }).join("")+'</div>'
-      : '<p style="color:#b45309;font-size:0.78rem;text-align:center;margin:0;">אין סימניות עדיין — לחץ 🔖 ליד הלכה או דרשה כדי לסמן</p>');
+      window._bmHeadHtml("🔖 סימניות <small>בן איש חי</small>", rows.count, "window._bihToggleReaderBMPanel();") +
+      (rows.count ? rows.html
+        : window._bmEmptyHtml("אין סימניות שמורות עדיין",
+            "לחצו על 🔖 שליד הלכה או דרשה כדי לסמן,<br>או על 📌 הצף כדי לשמור את המיקום האחרון"));
   }
 
   window._bihRefreshReaderBMPanel = () => {
@@ -16899,15 +16964,7 @@ function openBenIshHaiPage() {
   };
 
   window._bihToggleReaderBMPanel = () => {
-    const panel = document.getElementById("bih-reader-bm-panel");
-    if (!panel) return;
-    if (panel.style.display === "none") {
-      buildReaderBMPanel();
-      panel.style.display = "block";
-      if (typeof window.showToast === "function") window.showToast("📌 סימניות ומיקומים אחרונים", "info", 2000);
-    } else {
-      panel.style.display = "none";
-    }
+    window._bmStripToggle("bih-reader-bm-panel", buildReaderBMPanel, '[onclick*="_bihToggleReaderBMPanel"]');
   };
 
   // Find the halacha currently at the top of the viewport for current parsha
@@ -17089,19 +17146,21 @@ function openBenIshHaiPage() {
 
   modal.innerHTML =
     '<div id="bih-grid-view" style="position:absolute;inset:0;display:flex;flex-direction:column;overflow:hidden;">'+
-      '<div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;">'+
-        '<div><h2 style="color:#f1f5f9;font-size:1.3rem;font-weight:900;margin:0;">בן איש חי</h2>'+
-        '<p style="color:#6366f1;font-size:0.78rem;font-weight:700;margin:0.15rem 0 0;">רבי יוסף חיים מבגדד זצ"ל</p></div>'+
-        '<div style="display:flex;gap:0.5rem;align-items:center;">'+
-          '<button onclick="window._bihOpenSearch()" style="background:rgba(255,255,255,0.08);border:none;color:#e2e8f0;padding:0.4rem 0.8rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;">🔍 חיפוש</button>'+
+      // סדר אחיד בכל האתר (09/2026): כפתורי פעולה בצד ימין, ✕ תמיד בצד שמאל.
+      // RTL: הילד הראשון מרונדר מימין — לכן קבוצת הפעולות ראשונה וה-✕ אחרון.
+      '<div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;gap:0.5rem;">'+
+        '<div style="display:flex;gap:0.5rem;align-items:center;flex-shrink:0;">'+
           '<button onclick="window._bihToggleBMPanel()" id="bih-bm-pin-btn" style="background:rgba(255,255,255,0.08);border:none;color:#e2e8f0;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1rem;flex-shrink:0;" title="סימניות">📌</button>'+
-          '<button onclick="closeBenIshHaiModal()" style="background:rgba(255,255,255,0.08);border:none;color:#94a3b8;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.1rem;flex-shrink:0;">✕</button>'+
+          '<button onclick="window._bihOpenSearch()" style="background:rgba(255,255,255,0.08);border:none;color:#e2e8f0;padding:0.4rem 0.8rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;">🔍 חיפוש</button>'+
         '</div>'+
+        '<div style="text-align:center;min-width:0;"><h2 style="color:#f1f5f9;font-size:1.3rem;font-weight:900;margin:0;">בן איש חי</h2>'+
+        '<p style="color:#6366f1;font-size:0.78rem;font-weight:700;margin:0.15rem 0 0;">רבי יוסף חיים מבגדד זצ"ל</p></div>'+
+        '<button onclick="closeBenIshHaiModal()" style="background:rgba(255,255,255,0.08);border:none;color:#94a3b8;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.1rem;flex-shrink:0;">✕</button>'+
       '</div>'+
       '<div style="display:flex;gap:0.4rem;padding:0.6rem 1.25rem;flex-shrink:0;flex-wrap:wrap;border-bottom:1px solid rgba(255,255,255,0.05);">'+
         '<div id="bih-year-bar" style="display:flex;gap:0.4rem;flex-wrap:wrap;"></div>'+
       '</div>'+
-      '<div id="bih-bm-panel" style="display:none;background:rgba(245,158,11,0.1);border-bottom:1px solid rgba(245,158,11,0.25);padding:0.75rem 1.25rem;flex-shrink:0;max-height:40vh;overflow-y:auto;"></div>'+
+      '<div id="bih-bm-panel" style="display:none;position:absolute;top:76px;right:12px;left:12px;z-index:50;background:linear-gradient(168deg,#131f45 0%,#0a1330 100%);border:1px solid rgba(232,193,90,0.4);border-radius:1rem;padding:0.8rem 0.9rem;max-height:60vh;overflow-y:auto;direction:rtl;box-shadow:0 18px 48px rgba(0,0,0,0.55);max-width:440px;margin:0 auto;"></div>'+
       '<div style="overflow-y:auto;flex:1;padding:0.75rem 1.25rem 0;">'+
         '<p style="color:#64748b;font-size:0.72rem;margin:0 0 0.65rem;">לחץ על פרשה לקריאת הטקסט המלא</p>'+
         '<div id="bih-grid-content" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:0.5rem;"></div>'+
@@ -17110,13 +17169,14 @@ function openBenIshHaiPage() {
     '</div>'+
 
     '<div id="bih-reading-pane" style="display:none;position:absolute;inset:0;background:#faf9f6;z-index:10;flex-direction:column;overflow:hidden;">'+
-      '<div style="display:flex;align-items:center;justify-content:space-between;padding:0.7rem 3.6rem 0.7rem 1rem;border-bottom:1px solid rgba(0,0,0,0.09);background:#faf9f6;flex-shrink:0;gap:0.5rem;">'+
-        '<h3 id="bih-reading-title" style="color:#1e293b;font-size:0.95rem;font-weight:900;margin:0;text-align:center;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></h3>'+
+      // כפתורי פעולה ראשונים = צד ימין; הכותרת אחרונה; ריווח 3.6rem בצד שמאל ל-X האוניברסלי (09/2026)
+      '<div style="display:flex;align-items:center;justify-content:space-between;padding:0.7rem 1rem 0.7rem 3.6rem;border-bottom:1px solid rgba(0,0,0,0.09);background:#faf9f6;flex-shrink:0;gap:0.5rem;">'+
         '<button onclick="window._bihGoToChapters()" style="background:rgba(0,0,0,0.06);border:none;color:#1e293b;padding:0.4rem 0.55rem;border-radius:999px;cursor:pointer;font-size:0.82rem;flex-shrink:0;margin-left:0.35rem;" title="כל הפרשיות">📑</button>'+
         '<button onclick="window._bihToggleReaderBMPanel()" id="bih-reader-bm-pin" style="background:rgba(0,0,0,0.06);border:none;color:#1e293b;padding:0.4rem 0.55rem;border-radius:999px;cursor:pointer;font-size:0.82rem;flex-shrink:0;margin-left:0.35rem;" title="סימניות">📌</button>'+
         '<button onclick="window._bihOpenSearch()" style="background:rgba(0,0,0,0.06);border:none;color:#1e293b;padding:0.4rem 0.75rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;white-space:nowrap;flex-shrink:0;">🔍 חיפוש</button>'+
+        '<h3 id="bih-reading-title" style="color:#1e293b;font-size:0.95rem;font-weight:900;margin:0;text-align:center;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></h3>'+
       '</div>'+
-      '<div id="bih-reader-bm-panel" style="display:none;background:#fffbeb;border-bottom:1px solid rgba(245,158,11,0.35);padding:0.7rem 1.1rem;flex-shrink:0;max-height:40vh;overflow-y:auto;direction:rtl;"></div>'+
+      '<div id="bih-reader-bm-panel" style="display:none;position:absolute;top:64px;right:12px;left:12px;z-index:50;background:linear-gradient(168deg,#131f45 0%,#0a1330 100%);border:1px solid rgba(232,193,90,0.4);border-radius:1rem;padding:0.8rem 0.9rem;max-height:60vh;overflow-y:auto;direction:rtl;box-shadow:0 18px 48px rgba(0,0,0,0.55);max-width:440px;margin:0 auto;"></div>'+
       '<div id="bih-content-area" style="overflow-y:auto;flex:1;padding:0.5rem 1.5rem 1rem;font-family:\'Frank Ruhl Libre\',\'David Libre\',serif;font-size:100%;line-height:2;color:#1e293b;text-align:center;direction:rtl;">'+
         '<div id="bih-parsha-sections"></div>'+
       '</div>'+
@@ -17521,12 +17581,12 @@ function renderPrayerModalShell(title, isPopup, prayerKey) {
       "position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);display:flex;align-items:flex-start;justify-content:center;padding:1rem;overflow-y:auto;";
     modal.innerHTML = `
             <div class="modal-inner" style="background:#faf9f6;border:1px solid rgba(0,0,0,0.1);border-radius:2rem;padding:1.5rem;width:100%;max-width:760px;max-height:min(88vh,980px);margin:auto;box-shadow:0 25px 60px rgba(0,0,0,0.2);text-align:center;direction:rtl;display:flex;flex-direction:column;overflow:hidden;">
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
-                <h3 class="modal-title" style="color:#000000;font-size:1.4rem;font-weight:900;margin:0;">${title}</h3>
-                <div style="display:flex;align-items:center;gap:0.5rem;flex-shrink:0;">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;gap:0.5rem;">
+                <div id="prayer-header-actions" style="display:flex;align-items:center;gap:0.5rem;flex-shrink:0;">
                   ${_prayerNavBtnHtml}
-                  <button class="modal-close" onclick="closePrayerModal()" style="background:rgba(0,0,0,0.06);border:none;color:#64748b;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.2rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✕</button>
                 </div>
+                <h3 class="modal-title" style="color:#000000;font-size:1.4rem;font-weight:900;margin:0;min-width:0;">${title}</h3>
+                <button class="modal-close" onclick="closePrayerModal()" style="background:rgba(0,0,0,0.06);border:none;color:#64748b;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.2rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✕</button>
               </div>
               <div id="prayer-modal-meta" style="color:#64748b;font-size:0.75rem;margin-bottom:1rem;">טוען נוסח מלא…</div>
               <div id="prayer-modal-body" class="prayer-modal-body-mobile" style="background:rgba(0,0,0,0.02);border-radius:1rem;min-height:240px;flex:1;overflow:hidden;display:flex;flex-direction:column;">
@@ -17540,15 +17600,15 @@ function renderPrayerModalShell(title, isPopup, prayerKey) {
     modal.style.cssText =
       "position:fixed;inset:0;z-index:200;display:flex;flex-direction:column;overflow:hidden;background:#faf9f6;";
     modal.innerHTML = `
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem 0.75rem;border-bottom:1px solid rgba(0,0,0,0.08);flex-shrink:0;background:#faf9f6;">
-              <div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem 0.75rem;border-bottom:1px solid rgba(0,0,0,0.08);flex-shrink:0;background:#faf9f6;gap:0.5rem;">
+              <div id="prayer-header-actions" style="display:flex;align-items:center;gap:0.5rem;flex-shrink:0;">
+                ${_prayerNavBtnHtml}
+              </div>
+              <div style="min-width:0;">
                 <h2 style="color:#1a1a1a;font-size:1.3rem;font-weight:900;margin:0;">${title}</h2>
                 <div id="prayer-modal-meta" style="color:#64748b;font-size:0.75rem;margin-top:0.15rem;">טוען נוסח מלא…</div>
               </div>
-              <div style="display:flex;align-items:center;gap:0.5rem;flex-shrink:0;">
-                ${_prayerNavBtnHtml}
-                <button onclick="closePrayerModal()" style="background:rgba(0,0,0,0.06);border:none;color:#64748b;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.1rem;flex-shrink:0;">✕</button>
-              </div>
+              <button onclick="closePrayerModal()" style="background:rgba(0,0,0,0.06);border:none;color:#64748b;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.1rem;flex-shrink:0;">✕</button>
             </div>
             <div id="prayer-modal-body" class="prayer-modal-body-mobile" style="flex:1;overflow-y:auto;background:#faf9f6;text-align:center;direction:rtl;">
               <div style="text-align:center;padding:2rem;color:#94a3b8;">טוען טקסט מלא ממקור זמין…</div>
@@ -17868,17 +17928,17 @@ openTehillimPage = function () {
     const plan = dayPlans[index];
     const rangeLabel = `${toHebrewPsalmNumber(plan.chapters[0])}-${toHebrewPsalmNumber(plan.chapters[plan.chapters.length - 1])}`;
     modal.innerHTML = `
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem 0.75rem;border-bottom:1px solid rgba(0,0,0,0.08);flex-shrink:0;background:#faf9f6;">
-              <div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem 0.75rem;border-bottom:1px solid rgba(0,0,0,0.08);flex-shrink:0;background:#faf9f6;gap:0.5rem;">
+              <div style="display:flex;align-items:center;gap:0.5rem;flex-shrink:0;">
+                <button onclick="window._thToggleBMPanel()" id="th-bm-toggle-btn" style="background:rgba(0,0,0,0.06);border:none;color:#64748b;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1rem;flex-shrink:0;" title="סמניות">📌</button>
+              </div>
+              <div style="text-align:center;min-width:0;">
                 <h2 style="color:#000000;font-size:1.3rem;font-weight:900;margin:0;">ספר תהילים</h2>
                 <p style="color:#1d4ed8;font-size:0.82rem;font-weight:700;margin:0.15rem 0 0;">יום ${plan.day} · פרקים ${rangeLabel}</p>
               </div>
-              <div style="display:flex;align-items:center;gap:0.5rem;">
-                <button onclick="window._thToggleBMPanel()" id="th-bm-toggle-btn" style="background:rgba(0,0,0,0.06);border:none;color:#64748b;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1rem;" title="סמניות">📌</button>
-                <button onclick="closeTehillimModal()" style="background:rgba(0,0,0,0.06);border:none;color:#64748b;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.1rem;">✕</button>
-              </div>
+              <button onclick="closeTehillimModal()" style="background:rgba(0,0,0,0.06);border:none;color:#64748b;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.1rem;flex-shrink:0;">✕</button>
             </div>
-            <div id="th-bm-panel" style="display:none;background:#fffbeb;border-bottom:1px solid #fde68a;padding:0.75rem 1.25rem;flex-shrink:0;max-height:40vh;overflow-y:auto;"></div>
+            <div id="th-bm-panel" style="display:none;position:absolute;top:84px;right:12px;left:12px;z-index:50;background:linear-gradient(168deg,#131f45 0%,#0a1330 100%);border:1px solid rgba(232,193,90,0.4);border-radius:1rem;padding:0.8rem 0.9rem;max-height:60vh;overflow-y:auto;direction:rtl;box-shadow:0 18px 48px rgba(0,0,0,0.55);max-width:440px;margin:0 auto;"></div>
             <div style="display:flex;gap:0.4rem;padding:0.75rem 1.25rem;overflow-x:auto;flex-shrink:0;background:#faf9f6;">
               ${dayPlans
                 .map((item, itemIndex) => {
@@ -17895,15 +17955,15 @@ openTehillimPage = function () {
               <div style="margin-top:1.5rem;padding-top:0.85rem;border-top:1px solid rgba(0,0,0,0.08);color:#94a3b8;font-size:0.74rem;line-height:1.6;text-align:center;">מקור הטקסט: <strong style="color:#1e40af;">Sefaria.org</strong> · ספר תהילים</div>
             </div>
             <div id="psalm-content-pane" style="display:none;position:absolute;inset:0;background:#faf9f6;z-index:10;flex-direction:column;overflow:hidden;">
-              <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border-bottom:1px solid rgba(0,0,0,0.08);background:#faf9f6;">
-                <button onclick="window._tehillimClosePsalm()" style="background:rgba(0,0,0,0.06);border:none;color:#64748b;padding:0.4rem 0.8rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;">← חזרה</button>
-                <h3 id="psalm-title" style="color:#000000;font-size:1rem;font-weight:900;margin:0;">תהילים</h3>
-                <div style="display:flex;align-items:center;gap:0.4rem;">
-                  <button onclick="window._thTogglePsalmBMPanel()" id="th-psalm-bm-toggle-btn" style="background:rgba(0,0,0,0.06);border:none;color:#64748b;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1rem;" title="סמניות">📌</button>
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border-bottom:1px solid rgba(0,0,0,0.08);background:#faf9f6;gap:0.5rem;">
+                <div style="display:flex;align-items:center;gap:0.4rem;flex-shrink:0;">
                   <button onclick="window._tehillimGoToChapters()" style="background:rgba(0,0,0,0.06);border:none;color:#1e293b;padding:0.4rem 0.55rem;border-radius:999px;cursor:pointer;font-size:0.82rem;flex-shrink:0;" title="כל הפרקים">📑</button>
+                  <button onclick="window._thTogglePsalmBMPanel()" id="th-psalm-bm-toggle-btn" style="background:rgba(0,0,0,0.06);border:none;color:#64748b;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1rem;" title="סמניות">📌</button>
                 </div>
+                <h3 id="psalm-title" style="color:#000000;font-size:1rem;font-weight:900;margin:0;flex:1;text-align:center;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">תהילים</h3>
+                <button onclick="window._tehillimClosePsalm()" style="background:rgba(0,0,0,0.06);border:none;color:#64748b;padding:0.4rem 0.8rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;flex-shrink:0;">← חזרה</button>
               </div>
-              <div id="th-psalm-bm-panel" style="display:none;background:#fffbeb;border-bottom:1px solid #fde68a;padding:0.75rem 1.25rem;flex-shrink:0;max-height:40vh;overflow-y:auto;"></div>
+              <div id="th-psalm-bm-panel" style="display:none;position:absolute;top:72px;right:12px;left:12px;z-index:50;background:linear-gradient(168deg,#131f45 0%,#0a1330 100%);border:1px solid rgba(232,193,90,0.4);border-radius:1rem;padding:0.8rem 0.9rem;max-height:60vh;overflow-y:auto;direction:rtl;box-shadow:0 18px 48px rgba(0,0,0,0.55);max-width:440px;margin:0 auto;"></div>
               <div id="psalm-text-area" class="holy-text-style" style="padding:1.25rem;overflow-y:auto;flex:1;text-align:center;direction:rtl;"></div>
               <div id="tehillim-font-bar" class="flex items-center justify-center gap-3 py-2 px-4 flex-shrink-0" style="background:rgba(250,249,246,0.95);border-top:1px solid rgba(0,0,0,0.08);">
                 <span class="font-btn-group" style="display:inline-flex;align-items:center;gap:0.75rem;flex-wrap:nowrap;flex-shrink:0;"><button onclick="changePrayerFontSize(-10, '#psalm-text-area')" style="width:38px;height:38px;border-radius:50%;border:1.5px solid rgba(99,102,241,0.3);background:linear-gradient(135deg,#eef2ff 0%,#e0e7ff 100%);color:#4338ca;font-size:1.25rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(99,102,241,0.15);transition:transform 0.15s ease,box-shadow 0.15s ease;" onmouseover="this.style.transform='scale(1.08)';this.style.boxShadow='0 4px 10px rgba(99,102,241,0.25)';" onmouseout="this.style.transform='';this.style.boxShadow='0 2px 6px rgba(99,102,241,0.15)';" aria-label="הקטן כתב">−</button><button onclick="changePrayerFontSize(10, '#psalm-text-area')" style="width:38px;height:38px;border-radius:50%;border:1.5px solid rgba(99,102,241,0.3);background:linear-gradient(135deg,#eef2ff 0%,#e0e7ff 100%);color:#4338ca;font-size:1.25rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(99,102,241,0.15);transition:transform 0.15s ease,box-shadow 0.15s ease;" onmouseover="this.style.transform='scale(1.08)';this.style.boxShadow='0 4px 10px rgba(99,102,241,0.25)';" onmouseout="this.style.transform='';this.style.boxShadow='0 2px 6px rgba(99,102,241,0.15)';" aria-label="הגדל כתב">+</button></span>
@@ -18013,84 +18073,67 @@ openTehillimPage = function () {
     }
   };
 
+  // שורות אחידות לשני פאנלי תהילים — עיצוב snbm הכלל-אתרי (09/2026)
+  const _thBMRowsHtml = (fromPsalm) => {
+    const bms = thLoadBMs().slice().sort((a,b)=>a-b);
+    const lp = thLoadLP();
+    const fr = fromPsalm ? 1 : 0;
+    let html = "";
+    let count = bms.length + (lp && lp.ch ? 1 : 0);
+    if (lp && lp.ch) {
+      html += window._bmRowHtml(
+        { label: "מיקום אחרון — פרק " + toHebrewPsalmNumber(lp.ch) + (lp.v ? " פסוק " + toHebrewPsalmNumber(lp.v) : ""), isLastPos: true, ts: lp.ts },
+        "window._thBMPanelGoLP(" + fr + ")",
+        "window._thRemoveLastPosition()",
+        ""
+      );
+    }
+    html += bms.map(ch => window._bmRowHtml(
+      { label: "פרק " + toHebrewPsalmNumber(ch) },
+      "window._thBMPanelGo(" + ch + "," + fr + ")",
+      "window._thToggleBM(" + ch + ")",
+      ""
+    )).join("");
+    return { count: count, html: html };
+  };
+  // ניווט משורת פאנל: סוגרים את הפאנל (סינכרונית) ואז פותחים את הפרק/המיקום
+  const _thBMPanelDismiss = (fromPsalm) => {
+    const pid = fromPsalm ? "th-psalm-bm-panel" : "th-bm-panel";
+    window._popupSyncDismiss(pid);
+    const hider = window._popupHideHandlers[pid];
+    if (hider) { try { hider(); } catch (e) {} }
+    else { const el = document.getElementById(pid); if (el) el.style.display = "none"; }
+  };
+  window._thBMPanelGo = (ch, fromPsalm) => { _thBMPanelDismiss(fromPsalm); window._tehillimOpenPsalm(ch); };
+  window._thBMPanelGoLP = (fromPsalm) => { _thBMPanelDismiss(fromPsalm); window._thGoLastPosition(); };
   window._thBuildBMPanel = () => {
     const panel = document.getElementById("th-bm-panel");
     if (!panel) return;
-    const bms = thLoadBMs().slice().sort((a,b)=>a-b);
-    const lp = thLoadLP();
-    const lpHtml = lp && lp.ch ?
-      '<div style="margin-bottom:0.6rem;padding:0.5rem 0.65rem;background:rgba(245,158,11,0.12);border:1.5px solid rgba(245,158,11,0.45);border-radius:0.5rem;display:flex;align-items:center;gap:0.4rem;">'+
-        '<button onclick="window._thGoLastPosition()" style="background:none;border:none;color:#92400e;cursor:pointer;font-size:0.85rem;font-weight:700;text-align:right;flex:1;padding:0;">📍 מיקום אחרון — תהילים פרק ' + toHebrewPsalmNumber(lp.ch) + (lp.v ? " פסוק " + toHebrewPsalmNumber(lp.v) : "") + '</button>'+
-        '<button onclick="window._thRemoveLastPosition()" style="background:none;border:none;color:#92400e;cursor:pointer;font-size:0.85rem;padding:0.1rem 0.3rem;flex-shrink:0;" title="הסר">✕</button>'+
-      '</div>' : '';
-    if (!bms.length) {
-      panel.innerHTML = lpHtml + '<p style="color:#92400e;font-size:0.78rem;margin:0;text-align:center;">אין סמניות שמורות</p>';
-      return;
-    }
-    panel.innerHTML = lpHtml +
-      '<p style="color:#92400e;font-size:0.78rem;font-weight:900;margin:0 0 0.5rem;">📌 פרקים מסומנים:</p>'+
-      '<div style="display:flex;flex-wrap:wrap;gap:0.4rem;">'+
-      bms.map(ch =>
-        '<div style="display:flex;align-items:center;gap:0.25rem;">'+
-          '<button onclick="window._tehillimOpenPsalm('+ch+')" style="background:#fff;border:1.5px solid #f59e0b;border-radius:999px;padding:0.25rem 0.7rem;font-size:0.78rem;font-weight:800;color:#92400e;cursor:pointer;">פרק '+toHebrewPsalmNumber(ch)+'</button>'+
-          '<button onclick="window._thToggleBM('+ch+')" style="background:none;border:none;color:#94a3b8;font-size:0.8rem;cursor:pointer;" title="הסר">✕</button>'+
-        '</div>'
-      ).join("")+
-      '</div>';
+    const rows = _thBMRowsHtml(0);
+    panel.innerHTML =
+      window._bmHeadHtml("🔖 סימניות <small>תהילים</small>", rows.count, "window._thToggleBMPanel();") +
+      (rows.count ? rows.html
+        : window._bmEmptyHtml("אין סימניות שמורות עדיין",
+            "לחצו על 🔖 שבראש הפרק כדי לסמן,<br>או על 📌 הצף כדי לשמור את המיקום האחרון"));
   };
 
   window._thToggleBMPanel = () => {
-    const panel = document.getElementById("th-bm-panel");
-    if (!panel) return;
-    if (panel.style.display === "none") {
-      window._thBuildBMPanel();
-      panel.style.display = "block";
-      if (typeof window.showToast === "function") window.showToast("📌 סימניות ומיקומים אחרונים", "info", 2000);
-    } else {
-      panel.style.display = "none";
-    }
+    window._bmStripToggle("th-bm-panel", window._thBuildBMPanel, '[onclick*="_thToggleBMPanel"]');
   };
 
   window._thBuildPsalmBMPanel = () => {
     const panel = document.getElementById("th-psalm-bm-panel");
     if (!panel) return;
-    const bms = thLoadBMs().slice().sort((a,b)=>a-b);
-    const lp = thLoadLP();
-    const lpHtml = lp && lp.ch ?
-      '<div style="margin-bottom:0.6rem;padding:0.5rem 0.65rem;background:rgba(245,158,11,0.12);border:1.5px solid rgba(245,158,11,0.45);border-radius:0.5rem;display:flex;align-items:center;gap:0.4rem;">'+
-        '<button onclick="window._thGoLastPosition()" style="background:none;border:none;color:#92400e;cursor:pointer;font-size:0.85rem;font-weight:700;text-align:right;flex:1;padding:0;">📍 מיקום אחרון — תהילים פרק ' + toHebrewPsalmNumber(lp.ch) + (lp.v ? " פסוק " + toHebrewPsalmNumber(lp.v) : "") + '</button>'+
-        '<button onclick="window._thRemoveLastPosition()" style="background:none;border:none;color:#92400e;cursor:pointer;font-size:0.85rem;padding:0.1rem 0.3rem;flex-shrink:0;" title="הסר">✕</button>'+
-      '</div>' : '';
-    if (!bms.length && !lp) {
-      panel.innerHTML = '<p style="color:#92400e;font-size:0.78rem;margin:0;text-align:center;">אין סמניות שמורות</p>';
-      return;
-    }
-    if (!bms.length) {
-      panel.innerHTML = lpHtml;
-      return;
-    }
-    panel.innerHTML = lpHtml +
-      '<p style="color:#92400e;font-size:0.78rem;font-weight:900;margin:0 0 0.5rem;">📌 פרקים מסומנים:</p>'+
-      '<div style="display:flex;flex-wrap:wrap;gap:0.4rem;">'+
-      bms.map(ch =>
-        '<div style="display:flex;align-items:center;gap:0.25rem;">'+
-          '<button onclick="window._tehillimOpenPsalm('+ch+')" style="background:#fff;border:1.5px solid #f59e0b;border-radius:999px;padding:0.25rem 0.7rem;font-size:0.78rem;font-weight:800;color:#92400e;cursor:pointer;">פרק '+toHebrewPsalmNumber(ch)+'</button>'+
-          '<button onclick="window._thToggleBM('+ch+')" style="background:none;border:none;color:#94a3b8;font-size:0.8rem;cursor:pointer;" title="הסר">✕</button>'+
-        '</div>'
-      ).join("")+
-      '</div>';
+    const rows = _thBMRowsHtml(1);
+    panel.innerHTML =
+      window._bmHeadHtml("🔖 סימניות <small>תהילים</small>", rows.count, "window._thTogglePsalmBMPanel();") +
+      (rows.count ? rows.html
+        : window._bmEmptyHtml("אין סימניות שמורות עדיין",
+            "לחצו על 🔖 שבראש הפרק כדי לסמן,<br>או על 📌 הצף כדי לשמור את המיקום האחרון"));
   };
 
   window._thTogglePsalmBMPanel = () => {
-    const panel = document.getElementById("th-psalm-bm-panel");
-    if (!panel) return;
-    if (panel.style.display === "none") {
-      window._thBuildPsalmBMPanel();
-      panel.style.display = "block";
-      if (typeof window.showToast === "function") window.showToast("📌 סימניות ומיקומים אחרונים", "info", 2000);
-    } else {
-      panel.style.display = "none";
-    }
+    window._bmStripToggle("th-psalm-bm-panel", window._thBuildPsalmBMPanel, '[onclick*="_thTogglePsalmBMPanel"]');
   };
 
   // Psalm reading pane back-navigation
@@ -24981,36 +25024,11 @@ function openSefarimNosafimPage(_pageMode) {
   }
 
   // ── Bookmark panel ──
-  // תאריך יחסי קריא לשורת סימנייה ("היום", "אתמול", "לפני 3 ימים", תאריך מלא)
-  function _snBMTimeStr(ts) {
-    if (!ts) return "";
-    var days = Math.floor((Date.now() - ts) / 86400000);
-    if (days <= 0) return "היום";
-    if (days === 1) return "אתמול";
-    if (days < 30) return "לפני " + days + " ימים";
-    try { return new Date(ts).toLocaleDateString("he-IL"); } catch (e) { return ""; }
-  }
-  // שורת סימנייה אחידה — משמשת גם את הפאנל הכללי וגם את פאנל הספר
-  function _snBMRowHtml(bm, gotoJs, removeJs, subText) {
-    var isLP = !!bm.isLastPos;
-    var label = String(bm.label || "").replace(/^📍\s*/, "");
-    return "<div class=\"snbm-row" + (isLP ? " snbm-row-lp" : "") + "\">" +
-      "<button class=\"snbm-go\" onclick=\"" + gotoJs + "\">" +
-        "<span class=\"snbm-ico\">" + (isLP ? "📍" : "🔖") + "</span>" +
-        "<span class=\"snbm-txt\">" +
-          (subText ? "<span class=\"snbm-sub\">" + subText + "</span>" : "") +
-          "<span class=\"snbm-label\">" + label + "</span>" +
-          (bm.ts ? "<span class=\"snbm-time\">" + _snBMTimeStr(bm.ts) + "</span>" : "") +
-        "</span>" +
-      "</button>" +
-      "<button class=\"snbm-del\" onclick=\"" + removeJs + "\" title=\"הסרת סימנייה\">✕</button>" +
-    "</div>";
-  }
-  function _snBMEmptyHtml(msg) {
-    return "<div class=\"snbm-empty\"><span class=\"snbm-empty-ico\">🔖</span>" +
-      "<p>" + msg + "</p>" +
-      "<small>לחצו על 🔖 שליד כותרת או פסקה כדי לשמור סימנייה,<br>או על 📌 הצף כדי לשמור את המיקום האחרון</small></div>";
-  }
+  // בוני העיצוב האחיד (שורה/ריק/תאריך) הם גלובליים — משותפים לכל פאנלי הסימניות
+  // באתר (ספרים נוספים, בן איש חי, תהילים). מוגדרים ליד מערכת הטוסטים.
+  var _snBMTimeStr = window._bmTimeStr;
+  var _snBMRowHtml = window._bmRowHtml;
+  var _snBMEmptyHtml = window._bmEmptyHtml;
 
   function buildBMPanel() {
     var panel = document.getElementById("sn-bm-panel");
@@ -25173,43 +25191,9 @@ function openSefarimNosafimPage(_pageMode) {
       }, 700);
     }
   };
-  // הסתרה בפועל של פאנל הסימניות הכללי + הסרת מאזין הנגיעה-בחוץ
-  function _snBMPanelHideNow() {
-    var p = document.getElementById("sn-bm-panel");
-    if (p) p.style.display = "none";
-    if (window._snBMPanelDocClose) {
-      document.removeEventListener("pointerdown", window._snBMPanelDocClose, true);
-      window._snBMPanelDocClose = null;
-    }
-  }
+  // פאנל צף אחיד (כרטיס כהה-זהב + רקע מעומעם) — דרך הטוגל הכלל-אתרי
   window._snToggleBMPanel = function() {
-    var p = document.getElementById("sn-bm-panel");
-    if (!p) return;
-    var hidden = !p.style.display || p.style.display === "none";
-    if (!hidden) {
-      window._popupHistoryClose("sn-bm-panel");
-      return;
-    }
-    p.style.display = "block";
-    buildBMPanel();
-    window._popupHideHandlers["sn-bm-panel"] = _snBMPanelHideNow;
-    pushModalState("sn-bm-panel");
-    // נגיעה בכל מקום מחוץ לפאנל סוגרת אותו (בקשת משתמש 09/2026). ההאזנה נוספת
-    // אחרי טיק כדי לא לתפוס את לחיצת הפתיחה עצמה, וההסתרה סינכרונית (בלי back)
-    // כדי לא להתנגש עם הלחיצה שמתבצעת (למשל ה-✕ של המודאל כולו).
-    setTimeout(function () {
-      if (window._snBMPanelDocClose) return;
-      window._snBMPanelDocClose = function (ev) {
-        var pp = document.getElementById("sn-bm-panel");
-        if (!pp || !pp.style.display || pp.style.display === "none") return;
-        var t = ev.target;
-        if (t && t.closest && (t.closest("#sn-bm-panel") || t.closest('[onclick*="_snToggleBMPanel"]'))) return;
-        window._popupSyncDismiss("sn-bm-panel");
-        _snBMPanelHideNow();
-      };
-      document.addEventListener("pointerdown", window._snBMPanelDocClose, true);
-    }, 0);
-    if (typeof window.showToast === "function") window.showToast("📌 סימניות ומיקומים אחרונים", "info", 2000);
+    window._bmStripToggle("sn-bm-panel", buildBMPanel);
   };
 
   // ── Book-specific bookmarks panel (shown inside subbook/sections/reader views) ──
@@ -26269,24 +26253,26 @@ function openSefarimNosafimPage(_pageMode) {
   modal.style.cssText = "position:fixed;inset:0;z-index:200;background:rgba(2,6,23,0.95);backdrop-filter:blur(8px);overflow:hidden;";
   modal.innerHTML = [
     "<div id=\"sn-books-view\" style=\"position:absolute;inset:0;display:flex;flex-direction:column;overflow:hidden;\">",
-      "<div style=\"display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;\">",
-        "<div><h2 style=\"color:#f1f5f9;font-size:1.3rem;font-weight:900;margin:0;\">"+(_pageMode === "tefilot" ? "תפילות נוספות" : "ספרים נוספים")+"</h2>",
-        "<p style=\"color:#6366f1;font-size:0.78rem;font-weight:700;margin:0.15rem 0 0;\">"+(_pageMode === "tefilot" ? "תפילות מיוחדות" : "ספריית קודש")+"</p></div>",
-        "<div style=\"display:flex;gap:0.5rem;align-items:center;\">",
-          "<button onclick=\"window._snOpenSearch();\" style=\"background:rgba(255,255,255,0.08);border:none;color:#e2e8f0;padding:0.4rem 0.8rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;\">🔍 חיפוש</button>",
+      // סדר אחיד (09/2026): פעולות ראשונות = צד ימין, כותרת במרכז, ✕ אחרון = צד שמאל
+      "<div style=\"display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;gap:0.5rem;\">",
+        "<div style=\"display:flex;gap:0.5rem;align-items:center;flex-shrink:0;\">",
           "<button onclick=\"window._snToggleBMPanel();\" style=\"background:rgba(255,255,255,0.08);border:none;color:#e2e8f0;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1rem;flex-shrink:0;\" title=\"סימניות\">📌</button>",
-          "<button onclick=\"closeSefarimNosafimModal();\" style=\"background:rgba(255,255,255,0.08);border:none;color:#94a3b8;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.1rem;flex-shrink:0;\">✕</button>",
+          "<button onclick=\"window._snOpenSearch();\" style=\"background:rgba(255,255,255,0.08);border:none;color:#e2e8f0;padding:0.4rem 0.8rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;\">🔍 חיפוש</button>",
         "</div>",
+        "<div style=\"text-align:center;min-width:0;\"><h2 style=\"color:#f1f5f9;font-size:1.3rem;font-weight:900;margin:0;\">"+(_pageMode === "tefilot" ? "תפילות נוספות" : "ספרים נוספים")+"</h2>",
+        "<p style=\"color:#6366f1;font-size:0.78rem;font-weight:700;margin:0.15rem 0 0;\">"+(_pageMode === "tefilot" ? "תפילות מיוחדות" : "ספריית קודש")+"</p></div>",
+        "<button onclick=\"closeSefarimNosafimModal();\" style=\"background:rgba(255,255,255,0.08);border:none;color:#94a3b8;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.1rem;flex-shrink:0;\">✕</button>",
       "</div>",
-      "<div id=\"sn-bm-panel\" style=\"display:none;background:linear-gradient(168deg,rgba(19,31,69,0.85) 0%,rgba(10,19,48,0.85) 100%);border-bottom:1px solid rgba(232,193,90,0.3);padding:0.8rem 1.1rem;flex-shrink:0;max-height:40vh;overflow-y:auto;direction:rtl;\"></div>",
+      "<div id=\"sn-bm-panel\" style=\"display:none;position:absolute;top:84px;right:12px;left:12px;z-index:50;background:linear-gradient(168deg,#131f45 0%,#0a1330 100%);border:1px solid rgba(232,193,90,0.4);border-radius:1rem;padding:0.8rem 0.9rem;max-height:60vh;overflow-y:auto;direction:rtl;box-shadow:0 18px 48px rgba(0,0,0,0.55);max-width:440px;margin:0 auto;\"></div>",
       "<div style=\"overflow-y:auto;flex:1;padding:1rem 1.25rem 1.5rem;\"><div id=\"sn-books-grid\"></div></div>",
     "</div>",
     "<div id=\"sn-subbook-view\" style=\"display:none;position:absolute;inset:0;flex-direction:column;overflow:hidden;\">",
-      "<div style=\"display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;\">",
-        "<div style=\"width:38px;flex-shrink:0;\"></div>",
-        "<h2 id=\"sn-subbook-title\" style=\"color:#f1f5f9;font-size:1.1rem;font-weight:900;margin:0;flex:1;text-align:center;\"></h2>",
-        "<button onclick=\"window._snOpenSearch();\" style=\"background:rgba(255,255,255,0.08);border:none;color:#e2e8f0;padding:0.4rem 0.8rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;flex-shrink:0;margin-left:0.4rem;\" title=\"חיפוש\">🔍 חיפוש</button>",
-        "<button onclick=\"window._snToggleBookBMPanel();\" style=\"background:rgba(255,255,255,0.08);border:none;color:#e2e8f0;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:0.95rem;flex-shrink:0;margin-left:0.4rem;\" title=\"סימניות הספר\">📌</button>",
+      "<div style=\"display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;gap:0.5rem;\">",
+        "<div style=\"display:flex;gap:0.4rem;align-items:center;flex-shrink:0;\">",
+          "<button onclick=\"window._snToggleBookBMPanel();\" style=\"background:rgba(255,255,255,0.08);border:none;color:#e2e8f0;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:0.95rem;flex-shrink:0;\" title=\"סימניות הספר\">📌</button>",
+          "<button onclick=\"window._snOpenSearch();\" style=\"background:rgba(255,255,255,0.08);border:none;color:#e2e8f0;padding:0.4rem 0.8rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;flex-shrink:0;\" title=\"חיפוש\">🔍 חיפוש</button>",
+        "</div>",
+        "<h2 id=\"sn-subbook-title\" style=\"color:#f1f5f9;font-size:1.1rem;font-weight:900;margin:0;flex:1;text-align:center;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;\"></h2>",
         "<button onclick=\"history.back();\" style=\"background:rgba(255,255,255,0.08);border:none;color:#94a3b8;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.1rem;flex-shrink:0;\" title=\"חזרה\">✕</button>",
       "</div>",
       "<div style=\"overflow-y:auto;flex:1;padding:2rem 1.25rem;display:flex;align-items:flex-start;justify-content:center;\">",
@@ -26295,12 +26281,14 @@ function openSefarimNosafimPage(_pageMode) {
     "</div>",
     "<div id=\"sn-sections-view\" style=\"display:none;position:absolute;inset:0;flex-direction:column;overflow:hidden;\">",
       "<div style=\"display:flex;align-items:center;justify-content:space-between;padding:0.75rem 1rem 0.75rem 3.6rem;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;gap:0.5rem;\">",
+        "<div style=\"display:flex;gap:0.35rem;align-items:center;flex-shrink:0;\">",
+          "<button onclick=\"window._snToggleBookBMPanel();\" style=\"background:rgba(255,255,255,0.08);border:none;color:#e2e8f0;padding:0.4rem 0.6rem;border-radius:999px;cursor:pointer;font-size:0.85rem;flex-shrink:0;\" title=\"סימניות הספר\">📌</button>",
+          "<button onclick=\"window._snOpenSearch();\" style=\"background:rgba(255,255,255,0.08);border:none;color:#e2e8f0;padding:0.4rem 0.75rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;flex-shrink:0;\">🔍</button>",
+        "</div>",
         "<div style=\"flex:1;min-width:0;text-align:center;\">",
           "<h3 id=\"sn-sections-title\" style=\"color:#f1f5f9;font-size:0.9rem;font-weight:900;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;\"></h3>",
           "<span id=\"sn-sections-subtitle\" style=\"color:#6366f1;font-size:0.7rem;\"></span>",
         "</div>",
-        "<button onclick=\"window._snToggleBookBMPanel();\" style=\"background:rgba(255,255,255,0.08);border:none;color:#e2e8f0;padding:0.4rem 0.6rem;border-radius:999px;cursor:pointer;font-size:0.85rem;flex-shrink:0;margin-left:0.35rem;\" title=\"סימניות הספר\">📌</button>",
-        "<button onclick=\"window._snOpenSearch();\" style=\"background:rgba(255,255,255,0.08);border:none;color:#e2e8f0;padding:0.4rem 0.75rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;flex-shrink:0;\">🔍</button>",
       "</div>",
       "<div style=\"padding:0.5rem 1rem;border-bottom:1px solid rgba(255,255,255,0.05);flex-shrink:0;\">",
         "<input id=\"sn-sections-filter\" type=\"search\" placeholder=\"סנן סעיף...\" oninput=\"window._snFilterSections(this.value);\" style=\"width:100%;box-sizing:border-box;padding:0.4rem 0.85rem;border-radius:999px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.07);color:#f1f5f9;font-size:0.85rem;direction:rtl;outline:none;\"/>",

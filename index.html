@@ -1486,10 +1486,17 @@
       role="dialog"
       aria-modal="true"
     >
+        <!-- סדר אחיד (09/2026): כותרת ראשונה = צד ימין, ✕ אחרון = צד שמאל -->
         <div
           class="p-4 md:p-6 pb-3 md:pb-4 border-b flex justify-between items-center flex-shrink-0"
           style="border-color:rgba(0,0,0,0.08);background:#faf9f6;"
         >
+          <h2
+            id="sefaria-modal-title"
+            class="text-xl md:text-2xl font-black text-slate-800 text-right"
+          >
+            קריאה
+          </h2>
           <button
             onclick="closeSefariaModal()"
             class="text-slate-500 hover:text-slate-700 bg-black/5 hover:bg-black/10 p-2.5 rounded-full transition-colors"
@@ -1509,12 +1516,6 @@
               ></path>
             </svg>
           </button>
-          <h2
-            id="sefaria-modal-title"
-            class="text-xl md:text-2xl font-black text-slate-800 text-right"
-          >
-            קריאה
-          </h2>
         </div>
         <div
           id="sefaria-modal-content"
@@ -1535,10 +1536,17 @@
       aria-modal="true"
       aria-labelledby="chok-israel-modal-title"
     >
+      <!-- סדר אחיד (09/2026): כותרת ראשונה = צד ימין, ✕ אחרון = צד שמאל -->
       <div
         class="p-4 md:p-6 pb-3 md:pb-4 border-b flex justify-between items-center flex-shrink-0"
         style="border-color:rgba(0,0,0,0.08);background:#faf9f6;"
       >
+        <h2
+          id="chok-israel-modal-title"
+          class="text-xl md:text-2xl font-black text-slate-800 text-right"
+        >
+          חוק לישראל
+        </h2>
         <button
           onclick="closeChokLeIsraelModal()"
           class="text-slate-500 hover:text-slate-700 bg-black/5 hover:bg-black/10 p-2.5 rounded-full transition-colors"
@@ -1548,12 +1556,6 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
           </svg>
         </button>
-        <h2
-          id="chok-israel-modal-title"
-          class="text-xl md:text-2xl font-black text-slate-800 text-right"
-        >
-          חוק לישראל
-        </h2>
       </div>
       <div
         id="chok-israel-modal-content"
@@ -2189,8 +2191,8 @@
       </section>
     </noscript>
 
-    <script src="script.js?v=46" defer></script>
-    <script src="lux.js?v=44" defer></script>
+    <script src="script.js?v=47" defer></script>
+    <script src="lux.js?v=45" defer></script>
 
     <!-- Service Worker registration — enables offline caching (PWA) -->
     <script>

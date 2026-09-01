@@ -24,3 +24,35 @@
 - [KosherZmanim / KosherJava](https://github.com/BehindTheMath/KosherZmanim): חישוב זמני הלכה אסטרונומיים לפי מיקום
 - [GeoNames](https://www.geonames.org/): מזהי ערים
 - [OpenStreetMap](https://www.openstreetmap.org/) (Overpass, Nominatim): בתי כנסת ומקוואות
+
+## מועדי ישראל תשפ"ז — תאריכים לועזיים (Jewish holidays 5787 / 2026–2027, Israel calendar)
+
+- ראש השנה תשפ"ז (Rosh Hashana 5787): א'–ב' בתשרי — 12–13 בספטמבר 2026 (שבת–ראשון)
+- יום כיפור (Yom Kippur): י' בתשרי — 21 בספטמבר 2026 (שני)
+- סוכות (Sukkot): ט"ו–כ"א בתשרי — 26 בספטמבר – 2 באוקטובר 2026
+- שמיני עצרת ושמחת תורה (Shemini Atzeret / Simchat Torah): כ"ב בתשרי — 3 באוקטובר 2026 (שבת)
+- חנוכה (Chanukah): כ"ה בכסלו – ב' בטבת — 5–12 בדצמבר 2026 (נר ראשון: יום שישי 4.12 לפני כניסת השבת)
+- ט"ו בשבט (Tu BiShvat): 23 בינואר 2027 (שבת)
+- פורים (Purim): י"ד באדר ב' — 23 במרץ 2027 (שלישי); שושן פורים 24.3
+- פסח (Pesach): ט"ו–כ"א בניסן — 22–28 באפריל 2027
+- יום העצמאות (Yom HaAtzmaut): ה' באייר — 12 במאי 2027 (רביעי)
+- ל"ג בעומר (Lag BaOmer): י"ח באייר — 25 במאי 2027 (שלישי)
+- שבועות (Shavuot): ו' בסיוון — 11 ביוני 2027 (שישי)
+- תשעה באב (Tisha B'Av): ט' באב — 12 באוגוסט 2027 (חמישי)
+
+הערה: התאריכים לפי הלוח הנהוג בארץ ישראל; זמני כניסת ויציאת החגים תלויים במיקום ומוצגים באתר לפי העיר.
+
+## זמני ההלכה שהאתר מציג (Halachic times / zmanim shown on the site)
+
+- עלות השחר (Alot HaShachar) — תחילת היום ההלכתי
+- הנץ החמה (Netz / sunrise) — זמן תפילת ותיקין
+- סוף זמן קריאת שמע — לפי מגן אברהם ולפי הגר"א (Sof Zman Kriat Shema, MGA / GRA)
+- סוף זמן תפילה (Sof Zman Tefillah)
+- חצות היום (Chatzot)
+- מנחה גדולה, מנחה קטנה, פלג המנחה (Mincha Gedola, Mincha Ketana, Plag HaMincha)
+- שקיעה (Shkia / sunset) והדלקת נרות שבת (Candle lighting — 18/20/40 דקות לפי המקום)
+- צאת הכוכבים (Tzeit HaKochavim) ויציאת שבת (Havdalah)
+- חצות הלילה (Chatzot HaLayla)
+- שעות זמניות (Sha'ot Zmaniyot) — שעון הלכתי אנלוגי בזמן אמת
+
+החישוב נעשה במכשיר המשתמש בספריית KosherZmanim (KosherJava) לפי קואורדינטות העיר או ה-GPS; אזהרה: אין להסתמך על הזמנים "עד הדקה" לעניין כניסת שבת ויציאתה.

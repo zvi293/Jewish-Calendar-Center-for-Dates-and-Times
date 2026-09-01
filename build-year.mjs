@@ -220,26 +220,54 @@ try {
   const tableHtml = await buildTable(tableHebYear, tableLabel);
   html = html.slice(0, si + START.length) + "\n        " + tableHtml + "\n        " + html.slice(ei);
 
+  // 3) חותמות רעננות — בכל בילד (דיפלוי = תוכן חדש): שנת הפוטר, dateModified
+  //    ב-JSON-LD של דף הבית, ו-lastmod בסייטמאפ (דף הבית = תאריך הבילד; שאר
+  //    הדפים = תאריך הקומיט האחרון שלהם מ-git, אם זמין; אחרת נשארים כפי שהם).
+  const buildIso = today.toISOString().slice(0, 10);
+  html = html.replace(/(<span id="footer-year">)\d{4}(<\/span>)/, `$1${today.getFullYear()}$2`);
+  html = html.replace(/("dateModified":\s*")\d{4}-\d{2}-\d{2}(")/, `$1${buildIso}$2`);
+
   if (html !== original) {
     writeFileSync(INDEX, html);
-    // 3) lastmod של דף הבית ב-sitemap — רק כשהתוכן באמת השתנה
-    try {
-      let sm = readFileSync(SITEMAP, "utf8");
-      sm = replaceYearTokens(sm, curLabel, curCivil);
-      const iso = new Date().toISOString().slice(0, 10);
-      sm = sm.replace(
-        /(<loc>https:\/\/jewishcalendar\.co\.il\/<\/loc>\s*<lastmod>)[^<]+/,
-        `$1${iso}`,
-      );
-      writeFileSync(SITEMAP, sm);
-    } catch (e) {
-      console.warn("[build-year] sitemap update skipped:", e.message);
-    }
     console.log(
       `[build-year] updated: year=${curLabel} ${curCivil}, table=${tableLabel} (RH in ${daysToRH}d)`,
     );
   } else {
     console.log("[build-year] no changes needed");
+  }
+  try {
+    let sm = readFileSync(SITEMAP, "utf8");
+    const smOrig = sm;
+    sm = replaceYearTokens(sm, curLabel, curCivil);
+    sm = sm.replace(
+      /(<loc>https:\/\/jewishcalendar\.co\.il\/<\/loc>\s*<lastmod>)[^<]+/,
+      `$1${buildIso}`,
+    );
+    for (const page of ["synagogues.html", "credits.html", "privacy.html", "terms.html"]) {
+      let gitDate = "";
+      try {
+        const { execFileSync } = await import("node:child_process");
+        gitDate = execFileSync("git", ["log", "-1", "--format=%cs", "--", page], {
+          cwd: new URL("./", import.meta.url),
+          stdio: ["ignore", "pipe", "ignore"],
+        })
+          .toString()
+          .trim();
+      } catch (e) {
+        gitDate = "";
+      }
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(gitDate)) continue;
+      sm = sm.replace(
+        new RegExp(`(<loc>https:\\/\\/jewishcalendar\\.co\\.il\\/${page.replace(".", "\\.")}<\\/loc>\\s*<lastmod>)[^<]+`),
+        `$1${gitDate}`,
+      );
+    }
+    if (sm !== smOrig) {
+      writeFileSync(SITEMAP, sm);
+      console.log("[build-year] sitemap lastmod stamped");
+    }
+  } catch (e) {
+    console.warn("[build-year] sitemap update skipped:", e.message);
   }
 } catch (e) {
   // לעולם לא מפילים את הבילד — האתר יוצא עם התוכן הקיים

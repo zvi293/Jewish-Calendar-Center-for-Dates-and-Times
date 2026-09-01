@@ -136,6 +136,7 @@
           "isPartOf": { "@id": "https://jewishcalendar.co.il/#website" },
           "about": { "@id": "https://jewishcalendar.co.il/#app" },
           "inLanguage": "he-IL",
+          "dateModified": "2026-09-02",
           "speakable": {
             "@type": "SpeakableSpecification",
             "cssSelector": ["#about-title", "#about-lead"]
@@ -277,9 +278,6 @@
     }
     </script>
     <!-- Performance: preconnect to critical origins -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="preconnect" href="https://unpkg.com" crossorigin>
     <link rel="preconnect" href="https://www.hebcal.com" crossorigin>
     <link rel="preconnect" href="https://www.sefaria.org" crossorigin>
     <link rel="dns-prefetch" href="https://www.hebcal.com">
@@ -287,20 +285,28 @@
     <link rel="dns-prefetch" href="https://cdn.onesignal.com">
 
     <link rel="stylesheet" href="tailwind.css?v=2" />
-    <!-- KosherZmanim: defer (לא חוסם רינדור); בכשל — נפילה ל-jsDelivr עם אותו hash.
+    <!-- KosherZmanim 0.9.0 — אחסון עצמי (אותו קובץ בדיוק כמו ב-unpkg, אותו hash SRI):
+         חוסך חיבור לדומיין שלישי בכל טעינה ומאפשר מטמון ארוך (הגרסה בשם הקובץ).
+         defer (לא חוסם רינדור); בכשל — נפילה ל-unpkg ואז ל-jsDelivr עם אותו hash.
          script.js בודק את window.KosherZmanim בזמן ריצה ונופל ל-API של Hebcal אם חסר. -->
-    <script
-      src="https://unpkg.com/kosher-zmanim@0.9.0/dist/kosher-zmanim.min.js"
+    <!-- הספרייה יורדת מוקדם (preload) אך מוזרקת ומתבצעת אחרי הציור הראשון — בטוען
+         שבסוף ה-body, לפני script.js (async=false שומר על הסדר). -->
+    <link
+      rel="preload"
+      href="/kosher-zmanim-0.9.0.min.js"
+      as="script"
       integrity="sha384-oajHVnQqCix/BrH1MgbJQS6LNlNaPmnUMsLLT0bMIPiFhSXK/OoQKGy9GQluheJ1"
       crossorigin="anonymous"
-      defer
-      onerror="var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/kosher-zmanim@0.9.0/dist/kosher-zmanim.min.js';s.integrity='sha384-oajHVnQqCix/BrH1MgbJQS6LNlNaPmnUMsLLT0bMIPiFhSXK/OoQKGy9GQluheJ1';s.crossOrigin='anonymous';document.head.appendChild(s);"
-    ></script>
-    <link
-      href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800&family=Frank+Ruhl+Libre:wght@400;700;900&display=swap"
-      rel="stylesheet"
     />
-    <link rel="stylesheet" href="style.css?v=53" />
+    <!-- גופני האתר באחסון עצמי (ראו fonts.css): בלי בקשה ל-Google Fonts בטעינה,
+         ו-preload לגופן הכותרת (העברית של Assistant) — LCP יציב ומהיר. -->
+    <link rel="preload" href="/fonts/assistant-hebrew.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="/fonts.css?v=1" />
+    <link rel="stylesheet" href="style.css?v=54" />
+    <!-- הקוד הראשי יורד מוקדם (preload) אך מוזרק ומתבצע רק אחרי הציור הראשון —
+         ראו הטוען בסוף ה-body. ה-?v= כאן חייב להיות זהה לזה שבטוען וב-sw.js. -->
+    <link rel="preload" href="script.js?v=48" as="script" />
+    <link rel="preload" href="lux.js?v=46" as="script" />
 
     <!-- OneSignal Web Push SDK -->
     <script>
@@ -311,7 +317,31 @@
       // gesture (otherwise the browser silently blocks the permission prompt).
       window.OneSignalReady = false;
     </script>
-    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+    <script>
+      // טעינה עצלה של OneSignal: ה-SDK (43KB + קוקיז צד-ג') נטען רק למשתמשים
+      // שכבר הפעילו התראות (או שיש הרשאה בדפדפן), וכן ברגע שמשתמש לוחץ על
+      // מתג ההתראות (script.js → requestNotificationPermission). מבקר חדש לא
+      // מוריד אותו כלל — פחות JS בטעינה ואפס קוקיז צד-ג' לפני הסכמה.
+      window.__loadOneSignal = function () {
+        if (window.__oneSignalLoading) return;
+        window.__oneSignalLoading = true;
+        var s = document.createElement("script");
+        s.src = "https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js";
+        s.defer = true;
+        s.onerror = function () { window.__oneSignalLoading = false; };
+        document.head.appendChild(s);
+      };
+      try {
+        var _osWanted =
+          localStorage.getItem("moadim_notifications_enabled") === "true" ||
+          ("Notification" in window && Notification.permission === "granted");
+        if (_osWanted) {
+          window.addEventListener("load", function () {
+            setTimeout(window.__loadOneSignal, 2500);
+          });
+        }
+      } catch (e) {}
+    </script>
     <script>
       window.OneSignalDeferred = window.OneSignalDeferred || [];
       OneSignalDeferred.push(async function (OneSignal) {
@@ -389,6 +419,8 @@
   <body
     class="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200 pb-24"
   >
+    <!-- קישור דילוג לתוכן — מופיע רק בפוקוס מקלדת (נגישות) -->
+    <a href="#main-content" class="skip-link">דלג לתוכן הראשי</a>
     <!-- ═══ מסך פתיחה קולנועי ═══ -->
     <div id="lux-splash" aria-hidden="true">
       <div class="lux-splash-inner">
@@ -419,13 +451,14 @@
     </script>
     <div
       class="fixed top-0 left-0 right-0 z-50 px-4 py-3 flex justify-between items-center pointer-events-none"
+      style="padding-top:max(0.75rem, env(safe-area-inset-top, 0px));"
       role="toolbar"
       aria-label="פעולות מהירות"
     >
       <div class="pointer-events-auto flex gap-2">
         <button
           onclick="toggleSettings()"
-          class="nav-action-btn bg-white/10 backdrop-blur-md border border-white/20 text-white p-2.5 rounded-full hover:bg-white/20 transition-all shadow-lg"
+          class="nav-action-btn bg-white/10 backdrop-blur-md border border-white/20 text-white p-3 rounded-full hover:bg-white/20 transition-all shadow-lg"
           title="הגדרות אישיות"
           aria-label="הגדרות"
         >
@@ -451,7 +484,7 @@
         </button>
         <button
           onclick="openGlobalSmartSearch()"
-          class="nav-action-btn bg-white/10 backdrop-blur-md border border-white/20 text-white p-2.5 rounded-full hover:bg-white/20 transition-all shadow-lg"
+          class="nav-action-btn bg-white/10 backdrop-blur-md border border-white/20 text-white p-3 rounded-full hover:bg-white/20 transition-all shadow-lg"
           title="חיפוש חכם בכל הספרים"
           aria-label="חיפוש חכם"
         >
@@ -471,7 +504,7 @@
         </button>
         <button
           onclick="openCompass()"
-          class="nav-action-btn bg-white/10 backdrop-blur-md border border-white/20 text-white p-2.5 rounded-full hover:bg-white/20 transition-all shadow-lg"
+          class="nav-action-btn bg-white/10 backdrop-blur-md border border-white/20 text-white p-3 rounded-full hover:bg-white/20 transition-all shadow-lg"
           title="מצפן לירושלים"
           aria-label="מצפן"
         >
@@ -491,7 +524,7 @@
         </button>
         <button
           onclick="shareApp()"
-          class="nav-action-btn bg-white/10 backdrop-blur-md border border-white/20 text-white p-2.5 rounded-full hover:bg-white/20 transition-all shadow-lg"
+          class="nav-action-btn bg-white/10 backdrop-blur-md border border-white/20 text-white p-3 rounded-full hover:bg-white/20 transition-all shadow-lg"
           title="שתף את האתר"
           aria-label="שתף"
         >
@@ -525,7 +558,7 @@
     </div>
 
     <!-- Toast Container -->
-    <div id="toast-container"></div>
+    <div id="toast-container" role="status" aria-live="polite"></div>
 
     <header
       id="hero-section"
@@ -537,9 +570,11 @@
 
       <!-- Subtle glow orbs -->
       <div class="absolute inset-0 z-0 pointer-events-none" aria-hidden="true">
-        <div class="lux-hero-orb" style="position:absolute;top:8%;right:12%;width:340px;height:340px;background:radial-gradient(circle,rgba(232,193,90,0.10) 0%,transparent 70%);border-radius:50%;filter:blur(46px);"></div>
-        <div class="lux-hero-orb" style="position:absolute;bottom:18%;left:8%;width:280px;height:280px;background:radial-gradient(circle,rgba(59,130,246,0.10) 0%,transparent 70%);border-radius:50%;filter:blur(44px);"></div>
-        <div class="lux-hero-orb" style="position:absolute;top:38%;left:50%;width:240px;height:240px;background:radial-gradient(circle,rgba(226,183,79,0.06) 0%,transparent 70%);border-radius:50%;filter:blur(34px);transform:translateX(-50%);"></div>
+        <!-- מיקום בפיקסלים (לא באחוזים): ההירו גדל כשהדשבורד נטען, ואורבים
+             באחוזי גובה "קפצו" איתו — CLS של 0.73 במובייל. פיקסלים מהחלק העליון יציבים. -->
+        <div class="lux-hero-orb" style="position:absolute;top:64px;right:12%;width:340px;height:340px;background:radial-gradient(circle,rgba(232,193,90,0.10) 0%,transparent 70%);border-radius:50%;filter:blur(46px);"></div>
+        <div class="lux-hero-orb" style="position:absolute;top:520px;left:8%;width:280px;height:280px;background:radial-gradient(circle,rgba(59,130,246,0.10) 0%,transparent 70%);border-radius:50%;filter:blur(44px);"></div>
+        <div class="lux-hero-orb" style="position:absolute;top:300px;left:50%;width:240px;height:240px;background:radial-gradient(circle,rgba(226,183,79,0.06) 0%,transparent 70%);border-radius:50%;filter:blur(34px);transform:translateX(-50%);"></div>
       </div>
 
       <!-- Wave divider -->
@@ -550,6 +585,9 @@
       </div>
 
       <div class="relative z-10 max-w-5xl mx-auto text-center">
+        <!-- שומר-מקום לברכת השעה (lux.js "greeting" ממלא אותו) — כך הכותרת לא זזה
+             כשהברכה מוזרקת אחרי הציור הראשון (CLS/LCP) -->
+        <div id="lux-greeting"></div>
         <h1
           class="text-5xl md:text-7xl font-extrabold text-white mb-6 tracking-tighter"
           style="text-shadow: 0 0 60px rgba(96,165,250,0.3);"
@@ -578,7 +616,6 @@
             style="color:#fdf3d0;border:1px solid rgba(232,193,90,0.5);background:linear-gradient(135deg,rgba(120,86,20,0.35),rgba(30,58,138,0.4),rgba(120,86,20,0.35));box-shadow:0 0 22px rgba(232,193,90,0.28),0 0 38px rgba(59,130,246,0.18),inset 0 1px 0 rgba(255,255,255,0.15);text-shadow:0 1px 8px rgba(0,0,0,0.4);"
             onmouseover="this.style.color='#ffffff';this.style.background='linear-gradient(135deg,rgba(150,110,30,0.5),rgba(30,58,138,0.55),rgba(150,110,30,0.5))';this.style.boxShadow='0 0 28px rgba(232,193,90,0.5),0 0 52px rgba(59,130,246,0.28),inset 0 1px 0 rgba(255,255,255,0.25)';"
             onmouseout="this.style.color='#fdf3d0';this.style.background='linear-gradient(135deg,rgba(120,86,20,0.35),rgba(30,58,138,0.4),rgba(120,86,20,0.35))';this.style.boxShadow='0 0 22px rgba(232,193,90,0.28),0 0 38px rgba(59,130,246,0.18),inset 0 1px 0 rgba(255,255,255,0.15)';"
-            aria-label="בניית אתר"
           >
             <span class="relative flex h-2.5 w-2.5">
               <span
@@ -645,7 +682,7 @@
             <path d="M12 18l-1.5 3M12 18l1.5 3"></path>
             <path d="M5 4.5v.01M8.5 4.5v.01M12 2.5v.01M15.5 4.5v.01M19 4.5v.01"></path>
           </svg>
-          <span class="whitespace-nowrap">בתי כנסת מקוואות וציוני צדיקים באזורך</span>
+          <span>בתי כנסת מקוואות וציוני צדיקים באזורך</span>
         </a>
         <!-- ══════════════════════════════════ -->
 
@@ -664,10 +701,13 @@
         <div
           id="shabbat-countdown-wrap"
           class="hidden mx-auto mb-6 flex items-center justify-center"
-          aria-label="ספירה לאחור לכניסת שבת"
+          aria-label="ספירה לאחור לכניסת שבת — לחץ לפרטי שבת"
           onclick="openShabbatInfoModal()"
           style="cursor:pointer;"
           title="לחץ לפרטי שבת"
+          role="button"
+          tabindex="0"
+          onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openShabbatInfoModal()}"
         >
           <div id="shabbat-countdown-bar" class="flex items-center justify-center gap-3">
             <span class="text-blue-200/80 text-sm font-bold" id="countdown-label">🕯️ עוד</span>
@@ -692,7 +732,7 @@
           </div>
           <!-- כפתור עוד -->
           <div class="flex justify-center mb-2">
-            <button id="prayer-more-btn" onclick="toggleMorePrayers()" class="chevron-cta-pulse flex items-center gap-1.5 text-blue-200/70 hover:text-blue-100 text-xs font-bold px-4 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all">
+            <button id="prayer-more-btn" onclick="toggleMorePrayers()" aria-expanded="false" aria-controls="prayer-more-grid" class="chevron-cta-pulse flex items-center gap-1.5 text-blue-200/70 hover:text-blue-100 text-xs font-bold px-4 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all">
               <span id="prayer-more-label">תפילות נוספות</span>
               <svg id="prayer-more-chevron" class="w-3 h-3 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
             </button>
@@ -761,7 +801,7 @@
           class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 hidden opacity-0 transition-opacity duration-500"
         >
           <!-- כרטיסייה 1: התאריך היום -->
-          <article
+          <div
             class="glass-card p-2.5 md:p-3.5 rounded-[2rem] text-right flex flex-col justify-center cursor-pointer hover:ring-2 hover:ring-amber-400/50 transition-all"
             onclick="openHilulotModal()"
             role="button"
@@ -793,13 +833,17 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
               </svg>
             </div>
-          </article>
+          </div>
 
           <!-- כרטיסייה 2: שבת קרובה -->
-          <article
+          <div
             id="shabbat-card"
             class="glass-card p-2.5 md:p-3.5 rounded-[2rem] text-right flex flex-col justify-center relative cursor-pointer hover:ring-2 hover:ring-blue-400/50 transition-all"
             onclick="if(window.openParshaTorahModal) window.openParshaTorahModal()"
+            role="button"
+            tabindex="0"
+            title="לחץ לדבר תורה על פרשת השבוע"
+            onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();if(window.openParshaTorahModal) window.openParshaTorahModal()}"
           >
             <h2
               class="dashboard-card-title-tight text-blue-300 text-[12px] md:text-[14px] font-bold uppercase tracking-widest opacity-90"
@@ -819,10 +863,10 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
               </svg>
             </div>
-          </article>
+          </div>
 
           <!-- כרטיסייה 3: ברכת הלבנה הקרובה -->
-          <article
+          <div
             class="glass-card p-2.5 md:p-3.5 rounded-[2rem] text-right flex flex-col justify-center cursor-pointer hover:ring-2 hover:ring-purple-400/50 transition-all"
             onclick="openPrayer('kiddush-levana','ברכת לבנה','Kiddush Levana')"
             title="לחץ לפתיחת ברכת הלבנה"
@@ -851,10 +895,10 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
               </svg>
             </div>
-          </article>
+          </div>
 
           <!-- כרטיסייה 4: המועד הבא -->
-          <article
+          <div
             class="glass-card p-2.5 md:p-3.5 rounded-[2rem] text-right flex flex-col justify-center cursor-pointer hover:ring-2 hover:ring-blue-400/50 transition-all"
             onclick="openMoadModal()"
             role="button"
@@ -880,7 +924,7 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
               </svg>
             </div>
-          </article>
+          </div>
 
         </div>
 
@@ -1086,7 +1130,6 @@
       <div
         id="resultsGrid"
         class="space-y-4 md:space-y-5 pb-20"
-        aria-live="polite"
       ></div>
     </main>
 
@@ -1172,7 +1215,7 @@
               <tr><td class="py-2 pl-4 font-semibold">תשעה באב</td><td class="py-2 pl-4">ט' באב</td><td class="py-2 pl-4">12 באוגוסט 2027</td><td class="py-2">חמישי</td></tr>
             </tbody>
           </table>
-          <p class="mt-2 text-xs text-slate-400 dark:text-slate-500">התאריכים לפי הלוח הנהוג בארץ ישראל. ללוח המלא, לזמני החגים המדויקים ולייצוא ליומן — השתמשו בלוח האינטראקטיבי שבראש הדף.</p>
+          <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">התאריכים לפי הלוח הנהוג בארץ ישראל. ללוח המלא, לזמני החגים המדויקים ולייצוא ליומן — השתמשו בלוח האינטראקטיבי שבראש הדף.</p>
         </div>
         <!-- LUACH-AUTO:TABLE:END -->
 
@@ -1314,7 +1357,7 @@
             הצהרת נגישות
           </a>
         </div>
-        <p class="text-xs text-slate-400 dark:text-slate-500">
+        <p class="text-xs text-slate-500 dark:text-slate-400">
           &copy; <span id="footer-year">2026</span> NZ-web. כל הזכויות שמורות.
         </p>
       </div>
@@ -1323,7 +1366,7 @@
     <!-- PWA Install Banner -->
     <div
       id="pwa-install-banner"
-      role="banner"
+      role="status"
       aria-live="polite"
       style="display:none;position:fixed;bottom:5.5rem;left:50%;transform:translateX(-50%) translateY(20px);z-index:45;opacity:0;transition:all 0.4s cubic-bezier(0.34,1.56,0.64,1);max-width:min(420px,90vw);width:100%;"
     >
@@ -1425,7 +1468,7 @@
             <div id="omer-timer-box" class="mb-3 py-2 px-4 bg-white/60 dark:bg-slate-700/40 rounded-xl text-center">
               <div id="omer-timer-label" class="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 text-center"></div>
               <div id="omer-timer-display" class="text-2xl font-mono font-black text-blue-700 dark:text-blue-300 tracking-widest text-center" dir="ltr">--:--:--</div>
-              <div id="omer-timer-sublabel" class="text-xs text-slate-400 dark:text-slate-500 mt-1 text-center"></div>
+              <div id="omer-timer-sublabel" class="text-xs text-slate-500 dark:text-slate-400 mt-1 text-center"></div>
             </div>
             <p
               id="omer-modal-text"
@@ -1485,6 +1528,7 @@
       style="background:#faf9f6;"
       role="dialog"
       aria-modal="true"
+      aria-labelledby="sefaria-modal-title"
     >
         <!-- סדר אחיד (09/2026): כותרת ראשונה = צד ימין, ✕ אחרון = צד שמאל -->
         <div
@@ -2021,6 +2065,8 @@
               >
                 --
               </p>
+              <!-- גישה מקלדתית לבורר החודש/שנה (הכותרת עצמה היא h2 לחיץ) — נראה רק בפוקוס -->
+              <button type="button" class="sr-focusable" onclick="openMonthYearPicker()" aria-haspopup="dialog">בחירת חודש ושנה</button>
             </div>
             <button
               onclick="changeMonth(1)"
@@ -2081,28 +2127,28 @@
           </button>
         </div>
         <div class="p-3 md:p-6 overflow-y-auto flex-1">
-          <div class="cal-grid mb-2" role="row">
-            <div class="cal-header dark:text-slate-400" role="columnheader">א'</div>
-            <div class="cal-header dark:text-slate-400" role="columnheader">
+          <div class="cal-grid mb-2">
+            <div class="cal-header dark:text-slate-400">א'</div>
+            <div class="cal-header dark:text-slate-400">
               ב'
             </div>
-            <div class="cal-header dark:text-slate-400" role="columnheader">
+            <div class="cal-header dark:text-slate-400">
               ג'
             </div>
-            <div class="cal-header dark:text-slate-400" role="columnheader">
+            <div class="cal-header dark:text-slate-400">
               ד'
             </div>
-            <div class="cal-header dark:text-slate-400" role="columnheader">
+            <div class="cal-header dark:text-slate-400">
               ה'
             </div>
-            <div class="cal-header text-amber-600 dark:text-amber-400" role="columnheader">
+            <div class="cal-header text-amber-600 dark:text-amber-400">
               ו'
             </div>
-            <div class="cal-header text-rose-500 dark:text-rose-400" role="columnheader">
+            <div class="cal-header text-rose-500 dark:text-rose-400">
               ש'
             </div>
           </div>
-          <div id="cal-days-grid" class="cal-grid" role="grid"></div>
+          <div id="cal-days-grid" class="cal-grid"></div>
         </div>
       </div>
     </div>
@@ -2116,11 +2162,11 @@
       style="
         display:none;
         position:fixed;
-        bottom:1.4rem;
+        bottom:calc(1.4rem + env(safe-area-inset-bottom, 0px));
         left:1.1rem;
         z-index:9998;
-        width:2.6rem;
-        height:2.6rem;
+        width:2.75rem;
+        height:2.75rem;
         border-radius:50%;
         border:1px solid rgba(99,102,241,0.35);
         background:rgba(255,255,255,0.55);
@@ -2191,8 +2237,59 @@
       </section>
     </noscript>
 
-    <script src="script.js?v=47" defer></script>
-    <script src="lux.js?v=45" defer></script>
+    <!-- טוען הקוד הראשי: הקבצים כבר ירדו (preload ב-head), אך מוזרקים ומתבצעים רק
+         אחרי DOMContentLoaded + הפריים המצויר הראשון (double-rAF). עם defer רגיל
+         ~1s של ביצוע JS (בנייד) התבצע לפני הציור הראשון ודחה FCP/LCP. הסדר נשמר:
+         kosher-zmanim (defer) מתבצע לפני DOMContentLoaded, ואז script.js → lux.js
+         (async=false = ביצוע לפי סדר ההזרקה). רשת ביטחון: טיימר 1.5s (rAF לא יורה
+         בטאב מוסתר). לא להחזיר ל-<script defer>. -->
+    <script>
+      (function () {
+        var started = false;
+        var KZ_SRI = "sha384-oajHVnQqCix/BrH1MgbJQS6LNlNaPmnUMsLLT0bMIPiFhSXK/OoQKGy9GQluheJ1";
+        function addScript(src, opts) {
+          var s = document.createElement("script");
+          s.src = src;
+          s.async = false;
+          if (opts && opts.sri) { s.integrity = opts.sri; s.crossOrigin = "anonymous"; }
+          if (opts && opts.onerror) s.onerror = opts.onerror;
+          document.body.appendChild(s);
+        }
+        function go() {
+          if (started) return;
+          started = true;
+          // KosherZmanim (אחסון עצמי, SRI) — בכשל: unpkg ואז jsDelivr עם אותו hash;
+          // script.js בודק window.KosherZmanim בזמן ריצה ונופל ל-API של Hebcal אם חסר.
+          addScript("/kosher-zmanim-0.9.0.min.js", {
+            sri: KZ_SRI,
+            onerror: function () {
+              addScript("https://unpkg.com/kosher-zmanim@0.9.0/dist/kosher-zmanim.min.js", {
+                sri: KZ_SRI,
+                onerror: function () {
+                  addScript("https://cdn.jsdelivr.net/npm/kosher-zmanim@0.9.0/dist/kosher-zmanim.min.js", { sri: KZ_SRI });
+                },
+              });
+            },
+          });
+          addScript("script.js?v=48");
+          addScript("lux.js?v=46");
+        }
+        function afterFirstPaint() {
+          // rAF אחד (רץ ממש לפני ציור הפריים הראשון) ואז setTimeout(0) — משימה
+          // נפרדת שרצה אחרי שהפריים כבר נשלח לקומפוזיטור. לא rAF כפול: rAF שני
+          // נמצא מתעכב ~1s ב-Chrome כשרק אנימציות קומפוזיטור (מסך הפתיחה) פעילות.
+          try {
+            requestAnimationFrame(function () { setTimeout(go, 0); });
+          } catch (e) { go(); }
+          setTimeout(go, 1500);
+        }
+        if (document.readyState === "loading") {
+          document.addEventListener("DOMContentLoaded", afterFirstPaint);
+        } else {
+          afterFirstPaint();
+        }
+      })();
+    </script>
 
     <!-- Service Worker registration — enables offline caching (PWA) -->
     <script>

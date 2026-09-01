@@ -44,6 +44,12 @@
   force = true
 
 [[redirects]]
+  from = "/minify.mjs"
+  to = "/404.html"
+  status = 404
+  force = true
+
+[[redirects]]
   from = "/tailwind.config.js"
   to = "/404.html"
   status = 404
@@ -65,8 +71,8 @@
     X-Content-Type-Options = "nosniff"
     X-Frame-Options = "SAMEORIGIN"
     Referrer-Policy = "strict-origin-when-cross-origin"
-    Strict-Transport-Security = "max-age=31536000; includeSubDomains"
-    Permissions-Policy = "geolocation=(self), camera=(), microphone=(), payment=(), usb=()"
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload"
+    Permissions-Policy = "geolocation=(self), camera=(), microphone=(), payment=(), usb=(), interest-cohort=(), browsing-topics=()"
     Content-Security-Policy = "frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'self'"
     Cross-Origin-Opener-Policy = "same-origin"
 
@@ -85,20 +91,47 @@
   [headers.values]
     Cache-Control = "no-cache, must-revalidate"
 
+# קבצי הקוד ממוסמכים ב-?v= (כל שינוי = URL חדש), וה-SW מאמת מול השרת בכל
+# טעינה (cache:"no-cache") — לכן יום שלם במטמון הדפדפן בטוח, וביקור חוזר
+# בלי SW (סורקים, מצב פרטי) חוסך הורדה של ~600KB.
 [[headers]]
   for = "/script.js"
   [headers.values]
-    Cache-Control = "public, max-age=3600, stale-while-revalidate=86400"
+    Cache-Control = "public, max-age=86400, stale-while-revalidate=604800"
 
 [[headers]]
   for = "/lux.js"
   [headers.values]
-    Cache-Control = "public, max-age=3600, stale-while-revalidate=86400"
+    Cache-Control = "public, max-age=86400, stale-while-revalidate=604800"
 
 [[headers]]
   for = "/style.css"
   [headers.values]
-    Cache-Control = "public, max-age=3600, stale-while-revalidate=86400"
+    Cache-Control = "public, max-age=86400, stale-while-revalidate=604800"
+
+[[headers]]
+  for = "/fonts.css"
+  [headers.values]
+    Cache-Control = "public, max-age=86400, stale-while-revalidate=604800"
+
+# קבצי הגופנים (woff2) — שינוי גופן = שם קובץ חדש ⇒ מטמון שנה, בלתי-משתנה
+[[headers]]
+  for = "/fonts/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# ספריית הזמנים באחסון עצמי — הגרסה בשם הקובץ ⇒ מטמון ארוך ובלתי-משתנה
+[[headers]]
+  for = "/kosher-zmanim-0.9.0.min.js"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# מפות מקור (נוצרות ב-minify.mjs) — נטענות רק כש-DevTools פתוח; לא לאינדוקס
+[[headers]]
+  for = "/*.map"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
+    X-Robots-Tag = "noindex"
 
 # tailwind.css נוצר מחדש בכל דיפלוי אך ה-?v= שלו קבוע — לכן revalidation
 # בכל בקשה (זול: 304 של קובץ קטן) במקום מטמון שעה שעלול להגיש CSS ישן.

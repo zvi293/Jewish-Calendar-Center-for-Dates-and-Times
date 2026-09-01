@@ -435,17 +435,32 @@ function escapeHtml(s) {
     .replace(/'/g, "&#39;");
 }
 // חיטוי HTML שמקורו חיצוני שאינו בשליטתנו (דפי מקור של ספריא, ויקיטקסט וכד')
+// תאריך "YYYY-MM-DD" → חצות מקומית. new Date("YYYY-MM-DD") מפרש כ-UTC, ובאזורי זמן
+// מערבית ל-UTC (למשל ארה"ב) מחזיר את היום הקודם ⇒ ימי שבוע וספירת ימים שגויים.
+function parseLocalDate(v) {
+  if (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v)) {
+    const p = v.split("-");
+    return new Date(+p[0], +p[1] - 1, +p[2]);
+  }
+  return new Date(v);
+}
+// בדיקת סכמה מסוכנת ב-URL: מסירים תווי בקרה/רווחים שדפדפנים מתעלמים מהם
+// ("java\tscript:", "&#9;") — אחרת הבדיקה עוקפת בקלות (mXSS).
+function _isDangerousUrl(v) {
+  return /^(javascript|data|vbscript):/i.test(String(v == null ? "" : v).replace(/[\u0000-\u0020\u00A0]/g, ""));
+}
 // לפני innerHTML: מסירים תגי הרצה ומאפייני on*/javascript: — עיצוב לגיטימי
 // (b/i/span/br וכו') נשמר. אותה מדיניות כמו מסלול בן-יהודה ב-fetchSec.
 function sanitizeExternalHtml(html) {
   try {
     const doc = new DOMParser().parseFromString(String(html == null ? "" : html), "text/html");
-    doc.querySelectorAll("script,style,iframe,object,embed,link,meta,form").forEach((n) => n.remove());
+    // noscript/template — תוכנם מפוענח מחדש בהצבה ב-innerHTML (mXSS) ⇒ מוסרים
+    doc.querySelectorAll("script,style,iframe,object,embed,link,meta,form,noscript,template,base").forEach((n) => n.remove());
     doc.querySelectorAll("*").forEach((n) => {
       Array.prototype.slice.call(n.attributes).forEach((a) => {
         const nm = a.name.toLowerCase();
         if (nm.indexOf("on") === 0) n.removeAttribute(a.name);
-        else if ((nm === "href" || nm === "src" || nm === "xlink:href") && /^\s*(javascript|data):/i.test(a.value)) n.removeAttribute(a.name);
+        else if ((nm === "href" || nm === "src" || nm === "xlink:href" || nm === "srcdoc" || nm === "formaction") && (nm === "srcdoc" || _isDangerousUrl(a.value))) n.removeAttribute(a.name);
       });
     });
     return doc.body.innerHTML;
@@ -1074,7 +1089,7 @@ let _levanaCountdownInterval = null;
 
 /* רגע הזמן (במילישניות) של תחילת/סוף חלון ברכת הלבנה בתאריך נתון */
 function _levanaZmanMs(dateStr, which) {
-  const d = new Date(dateStr);
+  const d = parseLocalDate(dateStr);
   const zman = getApproxZmanim(d)[which === "s" ? "s" : "e"];
   const [zh, zm] = zman.split(":").map(Number);
   const t = new Date(d);
@@ -3021,9 +3036,55 @@ async function fetchLiveCalendarData() {
       hebrewDateFetchIso = `${ty}-${tm}-${td}`;
     }
 
-    const dateData = await fetchHebcalWithCache(
-      `https://www.hebcal.com/converter?cfg=json&date=${hebrewDateFetchIso}&g2h=1&strict=1`,
+    // ── ביצועים: כל בקשות Hebcal של הטעינה יוצאות עכשיו במקביל (לפני כן: חמישה
+    //    סבבי רשת עוקבים לפני הצגת הדשבורד). ה-await-ים בהמשך ממתינים להבטחות
+    //    שכבר בדרך; דחייה נתפסת בדיוק כמו קודם (try/catch של הפונקציה). ──
+    const _cyPre = dateForHebcal.getFullYear();
+    const _hcBasePre = new Date();
+    _hcBasePre.setHours(0, 0, 0, 0);
+    const _hcEndPre = new Date(_hcBasePre);
+    _hcEndPre.setDate(_hcEndPre.getDate() + 3);
+    const _isoPre = (d) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const _quiet = (p) => {
+      p.catch(() => {});
+      return p;
+    };
+    const _pDate = _quiet(
+      fetchHebcalWithCache(
+        `https://www.hebcal.com/converter?cfg=json&date=${hebrewDateFetchIso}&g2h=1&strict=1`,
+      ),
     );
+    const _pDaf = _quiet(
+      fetchHebcalWithCache(
+        `https://www.hebcal.com/hebcal?v=1&cfg=json&F=on&start=${hebrewDateFetchIso}&end=${hebrewDateFetchIso}`,
+      ),
+    );
+    const _pShabbat = _quiet(
+      fetchHebcalWithCache(
+        `https://www.hebcal.com/shabbat?cfg=json&${getGeoParams()}&m=50&date=${todayLocalIso}`,
+      ),
+    );
+    const _pHc = _quiet(
+      fetchHebcalWithCache(
+        `https://www.hebcal.com/hebcal?v=1&cfg=json&c=on&${getGeoParams()}&start=${_isoPre(_hcBasePre)}&end=${_isoPre(_hcEndPre)}&maj=on&i=on`,
+      ),
+    );
+    const _pYears = _quiet(
+      Promise.all([
+        fetchHebcalWithCache(
+          `https://www.hebcal.com/hebcal?v=1&cfg=json&year=${_cyPre - 1}&i=on&maj=on&min=on&nx=on&mf=on&ss=on&mod=on&s=on`,
+        ),
+        fetchHebcalWithCache(
+          `https://www.hebcal.com/hebcal?v=1&cfg=json&year=${_cyPre}&i=on&maj=on&min=on&nx=on&mf=on&ss=on&mod=on&s=on`,
+        ),
+        fetchHebcalWithCache(
+          `https://www.hebcal.com/hebcal?v=1&cfg=json&year=${_cyPre + 1}&i=on&maj=on&min=on&nx=on&mf=on&ss=on&mod=on&s=on`,
+        ),
+      ]),
+    );
+
+    const dateData = await _pDate;
     window._livePrayerContextData = {
       dateData,
       hebrewDateFetchIso,
@@ -3077,9 +3138,7 @@ async function fetchLiveCalendarData() {
       omerContainer.classList.remove("flex");
     }
 
-    const dafData = await fetchHebcalWithCache(
-      `https://www.hebcal.com/hebcal?v=1&cfg=json&F=on&start=${hebrewDateFetchIso}&end=${hebrewDateFetchIso}`,
-    );
+    const dafData = await _pDaf;
     const dafEvent = (dafData.items || []).find(
       (i) => i.category === "dafyomi",
     );
@@ -3101,9 +3160,7 @@ async function fetchLiveCalendarData() {
 
     renderZmanimGrid(zData);
 
-    const sData = await fetchHebcalWithCache(
-      `https://www.hebcal.com/shabbat?cfg=json&${getGeoParams()}&m=50&date=${todayLocalIso}`,
-    );
+    const sData = await _pShabbat;
     let p = CURRENT_LANG === "he" ? "שבת" : "Shabbat",
       c = "--:--",
       h = "--:--",
@@ -3202,9 +3259,7 @@ async function fetchLiveCalendarData() {
         `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
       const _hcEnd = new Date(_hcBase);
       _hcEnd.setDate(_hcEnd.getDate() + 3);
-      const hcData = await fetchHebcalWithCache(
-        `https://www.hebcal.com/hebcal?v=1&cfg=json&c=on&${getGeoParams()}&start=${_hcIso(_hcBase)}&end=${_hcIso(_hcEnd)}&maj=on&i=on`,
-      );
+      const hcData = await _pHc; // אותו URL בדיוק (_hcBase/_hcEnd) — הבקשה יצאה במקביל למעלה
       window.HOLIDAY_CANDLES_TIME = null;
       window.HOLIDAY_CANDLES_STR = "";
       window.HOLIDAY_HAVDALAH_STR = "";
@@ -3254,17 +3309,7 @@ async function fetchLiveCalendarData() {
     }
 
     const cy = dateForHebcal.getFullYear();
-    const [y0, y1, y2] = await Promise.all([
-      fetchHebcalWithCache(
-        `https://www.hebcal.com/hebcal?v=1&cfg=json&year=${cy - 1}&i=on&maj=on&min=on&nx=on&mf=on&ss=on&mod=on&s=on`,
-      ),
-      fetchHebcalWithCache(
-        `https://www.hebcal.com/hebcal?v=1&cfg=json&year=${cy}&i=on&maj=on&min=on&nx=on&mf=on&ss=on&mod=on&s=on`,
-      ),
-      fetchHebcalWithCache(
-        `https://www.hebcal.com/hebcal?v=1&cfg=json&year=${cy + 1}&i=on&maj=on&min=on&nx=on&mf=on&ss=on&mod=on&s=on`,
-      ),
-    ]);
+    const [y0, y1, y2] = await _pYears;
 
     let newEvents = [];
     const rcCounts = {};
@@ -3325,7 +3370,7 @@ async function fetchLiveCalendarData() {
     };
 
     [...(y0.items || []), ...y1.items, ...y2.items].forEach((ev) => {
-      const eventDate = new Date(ev.date);
+      const eventDate = parseLocalDate(ev.date);
       eventDate.setHours(0, 0, 0, 0);
 
       // ── קידוש לבנה של חודש תשרי: ר"ח תשרי הוא ראש השנה ואינו מגיע
@@ -3539,7 +3584,12 @@ async function fetchLiveCalendarData() {
         `${nextH.name} <br><span class="text-sm font-normal opacity-80">(${formatDaysUntilText(getDaysDiff(nextH.date))})</span>`;
     }
     render();
-    buildMonthCalendar();
+    // הלוח החודשי נבנה ממילא בכל פתיחה (openCalendar) — בטעינה בונים אותו רק אם
+    // המודאל כבר פתוח (רענון נתונים תוך כדי צפייה); חוסך ~150ms חסימה בנייד
+    {
+      const _calM = document.getElementById("calendar-modal");
+      if (_calM && !_calM.classList.contains("hidden")) buildMonthCalendar();
+    }
   } catch (err) {
     console.error(err);
     if (ALL_EVENTS.length === 0)
@@ -3630,12 +3680,16 @@ function showDashboard() {
   setTimeout(() => {
     // חשיפה בלי מעבר CSS: מעבר opacity חד-פעמי קופא כשהדפדפן משהה רינדור
     // (PWA ברקע/מסך כבוי) והאלמנטים "נעלמים" עד רענון — בלי מעבר אין מה שיקפא.
-    [dash, banner, btn, btnShulMikve, prayerWrap].forEach((el) => {
-      if (!el) return;
+    const _revealEls = [dash, banner, btn, btnShulMikve, prayerWrap].filter(Boolean);
+    _revealEls.forEach((el) => {
       el.classList.remove("transition-opacity", "duration-500");
       el.style.transition = "none";
       el.classList.remove("opacity-0");
-      void el.offsetWidth; // מקבע את ה-opacity החדש לפני שמחזירים מעברי hover לכפתורים
+    });
+    // reflow יחיד לכולם (ולא offsetWidth לכל אלמנט = 5 חישובי פריסה של כל הדף):
+    // מקבע את ה-opacity החדש לפני שמחזירים מעברי hover לכפתורים
+    void document.body.offsetWidth;
+    _revealEls.forEach((el) => {
       el.style.transition = "";
     });
   }, 50);
@@ -3992,6 +4046,8 @@ function toggleMorePrayers() {
   grid.classList.toggle("hidden", isOpen);
   chevron.style.transform = isOpen ? "" : "rotate(180deg)";
   label.textContent = isOpen ? "תפילות נוספות" : "פחות";
+  const moreBtn = document.getElementById("prayer-more-btn");
+  if (moreBtn) moreBtn.setAttribute("aria-expanded", isOpen ? "false" : "true");
 }
 
 // Store last zData globally for opinions popup
@@ -4013,7 +4069,7 @@ async function computeFastWindow(name, dateStr) {
   await ensureCityCoords();
 
   // אירועי "ערב" (ערב תשעה באב וכו') — הצום עצמו הוא ביום שאחרי
-  let fastDay = new Date(dateStr);
+  let fastDay = parseLocalDate(dateStr);
   if (name.includes("ערב") || name.includes("Erev")) {
     fastDay.setDate(fastDay.getDate() + 1);
   }
@@ -4181,7 +4237,7 @@ async function fetchFastTimes(name, dateStr, elementId) {
 
 /* ── חישוב חלון חג: כניסה בהדלקת נרות של ערב החג, יציאה בצאת הכוכבים ── */
 async function computeHolidayWindow(name, dateStr) {
-  let holidayDay = new Date(dateStr);
+  let holidayDay = parseLocalDate(dateStr);
   if (name.includes("ערב") || name.includes("Erev")) {
     holidayDay.setDate(holidayDay.getDate() + 1);
   }
@@ -4638,7 +4694,7 @@ function bindCompass() {
 }
 
 function getDaysDiff(d) {
-  const t = new Date(d);
+  const t = parseLocalDate(d);
   t.setHours(0, 0, 0, 0);
   const todayNoTime = new Date();
   todayNoTime.setHours(0, 0, 0, 0);
@@ -4927,10 +4983,37 @@ function openCalendarDay(dateStr) {
   }
 }
 
+// ── מריץ את חישובי זמני הצום/החג של הכרטיסים בזה אחר זה עם "נשימה" בין כל
+// חישוב (setTimeout 0). בלי זה ~60 קריאות ל-KosherZmanim מצטברות למשימה
+// אחת של שניות שלמות במובייל (TBT). דור חדש של render מבטל תור ישן.
+let _cardTimesGen = 0;
+let _renderGen = 0;
+function _runDeferredCardTimes(tasks) {
+  const gen = ++_cardTimesGen;
+  let i = 0;
+  const step = () => {
+    if (gen !== _cardTimesGen || i >= tasks.length) return;
+    let p = null;
+    try {
+      p = tasks[i++]();
+    } catch (e) {}
+    Promise.resolve(p)
+      .catch(() => {})
+      .then(() => setTimeout(step, 0));
+  };
+  step();
+}
+
 function render(filter = "all", search = "") {
   const c = document.getElementById("resultsGrid");
   const ui = getDynamicUiText();
   c.innerHTML = "";
+  // ביצועים: בונים את כל ה-HTML במערך ומציבים פעם אחת. ‎innerHTML +=‎ בלולאה
+  // גרם לפרסינג מחדש של כל הכרטיסים הקודמים בכל איטרציה (ריבועי) — ~4 שניות
+  // חסימה במובייל על ~145 כרטיסים.
+  const _parts = [];
+  const _countdownTexts = [];
+  const _deferredTimes = [];
   const filtered = ALL_EVENTS.filter(
     (e) =>
       e.type !== "parashat" &&
@@ -4950,7 +5033,7 @@ function render(filter = "all", search = "") {
         }[e.type] || "slate";
     const str = encodeURIComponent(JSON.stringify(e)).replace(/'/g, "%27");
 
-    const dateDisplay = `${ui.weekdayNames[new Date(e.date).getDay()]} | ${formatLocalizedDate(new Date(e.date), { day: "2-digit", month: "2-digit", year: "numeric" })} | <span class="text-slate-800 dark:text-slate-200 font-bold">${getHebrewDateString(new Date(e.date))}</span>`;
+    const dateDisplay = `${ui.weekdayNames[parseLocalDate(e.date).getDay()]} | ${formatLocalizedDate(parseLocalDate(e.date), { day: "2-digit", month: "2-digit", year: "numeric" })} | <span class="text-slate-800 dark:text-slate-200 font-bold">${getHebrewDateString(new Date(e.date))}</span>`;
 
     let extraTimesHtml = "";
     const _isFastEv =
@@ -4961,7 +5044,7 @@ function render(filter = "all", search = "") {
     if (_isFastEv) {
       const elId = `fast-times-${e.date}`;
       extraTimesHtml = `<div id="${elId}" class="mt-3 flex flex-wrap gap-2 text-xs" aria-live="polite">מחשב זמני צום...</div>`;
-      fetchFastTimes(e.name, e.date, elId);
+      _deferredTimes.push(() => fetchFastTimes(e.name, e.date, elId));
     } else if (e.type === "major" && shouldShowHolidayTimes(e)) {
       const isExclude =
         e.name.includes("חוה") ||
@@ -4976,7 +5059,7 @@ function render(filter = "all", search = "") {
       if (!isExclude) {
         const elId = `holiday-times-${e.date}`;
         extraTimesHtml = `<div id="${elId}" class="mt-3 flex flex-wrap gap-2 text-xs" aria-live="polite">מחשב זמני חג...</div>`;
-        fetchHolidayTimes(e.name, e.date, elId);
+        _deferredTimes.push(() => fetchHolidayTimes(e.name, e.date, elId));
       }
     }
 
@@ -5013,31 +5096,58 @@ function render(filter = "all", search = "") {
           ? `בעוד ${diff} ימים`
           : `In ${diff} Days`;
 
-    c.innerHTML += `
+    _parts.push(`
                     <article class="event-card card-${e.type} bg-gradient-to-br ${cardGradient} border border-slate-100 dark:border-slate-700/50 p-5 md:p-7 rounded-[2rem] flex flex-col md:flex-row items-center justify-between gap-4 shadow-sm" tabindex="0">
                         <div class="flex items-center gap-4 md:gap-6 w-full md:w-auto">
                             <div class="w-14 h-14 md:w-16 md:h-16 shrink-0 bg-white dark:bg-slate-700/50 text-2xl md:text-3xl flex items-center justify-center rounded-2xl md:rounded-3xl shadow-md border border-${color}-100 dark:border-${color}-500/20" style="box-shadow:0 4px 15px rgba(0,0,0,0.06);" aria-hidden="true">${e.icon}</div>
                             <div class="flex-1 min-w-0">
-                                <h3 class="font-black text-slate-900 dark:text-white text-xl md:text-2xl mb-1 cursor-pointer hover:text-${color}-600 dark:hover:text-${color}-400 transition-colors truncate" data-ev-name="${escapeHtml(e.name)}" data-ev-title="${escapeHtml(e.titleStr || e.name)}" onclick="openSefariaModal(this.dataset.evName, this.dataset.evTitle)">${escapeHtml(e.name)}</h3>
+                                <h3 class="font-black text-slate-900 dark:text-white text-xl md:text-2xl mb-1 hover:text-${color}-600 dark:hover:text-${color}-400 transition-colors truncate"><button type="button" class="ev-name-btn" data-ev-name="${escapeHtml(e.name)}" data-ev-title="${escapeHtml(e.titleStr || e.name)}" onclick="openSefariaModal(this.dataset.evName, this.dataset.evTitle)" aria-haspopup="dialog">${escapeHtml(e.name)}</button></h3>
                                 <div class="text-slate-500 dark:text-slate-400 font-medium text-sm">${dateDisplay}</div>
                                 ${extraTimesHtml}
                                 ${e.levanaString ? `${e.levanaString}` : ""}
                             </div>
                         </div>
                         <div class="flex md:flex-col items-center justify-between w-full md:w-auto md:items-end md:justify-center border-t border-slate-100/80 dark:border-slate-700/50 md:border-t-0 pt-3 md:pt-0 mt-2 md:mt-0 gap-2 md:gap-2">
-                            <div class="${isToday && !isMoonOpen ? `bg-${color}-600 text-white shadow-lg` : isMoonOpen ? `bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300` : `bg-${color}-50 dark:bg-${color}-500/15 text-${color}-700 dark:text-${color}-300`} px-4 py-2 rounded-xl text-sm font-black md:mb-1 transition-all" aria-label="זמן נותר">${badgeText}</div>
+                            <div class="${isToday && !isMoonOpen ? `bg-${color}-600 text-white shadow-lg` : isMoonOpen ? `bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300` : `bg-${color}-50 dark:bg-${color}-500/15 text-${color}-700 dark:text-${color}-300`} px-4 py-2 rounded-xl text-sm font-black md:mb-1 transition-all ev-countdown">${badgeText}</div>
                             <button onclick="downloadICS('${str}')" class="flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500 hover:text-${color}-600 dark:hover:text-${color}-400 font-bold uppercase tracking-wider transition-all bg-white/70 dark:bg-slate-900/40 hover:bg-${color}-50 dark:hover:bg-${color}-900/20 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-${color}-200 dark:hover:border-${color}-700">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg> <span data-i18n-key="sync_mobile">סנכרן</span>
                             </button>
                             ${window._matchMoad && window._matchMoad(e.name) && window._DT[window._matchMoad(e.name)] ? `<button data-moad-name="${e.name.replace(/"/g, "&quot;")}" onclick="window._openMoadByName(this.dataset.moadName);event.stopPropagation();" class="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider transition-all bg-violet-50 dark:bg-violet-900/30 hover:bg-violet-100 dark:hover:bg-violet-900/50 text-violet-600 dark:text-violet-400 px-3 py-2 rounded-xl border border-violet-200 dark:border-violet-700">📖 דבר תורה</button>` : ""}
                         </div>
-                    </article>`;
-    const latestCard = c.lastElementChild;
-    const countdownEl = latestCard?.querySelector("[aria-label]");
-    if (countdownEl && !isMoonOpen)
-      countdownEl.textContent = formatDaysUntilText(diff);
+                    </article>`);
+    _countdownTexts.push(isMoonOpen ? null : formatDaysUntilText(diff));
   });
-  if (c.querySelector(".levana-badge-countdown")) _ensureLevanaBadgeTicker();
+  // ── רינדור בשני חלקים: הכרטיסים הראשונים מיד, השאר בפריים הבא — מפצל משימה
+  //    ארוכה אחת (TBT בנייד) לשתיים קצרות. דור חדש של render (חיפוש/סינון)
+  //    מבטל חלק שני שטרם רץ. חישובי הזמנים והטיקר של הלבנה רצים אחרי ההשלמה. ──
+  const _FIRST = 24;
+  const _gen = ++_renderGen;
+  const _applyCountdown = (from, to) => {
+    for (let i = from; i < to && i < c.children.length; i++) {
+      const t = _countdownTexts[i];
+      if (t == null) continue;
+      const countdownEl = c.children[i].querySelector(".ev-countdown");
+      if (countdownEl) countdownEl.textContent = t;
+    }
+  };
+  const _finish = () => {
+    _runDeferredCardTimes(_deferredTimes);
+    if (c.querySelector(".levana-badge-countdown")) _ensureLevanaBadgeTicker();
+  };
+  c.innerHTML = _parts.slice(0, _FIRST).join("");
+  _applyCountdown(0, _FIRST);
+  if (_parts.length > _FIRST) {
+    setTimeout(() => {
+      if (_gen !== _renderGen || !c.isConnected) return;
+      c.insertAdjacentHTML("beforeend", _parts.slice(_FIRST).join(""));
+      _applyCountdown(_FIRST, _parts.length);
+      _finish();
+      if (typeof setupCardObserver === "function") requestAnimationFrame(setupCardObserver);
+      applyTranslations();
+    }, 0);
+  } else {
+    _finish();
+  }
   if (!filtered.length)
     c.innerHTML = `<div class="text-center py-10 text-slate-400 font-bold text-lg" role="alert">לא נמצאו מועדים תואמים.</div>`;
   if (!filtered.length && CURRENT_LANG !== "he") {
@@ -5264,7 +5374,7 @@ function openMonthYearPicker() {
     yearOpts += `<option value="${yr}" ${yr === selY ? "selected" : ""}>${yr}</option>`;
   }
   let html = `<div style="margin-bottom:0.7rem;text-align:center;">
-          <select id="cal-year-select" onchange="window._calPickerYear(parseInt(this.value))"
+          <select id="cal-year-select" aria-label="בחירת שנה" onchange="window._calPickerYear(parseInt(this.value))"
             style="background:#0f172a;color:#c4b5fd;border:1px solid rgba(139,92,246,0.5);
             border-radius:0.5rem;padding:0.3rem 0.6rem;font-size:0.95rem;font-weight:700;
             cursor:pointer;width:100%;">${yearOpts}</select>
@@ -5350,8 +5460,10 @@ function buildMonthCalendar() {
   const lastDay = new Date(y, m + 1, 0),
     grid = document.getElementById("cal-days-grid");
   grid.innerHTML = "";
+  // ביצועים: כל התאים נבנים במערך ומוצבים פעם אחת (‎innerHTML +=‎ ריבועי)
+  const _cells = [];
   for (let i = 0; i < new Date(y, m, 1).getDay(); i++)
-    grid.innerHTML += `<div class="min-h-[4.5rem] sm:h-20 md:h-28 bg-slate-100/50 dark:bg-slate-800/50 rounded-lg md:rounded-xl border border-transparent" aria-hidden="true"></div>`;
+    _cells.push(`<div class="min-h-[4.5rem] sm:h-20 md:h-28 bg-slate-100/50 dark:bg-slate-800/50 rounded-lg md:rounded-xl border border-transparent" aria-hidden="true"></div>`);
 
   for (let i = 1; i <= lastDay.getDate(); i++) {
     const cDate = new Date(y, m, i),
@@ -5399,15 +5511,16 @@ function buildMonthCalendar() {
     }
     const ariaLabel = `${formatLocalizedDate(cDate, { day: "2-digit", month: "long", year: "numeric" })}${hebrewDate ? ` | ${hebrewDate}` : ""}`;
 
-    grid.innerHTML += `
+    _cells.push(`
                     <div class="min-h-[4.5rem] sm:h-20 md:h-28 p-1 sm:p-1.5 md:p-2.5 bg-white dark:bg-slate-800 rounded-lg md:rounded-xl border ${isToday ? "border-blue-500 ring-2 ring-blue-500/20 shadow-md" : "border-slate-200 dark:border-slate-700"} flex flex-col transition-all md:overflow-hidden" role="button" tabindex="0" aria-haspopup="dialog" data-date="${dStr}" aria-label="${ariaLabel}" onclick="openCalendarDay('${dStr}')" onkeydown="handleCalendarDayKeydown(event, '${dStr}')">
                         <div class="flex justify-between items-start mb-0.5 sm:mb-1 px-0.5 sm:px-1">
-                            <span class="text-[10px] sm:text-xs md:text-sm font-bold text-blue-800 dark:text-blue-400" aria-label="תאריך עברי ${hebDayStr}">${hebDayStr}</span>
-                            <span class="text-xs sm:text-sm md:text-base font-black ${isToday ? "text-blue-600 dark:text-blue-400" : "text-slate-700 dark:text-slate-300"}" aria-label="תאריך לועזי ${i}">${i}</span>
+                            <span class="text-[10px] sm:text-xs md:text-sm font-bold text-blue-800 dark:text-blue-400">${hebDayStr}</span>
+                            <span class="text-xs sm:text-sm md:text-base font-black ${isToday ? "text-blue-600 dark:text-blue-400" : "text-slate-700 dark:text-slate-300"}">${i}</span>
                         </div>
                         <div class="flex-1 overflow-y-auto flex flex-col gap-0.5 sm:gap-1 scrollbar-hide px-0.5 pb-0.5">${evHtml}</div>
-                    </div>`;
+                    </div>`);
   }
+  grid.innerHTML = _cells.join("");
 }
 
 // --- Web Notifications Logic ---
@@ -5552,6 +5665,20 @@ function requestNotificationPermission() {
             icon: "/icon-192.png",
           });
         } catch (e) {}
+        // ה-SDK של OneSignal נטען עצל (index.html). ההרשאה כבר ניתנה — משלימים
+        // את רישום ה-push ברקע ברגע שה-init של ה-SDK מסתיים (לא נדרשת מחווה).
+        try {
+          window.OneSignalDeferred = window.OneSignalDeferred || [];
+          window.OneSignalDeferred.push(async function (OneSignal) {
+            for (let t = 0; t < 40 && window.OneSignalReady !== true; t++) {
+              await new Promise((r) => setTimeout(r, 250));
+            }
+            if (window.OneSignalReady !== true) return;
+            try {
+              await OneSignal.User.PushSubscription.optIn();
+            } catch (e) {}
+          });
+        } catch (e) {}
       }
     });
   };
@@ -5562,6 +5689,13 @@ function requestNotificationPermission() {
   if (typeof window !== "undefined" && window.OneSignalReady === true) {
     useOneSignal();
   } else {
+    // ה-SDK נטען עצל: מתחילים להוריד אותו עכשיו; בקשת ההרשאה עצמה נעשית מיד
+    // ב-API המקורי (בתוך מחוות המשתמש), והרישום ל-push מושלם ברקע אחרי האישור.
+    if (typeof window.__loadOneSignal === "function") {
+      try {
+        window.__loadOneSignal();
+      } catch (e) {}
+    }
     fallbackBrowserPermission();
   }
 }
@@ -5828,10 +5962,16 @@ initApp();
   // (לחץ זיכרון GPU בטלפון גורם לפינוי שכבות ורה-רסטריזציה שנראית כהבהוב).
   // הסימולציה מפוצה ב-STEP=2 כך שמהירות הנדידה, הריצוד והנצנוץ נשמרת זהה.
   const _STARS_STEP = window.matchMedia("(pointer: coarse)").matches ? 2 : 1;
+  // prefers-reduced-motion: פריים סטטי אחד של השמיים — בלי לולאת אנימציה
+  const _starsReduced = (() => {
+    try { return window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { return false; }
+  })();
   let _starsFrameNo = 0;
   function draw() {
     _starsFrameNo++;
-    if (_STARS_STEP === 2 && _starsFrameNo % 2) {
+    if (_starsReduced) {
+      if (_starsFrameNo > 1) return;
+    } else if (_STARS_STEP === 2 && _starsFrameNo % 2) {
       requestAnimationFrame(draw);
       return;
     }
@@ -6634,7 +6774,9 @@ function openMotzeiShabbatModal(activeTab) {
     ? NUSACH_LABELS[nusach] : nusach;
 
   // Detect Rosh Chodesh
-  const _todayIsoH = new Date().toISOString().slice(0, 10);
+  // תאריך מקומי (לא UTC — בין חצות ל-03:00 שעון ישראל toISOString מחזיר אתמול)
+  const _tdH = new Date();
+  const _todayIsoH = `${_tdH.getFullYear()}-${String(_tdH.getMonth() + 1).padStart(2, "0")}-${String(_tdH.getDate()).padStart(2, "0")}`;
   const isRoshChodesh = (window.ALL_EVENTS || []).some(
     e => e.date === _todayIsoH && /ראש חודש|Rosh Chodesh/i.test(e.name || e.heb || "")
   );
@@ -6908,7 +7050,7 @@ function openMotzeiShabbatModal(activeTab) {
     <div id="motzei-card" style="background:linear-gradient(160deg,#1a1f3a,#0f1628);border:1px solid rgba(255,255,255,0.1);border-radius:24px 24px 0 0;width:100%;max-width:480px;margin:0 auto;box-sizing:border-box;max-height:82vh;display:flex;flex-direction:column;overflow:hidden;color:#fff;box-shadow:0 -20px 60px rgba(0,0,0,0.5);position:relative;direction:rtl;">
       <div style="flex-shrink:0;padding:16px 20px 0;position:relative;">
         <button type="button" onclick="window._closePopupViaBack('motzei-shabbat-modal')"
-          style="position:absolute;top:14px;left:16px;background:rgba(255,255,255,0.1);border:none;color:rgba(255,255,255,0.7);font-size:1.2rem;cursor:pointer;border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;" aria-label="סגור">×</button>
+          style="position:absolute;top:8px;left:10px;background:rgba(255,255,255,0.1);border:none;color:rgba(255,255,255,0.7);font-size:1.35rem;cursor:pointer;border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;" aria-label="סגור">×</button>
         <div style="text-align:center;margin-bottom:12px;padding-top:2px;">
           <div style="font-size:1.4rem;margin-bottom:2px;">✨</div>
           <div style="font-size:1.05rem;font-weight:800;color:#fde68a;">סדר מוצאי שבת וחג</div>
@@ -7642,7 +7784,7 @@ renderZmanimGrid = function (zData) {
   document.getElementById("zmanim-details").innerHTML = normalized.orderedItems
     .map(
       (item) => `
-            <div class="${cardClass}" data-zman-key="${item.key}" onclick="showZmanOpinions('${item.key}')">
+            <div class="${cardClass}" data-zman-key="${item.key}" onclick="showZmanOpinions('${item.key}')" role="button" tabindex="0" aria-haspopup="dialog" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showZmanOpinions('${item.key}')}">
               <span class="text-blue-300/80 text-xs md:text-sm block mb-1.5 font-semibold">${item.label}</span>
               <span class="font-black text-lg md:text-xl text-white tracking-tight" dir="ltr">${item.displayValue}</span>
               <span class="zman-meta">${item.meta}</span>
@@ -7670,10 +7812,10 @@ showZmanOpinions = function (key) {
   modal.style.cssText =
     "position:fixed;inset:0;z-index:200;background:rgba(15,23,42,0.85);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:1rem;";
   modal.innerHTML = `
-          <div style="background:linear-gradient(145deg,#1e293b,#0f172a);border:1px solid rgba(99,102,241,0.3);border-radius:2rem;padding:2rem;width:100%;max-width:380px;box-shadow:0 25px 60px rgba(0,0,0,0.5);text-align:right;direction:rtl;">
+          <div role="dialog" aria-modal="true" aria-label="${payload.label}" style="background:linear-gradient(145deg,#1e293b,#0f172a);border:1px solid rgba(99,102,241,0.3);border-radius:2rem;padding:2rem;width:100%;max-width:380px;max-height:88vh;overflow-y:auto;box-shadow:0 25px 60px rgba(0,0,0,0.5);text-align:right;direction:rtl;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
               <h3 style="color:#e2e8f0;font-size:1.25rem;font-weight:900;margin:0;">${payload.label}</h3>
-              <button onclick="window._closePopupViaBack('zman-opinions-modal')" style="background:rgba(255,255,255,0.08);border:none;color:#94a3b8;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center;">✕</button>
+              <button onclick="window._closePopupViaBack('zman-opinions-modal')" aria-label="סגור" style="background:rgba(255,255,255,0.08);border:none;color:#94a3b8;width:44px;height:44px;border-radius:50%;cursor:pointer;font-size:1.2rem;display:flex;align-items:center;justify-content:center;">✕</button>
             </div>
             <p style="color:#64748b;font-size:0.75rem;margin-bottom:1rem;">כל השיטות הזמינות לזמן זה. השיטה הפעילה מסומנת.</p>
             <div style="display:flex;flex-direction:column;gap:0.75rem;">
@@ -18384,7 +18526,7 @@ window.updateOmerRing = function (day) {
 // ✦  WHATSAPP SHARE
 // ═══════════════════════════════════════════════════════
 function shareEventWhatsApp(name, dateStr, heb) {
-  const d = new Date(dateStr);
+  const d = parseLocalDate(dateStr);
   const dateFmt = d.toLocaleDateString(getCurrentLocale(), {
     weekday: "long",
     day: "numeric",
@@ -19812,6 +19954,12 @@ document.addEventListener("keydown", (e) => {
     }
     // ── אדר / אדר ב (פורים) ──
     if (m.indexOf("אדר") !== -1) {
+      // שנה מעוברת — אדר ראשון: פורים קטן בלבד (תענית אסתר ופורים באדר ב')
+      if (m === "אדר א") {
+        if (day === 14) return "פורים קטן";
+        if (day === 15) return "שושן פורים קטן";
+        return "";
+      }
       if (day === 13) return "תענית אסתר";
       if (day === 14) return "פורים";
       if (day === 15) return "שושן פורים";
@@ -19852,6 +20000,7 @@ document.addEventListener("keydown", (e) => {
       year: "numeric",
     });
     var month = fmtM.format(d);
+    var monthKey = _hilMonthKey(month);
     var dayNum = parseInt(fmtD.format(d).replace(/[^0-9]/g, ""), 10);
     // חלק מהדפדפנים מחזירים את השנה העברית בספרות (5786) — ממירים לאותיות (תשפ"ו)
     var year = hebrewizeYearDigits(fmtY.format(d));
@@ -19865,11 +20014,21 @@ document.addEventListener("keydown", (e) => {
       month: month,
       day: dayNum,
       year: year,
-      key: month + "-" + dayNum,
+      key: monthKey + "-" + dayNum,
       date: d,
       gregStr: gregStr,
-      specialDay: getSpecialDay(month, dayNum),
+      specialDay: getSpecialDay(monthKey, dayNum),
     };
+  }
+
+  // שנה מעוברת: Intl מחזיר "אדר א׳" / "אדר ב׳" (עם גרש) — מפתחות המאגר הם
+  // "אדר א-N" (אדר ראשון) ו-"אדר-N" (אדר שני, וגם אדר בשנה רגילה — פורים וכו').
+  // בלי הנרמול שני חודשי אדר של שנה מעוברת (תשפ"ז!) יצאו בלי הילולות.
+  function _hilMonthKey(m) {
+    m = String(m || "").replace(/[׳'"]/g, "").trim();
+    if (/^אדר\s*ב$/.test(m)) return "אדר";
+    if (/^אדר\s*א$/.test(m)) return "אדר א";
+    return m;
   }
 
   function getFirstOfHebMonth(refDate) {
@@ -20187,7 +20346,7 @@ document.addEventListener("keydown", (e) => {
       cellDate.setDate(first.getDate() + i);
       cellDate.setHours(0, 0, 0, 0);
       var dayNum = parseInt(fmtD.format(cellDate).replace(/[^0-9]/g, ""), 10);
-      var key = monthName + "-" + dayNum;
+      var key = _hilMonthKey(monthName) + "-" + dayNum;
       var haH = !!(HD[key] && HD[key].length > 0);
       var diffMs = cellDate.getTime() - today.getTime();
       var offset = Math.round(diffMs / 86400000);
@@ -22512,12 +22671,12 @@ function openSefarimNosafimPage(_pageMode) {
             if (!bodyDiv) continue;
             // חיטוי: ה-HTML מגיע דרך שירותי proxy חיצוניים שאינם בשליטתנו —
             // מסירים תגי הרצה ומאפייני on*/javascript: לפני מטמון והצגה ב-innerHTML
-            bodyDiv.querySelectorAll("script,style,iframe,object,embed,link,meta,form").forEach(function (n) { n.remove(); });
+            bodyDiv.querySelectorAll("script,style,iframe,object,embed,link,meta,form,noscript,template,base").forEach(function (n) { n.remove(); });
             bodyDiv.querySelectorAll("*").forEach(function (n) {
               Array.prototype.slice.call(n.attributes).forEach(function (a) {
                 var nm = a.name.toLowerCase();
                 if (nm.indexOf("on") === 0) n.removeAttribute(a.name);
-                else if ((nm === "href" || nm === "src" || nm === "xlink:href") && /^\s*(javascript|data):/i.test(a.value)) n.removeAttribute(a.name);
+                else if ((nm === "href" || nm === "src" || nm === "xlink:href" || nm === "srcdoc" || nm === "formaction") && (nm === "srcdoc" || (typeof _isDangerousUrl === "function" ? _isDangerousUrl(a.value) : /^\s*(javascript|data):/i.test(a.value)))) n.removeAttribute(a.name);
               });
             });
             // מחלק לפסקאות מההיררכיה
@@ -23025,7 +23184,7 @@ function openSefarimNosafimPage(_pageMode) {
       ]},
     { id:"orchot-tzadikim", he:"אורחות צדיקים", subtitle:'מחבר אנונימי',
       cat:"musar", color:"#059669", icon:"🌳",
-      credit:"הטקסט מ-Sefaria.org — נחלת הכלל",
+      credit:"הטקסט מ-Sefaria.org (רישיון CC-BY-SA 4.0)",
       creditUrl:"https://www.sefaria.org/Orchot_Tzadikim",
       type:"flat",
       sections:[
@@ -23991,7 +24150,7 @@ function openSefarimNosafimPage(_pageMode) {
     },
     { id:"tanakh", he:"תנ\"ך", subtitle:"תורה, נביאים, כתובים",
       cat:"limmud", color:"#0e7490", icon:"📖",
-      credit:"הטקסט מ-Sefaria.org — נחלת הכלל",
+      credit:"הטקסט מ-Sefaria.org — מקרא על פי המסורה (רישיון CC-BY-SA 4.0)",
       creditUrl:"https://www.sefaria.org/Tanakh",
       type:"multi",
       subBooks:[
@@ -24107,7 +24266,7 @@ function openSefarimNosafimPage(_pageMode) {
       ]},
     { id:"talmud-bavli", he:"תלמוד בבלי", subtitle:"כל הש\"ס — עם רש\"י, תוספות ונושאי כלים",
       cat:"limmud", color:"#4338ca", icon:"🎓",
-      credit:"הטקסט מ-Sefaria.org — נחלת הכלל · נושאי כלים — Sefaria",
+      credit:"הטקסט מ-Sefaria.org — תלמוד בבלי, מהדורת ויליאם דוידסון (רישיון CC-BY-NC 4.0) · נושאי כלים — Sefaria",
       creditUrl:"https://www.sefaria.org/texts/Talmud",
       type:"multi",
       // ~5,300 עמודים — לא נסרק בחיפוש הכללי (עומס רשת); הניווט דרך תוכן העניינים עם סינון
@@ -26330,7 +26489,7 @@ function openSefarimNosafimPage(_pageMode) {
           "<input id=\"sn-search-input\" type=\"search\" placeholder=\"הקלידו מילה או ביטוי...\" oninput=\"window._snSearchInput(this.value);\" style=\"width:100%;box-sizing:border-box;padding:0.9rem 2.9rem 0.9rem 1.1rem;border-radius:1.2rem;border:none;background:#fff;color:#1e293b;font-size:1rem;font-weight:600;direction:rtl;outline:none;box-shadow:0 8px 28px rgba(79,70,229,0.22),0 2px 8px rgba(0,0,0,0.08);\"/>",
           "<span style=\"position:absolute;top:50%;right:1.05rem;transform:translateY(-50%);font-size:1.05rem;pointer-events:none;opacity:0.7;\">🔍</span>",
         "</div>",
-        "<select id=\"sn-search-book-sel\" style=\"width:100%;padding:0.5rem 0.9rem;border-radius:999px;border:1.5px solid rgba(99,102,241,0.25);background:#fff;color:#4338ca;font-size:0.85rem;font-weight:700;direction:rtl;outline:none;cursor:pointer;box-shadow:0 2px 8px rgba(79,70,229,0.08);\"></select>",
+        "<select id=\"sn-search-book-sel\" aria-label=\"בחירת ספר לחיפוש\" style=\"width:100%;padding:0.5rem 0.9rem;border-radius:999px;border:1.5px solid rgba(99,102,241,0.25);background:#fff;color:#4338ca;font-size:0.85rem;font-weight:700;direction:rtl;outline:none;cursor:pointer;box-shadow:0 2px 8px rgba(79,70,229,0.08);\"></select>",
         "<p style=\"color:#818cf8;font-size:0.7rem;margin:0;text-align:center;font-weight:600;\">💡 בחיפוש של כמה מילים — יוצגו רק קטעים שבהם כל המילים מופיעות יחד</p>",
       "</div>",
       "<p id=\"sn-search-status\" style=\"color:#6366f1;font-size:0.78rem;font-weight:700;padding:0.5rem 1.2rem 0.2rem;margin:0;flex-shrink:0;min-height:1.6rem;display:flex;align-items:center;gap:0.45rem;\"></p>",

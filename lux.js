@@ -8,6 +8,20 @@
 
   document.documentElement.classList.add("lux-js");
 
+  // תאריך מקומי YYYY-MM-DD (לא UTC: בין חצות ל-03:00 שעון ישראל toISOString מחזיר אתמול)
+  function luxTodayIso() {
+    var d = new Date();
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  }
+  // "YYYY-MM-DD" → חצות מקומית (new Date("YYYY-MM-DD") = חצות UTC — יום קודם מערבית ל-UTC)
+  function luxParseDate(v) {
+    if (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v)) {
+      var p = v.split("-");
+      return new Date(+p[0], +p[1] - 1, +p[2]);
+    }
+    return new Date(v);
+  }
+
   function safe(name, fn) {
     try { fn(); } catch (e) { try { console.warn("[lux] " + name + ":", e); } catch (_) {} }
   }
@@ -163,14 +177,22 @@
       pending = null;
       var cards = grid.querySelectorAll(".event-card");
       var i = 0;
+      var fresh = [];
       cards.forEach(function (c) {
         if (seen.has(c)) return;
         seen.add(c);
-        c.classList.remove("lux-in");
         c._luxIdx = i++;
+        fresh.push(c);
+      });
+      if (!fresh.length) return;
+      // קודם קוראים את כל המידות ורק אז כותבים מחלקות — כתיבה+קריאה לסירוגין
+      // לכל כרטיס כפתה חישוב פריסה מחדש ~145 פעמים אחרי כל render()
+      var limit = window.innerHeight * 0.92;
+      var tops = fresh.map(function (c) { return c.getBoundingClientRect().top; });
+      fresh.forEach(function (c, k) {
+        c.classList.remove("lux-in");
         // כרטיס שכבר על המסך — לחשוף מיד
-        var r = c.getBoundingClientRect();
-        if (r.top < window.innerHeight * 0.92) c.classList.add("lux-in");
+        if (tops[k] < limit) c.classList.add("lux-in");
         else io.observe(c);
       });
     }
@@ -792,7 +814,7 @@
   /* ── 10. כפתור גלילה למעלה במובייל — מעל הניווט התחתון ─────────── */
   safe("scrollTopLift", function () {
     var b = document.getElementById("scroll-top-btn");
-    if (b) b.style.bottom = "5.6rem";
+    if (b) b.style.bottom = "calc(5.6rem + env(safe-area-inset-bottom, 0px))";
   });
 
   /* ── 11. ניווט תחתון מותאם אישית + עורך בהגדרות ────────────────── */
@@ -1168,7 +1190,7 @@
         var ttl = String(e.titleStr || "").replace(/[‘’]/g, "'");
         if (/^Yom HaShoah$|^Yom HaAtzma'ut$/.test(ttl)) return false;
         if (/^יום (השואה|העצמאות)$/.test(nm) || /^יום (השואה|העצמאות)$/.test(String(e.heb || ""))) return false;
-        var d = new Date(e.date);
+        var d = luxParseDate(e.date);
         var diff = (d - new Date()) / 86400000;
         // עד 363 — שלא ייחתך חג שיושב ממש בתפר (תשעה באב של השנה הבאה)
         return diff > -2 && diff < 363;
@@ -1312,10 +1334,10 @@
       }
       // חגים — אייקון אמיתי של כל חג על הטבעת, עם הילה זהב
       events.forEach(function (ev, i) {
-        var diff = (new Date(ev.date) - new Date()) / 86400000;
+        var diff = (luxParseDate(ev.date) - new Date()) / 86400000;
         // מיקום לפי אינדקס היום מחצות (+0.5 = מרכז התא היומי) — כך אייקון
         // של א' בחודש יושב בבירור בתוך החודש שלו ולא על קו הגבול
-        var dayIdx = Math.round((new Date(ev.date).getTime() - T0) / 86400000);
+        var dayIdx = Math.round((luxParseDate(ev.date).getTime() - T0) / 86400000);
         var ang = ((Math.max(0, dayIdx) + 0.5) / 365) * 2 * Math.PI - Math.PI / 2;
         var x = CX + R * Math.cos(ang), y = CY + R * Math.sin(ang);
         var g = document.createElementNS("http://www.w3.org/2000/svg", "g");
@@ -1323,7 +1345,7 @@
         g.innerHTML =
           '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="11" class="lux-yw-halo"/>' +
           '<text x="' + x.toFixed(1) + '" y="' + (y + 4.2).toFixed(1) + '" text-anchor="middle" font-size="12">' + (ev.icon || "✨") + "</text>";
-        var evMonth = heMonthOf(new Date(ev.date));
+        var evMonth = heMonthOf(luxParseDate(ev.date));
         evNodes.push({ g: g, month: evMonth, x: x, y: y, ang: ang });
         var c = g;
         c.addEventListener("click", function (e) {
@@ -1331,13 +1353,13 @@
           // לחיצה ראשונה על חודש צפוף — קודם מרחפים ומגדילים את כל אייקוני החודש
           if (zoomedMonth !== evMonth) { zoomMonth(evMonth); return; }
           var info = overlay.querySelector("#lux-yw-info");
-          var dateStr = new Date(ev.date).toLocaleDateString("he-IL", { day: "numeric", month: "long" });
+          var dateStr = luxParseDate(ev.date).toLocaleDateString("he-IL", { day: "numeric", month: "long" });
           // חג רב-יומי מאוחד — מציגים את כל הטווח שלו
           if (ev.until && ev.until !== ev.date) {
-            dateStr += " – " + new Date(ev.until).toLocaleDateString("he-IL", { day: "numeric", month: "long" });
+            dateStr += " – " + luxParseDate(ev.until).toLocaleDateString("he-IL", { day: "numeric", month: "long" });
           }
           var heb = "";
-          try { heb = typeof window.getHebrewDateString === "function" ? window.getHebrewDateString(new Date(ev.date)) : ""; } catch (e) {}
+          try { heb = typeof window.getHebrewDateString === "function" ? window.getHebrewDateString(luxParseDate(ev.date)) : ""; } catch (e) {}
           info.innerHTML =
             '<div class="lux-yw-evname">' + (ev.icon || "✨") + " " + ev.name + "</div>" +
             '<div style="color:rgba(191,219,254,0.8);font-size:0.8rem;">' + dateStr + (heb ? " · " + heb : "") + " · בעוד " + Math.round(diff) + ' ימים</div>' +
@@ -1445,8 +1467,14 @@
     var greet = h >= 5 && h < 12 ? "☀️ בוקר טוב" : h >= 12 && h < 17 ? "🌤️ צהריים טובים" : h >= 17 && h < 21 ? "🌆 ערב טוב" : "🌙 לילה טוב";
     if (day === 5 && h >= 12) greet = "🕯️ שבת שלום";
     if (day === 6) greet = "✨ שבוע טוב";
-    var el = document.createElement("div");
-    el.id = "lux-greeting";
+    // index.html מכיל שומר-מקום ריק #lux-greeting לפני הכותרת — ממלאים אותו
+    // במקום להזריק אלמנט חדש (הזרקה אחרי הציור הראשון הזיזה את הכותרת = CLS)
+    var el = document.getElementById("lux-greeting");
+    var preplaced = !!el;
+    if (!el) {
+      el = document.createElement("div");
+      el.id = "lux-greeting";
+    }
     function paint(force) {
       var heb = luxHebDateStr();
       var base = greet + (heb ? ' · <span class="lux-greet-date">' + heb + "</span>" : "");
@@ -1458,7 +1486,14 @@
       if (window.__luxNameDecorate) window.__luxNameDecorate(el);
     }
     paint();
-    h1.insertAdjacentElement("beforebegin", el);
+    if (!preplaced) {
+      h1.insertAdjacentElement("beforebegin", el);
+    } else {
+      // שומר-המקום כבר סיים את אנימציית הכניסה בזמן הטעינה — מנגנים אותה שוב עם הטקסט
+      el.style.animation = "none";
+      void el.offsetWidth;
+      el.style.animation = "";
+    }
     // ביטחון: אנימציית הכניסה (lux-rise) קופאת אם ציר האנימציות מושהה
     // (רקע/PWA מוקפא) והברכה נשארת שקופה — משלימים אותה ידנית אחרי החלון
     setTimeout(function () {
@@ -2181,7 +2216,7 @@
       });
       var el = document.getElementById("lux-crit-pill");
       if (!show) { if (el) el.remove(); return; }
-      var dKey = "lux_crit_" + show.k + "_" + new Date().toISOString().slice(0, 10);
+      var dKey = "lux_crit_" + show.k + "_" + luxTodayIso();
       try { if (sessionStorage.getItem(dKey)) return; } catch (e) {}
       var mins = Math.ceil((show.ms - now) / 60000);
       if (!el) {
@@ -2207,7 +2242,7 @@
   safe("dayBanner", function () {
     var hero = document.querySelector("#hero-section .relative.z-10") || document.getElementById("hero-section");
     if (!hero) return;
-    var todayKey = new Date().toISOString().slice(0, 10);
+    var todayKey = luxTodayIso();
     try { if (localStorage.getItem("lux_banner_dismiss") === todayKey) return; } catch (e) {}
     var msg = null;
     // ראש חודש לפי התאריך העברי
@@ -2412,8 +2447,8 @@
         '<p class="lux-sheet-note">השמות מוצגים בפתיחת התהילים — נשמרים רק במכשיר שלך</p>' +
         '<div id="lux-names-list"></div>' +
         '<div class="lux-names-add">' +
-          '<input type="text" id="lux-nm-name" class="lux-sheet-input" maxlength="40" placeholder="לדוגמה: רחל בת לאה">' +
-          '<select id="lux-nm-purpose" class="lux-sheet-input">' + PURPOSES.map(function (p) { return "<option>" + p + "</option>"; }).join("") + "</select>" +
+          '<input type="text" id="lux-nm-name" class="lux-sheet-input" maxlength="40" aria-label="שם לתפילה" placeholder="לדוגמה: רחל בת לאה">' +
+          '<select id="lux-nm-purpose" class="lux-sheet-input" aria-label="מטרת התפילה">' + PURPOSES.map(function (p) { return "<option>" + p + "</option>"; }).join("") + "</select>" +
           '<button type="button" class="lux-sheet-primary" id="lux-nm-add">➕ הוסף</button>' +
         "</div>" +
         '<div class="lux-sheet-actions"><button type="button" class="lux-sheet-cancel">סגור</button></div>');
@@ -2528,10 +2563,10 @@
         '<div class="lux-names-add">' +
           '<input type="text" id="lux-yz-name" class="lux-sheet-input" maxlength="40" placeholder=\'לדוגמה: סבא יוסף ז"ל\'>' +
           '<div style="display:flex;gap:0.4rem;">' +
-            '<select id="lux-yz-day" class="lux-sheet-input" style="flex:1;">' +
+            '<select id="lux-yz-day" class="lux-sheet-input" aria-label="יום בחודש העברי" style="flex:1;">' +
               Array.apply(null, Array(30)).map(function (_, i) { return '<option value="' + (i + 1) + '">' + toHebDayStr(i + 1) + "</option>"; }).join("") +
             "</select>" +
-            '<select id="lux-yz-month" class="lux-sheet-input" style="flex:1.4;">' + MONTHS.map(function (m) { return "<option>" + m + "</option>"; }).join("") + "</select>" +
+            '<select id="lux-yz-month" class="lux-sheet-input" aria-label="חודש עברי" style="flex:1.4;">' + MONTHS.map(function (m) { return "<option>" + m + "</option>"; }).join("") + "</select>" +
           "</div>" +
           '<button type="button" class="lux-sheet-primary" id="lux-yz-add">➕ הוסף</button>' +
         "</div>" +
@@ -2610,7 +2645,7 @@
   safe("achievements", function () {
     // מונה ימי ביקור
     var v = jget("lux_visits", { count: 0, last: null });
-    var todayStr = new Date().toISOString().slice(0, 10);
+    var todayStr = luxTodayIso();
     if (v.last !== todayStr) { v.count++; v.last = todayStr; jset("lux_visits", v); }
     // סימון ברכת לבנה (להישג)
     document.addEventListener("click", function (e) {
@@ -3525,17 +3560,17 @@
       // החג הקרוב
       var evs = (getCachedEvents() || []).filter(function (e) {
         if (e.type !== "major" && e.type !== "fast") return false;
-        var diff = (new Date(e.date) - new Date()) / 86400000;
+        var diff = (luxParseDate(e.date) - new Date()) / 86400000;
         return diff > -0.5 && diff < 90;
       });
       if (evs.length) {
         var ev = evs[0];
-        var days = Math.max(0, Math.ceil((new Date(ev.date) - new Date()) / 86400000));
+        var days = Math.max(0, Math.ceil((luxParseDate(ev.date) - new Date()) / 86400000));
         slides.push({
           cls: "lux-st-holiday",
           html: '<div class="lux-st-big">' + (ev.icon || "✨") + "</div><h2>" + esc(ev.name) + "</h2>" +
                 '<p class="lux-st-line">' + (days === 0 ? "היום! 🎉" : "בעוד <b>" + days + "</b> ימים") + "</p>" +
-                '<p class="lux-st-sub">' + new Date(ev.date).toLocaleDateString("he-IL", { weekday: "long", day: "numeric", month: "long" }) + "</p>"
+                '<p class="lux-st-sub">' + luxParseDate(ev.date).toLocaleDateString("he-IL", { weekday: "long", day: "numeric", month: "long" }) + "</p>"
         });
       }
       return slides;
@@ -3552,7 +3587,7 @@
     }
     function openStories() {
       closeStories();
-      try { localStorage.setItem(SEEN_KEY, new Date().toISOString().slice(0, 10)); } catch (e) {}
+      try { localStorage.setItem(SEEN_KEY, luxTodayIso()); } catch (e) {}
       var slides = buildSlides();
       if (!slides.length) return;
       stIdx = 0;
@@ -3694,7 +3729,7 @@
     setTimeout(function () {
       try {
         if (localStorage.getItem(AUTO_KEY) !== "1") return;
-        var today = new Date().toISOString().slice(0, 10);
+        var today = luxTodayIso();
         if (localStorage.getItem(SEEN_KEY) === today) return;
         var ready = document.getElementById("dashboard-state") &&
           !document.getElementById("dashboard-state").classList.contains("hidden");
@@ -4139,7 +4174,7 @@
           if (THEMES[i].match.test(nm)) { th = THEMES[i]; break; }
         }
         if (!th) return;
-        var days = Math.floor((new Date(e.date) - new Date()) / 86400000) + 1;
+        var days = Math.floor((luxParseDate(e.date) - new Date()) / 86400000) + 1;
         if (days > 30 || days <= -(th.dur || 1)) return;
         var ex = null;
         for (var j = 0; j < found.length; j++) { if (found[j].theme === th) { ex = found[j]; break; } }
@@ -4341,10 +4376,10 @@
           '<button type="button" class="lux-sn-g" data-g="m">👨 לגבר</button>' +
           '<button type="button" class="lux-sn-g" data-g="f">👩 לאישה</button>' +
         "</div>" +
-        '<input type="text" id="lux-sn-to" class="lux-sheet-input" maxlength="30" placeholder="לכבוד... (למשל: משפחת לוי — אופציונלי)">' +
-        '<input type="text" id="lux-sn-from" class="lux-sheet-input" maxlength="30" placeholder="השם שלכם (יופיע בכרטיס)" value="' + esc(name) + '">' +
-        '<select id="lux-sn-bless" class="lux-sheet-input">' + theme.blessings.map(function (b) { return "<option>" + esc(blessTxt(b, selForm)) + "</option>"; }).join("") + "</select>" +
-        '<input type="text" id="lux-sn-custom" class="lux-sheet-input" maxlength="120" placeholder="✍️ או כתבו ברכה אישית משלכם...">' +
+        '<input type="text" id="lux-sn-to" class="lux-sheet-input" maxlength="30" aria-label="לכבוד מי הכרטיס" placeholder="לכבוד... (למשל: משפחת לוי — אופציונלי)">' +
+        '<input type="text" id="lux-sn-from" class="lux-sheet-input" maxlength="30" aria-label="השם שלכם" placeholder="השם שלכם (יופיע בכרטיס)" value="' + esc(name) + '">' +
+        '<select id="lux-sn-bless" class="lux-sheet-input" aria-label="בחירת ברכה">' + theme.blessings.map(function (b) { return "<option>" + esc(blessTxt(b, selForm)) + "</option>"; }).join("") + "</select>" +
+        '<input type="text" id="lux-sn-custom" class="lux-sheet-input" maxlength="120" aria-label="ברכה אישית" placeholder="✍️ או כתבו ברכה אישית משלכם...">' +
         '<canvas id="lux-sn-canvas" style="width:100%;border-radius:1rem;box-shadow:0 10px 30px rgba(0,0,0,0.35);margin:0.6rem 0;"></canvas>' +
         '<div class="lux-sheet-actions">' +
           '<button type="button" class="lux-sheet-primary" id="lux-sn-share">📤 שיתוף</button>' +
@@ -6349,5 +6384,48 @@
       ov.addEventListener("click", function (e) { if (e.target === ov) close(); });
       try { luxConfetti(); setTimeout(luxConfetti, 900); } catch (e) {}
     };
+  });
+
+  /* ── 55. נגישות דיאלוגים: role/aria-modal/שם נגיש לכל פופאפ שנוצר דינמית ──
+     script.js ו-lux.js בונים עשרות מודאלים ב-JS בלי סמנטיקת dialog. כאן משלימים
+     את המאפיינים בלבד (בלי ניהול פוקוס/Escape — אלה קיימים במנגנוני הסגירה)
+     ברגע שאלמנט-שכבה נוסף ל-body: id שמסתיים ב-"-modal" או .lux-sheet-overlay. */
+  safe("dialogA11y", function () {
+    if (!("MutationObserver" in window)) return;
+    function decorate(el) {
+      try {
+        if (!el || el.nodeType !== 1 || el.__luxA11yDone) return;
+        var isOverlay =
+          (el.id && /-modal$/.test(el.id)) || el.classList.contains("lux-sheet-overlay");
+        if (!isOverlay) return;
+        el.__luxA11yDone = true;
+        // מודאל סטטי שכבר מסומן role="dialog" (למשל #sefaria-modal) — משלימים רק שם נגיש
+        if (el.getAttribute("role") === "dialog") {
+          if (!el.hasAttribute("aria-label") && !el.hasAttribute("aria-labelledby")) {
+            var h0 = el.querySelector("h1, h2, h3, h4");
+            var t0 = h0 && (h0.textContent || "").replace(/\s+/g, " ").trim();
+            if (t0) el.setAttribute("aria-label", t0.slice(0, 120));
+          }
+          return;
+        }
+        // היעד: הכרטיס הפנימי אם יש (השכבה החיצונית היא רק רקע), אחרת השכבה עצמה
+        var card = el.querySelector(".lux-sheet, .modal-inner, [id$='-card'], [id$='-inner']") || el;
+        if (card.getAttribute("role") && card.getAttribute("role") !== "dialog") return;
+        if (!card.getAttribute("role")) card.setAttribute("role", "dialog");
+        if (!card.hasAttribute("aria-modal")) card.setAttribute("aria-modal", "true");
+        if (!card.hasAttribute("aria-label") && !card.hasAttribute("aria-labelledby")) {
+          var h = card.querySelector("h1, h2, h3, h4");
+          var txt = h && (h.textContent || "").replace(/\s+/g, " ").trim();
+          if (txt) card.setAttribute("aria-label", txt.slice(0, 120));
+        }
+      } catch (e) {}
+    }
+    document.querySelectorAll("body > [id$='-modal'], body > .lux-sheet-overlay").forEach(decorate);
+    new MutationObserver(function (muts) {
+      for (var i = 0; i < muts.length; i++) {
+        var added = muts[i].addedNodes;
+        for (var k = 0; k < added.length; k++) decorate(added[k]);
+      }
+    }).observe(document.body, { childList: true });
   });
 })();

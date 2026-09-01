@@ -46,4 +46,36 @@ Allow: /
 User-agent: Amazonbot
 Allow: /
 
+
+# ── סורקי AI נוספים (חיפוש/עוזרים) — מותרים ──
+User-agent: Applebot
+Allow: /
+
+User-agent: DuckAssistBot
+Allow: /
+
+User-agent: YouBot
+Allow: /
+
+User-agent: MistralAI-User
+Allow: /
+
+User-agent: cohere-ai
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: PetalBot
+Allow: /
+
+User-agent: Google-CloudVertexBot
+Allow: /
+
+User-agent: Meta-ExternalFetcher
+Allow: /
+
+User-agent: Bytespider
+Allow: /
+
 Sitemap: https://jewishcalendar.co.il/sitemap.xml

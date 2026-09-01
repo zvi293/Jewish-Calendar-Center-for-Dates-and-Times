@@ -1,4 +1,4 @@
-const STATIC_CACHE = "moadim-static-v75";
+const STATIC_CACHE = "moadim-static-v76";
 // מטמון ריצה: תשובות API וקבצים חיצוניים (ספריא, hebcal, פונטים, ספריות CDN)
 // נשמרים אחרי הצפייה הראשונה — כך האתר, התפילות והספרים עובדים גם בלי אינטרנט.
 const RUNTIME_CACHE = "moadim-runtime-v1";
@@ -11,15 +11,20 @@ const STATIC_ASSETS = [
   "/favicon.svg",
   "/apple-touch-icon.png",
   "/icon-192.png",
-  "/icon-512.png",
+  // icon-512 אינו בשימוש בזמן ריצה (רק במניפסט/התקנה) — לא מורידים 97KB בכל התקנת SW
   // קוד ועיצוב — נדרשים כדי שהאתר באמת יעבוד אופליין כבר אחרי ביקור אחד.
   // חשוב: ה-?v= כאן חייב להיות זהה לזה שב-index.html — כך ההתקנה נענית
   // מ-HTTP cache (בלי הורדה כפולה של ~3MB) והבקשות מהדף פוגעות במטמון
   // בדיוק; סטייה עתידית מכוסה ע"י ה-fallback עם ignoreSearch.
-  "/script.js?v=47",
-  "/lux.js?v=45",
-  "/style.css?v=53",
+  "/script.js?v=48",
+  "/lux.js?v=46",
+  "/style.css?v=54",
   "/tailwind.css?v=2",
+  "/fonts.css?v=1",
+  "/fonts/assistant-hebrew.woff2",
+  "/fonts/frank-ruhl-libre-hebrew.woff2",
+  // ספריית הזמנים מוגשת מאותו מקור (במקום unpkg) — הגרסה בשם הקובץ
+  "/kosher-zmanim-0.9.0.min.js",
 ];
 
 // מקורות חיצוניים שמותר לשמור במטמון הריצה — רשימה סגורה.
@@ -37,7 +42,8 @@ const RUNTIME_CACHE_ORIGINS = [
   "https://cdn.jsdelivr.net",
   "https://cdn.onesignal.com",
   "https://he.wikisource.org",
-  "https://nominatim.openstreetmap.org",
+  // nominatim (גיאוקוד הפוך) במכוון לא כאן: ה-URL מכיל קואורדינטות מדויקות של
+  // המשתמש ואין טעם לשמר אותן במטמון ללא תפוגה; החיפוש ממילא דורש חיבור.
   "https://www.toratemetfreeware.com",
 ];
 function isRuntimeCacheable(url) {
@@ -103,8 +109,11 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          const copy = response.clone();
-          caches.open(STATIC_CACHE).then((cache) => cache.put(request, copy));
+          // רק תשובה תקינה נשמרת כעותק האופליין של הדף — 404/5xx לא דורסים עותק טוב
+          if (response && response.ok) {
+            const copy = response.clone();
+            caches.open(STATIC_CACHE).then((cache) => cache.put(request, copy));
+          }
           return response;
         })
         .catch(() =>
@@ -201,8 +210,11 @@ self.addEventListener("fetch", (event) => {
     caches.match(request).then((cached) => {
       const networkFetch = fetch(request)
         .then((response) => {
-          const copy = response.clone();
-          caches.open(STATIC_CACHE).then((cache) => cache.put(request, copy));
+          // תמונות/גופנים/מניפסט מאותו מקור: רק תשובות תקינות נכנסות למטמון (בלי 404 קבועים)
+          if (response && response.ok) {
+            const copy = response.clone();
+            caches.open(STATIC_CACHE).then((cache) => cache.put(request, copy));
+          }
           return response;
         })
         // רשת נפלה: fallback עם ignoreSearch — "/icon-192.png?v=3" נענה מהרשומה

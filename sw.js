@@ -1,4 +1,4 @@
-const STATIC_CACHE = "moadim-static-v71";
+const STATIC_CACHE = "moadim-static-v74";
 // מטמון ריצה: תשובות API וקבצים חיצוניים (ספריא, hebcal, פונטים, ספריות CDN)
 // נשמרים אחרי הצפייה הראשונה — כך האתר, התפילות והספרים עובדים גם בלי אינטרנט.
 const RUNTIME_CACHE = "moadim-runtime-v1";
@@ -16,9 +16,9 @@ const STATIC_ASSETS = [
   // חשוב: ה-?v= כאן חייב להיות זהה לזה שב-index.html — כך ההתקנה נענית
   // מ-HTTP cache (בלי הורדה כפולה של ~3MB) והבקשות מהדף פוגעות במטמון
   // בדיוק; סטייה עתידית מכוסה ע"י ה-fallback עם ignoreSearch.
-  "/script.js?v=43",
-  "/lux.js?v=41",
-  "/style.css?v=50",
+  "/script.js?v=46",
+  "/lux.js?v=44",
+  "/style.css?v=53",
   "/tailwind.css?v=2",
 ];
 
@@ -162,19 +162,37 @@ self.addEventListener("fetch", (event) => {
     // cache:"no-cache" forces revalidation against the server even when an
     // intermediate HTTP cache holds a stale copy — the SW cache remains the
     // offline fallback only.
+    // תיקון FOUC (09/2026): ברשת איטית האימות-מול-שרת עיכב את ה-CSS בשניות והדף
+    // נראה "HTML בלי עיצוב". ה-URL-ים ממוסמכים ב-?v= (אותו URL = אותו תוכן), לכן
+    // כשיש עותק במטמון נותנים לרשת חלון קצר בלבד — איטית מזה, עונים מיידית
+    // מהמטמון והעדכון מהרשת ממשיך ברקע לטעינה הבאה. רשת מהירה — התנהגות זהה לקודם.
+    const CODE_NET_WINDOW_MS = 1200;
+    const network = fetch(request, { cache: "no-cache" }).then((response) => {
+      const copy = response.clone();
+      // waitUntil — שהדפדפן לא יהרוג את ה-SW לפני שהעותק הטרי נכתב למטמון
+      event.waitUntil(
+        caches
+          .open(STATIC_CACHE)
+          .then((cache) => cache.put(request, copy))
+          .catch(() => {}),
+      );
+      return response;
+    });
+    event.waitUntil(network.then(() => {}, () => {}));
     event.respondWith(
-      fetch(request, { cache: "no-cache" })
-        .then((response) => {
-          const copy = response.clone();
-          caches.open(STATIC_CACHE).then((cache) => cache.put(request, copy));
-          return response;
-        })
-        .catch(() =>
-          caches
-            .match(request)
-            .then((cached) => cached || caches.match(request, { ignoreSearch: true }))
-            .then((cached) => cached || Response.error()),
-        ),
+      caches.match(request).then((cached) => {
+        if (!cached) {
+          return network.catch(() =>
+            caches
+              .match(request, { ignoreSearch: true })
+              .then((alt) => alt || Response.error()),
+          );
+        }
+        return Promise.race([
+          network.catch(() => cached),
+          new Promise((resolve) => setTimeout(() => resolve(cached), CODE_NET_WINDOW_MS)),
+        ]);
+      }),
     );
     return;
   }

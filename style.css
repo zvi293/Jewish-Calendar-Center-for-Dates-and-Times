@@ -251,6 +251,32 @@
       }
       .toast.toast-success { background: linear-gradient(135deg, #059669, #10b981); }
       .toast.toast-error   { background: linear-gradient(135deg, #be123c, #f43f5e); }
+      /* ── טוסט הסרת סימנייה — אדום, נכנס כבלון מתנפח ו"מתפוצץ" ביציאה ── */
+      .toast.toast-bm-pop {
+        background: linear-gradient(135deg, #dc2626, #ef4444);
+        transition: none; /* מחליפים את מעבר ה-show הרגיל באנימציית הבלון */
+      }
+      .toast.toast-bm-pop.show {
+        animation: bm-balloon-in 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+      }
+      .toast.toast-bm-pop.bm-popping {
+        animation: bm-balloon-pop 0.32s ease-in forwards;
+      }
+      @keyframes bm-balloon-in {
+        0% { transform: scale(0.4); opacity: 0; }
+        55% { transform: scale(1.1); opacity: 1; }
+        75% { transform: scale(0.96); }
+        100% { transform: scale(1); opacity: 1; }
+      }
+      @keyframes bm-balloon-pop {
+        0% { transform: scale(1); opacity: 1; }
+        45% { transform: scale(1.22); opacity: 0.85; }
+        100% { transform: scale(1.5); opacity: 0; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .toast.toast-bm-pop.show, .toast.toast-bm-pop.bm-popping { animation: none; }
+        .toast.toast-bm-pop.bm-popping { opacity: 0; }
+      }
       .toast.toast-info    { background: linear-gradient(135deg, #1d4ed8, #3b82f6); }
 
       /* ── Skeleton Loader ── */
@@ -462,6 +488,12 @@
       /* Scroll-to-top (white): mobile only */
       @media (min-width: 768px) {
         #scroll-top-btn { display: none !important; }
+      }
+      /* כפתורי גלילה-למעלה מוצגים רק בדף הראשי — מוסתרים כשכל מודאל/ספר/תפילה פתוחים.
+         html.lux-modal-open מסונכרן ע"י שומר-הסף (script.js) לכל שכבת-על פתוחה. */
+      html.lux-modal-open #scroll-top-btn,
+      html.lux-modal-open #fab-top {
+        display: none !important;
       }
       /* Al-HaMichya (ברכת מעין שלוש) — on mobile, move "של א״י ועל מחיתה ועל כלכלתה" to its own line so it fits inside the supplement box */
       @media (max-width: 767px) {
@@ -1880,16 +1912,17 @@ body > .lux-ne-slot {
   0%, 100% { box-shadow: 0 0 14px rgba(191, 219, 254, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.1); }
   50% { box-shadow: 0 0 24px rgba(191, 219, 254, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.1); }
 }
-/* הרחבת שטח הלחיצה של הירח — בעיקר למובייל */
+/* הרחבת שטח הלחיצה של הירח — בעיקר למובייל.
+   בתחתית ההרחבה מצומצמת (-6px) כדי לא לחפוף את כפתור גלגל השנה שמתחתיו */
 #lux-moon::after {
   content: '';
   position: absolute;
-  inset: -14px;
+  inset: -14px -14px -6px -14px;
   border-radius: 50%;
 }
 @media (max-width: 480px) {
   #lux-moon { top: 4.4rem; left: 0.8rem; width: 40px; height: 40px; font-size: 1.35rem; }
-  #lux-moon::after { inset: -16px; }
+  #lux-moon::after { inset: -16px -16px -6px -16px; }
 }
 
 /* ── גלילה חושפת ── */
@@ -2121,27 +2154,52 @@ html.lux-royal .chip.active {
 }
 
 /* ── גלגל השנה ── */
+/* כפתור עגול צף מתחת לכפתור הירח (#lux-moon: top 4.7rem, 42px) — בקשת משתמש 09/2026.
+   קרוב לירח (מרווח חזותי ~16px), ואזורי המגע המוגדלים (::after) מצומצמים בצד
+   הפונה זה לזה כך שאינם חופפים — נוח ללחוץ על שניהם גם במובייל. */
 #lux-year-wheel-btn {
-  background: linear-gradient(150deg, rgba(36, 81, 184, 0.5) 0%, rgba(12, 21, 48, 0.6) 100%);
-  border: 1px solid rgba(232, 193, 90, 0.45);
-  color: #fff;
-  font-weight: 700;
-  padding: 0.75rem 2rem;
-  border-radius: 1rem;
-  cursor: pointer;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  box-shadow: 0 6px 24px rgba(5, 11, 26, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.14);
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  display: inline-flex;
+  position: absolute;
+  top: calc(4.7rem + 58px);
+  left: 1.1rem;
+  z-index: 30;
+  width: 42px;
+  height: 42px;
+  display: flex;
   align-items: center;
-  gap: 0.5rem;
-  margin: 0 auto 1rem;
+  justify-content: center;
+  font-size: 1.4rem;
+  background: linear-gradient(150deg, rgba(36, 81, 184, 0.45) 0%, rgba(12, 21, 48, 0.55) 100%);
+  border: 1px solid rgba(232, 193, 90, 0.35);
+  border-radius: 50%;
+  color: #fff;
+  cursor: pointer;
+  padding: 0;
+  box-shadow: 0 4px 16px rgba(5, 11, 26, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 #lux-year-wheel-btn:hover {
   border-color: rgba(242, 217, 138, 0.8);
-  box-shadow: 0 10px 32px rgba(5, 11, 26, 0.5), 0 0 24px rgba(232, 193, 90, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.2);
-  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(5, 11, 26, 0.5), 0 0 20px rgba(232, 193, 90, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transform: scale(1.08);
+}
+/* אזור מגע מוגדל — כמו #lux-moon; מצומצם למעלה כדי לא לחפוף את הירח */
+#lux-year-wheel-btn::after {
+  content: "";
+  position: absolute;
+  inset: -6px -14px -14px -14px;
+  border-radius: 50%;
+}
+@media (max-width: 480px) {
+  #lux-year-wheel-btn {
+    top: calc(4.4rem + 52px);
+    left: 0.8rem;
+    width: 40px;
+    height: 40px;
+    font-size: 1.25rem;
+  }
+  #lux-year-wheel-btn::after {
+    inset: -6px -16px -16px -16px;
+  }
 }
 #lux-year-wheel {
   position: fixed;
@@ -4501,6 +4559,136 @@ html.dark .lux-pl-cmbar-lbl { color: #f2d98a; }
 }
 html.dark .lux-pl-cmchip { background: rgba(124, 58, 237, 0.12); color: #c4b5fd; }
 html.dark .lux-pl-cmchip-on { background: rgba(124, 58, 237, 0.8); color: #fff; }
+
+/* ── בורר נושאי כלים מאוחד בקורא סדר הלימוד — כפתור 📖 + חלונית (כמו בתנ"ך) ── */
+.lux-pl-cm-mainbtn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.9rem;
+  border-radius: 999px;
+  border: 1.5px solid rgba(124, 58, 237, 0.4);
+  background: rgba(124, 58, 237, 0.08);
+  color: #6d28d9;
+  font-size: 0.8rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.lux-pl-cm-mainbtn:hover { background: rgba(124, 58, 237, 0.16); }
+.lux-pl-cm-badge {
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  box-sizing: border-box;
+  border-radius: 999px;
+  background: #7c3aed;
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 900;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+html.dark .lux-pl-cm-mainbtn { background: rgba(124, 58, 237, 0.18); color: #c4b5fd; border-color: rgba(196, 181, 253, 0.4); }
+.lux-pl-cmpop-bd {
+  position: absolute;
+  inset: 0;
+  z-index: 59;
+  background: rgba(15, 23, 42, 0.18);
+}
+.lux-pl-cmpop {
+  position: absolute;
+  left: 0.75rem;
+  right: 0.75rem;
+  top: 5.4rem;
+  z-index: 60;
+  max-height: 62%;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 1rem;
+  padding: 0.75rem 0.9rem 0.6rem;
+  direction: rtl;
+  text-align: right;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.22);
+  max-width: 560px;
+  margin: 0 auto;
+}
+html.dark .lux-pl-cmpop { background: #1e1b2e; border-color: rgba(255, 255, 255, 0.12); }
+.lux-pl-cmpop-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.55rem;
+}
+.lux-pl-cmpop-x {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: rgba(0, 0, 0, 0.04);
+  color: #475569;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+html.dark .lux-pl-cmpop-x { background: rgba(255, 255, 255, 0.08); color: #cbd5e1; border-color: rgba(255, 255, 255, 0.15); }
+.lux-pl-cmpop-title { flex: 1; text-align: center; color: #1e293b; font-weight: 900; font-size: 0.9rem; }
+.lux-pl-cmpop-title span { color: #64748b; font-weight: 700; font-size: 0.75rem; }
+html.dark .lux-pl-cmpop-title { color: #f1f5f9; }
+.lux-pl-cmpop-clear {
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  font-size: 0.68rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+html.dark .lux-pl-cmpop-clear { color: #94a3b8; border-color: rgba(255, 255, 255, 0.15); }
+.lux-pl-cmpop-list { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.lux-pl-cmchip2 {
+  padding: 0.4rem 0.7rem;
+  border-radius: 0.8rem;
+  font-size: 0.78rem;
+  font-weight: 800;
+  cursor: pointer;
+  line-height: 1.25;
+  text-align: right;
+  direction: rtl;
+  max-width: 100%;
+  border: 1.5px solid rgba(124, 58, 237, 0.3);
+  background: rgba(124, 58, 237, 0.05);
+  color: #6d28d9;
+  transition: all 0.15s ease;
+}
+.lux-pl-cmchip2.on {
+  border-color: rgba(124, 58, 237, 0.75);
+  background: rgba(124, 58, 237, 0.18);
+  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.18);
+}
+.lux-pl-cmchip2-t { white-space: nowrap; }
+.lux-pl-cmchip2-d {
+  display: block;
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: #64748b;
+  line-height: 1.35;
+  margin-top: 0.1rem;
+}
+html.dark .lux-pl-cmchip2 { background: rgba(124, 58, 237, 0.14); color: #c4b5fd; border-color: rgba(196, 181, 253, 0.3); }
+html.dark .lux-pl-cmchip2.on { background: rgba(124, 58, 237, 0.4); border-color: rgba(196, 181, 253, 0.75); }
+html.dark .lux-pl-cmchip2-d { color: #94a3b8; }
 .lux-pl-cm {
   margin: 0.6rem 0.4rem 1.1rem;
   padding: 0.7rem 0.9rem;
@@ -5270,7 +5458,7 @@ html.dark .cnp-foot { color: #64748b; }
 html.dark ::highlight(lux-mark) { background-color: rgba(250, 204, 21, 0.45); }
 
 /* ══════════════════════════════════════════════════════════════
-   מצב ערב שבת / ערב חג (lux.js §45) — שעה לפני הדלקת נרות
+   מצב ערב שבת / ערב חג (lux.js §45) — שלוש שעות לפני הדלקת נרות
    שבת: סגול-מלכותי + זהב · חג: כחול-חצות + זהב
    ══════════════════════════════════════════════════════════════ */
 body.lux-erev .gradient-bg {
@@ -5642,6 +5830,27 @@ body.lux-erev #btn-open-calendar { border-color: rgba(242, 217, 138, 0.45) !impo
   body.lux-erev #shabbat-countdown-wrap, .lux-erev-btn.lux-erev-hot { animation: none !important; }
 }
 
+/* ── ייצוב מצב ערב שבת (14) ──
+   מעבר רך גם לרקע ה-body: ההירו מתחלף ב-1.2s אבל רקע הדף קפץ מיידית —
+   הפער נראה כ"קפיצת רקע" בכניסה/יציאה מהמצב */
+body { transition: background-color 1.2s ease; }
+
+/* מובייל: אפקטים כבדים (backdrop-filter, אנימציות box-shadow/filter) גרמו
+   לריצוד, להבהובים ולגלילה תקועה ב-PWA. אותו תקדים כמו הסרת הפילטרים
+   מהכוכב הנופל במובייל — לא להחזיר. */
+@media (max-width: 768px) {
+  #lux-erev-panel {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+  #lux-erev-panel::before { animation: none !important; }
+  .lux-erev-halo { filter: none !important; animation: none !important; opacity: 0.55; }
+  .lux-erev-title { filter: none !important; }
+  body.lux-erev #shabbat-countdown-wrap { animation: none !important; }
+  .lux-erev-btn.lux-erev-hot { animation: none !important; }
+  body.lux-erev #countdown-label { animation: none !important; }
+}
+
 
 /* ══════════════════════════════════════════════════════════════
    פוליש יוקרה למסך הרגיל — CSS בלבד (23/08/2026)
@@ -5668,6 +5877,13 @@ body:not(.lux-erev) #hero-section h1 span[data-i18n-key="app_title_2"] { animati
 @keyframes lux-orb-drift {
   from { transform: translate(0, 0) scale(1); }
   to { transform: translate(18px, -14px) scale(1.08); }
+}
+/* בנייד: ה-sheen על background-clip:text מצייר מחדש את הכותרת בכל פריים,
+   וסחיפת האורבים (scale על משטחים גדולים) מרסטרת שכבות מחדש — יחד זה נראה
+   כהבהוב/ריצוד מחזורי של הדף הראשי ב-PWA. הגרדיאנט הסטטי נשאר. אל תחזירו. */
+@media (max-width: 768px), (pointer: coarse) {
+  body:not(.lux-erev) #hero-section h1 span[data-i18n-key="app_title_2"] { animation: none !important; }
+  .lux-hero-orb { animation: none !important; }
 }
 
 /* ── ארבעת כרטיסי המידע: פס חיווי עליון + סמל רקע ענק + זהות צבע ── */
@@ -6425,6 +6641,253 @@ body.lux-season-av9 .lux-hero-orb { opacity: 0.15; }
   filter: drop-shadow(0 0 5px rgba(255, 190, 80, 0.85));
   animation: lux-flame 0.95s ease-in-out infinite alternate;
 }
+/* ── חוק לישראל: תרגום אונקלוס בסעיף התורה — צבע נבדל, יפה וקריא.
+   הגודל נשאר כשל ה-small המקורי (בקשת משתמש 09/2026) ── */
+.chok-targum,
+.chok-targum small,
+.chok-targum b {
+  color: #0f766e !important;
+}
+html.dark #chok-israel-modal.chok-dark-skin .chok-targum,
+html.dark #chok-israel-modal.chok-dark-skin .chok-targum small,
+html.dark #chok-israel-modal.chok-dark-skin .chok-targum b {
+  color: #5eead4 !important;
+}
+
+/* ── כרטיס ההסבר הצהוב בראש ספרי "hardcoded" (בראשית תמן, לוח ברכות הנהנין ועוד) —
+   קומפקטי: כרטיס הסבר בלבד, לא חלק מהתוכן ── */
+.sn-intro-card {
+  background: #fef3c7;
+  border: 1.5px solid rgba(245, 158, 11, 0.4);
+  border-radius: 0.85rem;
+  padding: 0.7rem 0.95rem;
+  margin-bottom: 1.1rem;
+  line-height: 1.75;
+  font-size: 0.72em;
+  color: #78350f;
+}
+@media (max-width: 640px) {
+  .sn-intro-card {
+    padding: 0.6rem 0.8rem;
+    margin-bottom: 0.9rem;
+    line-height: 1.7;
+    font-size: 0.64em;
+  }
+}
+
+/* ── כרטיסי הכותרת בראש ספרי התפילות (ציוני צדיקים, סגולות ותפילות) —
+   קומפקטיים: לא יורשים את line-height:2 של גוף התפילה ── */
+#sn-reader-content .sn-head-card { line-height: 1.7; }
+#sn-reader-content .sn-head-card h2 { line-height: 1.5 !important; }
+#sn-reader-content .sn-head-card p { line-height: 1.65 !important; }
+@media (max-width: 640px) {
+  #sn-reader-content .sn-head-card { padding: 0.55rem 0.7rem !important; margin-bottom: 0.8rem !important; }
+  #sn-reader-content .sn-head-card h2 { font-size: 0.78em !important; margin-bottom: 0.3rem !important; }
+  #sn-reader-content .sn-head-card p { font-size: 0.56em !important; line-height: 1.6 !important; }
+}
+
+/* ── חלון הסימניות (ספרים נוספים) — עיצוב יוקרתי כהה-זהב (בקשת משתמש 09/2026) ── */
+.snbm-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.65rem;
+  padding-bottom: 0.55rem;
+  border-bottom: 1px solid rgba(232, 193, 90, 0.25);
+}
+.snbm-title {
+  color: #f2d98a;
+  font-size: 0.92rem;
+  font-weight: 900;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.snbm-title small {
+  color: #94a3b8;
+  font-weight: 600;
+  font-size: 0.72rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.snbm-count {
+  background: rgba(232, 193, 90, 0.15);
+  color: #e8c15a;
+  border: 1px solid rgba(232, 193, 90, 0.35);
+  font-size: 0.68rem;
+  font-weight: 800;
+  border-radius: 999px;
+  padding: 0.1rem 0.5rem;
+  flex-shrink: 0;
+}
+.snbm-close {
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #cbd5e1;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.8rem;
+  flex-shrink: 0;
+  padding: 0;
+  transition: all 0.2s;
+}
+.snbm-close:hover {
+  background: rgba(239, 68, 68, 0.18);
+  color: #fca5a5;
+  border-color: rgba(239, 68, 68, 0.4);
+}
+.snbm-row {
+  display: flex;
+  align-items: stretch;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 0.7rem;
+  margin-bottom: 0.45rem;
+  overflow: hidden;
+  transition: background 0.18s, border-color 0.18s;
+}
+.snbm-row:hover {
+  background: rgba(232, 193, 90, 0.09);
+  border-color: rgba(232, 193, 90, 0.35);
+}
+.snbm-row-lp {
+  background: rgba(232, 193, 90, 0.1);
+  border-color: rgba(232, 193, 90, 0.4);
+}
+.snbm-go {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: right;
+  padding: 0.55rem 0.65rem;
+  direction: rtl;
+}
+.snbm-ico {
+  font-size: 1.05rem;
+  flex-shrink: 0;
+}
+.snbm-txt {
+  min-width: 0;
+  flex: 1;
+}
+.snbm-sub {
+  display: block;
+  color: #e8c15a;
+  font-size: 0.68rem;
+  font-weight: 800;
+  margin-bottom: 0.1rem;
+}
+.snbm-label {
+  display: block;
+  color: #f1f5f9;
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1.45;
+}
+.snbm-time {
+  display: block;
+  color: #8b98ad;
+  font-size: 0.64rem;
+  margin-top: 0.15rem;
+}
+.snbm-del {
+  background: none;
+  border: none;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  color: #64748b;
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 0 0.7rem;
+  flex-shrink: 0;
+  transition: all 0.18s;
+}
+.snbm-del:hover {
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.12);
+}
+.snbm-empty {
+  text-align: center;
+  color: #94a3b8;
+  padding: 1.1rem 0.5rem 0.9rem;
+}
+.snbm-empty .snbm-empty-ico {
+  font-size: 1.6rem;
+  display: block;
+  margin-bottom: 0.35rem;
+  opacity: 0.8;
+}
+.snbm-empty p {
+  margin: 0 0 0.2rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #cbd5e1;
+}
+.snbm-empty small {
+  font-size: 0.7rem;
+  color: #7d8aa0;
+  line-height: 1.5;
+  display: block;
+}
+@media (max-width: 640px) {
+  .snbm-label { font-size: 0.8rem; }
+  .snbm-go { padding: 0.5rem 0.55rem; }
+  .snbm-title { font-size: 0.85rem; }
+}
+
+/* ── דבר תורה על צדיק (נפתח בלחיצה על הכרטיס) ── */
+.hil-item { margin-bottom: 0.6rem; }
+.hil-item .hil-card { margin-bottom: 0; }
+.hil-card-torah { cursor: pointer; }
+.hil-torah-hint {
+  margin-top: 0.3rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #f2d98a;
+  opacity: 0.85;
+  letter-spacing: 0.02em;
+}
+.hil-torah-arrow { display: inline-block; font-size: 0.68rem; }
+.hil-torah {
+  direction: rtl;
+  text-align: right;
+  margin: 0.35rem 0.35rem 0;
+  padding: 0.85rem 1rem;
+  border-radius: 0 0 1rem 1rem;
+  background: linear-gradient(180deg, rgba(242, 217, 138, 0.08), rgba(255, 255, 255, 0.03));
+  border: 1px solid rgba(242, 217, 138, 0.22);
+  border-top: none;
+  color: #e8e3d3;
+  font-size: 0.86rem;
+  line-height: 1.85;
+  animation: hil-card-in 0.35s ease both;
+}
+.hil-torah b, .hil-torah strong { color: #fdf3d0; }
+.hil-torah .hil-torah-src {
+  display: block;
+  margin-top: 0.45rem;
+  font-size: 0.74rem;
+  color: rgba(196, 181, 253, 0.9);
+  font-weight: 700;
+}
+.hil-torah .hil-torah-sep {
+  border: none;
+  border-top: 1px dashed rgba(242, 217, 138, 0.3);
+  margin: 0.75rem 0;
+}
+
 /* ריק — ירח */
 .hil-empty { text-align: center; padding: 2rem 0 1.6rem; color: #a5b4fc; }
 .hil-empty-moon { font-size: 2.6rem; margin-bottom: 0.6rem; filter: drop-shadow(0 0 16px rgba(165, 180, 252, 0.4)); }
@@ -6491,7 +6954,7 @@ body.lux-season-av9 .lux-hero-orb { opacity: 0.15; }
 .hilc-today .hilc-heb { color: #fbbf24; font-weight: 900; }
 
 @media (prefers-reduced-motion: reduce) {
-  .hil-card, .hil-flame-mini { animation: none !important; }
+  .hil-card, .hil-flame-mini, .hil-torah { animation: none !important; }
 }
 
 /* ── כפתור "לבניית אתר פרימיום" — גדול מעט יותר במובייל ── */
@@ -6503,6 +6966,29 @@ body.lux-season-av9 .lux-hero-orb { opacity: 0.15; }
 }
 
 /* ── כותרת "מנחה" עם פס עדין (מעל הקורבנות) ── */
+/* ── [12] כותרות סעיפים בתוך התפילות (אשרי, קורבנות, עמידה, עלינו לשבח...) —
+   נראות ככותרות אמיתיות ולא כחלק מגוף התפילה. אותו סלקטור שכבר משמש
+   ל-scroll-snap ולתפריט התפילה (p:has(> big > b)) — אין שינוי במבנה ה-DOM. ── */
+.prayer-richtext > p:has(> big > b) {
+  text-align: center;
+  color: #1e3a8a;
+  letter-spacing: 0.03em;
+  margin: 1.7rem auto 0.85rem;
+}
+.prayer-richtext > p:has(> big > b) > big {
+  font-size: 1.28em;
+  font-family: var(--lux-serif);
+}
+.prayer-richtext > p:has(> big > b)::after {
+  content: "";
+  display: block;
+  width: 5.5rem;
+  height: 2px;
+  margin: 0.35rem auto 0;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, rgba(180, 130, 40, 0.65), transparent);
+}
+
 .mincha-main-title {
   display: flex;
   align-items: center;

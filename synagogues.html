@@ -407,20 +407,33 @@
       </style>
 
 
-      <!-- ══════ Tzaddik Prayers Button (visible only on tzaddik tab) ══════ -->
+      <!-- ══════ Tzaddik Prayers Buttons (visible only on tzaddik tab) ══════
+           נפתחות במסך מלא בקורא "תפילות נוספות" באתר הראשי — עם תוכן עניינים וחיפוש -->
       <div id="tzaddik-prayers-section" style="display:none;margin-bottom:1.25rem;">
-        <button id="btn-tzaddik-prayers" type="button"
+        <a id="btn-tzaddik-prayers" href="index.html?prayer=tzadikim-il"
           style="width:100%;background:linear-gradient(135deg,#b45309,#7c2d12);color:#fffbeb;
-          border:none;border-radius:0.85rem;padding:0.9rem 1.2rem;font-size:1.05rem;font-weight:900;
+          border:none;border-radius:0.85rem;padding:0.9rem 1.2rem;font-size:1.02rem;font-weight:900;
           cursor:pointer;box-shadow:0 4px 14px rgba(180,83,9,0.35);display:flex;
-          align-items:center;justify-content:center;gap:0.6rem;transition:transform 0.15s;"
+          align-items:center;justify-content:center;gap:0.6rem;transition:transform 0.15s;
+          text-decoration:none;margin-bottom:0.6rem;"
           onmouseover="this.style.transform='translateY(-1px)'"
-          onmouseout="this.style.transform='translateY(0)'"
-          onclick="openTzaddikPrayersModal()">
+          onmouseout="this.style.transform='translateY(0)'">
           <span aria-hidden="true" style="font-size:1.25rem;">🕯️</span>
-          <span>תפילות בציוני צדיקים</span>
+          <span>תפילות בציוני צדיקים — ארץ ישראל</span>
           <span aria-hidden="true" style="font-size:1.1rem;opacity:0.85;">←</span>
-        </button>
+        </a>
+        <a id="btn-tzaddik-prayers-chul" href="index.html?prayer=tzadikim-chul"
+          style="width:100%;background:linear-gradient(135deg,#6d28d9,#4c1d95);color:#f5f3ff;
+          border:none;border-radius:0.85rem;padding:0.9rem 1.2rem;font-size:1.02rem;font-weight:900;
+          cursor:pointer;box-shadow:0 4px 14px rgba(109,40,217,0.35);display:flex;
+          align-items:center;justify-content:center;gap:0.6rem;transition:transform 0.15s;
+          text-decoration:none;"
+          onmouseover="this.style.transform='translateY(-1px)'"
+          onmouseout="this.style.transform='translateY(0)'">
+          <span aria-hidden="true" style="font-size:1.25rem;">🌍</span>
+          <span>תפילות בציוני צדיקים — חוץ לארץ</span>
+          <span aria-hidden="true" style="font-size:1.1rem;opacity:0.85;">←</span>
+        </a>
       </div>
 
       <!-- ══════ Status / Results ══════ -->

@@ -117,6 +117,19 @@
         "."
       ],
       "port": 8161
+    },
+    {
+      "name": "site-talmud",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "-y",
+        "http-server",
+        "-p",
+        "8171",
+        "-c-1",
+        "."
+      ],
+      "port": 8171
     }
   ]
 }

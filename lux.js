@@ -1395,15 +1395,18 @@
     }
     // חשיפה גלובלית — פריט "גלגל השנה" בסרגל הניווט התחתון
     window.luxOpenYearWheel = openWheel;
-    // כפתור בהירו — אחרי כפתור הלוח החודשי
+    // כפתור עגול צף מתחת לכפתור הירח (בקשת משתמש 09/2026) — ממוקם ע"י CSS אבסולוטי בהירו
+    var hero = document.getElementById("hero-section");
     var calBtn = document.getElementById("btn-open-calendar");
-    if (!calBtn) return;
+    if (!hero || !calBtn) return;
     var b = document.createElement("button");
     b.type = "button";
     b.id = "lux-year-wheel-btn";
-    b.innerHTML = "<span>🎡</span><span>גלגל השנה</span>";
+    b.setAttribute("aria-label", "גלגל השנה — כל מועדי השנה במבט אחד");
+    b.title = "גלגל השנה 🎡";
+    b.textContent = "🎡";
     b.addEventListener("click", openWheel);
-    calBtn.insertAdjacentElement("afterend", b);
+    hero.appendChild(b);
     // מוסתר עד שהדשבורד נטען — כמו שאר הכפתורים
     b.style.display = "none";
     var vis = setInterval(function () {
@@ -3335,9 +3338,28 @@
               (heb ? '<p class="lux-st-heb">' + esc(heb) + "</p>" : "") +
               '<p class="lux-st-sub">' + esc(greg) + "</p>"
       });
-      var todayIso = new Date().toISOString().slice(0, 10);
-      var day = new Date().getDay();
-      var hd0 = luxHebDay(new Date());
+      // התאריך ההלכתי הנוכחי — אחרי צאת הכוכבים עוברים ליום הבא, בדיוק כמו
+      // בשאר האתר (dateForHebcal). בלי זה הסטוריז הציגו חג/צום/ר"ח לא נכונים
+      // בלילה. הערה: toISOString הישן היה גם UTC — הזיז את התאריך בשעות הלילה.
+      var effDate = (function () {
+        var d = new Date();
+        try {
+          var z = window._lastZData;
+          var tzeit = z && z.times && z.times.tzeit7083deg ? new Date(z.times.tzeit7083deg).getTime() : null;
+          if (tzeit !== null) {
+            if (Date.now() > tzeit) d = new Date(Date.now() + 86400000);
+          } else if (d.getHours() >= 20) {
+            d = new Date(Date.now() + 86400000);
+          }
+        } catch (e) {}
+        return d;
+      })();
+      var todayIso = effDate.getFullYear() + "-" +
+        String(effDate.getMonth() + 1).padStart(2, "0") + "-" +
+        String(effDate.getDate()).padStart(2, "0");
+      var day = effDate.getDay();
+      var wallDay = new Date().getDay();
+      var hd0 = luxHebDay(effDate);
       var todayEvents = (getCachedEvents() || []).filter(function (e) { return e.date === todayIso; });
       // חג או צום היום
       todayEvents.forEach(function (e) {
@@ -3357,7 +3379,7 @@
       });
       // ראש חודש
       if (hd0 === 1 || hd0 === 30) {
-        var rcMonth = luxHebMonth(hd0 === 30 ? new Date(Date.now() + 86400000) : new Date());
+        var rcMonth = luxHebMonth(hd0 === 30 ? new Date(effDate.getTime() + 86400000) : effDate);
         slides.push({
           cls: "lux-st-zman",
           html: '<div class="lux-st-big">🌒</div><h2>ראש חודש ' + esc(rcMonth) + "</h2>" +
@@ -3368,7 +3390,16 @@
       var enter = ((document.getElementById("shabbat-enter") || {}).textContent || "").trim();
       var exit = ((document.getElementById("shabbat-exit") || {}).textContent || "").trim();
       var parsha0 = ((document.getElementById("stat-parasha") || {}).textContent || "").trim();
-      if (day === 5 && enter && enter !== "--:--") {
+      if (wallDay === 5 && day === 6) {
+        // ליל שבת (שישי אחרי צאת הכוכבים) — שבת כבר נכנסה
+        slides.push({
+          cls: "lux-st-cover",
+          html: '<div class="lux-st-big">🕯️</div><h2>שבת שלום</h2>' +
+                (parsha0 && parsha0 !== "--" ? '<p class="lux-st-line">פרשת השבוע: <b>' + esc(parsha0) + "</b></p>" : "") +
+                (exit && exit !== "--:--" ? '<p class="lux-st-sub">צאת השבת מחר: ' + esc(exit) + "</p>" : "") +
+                '<p class="lux-st-sub">שבת שלום ומבורך! ✨</p>'
+        });
+      } else if (wallDay === 5 && enter && enter !== "--:--") {
         slides.push({
           cls: "lux-st-cover",
           html: '<div class="lux-st-big">🕯️</div><h2>שבת מתקרבת</h2>' +
@@ -3376,16 +3407,25 @@
                 (parsha0 && parsha0 !== "--" ? '<p class="lux-st-sub">פרשת השבוע: ' + esc(parsha0) + "</p>" : "") +
                 '<p class="lux-st-sub">שבת שלום ומבורך! ✨</p>'
         });
-      } else if (day === 6 && exit && exit !== "--:--") {
+      } else if (wallDay === 6 && day === 6 && exit && exit !== "--:--") {
+        // יום שבת (לפני צאת הכוכבים)
         slides.push({
           cls: "lux-st-cover",
           html: '<div class="lux-st-big">✨</div><h2>מוצאי שבת הערב</h2>' +
                 '<p class="lux-st-line">צאת השבת: <b>' + esc(exit) + "</b></p>" +
                 '<p class="lux-st-sub">שבוע טוב ומבורך!</p>'
         });
+      } else if (wallDay === 6 && day === 0) {
+        // מוצאי שבת (אחרי צאת הכוכבים)
+        slides.push({
+          cls: "lux-st-cover",
+          html: '<div class="lux-st-big">✨</div><h2>שבוע טוב!</h2>' +
+                '<p class="lux-st-line">שבוע טוב ומבורך 🕊️</p>' +
+                '<p class="lux-st-sub">לא לשכוח הבדלה 🍷</p>'
+        });
       }
       // ערב חג (הדלקת נרות של חג מחושבת ע"י האתר)
-      if (window.HOLIDAY_CANDLES_STR && window.HOLIDAY_NAME_HE && day !== 5 && day !== 6) {
+      if (window.HOLIDAY_CANDLES_STR && window.HOLIDAY_NAME_HE && wallDay !== 5 && wallDay !== 6) {
         var hcd = window.HOLIDAY_CANDLES_TIME ? new Date(window.HOLIDAY_CANDLES_TIME) : null;
         if (hcd && (hcd - new Date()) > 0 && (hcd - new Date()) < 36 * 3600000) {
           slides.push({
@@ -5210,28 +5250,94 @@
         }
         renderRow();
       });
-      // ── נושאי כלים — צ'יפים להדלקה/כיבוי, כמו בקורא הספרים הרגיל ──
+      // ── נושאי כלים — כפתור 📖 + חלונית בחירה עם תיאורים, באותה לוגיקה של
+      // בורר המפרשים בקורא התנ"ך (אוחד ספטמבר 2026). האחסון נשאר lux_plan_cm
+      // לפי אינדקסים — לא נוגעים בפורמט (המערכים append-only). ──
       var CM_KEY = "lux_plan_cm";
       var cmAll = jget(CM_KEY, {});
       var cmOn = (cmAll[bk.id] || []).slice();
+      var PL_CM_DESC = {
+        'רש"י': "פרשן הפשט הגדול — יסוד כל לימוד",
+        "מצודת דוד": "ביאור העניין — פירוש שווה לכל נפש",
+        "מצודת ציון": "ביאור המילים הקשות",
+        "ברטנורא": "רבי עובדיה מברטנורא — הפירוש היסודי למשנה",
+        'רמב"ם': 'פירוש המשנה לרמב"ם',
+        "עיקר תוספות יום טוב": "תמצית התוספות יום טוב על המשנה",
+        "משנה ברורה": "החפץ חיים — הלכה למעשה על אורח חיים",
+        "באר היטב": "תמצית דברי האחרונים",
+        "ביאור הלכה": "הרחבות והכרעות של החפץ חיים",
+        "כף החיים": "הלכה עם קבלה — מנהגי הספרדים",
+        "שולחן ערוך": "לשון מרן רבי יוסף קארו"
+      };
       if (bk.cm && bk.cm.length) {
         var cmBar = document.createElement("div");
         cmBar.className = "lux-pl-cmbar";
-        cmBar.innerHTML = '<span class="lux-pl-cmbar-lbl">נושאי כלים:</span>' +
-          bk.cm.map(function (c, ci) {
-            return '<button type="button" class="lux-pl-cmchip' + (cmOn.indexOf(ci) >= 0 ? " lux-pl-cmchip-on" : "") + '" data-ci="' + ci + '">' + esc(c.he) + "</button>";
-          }).join("");
+        cmBar.innerHTML = '<button type="button" id="lux-pl-cm-btn" class="lux-pl-cm-mainbtn" aria-haspopup="dialog" aria-expanded="false">📖 נושאי כלים' +
+          '<span id="lux-pl-cm-badge" class="lux-pl-cm-badge"' + (cmOn.length ? "" : ' style="display:none;"') + ">" + cmOn.length + "</span></button>";
         area.insertAdjacentElement("beforebegin", cmBar);
+        var cmPop = document.createElement("div");
+        cmPop.id = "lux-pl-cm-pop";
+        cmPop.className = "lux-pl-cmpop";
+        cmPop.setAttribute("role", "dialog");
+        cmPop.setAttribute("aria-label", "בחירת נושאי כלים");
+        cmPop.style.display = "none";
+        var cmBd = document.createElement("div");
+        cmBd.className = "lux-pl-cmpop-bd";
+        cmBd.style.display = "none";
+        ov.appendChild(cmBd); ov.appendChild(cmPop);
+        function plCmRender() {
+          var chips = bk.cm.map(function (c, ci) {
+            var on = cmOn.indexOf(ci) >= 0;
+            var desc = PL_CM_DESC[c.he] || "";
+            return '<button type="button" class="lux-pl-cmchip2' + (on ? " on" : "") + '" data-ci="' + ci + '" aria-pressed="' + (on ? "true" : "false") + '">' +
+              '<span class="lux-pl-cmchip2-t">' + (on ? "✓ " : "") + esc(c.he) + "</span>" +
+              (desc ? '<span class="lux-pl-cmchip2-d">' + esc(desc) + "</span>" : "") +
+              "</button>";
+          }).join("");
+          cmPop.innerHTML =
+            '<div class="lux-pl-cmpop-head">' +
+              '<button type="button" class="lux-pl-cmpop-x" aria-label="סגור">✕</button>' +
+              '<div class="lux-pl-cmpop-title">📖 נושאי כלים' + (cmOn.length ? ' <span>(' + cmOn.length + " פעילים)</span>" : "") + "</div>" +
+              (cmOn.length ? '<button type="button" class="lux-pl-cmpop-clear">נקה הכל</button>' : '<span style="width:30px;flex-shrink:0;"></span>') +
+            "</div>" +
+            '<div class="lux-pl-cmpop-list">' + chips + "</div>";
+        }
+        function plCmSync() {
+          var badge = document.getElementById("lux-pl-cm-badge");
+          if (badge) { badge.textContent = cmOn.length; badge.style.display = cmOn.length ? "" : "none"; }
+        }
+        function plCmToggle(open) {
+          var willOpen = typeof open === "boolean" ? open : cmPop.style.display === "none";
+          if (willOpen) plCmRender();
+          cmPop.style.display = willOpen ? "" : "none";
+          cmBd.style.display = willOpen ? "" : "none";
+          var btn = document.getElementById("lux-pl-cm-btn");
+          if (btn) btn.setAttribute("aria-expanded", willOpen ? "true" : "false");
+        }
         cmBar.addEventListener("click", function (e) {
+          if (e.target.closest("#lux-pl-cm-btn")) plCmToggle();
+        });
+        cmBd.addEventListener("click", function () { plCmToggle(false); });
+        cmPop.addEventListener("click", function (e) {
+          if (e.target.closest(".lux-pl-cmpop-x")) { plCmToggle(false); return; }
+          if (e.target.closest(".lux-pl-cmpop-clear")) {
+            cmOn.length = 0;
+            cmAll[bk.id] = cmOn; jset(CM_KEY, cmAll);
+            if (window._btnToastOff) window._btnToastOff("נושאי כלים");
+            plCmRender(); plCmSync(); renderContent();
+            return;
+          }
           var b = e.target.closest("[data-ci]");
           if (!b) return;
           var ci = parseInt(b.getAttribute("data-ci"), 10);
           var at = cmOn.indexOf(ci);
           if (at >= 0) cmOn.splice(at, 1); else cmOn.push(ci);
-          b.classList.toggle("lux-pl-cmchip-on", at < 0);
           cmAll[bk.id] = cmOn;
           jset(CM_KEY, cmAll);
-          renderContent();
+          var nm = (bk.cm[ci] && bk.cm[ci].he) || "נושא כלים";
+          if (at >= 0) { if (window._btnToastOff) window._btnToastOff(nm); }
+          else if (window._btnToastOn) window._btnToastOn(nm);
+          plCmRender(); plCmSync(); renderContent();
         });
       }
 
@@ -5356,6 +5462,8 @@
       return STUDY_BADGES.map(function (b) { return { i: b.i, t: b.t + " (החצי־שנה הנוכחי)", on: c >= b.at }; });
     };
     function badgePopup(b) {
+      // פופאפ חדש מחליף פופאפ תג קיים — חציית שני ספים בבת אחת לא עורמת שניים
+      document.querySelectorAll(".lux-badge-pop").forEach(function (p) { p.remove(); });
       var el = document.createElement("div");
       el.className = "lux-badge-pop";
       el.innerHTML =
@@ -5849,13 +5957,13 @@
     setInterval(tick, 900);
     setTimeout(tick, 1200);
   });
-  /* ── 45. מצב ערב שבת / ערב חג — שעה לפני הדלקת נרות ──────────────
+  /* ── 45. מצב ערב שבת / ערב חג — שלוש שעות לפני הדלקת נרות ──────────────
      הכותרת והרקע מתחלפים לאווירת שבת, וגריד התפילות הרגיל מוחלף בכפתורים
      שרלוונטיים לשבת (שיר השירים, שניים מקרא, פרשה, זמנים...). הספירה לאחור
      נשארת במקומה. המצב נמשך עד מוצאי שבת/חג (~25.5 שעות מההדלקה).
      בדיקה ידנית: ?erev=shabbat או ?erev=chag בכתובת (?erev=0 מבטל). */
   safe("erevShabbatMode", function () {
-    var LEAD_MS = 60 * 60000;          // שעה לפני ההדלקה
+    var LEAD_MS = 3 * 3600000;         // שלוש שעות לפני ההדלקה
     var AFTER_MS = 25.5 * 3600000;     // עד אחרי ההבדלה
     var force = null;
     try {
@@ -5949,23 +6057,16 @@
         "</div>" +
         '<div class="grid grid-cols-3 gap-2">' + b.join("") + "</div>";
     }
-    function panelHtml(st) {
+    // החלק הדינמי של הפאנל (כותרת, פרשה, זמנים) — מוחלף לבדו כשהנתונים מתעדכנים,
+    // כדי שהעיטורים המונפשים (אבק, נרות, הילה) לא ייבנו מחדש ולא ירצדו
+    function panelDynHtml(st) {
       var isS = st.kind === "shabbat";
       var enter = isS ? (window.SHABBAT_CANDLES_STR || txt("shabbat-enter")) : (window.HOLIDAY_CANDLES_STR || "");
       var exit = isS ? (window.SHABBAT_HAVDALAH_STR || txt("shabbat-exit")) : (window.HOLIDAY_HAVDALAH_STR || "");
       var p = isS ? parshaName() : "";
       var hn = holName();
       var sub = isS ? (p ? "פרשת " + p : "") : (hn !== "חג" ? hn : "");
-      var dust = "";
-      for (var di = 0; di < 12; di++) {
-        dust += '<i style="left:' + (4 + Math.random() * 92) + "%;animation-delay:" + (Math.random() * 6).toFixed(2) + "s;animation-duration:" + (5 + Math.random() * 5).toFixed(2) + 's;"></i>';
-      }
-      return '<div class="lux-erev-dust" aria-hidden="true">' + dust + "</div>" +
-        '<span class="lux-erev-corner c1" aria-hidden="true">✦</span><span class="lux-erev-corner c2" aria-hidden="true">✦</span>' +
-        '<span class="lux-erev-corner c3" aria-hidden="true">✦</span><span class="lux-erev-corner c4" aria-hidden="true">✦</span>' +
-        '<div class="lux-erev-halo" aria-hidden="true"></div>' +
-        '<div class="lux-erev-candles">' + candleHtml() + candleHtml() + "</div>" +
-        '<div class="lux-erev-title">' + (isS ? "שבת שלום" : "חג שמח") + "</div>" +
+      return '<div class="lux-erev-title">' + (isS ? "שבת שלום" : "חג שמח") + "</div>" +
         '<div class="lux-erev-orn" aria-hidden="true"><span>✡</span></div>' +
         (sub ? '<div class="lux-erev-sub">' + esc(sub) + "</div>" : "") +
         '<div class="lux-erev-tag">' + (isS ? "בואי כלה, שבת המלכה" : "מועדים לשמחה, חגים וזמנים לששון") + "</div>" +
@@ -5974,6 +6075,21 @@
           (exit && exit !== "--:--" ? '<span>✨ ' + (isS ? "הבדלה" : "צאת החג") + ' <b dir="ltr">' + esc(exit) + "</b></span>" : "") +
         "</div>" +
         (st.entered ? '<div class="lux-erev-entered">' + (isS ? "שבת שלום ומבורך 🕊️" : "מועדים לשמחה 🕊️") + "</div>" : "");
+    }
+    function panelHtml(st) {
+      var dust = "";
+      for (var di = 0; di < 12; di++) {
+        // מיקומים דטרמיניסטיים — בנייה חוזרת של הפאנל לא "מקפיצה" את החלקיקים
+        var f1 = Math.sin(di * 127.1) * 43758.5453; f1 -= Math.floor(f1);
+        var f2 = Math.sin(di * 311.7) * 12543.2171; f2 -= Math.floor(f2);
+        dust += '<i style="left:' + (4 + f1 * 92).toFixed(2) + "%;animation-delay:" + (f2 * 6).toFixed(2) + "s;animation-duration:" + (5 + f1 * 5).toFixed(2) + 's;"></i>';
+      }
+      return '<div class="lux-erev-dust" aria-hidden="true">' + dust + "</div>" +
+        '<span class="lux-erev-corner c1" aria-hidden="true">✦</span><span class="lux-erev-corner c2" aria-hidden="true">✦</span>' +
+        '<span class="lux-erev-corner c3" aria-hidden="true">✦</span><span class="lux-erev-corner c4" aria-hidden="true">✦</span>' +
+        '<div class="lux-erev-halo" aria-hidden="true"></div>' +
+        '<div class="lux-erev-candles">' + candleHtml() + candleHtml() + "</div>" +
+        '<div class="lux-erev-dyn">' + panelDynHtml(st) + "</div>";
     }
 
     var lastKey = "";
@@ -6010,8 +6126,14 @@
         panel = document.createElement("div");
         panel.id = "lux-erev-panel";
         wrap.insertAdjacentElement("beforebegin", panel);
+        panel.innerHTML = panelHtml(st);
+      } else {
+        // עדכון נקודתי של הטקסטים בלבד — בנייה מלאה מחדש מאתחלת את כל
+        // האנימציות (אבק, הילה, נרות) וגורמת לריצוד בכל הגעת נתון חדש
+        var dyn = panel.querySelector(".lux-erev-dyn");
+        if (dyn) dyn.innerHTML = panelDynHtml(st);
+        else panel.innerHTML = panelHtml(st);
       }
-      panel.innerHTML = panelHtml(st);
       if (!grid) {
         grid = document.createElement("div");
         grid.id = "lux-erev-grid";

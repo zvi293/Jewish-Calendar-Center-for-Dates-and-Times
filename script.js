@@ -1126,26 +1126,38 @@ function _renderMoonCard() {
   const isHe = (typeof CURRENT_LANG === "undefined") || CURRENT_LANG === "he";
   const name = nextM.name.replace("קידוש לבנה - ", "").replace("Kiddush Levana - ", "");
   const open = _isMoonWindowOpenNow(nextM);
+  let html;
+  let countdown = null; // [תאריך, "s" לתחילת הזמן] — מופעל רק אחרי שהכרטיס במקום
   if (open && nextM.endDate) {
     const daysToEnd = getDaysDiff(nextM.endDate);
     if (daysToEnd <= 1) {
-      el.innerHTML =
+      html =
         `${name} <br><span class="text-sm font-normal opacity-80" style="color:#fbbf24">${isHe ? "⏱ סוף זמן: " : "⏱ End of window: "}<span id="levana-countdown-display">00:00:00</span></span>`;
-      _startLevanaCountdown(nextM.endDate);
+      countdown = [nextM.endDate];
     } else {
-      el.innerHTML =
+      html =
         `${name} <br><span class="text-sm font-normal opacity-80" style="color:#fbbf24">${isHe ? `(סוף זמן בעוד ${daysToEnd} ימים)` : `(End of window in ${daysToEnd} days)`}</span>`;
     }
   } else if (getDaysDiff(nextM.date) <= 0) {
     // חלון הברכה נפתח היום — ספירה לאחור עד תחילת הזמן הערב
-    el.innerHTML =
+    html =
       `${name} <br><span class="text-sm font-normal opacity-80" style="color:#6ee7b7">${isHe ? "⏱ ניתן לברך בעוד: " : "⏱ Opens in: "}<span id="levana-countdown-display">00:00:00</span></span>`;
-    _startLevanaCountdown(nextM.date, "s");
+    countdown = [nextM.date, "s"];
   } else {
     const days = getDaysDiff(nextM.date);
-    el.innerHTML =
+    html =
       `${name} <br><span class="text-sm font-normal opacity-80">${isHe ? `(בעוד ${days} ימים)` : `(${formatDaysUntilText(days)})`}</span>`;
   }
+  // כתיבה רק כשהתוכן באמת השתנה: הטיק הדקתי (PWA שנשאר פתוח) בנה את הכרטיס
+  // מחדש עם אותו HTML בדיוק — וכל בנייה כזו היא הבהוב קטן של הכרטיס בנייד.
+  // ההשוואה גם מול ה-DOM עצמו, כך שדריסה חיצונית (רינדור מחדש של הדשבורד)
+  // עדיין מתוקנת בטיק הבא.
+  if (html !== el.__moonHtml || el.innerHTML !== el.__moonDom) {
+    el.innerHTML = html;
+    el.__moonHtml = html;
+    el.__moonDom = el.innerHTML;
+  }
+  if (countdown) _startLevanaCountdown(countdown[0], countdown[1]);
   if (typeof updateLevanaBlink === "function") { try { updateLevanaBlink(); } catch (e) {} }
 }
 
@@ -6186,12 +6198,22 @@ initApp();
 
   function resize() {
     const hero = document.getElementById("hero-section");
-    W = canvas.width = hero ? hero.offsetWidth : window.innerWidth;
-    H = canvas.height = hero ? hero.offsetHeight : 400;
-    buildStars();
+    const nw = hero ? hero.offsetWidth : window.innerWidth;
+    const nh = hero ? hero.offsetHeight : 400;
+    // בנייד אירוע resize נורה בכל קריסה/פתיחה של סרגל הכתובת (ובמקלדת) בלי
+    // שההירו השתנה — אבל השמה ל-canvas.width מוחקת את הקנבס ובנייה מחדש
+    // מגרילה שמיים חדשים = "קפיצה" של כל הכוכבים. אותן מידות ⇒ לא נוגעים.
+    if (nw === W && nh === H && stars.length) return;
+    W = canvas.width = nw;
+    H = canvas.height = nh;
+    buildStars(true);
   }
 
-  function buildStars() {
+  function buildStars(preserve) {
+    // preserve: הכוכבים הקיימים שעדיין בתחום נשמרים (מיקום/פאזה) ומשלימים רק
+    // את החסר — שינוי גובה ההירו (טעינת הדשבורד, סרגל הכתובת בנייד) לא מגריל
+    // שמיים חדשים ולא נראה כקפיצה
+    const prev = preserve ? stars.filter((s) => s.x <= W && s.y <= H) : [];
     stars = [];
     const isMobile = W < 640;
     // More stars on mobile (smaller canvas), brighter + faster
@@ -6199,7 +6221,8 @@ initApp();
     const count = Math.max(60, Math.floor((W * H) / density));
     // Speed scale: mobile needs more relative drift to look alive
     const speedScale = isMobile ? W / 320 : W / 900;
-    for (let i = 0; i < count; i++) {
+    stars = prev.slice(0, count);
+    for (let i = stars.length; i < count; i++) {
       const angle = Math.random() * Math.PI * 2;
       // Base drift: noticeably faster than before, scaled to screen
       const driftSpeed = (Math.random() * 0.16 + 0.05) * speedScale;
@@ -6233,6 +6256,48 @@ initApp();
   const _starsReduced = (() => {
     try { return window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { return false; }
   })();
+  // ── כוכב נופל מצויר על הקנבס (נייד) ──
+  // בנייד הכוכב הנופל של lux.js לא נוגע ב-DOM: אלמנט/אנימציית compositor מעל
+  // ההירו (גם WAAPI על שכבה קבועה) נראו בטלפונים כהבהוב/"רענון" של כל המסך
+  // כל ~20-40 שניות. כאן הפס נמשח בתוך לולאת הציור שממילא רצה — אפס שכבות
+  // חדשות, אפס style/layout. lux.js קורא ל-__luxCanvasShoot במקום ליצור אלמנט.
+  let _shoot = null;
+  window.__luxCanvasShoot = function () {
+    if (!W || !H || _starsReduced) return false;
+    if (_shoot) return true; // יריה קודמת עדיין באוויר
+    const ang = (200 * Math.PI) / 180; // אותו כיוון כמו rotate(200deg) בגרסת ה-DOM
+    _shoot = {
+      x0: W - 60 - Math.random() * W * 0.4, // שמאלה מהקצה הימני
+      y0: H * (0.05 + Math.random() * 0.35), // ברבע-שליש העליון של ההירו
+      dx: Math.cos(ang),
+      dy: Math.sin(ang),
+      t0: performance.now(),
+    };
+    return true;
+  };
+  function drawShoot(now) {
+    if (!_shoot) return;
+    const p = (now - _shoot.t0) / 1300;
+    if (p >= 1) { _shoot = null; return; }
+    // ease-out על המסלול (כמו ה-CSS): הבהוב מהיר פנימה, דעיכה איטית החוצה
+    const e = 1 - Math.pow(1 - p, 2);
+    const a = p < 0.12 ? p / 0.12 : 1 - (p - 0.12) / 0.88;
+    const hx = _shoot.x0 + _shoot.dx * 340 * e, hy = _shoot.y0 + _shoot.dy * 340 * e;
+    const tx = hx - _shoot.dx * 120, ty = hy - _shoot.dy * 120;
+    const g = ctx.createLinearGradient(hx, hy, tx, ty);
+    g.addColorStop(0, "rgba(255,255,255," + (0.9 * a).toFixed(3) + ")");
+    g.addColorStop(0.5, "rgba(242,217,138," + (0.5 * a).toFixed(3) + ")");
+    g.addColorStop(1, "rgba(242,217,138,0)");
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(hx, hy);
+    ctx.lineTo(tx, ty);
+    ctx.strokeStyle = g;
+    ctx.lineWidth = 2;
+    ctx.lineCap = "round";
+    ctx.stroke();
+    ctx.restore();
+  }
   let _starsFrameNo = 0;
   function draw() {
     _starsFrameNo++;
@@ -6334,6 +6399,7 @@ initApp();
         ctx.fillStyle = "rgba(255,255,255," + a.toFixed(3) + ")";
         ctx.fill();
       });
+      drawShoot(performance.now());
     }
     requestAnimationFrame(draw);
   }

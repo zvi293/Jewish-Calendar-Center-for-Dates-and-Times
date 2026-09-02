@@ -71,6 +71,16 @@
       if (!heroOnScreen) return schedule();
       // reduced-motion: ה-CSS ממילא מבטל את האנימציה — אין טעם גם ב-DOM churn
       if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return schedule();
+      // נייד/מסך-מגע (09/2026): הפס נמשח על קנבס הכוכבים עצמו (script.js,
+      // __luxCanvasShoot) — בלי אלמנט DOM ובלי אנימציית compositor מעל ההירו.
+      // גם גרסת ה-WAAPI על אלמנט קבוע נראתה בטלפונים כהבהוב/"רענון" של כל
+      // המסך כל ~20-40 שניות (התלונה חזרה אחרי כל התיקונים הקודמים). הקנבס
+      // ממילא מצויר בכל פריים, כך שהפס לא מוסיף שכבה, style או layout.
+      // אין קנבס (למשל reduced-motion) ⇒ אין כוכב בנייד. אל תחזירו DOM לנייד.
+      if (window.matchMedia("(max-width: 768px), (pointer: coarse)").matches) {
+        try { if (typeof window.__luxCanvasShoot === "function") window.__luxCanvasShoot(); } catch (e) {}
+        return schedule();
+      }
       if (!star || !star.isConnected) {
         star = document.createElement("div");
         star.className = "lux-shooting-star";
@@ -6189,7 +6199,10 @@
       if (!st) {
         if (panel) panel.remove();
         if (grid) grid.remove();
-        body.classList.remove("lux-erev", "lux-erev-chag", "lux-erev-entered");
+        // classList.remove של מחלקות שאינן קיימות עדיין כותב את מאפיין ה-class
+        // (מוטציית DOM על ה-body כל 3/30 שניות) — מסירים רק כשבאמת יש מה להסיר
+        if (body.classList.contains("lux-erev") || body.classList.contains("lux-erev-chag") || body.classList.contains("lux-erev-entered"))
+          body.classList.remove("lux-erev", "lux-erev-chag", "lux-erev-entered");
         lastKey = "";
         return;
       }

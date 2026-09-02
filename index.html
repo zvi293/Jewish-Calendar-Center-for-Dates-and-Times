@@ -303,12 +303,12 @@
          ו-preload לגופן הכותרת (העברית של Assistant) — LCP יציב ומהיר. -->
     <link rel="preload" href="/fonts/assistant-hebrew.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="/fonts.css?v=1" />
-    <link rel="stylesheet" href="style.css?v=54" />
+    <link rel="stylesheet" href="style.css?v=55" />
     <!-- הקוד הראשי יורד מוקדם (preload) אך מוזרק ומתבצע רק אחרי הציור הראשון —
          ראו הטוען בסוף ה-body. ה-?v= כאן חייב להיות זהה לזה שבטוען וב-sw.js.
          fetchpriority=low: שלא יתחרו ברוחב-הפס עם ה-CSS החוסם (FCP) — כמו defer. -->
     <link rel="preload" href="script.js?v=49" as="script" fetchpriority="low" />
-    <link rel="preload" href="lux.js?v=47" as="script" fetchpriority="low" />
+    <link rel="preload" href="lux.js?v=48" as="script" fetchpriority="low" />
 
     <!-- OneSignal Web Push SDK -->
     <script>
@@ -586,6 +586,26 @@
         </svg>
       </div>
 
+      <!-- ══════ בתי כנסת, מקוואות וציוני צדיקים — כפתור עגול צף בקצה הימני, מול הירח ══════
+           ילד ישיר של ההירו (כמו #lux-moon ו-#lux-year-wheel-btn) כדי שה-absolute
+           יימדד מקצה המסך ולא מהקונטיינר הפנימי הממורכז (max-w-5xl) -->
+      <a
+        id="btn-shul-mikve"
+        href="synagogues.html"
+        class="hidden opacity-0 items-center justify-center no-underline"
+        aria-label="בתי כנסת, מקוואות וציוני צדיקים באזורך"
+        title="בתי כנסת, מקוואות וציוני צדיקים באזורך 🕍"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 4v14"></path>
+          <path d="M5 6v4a7 7 0 0 0 14 0V6"></path>
+          <path d="M8.5 6v4a3.5 3.5 0 0 0 7 0V6"></path>
+          <path d="M8 21h8"></path>
+          <path d="M12 18l-1.5 3M12 18l1.5 3"></path>
+          <path d="M5 4.5v.01M8.5 4.5v.01M12 2.5v.01M15.5 4.5v.01M19 4.5v.01"></path>
+        </svg>
+      </a>
+
       <div class="relative z-10 max-w-5xl mx-auto text-center">
         <!-- שומר-מקום לברכת השעה (lux.js "greeting" ממלא אותו) — כך הכותרת לא זזה
              כשהברכה מוזרקת אחרי הציור הראשון (CLS/LCP) -->
@@ -665,28 +685,6 @@
           </svg>
           <span data-i18n-key="cal_btn">לוח שנה חודשי</span>
         </button>
-
-        <!-- ══════ כפתור בתי כנסת מקוואות וציוני צדיקים באזורך ══════ -->
-        <a
-          id="btn-shul-mikve"
-          href="synagogues.html"
-          class="hidden mx-auto mb-4 px-8 py-3 rounded-2xl font-bold transition-all items-center justify-center gap-2 backdrop-blur-md opacity-0 text-white no-underline"
-          style="background: linear-gradient(135deg, rgba(16,185,129,0.30), rgba(20,184,166,0.30), rgba(34,211,238,0.30)); border: 1px solid rgba(94,234,212,0.55); box-shadow: 0 4px 24px rgba(20,184,166,0.20);"
-          onmouseover="this.style.boxShadow='0 6px 32px rgba(20,184,166,0.40)'; this.style.transform='translateY(-1px)';"
-          onmouseout="this.style.boxShadow='0 4px 24px rgba(20,184,166,0.20)'; this.style.transform='translateY(0)';"
-          aria-label="בתי כנסת מקוואות וציוני צדיקים באזורך"
-        >
-          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M12 4v14"></path>
-            <path d="M5 6v4a7 7 0 0 0 14 0V6"></path>
-            <path d="M8.5 6v4a3.5 3.5 0 0 0 7 0V6"></path>
-            <path d="M8 21h8"></path>
-            <path d="M12 18l-1.5 3M12 18l1.5 3"></path>
-            <path d="M5 4.5v.01M8.5 4.5v.01M12 2.5v.01M15.5 4.5v.01M19 4.5v.01"></path>
-          </svg>
-          <span>בתי כנסת מקוואות וציוני צדיקים באזורך</span>
-        </a>
-        <!-- ══════════════════════════════════ -->
 
         <!-- ══════ כפתור מוצאי שבת וחג ══════ -->
         <button
@@ -2274,7 +2272,7 @@
             },
           });
           addScript("script.js?v=49");
-          addScript("lux.js?v=47");
+          addScript("lux.js?v=48");
         }
         function afterFirstPaint() {
           // rAF אחד (רץ ממש לפני ציור הפריים הראשון) ואז setTimeout(0) — משימה

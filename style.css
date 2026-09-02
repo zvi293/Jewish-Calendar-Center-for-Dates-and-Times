@@ -506,18 +506,6 @@
           margin-top: 0.3em;
         }
       }
-      /* בכפתור "בתי כנסת מקוואות וציוני צדיקים באזורך" — keep on a single line on mobile, same button size, by shrinking the text. */
-      #btn-shul-mikve span { white-space: nowrap; }
-      @media (max-width: 480px) {
-        #btn-shul-mikve span { font-size: 0.80rem; }
-      }
-      @media (max-width: 380px) {
-        #btn-shul-mikve span { font-size: 0.70rem; }
-      }
-      @media (max-width: 340px) {
-        #btn-shul-mikve span { font-size: 0.62rem; }
-      }
-
       /* ── Hero stat cards pulse on load ── */
       @keyframes fadeSlideUp {
         from { opacity: 0; transform: translateY(16px); }
@@ -1077,17 +1065,57 @@ details.group summary .text-blue-500 {
   box-shadow: 0 10px 32px rgba(5, 11, 26, 0.5), 0 0 24px rgba(232, 193, 90, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
   transform: translateY(-2px);
 }
-/* בתי כנסת ומקוואות — זהב מלכותי במקום טורקיז, בהתאמה לשפת האתר */
+/* בתי כנסת, מקוואות וציוני צדיקים — כפתור עגול צף בקצה הימני של ההירו, מול
+   הירח (#lux-moon: top 4.7rem, left 1.1rem) — בקשת משתמש 02/09/2026.
+   שפה חזותית זהה לירח ולגלגל השנה: 42px, זהב-כחול, מסגרת זהב.
+   לא מגדירים כאן display — החשיפה נשלטת ע"י מחלקות hidden/flex של showDashboard
+   (חוק ה-ID היה גובר על ‎.hidden‎ והכפתור היה נלחץ בעודו שקוף) */
 #btn-shul-mikve {
-  background: linear-gradient(150deg, rgba(224, 183, 79, 0.30) 0%, rgba(30, 58, 138, 0.42) 55%, rgba(12, 21, 48, 0.55) 100%) !important;
-  border: 1px solid rgba(232, 193, 90, 0.55) !important;
-  box-shadow: 0 6px 24px rgba(5, 11, 26, 0.4), 0 0 18px rgba(232, 193, 90, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.16) !important;
-  color: #fdf3d0 !important;
-  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.35);
+  position: absolute;
+  top: 4.7rem;
+  right: 1.1rem;
+  z-index: 30;
+  width: 42px;
+  height: 42px;
+  background: linear-gradient(150deg, rgba(224, 183, 79, 0.32) 0%, rgba(30, 58, 138, 0.42) 55%, rgba(12, 21, 48, 0.55) 100%);
+  border: 1px solid rgba(232, 193, 90, 0.5);
+  border-radius: 50%;
+  color: #fdf3d0;
+  cursor: pointer;
+  padding: 0;
+  box-shadow: 0 4px 16px rgba(5, 11, 26, 0.4), 0 0 14px rgba(232, 193, 90, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+#btn-shul-mikve svg {
+  width: 23px;
+  height: 23px;
 }
 #btn-shul-mikve:hover {
-  border-color: rgba(242, 217, 138, 0.85) !important;
-  box-shadow: 0 10px 32px rgba(5, 11, 26, 0.5), 0 0 26px rgba(232, 193, 90, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+  border-color: rgba(242, 217, 138, 0.85);
+  box-shadow: 0 8px 24px rgba(5, 11, 26, 0.5), 0 0 20px rgba(232, 193, 90, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transform: scale(1.08);
+}
+/* אזור מגע מוגדל — כמו הירח שממול (אין שכן צמוד, אז ההרחבה סימטרית) */
+#btn-shul-mikve::after {
+  content: "";
+  position: absolute;
+  inset: -14px;
+  border-radius: 50%;
+}
+@media (max-width: 480px) {
+  #btn-shul-mikve {
+    top: 4.4rem;
+    right: 0.8rem;
+    width: 40px;
+    height: 40px;
+  }
+  #btn-shul-mikve svg {
+    width: 21px;
+    height: 21px;
+  }
+  #btn-shul-mikve::after {
+    inset: -16px;
+  }
 }
 
 /* ── ספירה לאחור — תוויות בזהב ── */
@@ -1444,11 +1472,6 @@ footer a:hover {
     linear-gradient(150deg, #14275e 0%, #0c1530 100%) !important;
   border: 1px solid rgba(232, 193, 90, 0.35) !important;
   box-shadow: 0 12px 44px rgba(5, 11, 26, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
-}
-
-/* ── כפתור "בתי כנסת מקוואות" — ליטוש ── */
-#btn-shul-mikve {
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 /* ═══════════════════════════════════════════════════════════════════

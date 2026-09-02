@@ -826,9 +826,38 @@
       { id: "tehillim", icon: "📖", label: "תהילים", run: function () { if (typeof window.openTehillimPage === "function") window.openTehillimPage(); } },
       { id: "plan", icon: "🎯", label: "סדר לימוד אישי", run: function () {
         // יש כבר תוכנית לימוד — פותחים את הקורא שלה; אחרת — אשף יצירת תוכנית
-        var plans = jget("lux_study_plans_v1", []);
-        if (Array.isArray(plans) && plans.length && plans[0] && plans[0].id && typeof window.luxOpenPlanReader === "function") window.luxOpenPlanReader(plans[0].id);
-        else if (typeof window.luxOpenPlanWizard === "function") window.luxOpenPlanWizard();
+        var openIt = function () {
+          var plans = jget("lux_study_plans_v1", []);
+          if (Array.isArray(plans) && plans.length && plans[0] && plans[0].id && typeof window.luxOpenPlanReader === "function") window.luxOpenPlanReader(plans[0].id);
+          else if (typeof window.luxOpenPlanWizard === "function") window.luxOpenPlanWizard();
+        };
+        // בקשת משתמש 02/09/2026: קודם גוללים לכרטיס "סדר הלימוד האישי שלי" בדף
+        // ורק אז פותחים. אם הכרטיס כבר נראה במסך (או שטרם הוזרק) — פותחים מיד.
+        // פותחים רק אחרי שהגלילה נרגעה (שתי דגימות scrollY זהות) — פתיחה באמצע
+        // גלילה חלקה גורמת לנעילת המודאל ללכוד מיקום ביניים, והסגירה מחזירה
+        // את המשתמש לאמצע הדרך במקום לכרטיס. טיימאאוט 1.6ש' לכל מקרה.
+        var row = document.getElementById("lux-plan-row");
+        var vh = window.innerHeight || document.documentElement.clientHeight;
+        var r = row ? row.getBoundingClientRect() : null;
+        if (row && (r.top < 0 || r.bottom > vh)) {
+          row.scrollIntoView({ behavior: "smooth", block: "center" });
+          var lastY = -1, ticks = 0;
+          var iv = setInterval(function () {
+            ticks++;
+            var y = window.scrollY;
+            if (y === lastY || ticks > 10) {
+              clearInterval(iv);
+              // רשת ביטחון: גלילה שנקטעה (או סביבה בלי אנימציות גלילה) משאירה
+              // את הכרטיס מחוץ למסך — משלימים בקפיצה מיידית לפני הפתיחה
+              var r2 = row.getBoundingClientRect();
+              if (r2.top < 0 || r2.bottom > vh) row.scrollIntoView({ block: "center" });
+              openIt();
+            }
+            lastY = y;
+          }, 160);
+        } else {
+          openIt();
+        }
       } },
       { id: "zmanim", icon: "⏰", label: "זמנים", run: function () { var z = document.getElementById("halacha-banner"); if (z) z.scrollIntoView({ behavior: "smooth", block: "center" }); } },
       { id: "settings", icon: "⚙️", label: "הגדרות", run: function () { if (typeof window.toggleSettings === "function") window.toggleSettings(); } },

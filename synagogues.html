@@ -300,6 +300,101 @@
         to { opacity: 1; transform: translateY(0); }
       }
 
+      /* ── תג "גרסת בטא" בסרגל העליון ── */
+      #beta-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.28rem;
+        padding: 0.3rem 0.62rem;
+        border-radius: 999px;
+        border: 1px solid rgba(251, 191, 36, 0.5);
+        background: linear-gradient(135deg, rgba(180, 83, 9, 0.32), rgba(120, 53, 15, 0.42));
+        color: #fde68a;
+        font-size: 0.68rem;
+        font-weight: 800;
+        white-space: nowrap;
+        cursor: pointer;
+        box-shadow: 0 0 12px rgba(251, 191, 36, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        transition: all 0.2s ease;
+      }
+      #beta-pill:hover {
+        border-color: rgba(251, 191, 36, 0.8);
+        color: #fef3c7;
+        box-shadow: 0 0 16px rgba(251, 191, 36, 0.25);
+      }
+
+      /* ── פופאפ "גרסת בטא" ── */
+      #beta-popup {
+        position: fixed;
+        inset: 0;
+        z-index: 1100;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 1.25rem;
+        background: rgba(2, 6, 23, 0.78);
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
+      }
+      #beta-popup-card {
+        width: min(92vw, 400px);
+        background:
+          radial-gradient(ellipse 130% 70% at 50% -10%, rgba(232, 193, 90, 0.12) 0%, transparent 55%),
+          linear-gradient(150deg, #131f45 0%, #0a1330 100%);
+        border: 1px solid rgba(232, 193, 90, 0.45);
+        border-radius: 1.15rem;
+        box-shadow: 0 18px 60px rgba(2, 6, 23, 0.7), 0 0 26px rgba(232, 193, 90, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        padding: 1.6rem 1.35rem 1.3rem;
+        text-align: center;
+        direction: rtl;
+        animation: beta-pop-in 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+      }
+      @keyframes beta-pop-in {
+        from { opacity: 0; transform: translateY(16px) scale(0.96); }
+        to { opacity: 1; transform: none; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #beta-popup-card { animation: none; }
+      }
+      #beta-popup-icon { font-size: 2.3rem; margin-bottom: 0.5rem; }
+      #beta-popup-title {
+        color: #f2d98a;
+        font-family: var(--lux-serif);
+        font-size: 1.3rem;
+        font-weight: 900;
+        margin: 0 0 0.55rem;
+      }
+      #beta-popup-text {
+        color: #e2e8f0;
+        font-size: 0.95rem;
+        line-height: 1.7;
+        margin: 0 0 0.6rem;
+      }
+      #beta-popup-text b { color: #fde68a; }
+      #beta-popup-note {
+        color: rgba(148, 163, 184, 0.95);
+        font-size: 0.8rem;
+        line-height: 1.65;
+        margin: 0 0 1.1rem;
+      }
+      #beta-popup-ok {
+        width: 100%;
+        border: 1px solid rgba(232, 193, 90, 0.55);
+        border-radius: 0.8rem;
+        background: linear-gradient(150deg, rgba(224, 183, 79, 0.32) 0%, rgba(30, 58, 138, 0.45) 60%, rgba(12, 21, 48, 0.55) 100%);
+        color: #fdf3d0;
+        font-size: 1rem;
+        font-weight: 800;
+        padding: 0.8rem 1rem;
+        cursor: pointer;
+        box-shadow: 0 4px 18px rgba(5, 11, 26, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+        transition: all 0.2s ease;
+      }
+      #beta-popup-ok:hover {
+        border-color: rgba(242, 217, 138, 0.85);
+        box-shadow: 0 6px 24px rgba(5, 11, 26, 0.55), 0 0 18px rgba(232, 193, 90, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+      }
+
       /* נייד: בלי backdrop-filter בשום מקום — אותה מדיניות כמו בדף הראשי (הבלור
          "קופץ" פריים מאוחר על GPU של טלפונים ונראה כהבהוב); רקעים מעט אטומים יותר */
       @media (max-width: 768px), (pointer: coarse) {
@@ -323,7 +418,9 @@
         <span>חזרה</span>
       </a>
       <h1 class="text-base font-bold text-white/90">בתי כנסת ומקוואות באזור</h1>
-      <div class="w-[78px]"></div>
+      <!-- תג בטא קבוע — נשאר גם אחרי סגירת הפופאפ; לחיצה פותחת אותו שוב.
+           תופס את מקום ה-spacer (78px) כך שהכותרת נשארת ממורכזת -->
+      <button type="button" id="beta-pill" onclick="openBetaPopup()" title="הפיצ׳ר בשלבי פיתוח — לחצו לפרטים">🧪 גרסת בטא</button>
     </header>
 
     <main class="max-w-3xl mx-auto px-4 pt-6">
@@ -474,6 +571,23 @@
           border-radius:50%;border:none;background:#fde68a;color:#78350f;font-size:1.4rem;
           font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
         <div id="tzaddik-prayers-modal-body" style="margin-top:0.5rem;"></div>
+      </div>
+    </div>
+
+    <!-- ══════ Beta Notice Popup ══════ -->
+    <div id="beta-popup" role="dialog" aria-modal="true" aria-labelledby="beta-popup-title">
+      <div id="beta-popup-card">
+        <div id="beta-popup-icon" aria-hidden="true">🧪</div>
+        <h2 id="beta-popup-title">גרסת בטא</h2>
+        <p id="beta-popup-text">
+          אזור בתי הכנסת, המקוואות וציוני הצדיקים נמצא עדיין <b>בשלבי פיתוח והרצה</b>,
+          ואנחנו ממשיכים לשפר ולהרחיב אותו.
+        </p>
+        <p id="beta-popup-note">
+          הנתונים מבוססים על מאגר OpenStreetMap הציבורי — ייתכנו מקומות חסרים,
+          כפולים או פרטים לא מעודכנים. נשמח שתעדכנו אותנו על כל טעות שמצאתם.
+        </p>
+        <button type="button" id="beta-popup-ok" onclick="closeBetaPopup()">הבנתי, אפשר להמשיך</button>
       </div>
     </div>
 
@@ -740,6 +854,61 @@
         const sec = document.getElementById("tzaddik-prayers-section");
         if (sec) sec.style.display = (currentTab === "tzaddik") ? "block" : "none";
       }
+
+      // ── Beta notice popup ─────────────────────────────
+      // נפתח בכל כניסה לעמוד. "חזור" (במובייל ובדפדפן) סוגר את הפופאפ בלבד —
+      // אותו דפוס history-safe כמו מודאל התפילות למעלה: פתיחה דוחפת state,
+      // popstate מסתיר; סגירה יזומה עושה history.back() וה-popstate מבצע.
+      // כל נגיעה במסך מחוץ לכרטיס (pointerdown על הרקע) סוגרת גם היא.
+      // התג "גרסת בטא" בסרגל העליון קבוע ופותח את הפופאפ מחדש.
+      let _betaPopupOpen = false;
+      function openBetaPopup() {
+        const p = document.getElementById("beta-popup");
+        if (!p || p.style.display === "flex") return;
+        p.style.display = "flex";
+        document.documentElement.style.overflow = "hidden";
+        document.body.style.overflow = "hidden";
+        if (!_betaPopupOpen) {
+          _betaPopupOpen = true;
+          try { history.pushState({ shulBetaPopup: true }, ""); } catch (e) {}
+        }
+      }
+      function _betaPopupHide() {
+        const p = document.getElementById("beta-popup");
+        if (p) p.style.display = "none";
+        document.documentElement.style.overflow = "";
+        document.body.style.overflow = "";
+        _betaPopupOpen = false;
+      }
+      function closeBetaPopup() {
+        if (_betaPopupOpen && history.state && history.state.shulBetaPopup) {
+          history.back();
+          // רשת ביטחון: אם ה-popstate לא הגיע — מסתירים בכל זאת
+          setTimeout(() => { if (_betaPopupOpen) _betaPopupHide(); }, 400);
+        } else {
+          _betaPopupHide();
+        }
+      }
+      window.addEventListener("popstate", function () {
+        const p = document.getElementById("beta-popup");
+        if (p && p.style.display === "flex") _betaPopupHide();
+      });
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape") {
+          const p = document.getElementById("beta-popup");
+          if (p && p.style.display === "flex") closeBetaPopup();
+        }
+      });
+      (function initBetaPopup() {
+        const p = document.getElementById("beta-popup");
+        if (!p) return;
+        // pointerdown ולא click — נתפס גם בנגיעה שמתחילה גרירה/גלילה
+        p.addEventListener("pointerdown", function (e) {
+          if (e.target === p) closeBetaPopup();
+        });
+        // נפתח אחרי שהעמוד צויר, בכל כניסה
+        setTimeout(openBetaPopup, 450);
+      })();
 
 
       // ── Location handling ─────────────────────────────

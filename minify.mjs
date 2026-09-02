@@ -23,6 +23,9 @@ for (const f of ["script.js", "lux.js"]) {
   try {
     const url = new URL("./" + f, import.meta.url);
     const src = readFileSync(url, "utf8");
+    // המקור הקריא נפרס לצד הקובץ (script.src.js) והמפה מצביעה אליו בלי להטמיע
+    // sourcesContent — אחרת המפה שוקלת ~3.4MB gz ו-Lighthouse/DevTools מתייאשים ממנה.
+    const srcName = f.replace(/\.js$/, ".src.js");
     const out = await transform(src, {
       minifyWhitespace: true,
       minifySyntax: true,
@@ -30,7 +33,8 @@ for (const f of ["script.js", "lux.js"]) {
       charset: "utf8",
       legalComments: "none",
       sourcemap: "external",
-      sourcefile: f,
+      sourcefile: srcName,
+      sourcesContent: false,
     });
     if (!out.code || out.code.length < src.length / 10) {
       throw new Error("suspicious output size: " + (out.code || "").length);
@@ -40,6 +44,7 @@ for (const f of ["script.js", "lux.js"]) {
     let code = out.code;
     if (out.map) {
       try {
+        writeFileSync(new URL("./" + srcName, import.meta.url), src);
         writeFileSync(new URL("./" + f + ".map", import.meta.url), out.map);
         code += "\n//# sourceMappingURL=" + f + ".map\n";
       } catch (e) {

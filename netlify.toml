@@ -126,9 +126,16 @@
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 
-# מפות מקור (נוצרות ב-minify.mjs) — נטענות רק כש-DevTools פתוח; לא לאינדוקס
+# מפות מקור (נוצרות ב-minify.mjs) + המקור הקריא (*.src.js) שהן מצביעות אליו —
+# נטענים רק כש-DevTools פתוח; לא לאינדוקס
 [[headers]]
   for = "/*.map"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
+    X-Robots-Tag = "noindex"
+
+[[headers]]
+  for = "/*.src.js"
   [headers.values]
     Cache-Control = "public, max-age=86400"
     X-Robots-Tag = "noindex"

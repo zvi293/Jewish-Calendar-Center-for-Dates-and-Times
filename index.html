@@ -295,6 +295,7 @@
       rel="preload"
       href="/kosher-zmanim-0.9.0.min.js"
       as="script"
+      fetchpriority="low"
       integrity="sha384-oajHVnQqCix/BrH1MgbJQS6LNlNaPmnUMsLLT0bMIPiFhSXK/OoQKGy9GQluheJ1"
       crossorigin="anonymous"
     />
@@ -304,9 +305,10 @@
     <link rel="stylesheet" href="/fonts.css?v=1" />
     <link rel="stylesheet" href="style.css?v=54" />
     <!-- הקוד הראשי יורד מוקדם (preload) אך מוזרק ומתבצע רק אחרי הציור הראשון —
-         ראו הטוען בסוף ה-body. ה-?v= כאן חייב להיות זהה לזה שבטוען וב-sw.js. -->
-    <link rel="preload" href="script.js?v=48" as="script" />
-    <link rel="preload" href="lux.js?v=46" as="script" />
+         ראו הטוען בסוף ה-body. ה-?v= כאן חייב להיות זהה לזה שבטוען וב-sw.js.
+         fetchpriority=low: שלא יתחרו ברוחב-הפס עם ה-CSS החוסם (FCP) — כמו defer. -->
+    <link rel="preload" href="script.js?v=48" as="script" fetchpriority="low" />
+    <link rel="preload" href="lux.js?v=46" as="script" fetchpriority="low" />
 
     <!-- OneSignal Web Push SDK -->
     <script>

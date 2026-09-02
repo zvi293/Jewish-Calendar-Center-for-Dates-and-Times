@@ -307,8 +307,8 @@
     <!-- הקוד הראשי יורד מוקדם (preload) אך מוזרק ומתבצע רק אחרי הציור הראשון —
          ראו הטוען בסוף ה-body. ה-?v= כאן חייב להיות זהה לזה שבטוען וב-sw.js.
          fetchpriority=low: שלא יתחרו ברוחב-הפס עם ה-CSS החוסם (FCP) — כמו defer. -->
-    <link rel="preload" href="script.js?v=48" as="script" fetchpriority="low" />
-    <link rel="preload" href="lux.js?v=46" as="script" fetchpriority="low" />
+    <link rel="preload" href="script.js?v=49" as="script" fetchpriority="low" />
+    <link rel="preload" href="lux.js?v=47" as="script" fetchpriority="low" />
 
     <!-- OneSignal Web Push SDK -->
     <script>
@@ -2273,8 +2273,8 @@
               });
             },
           });
-          addScript("script.js?v=48");
-          addScript("lux.js?v=46");
+          addScript("script.js?v=49");
+          addScript("lux.js?v=47");
         }
         function afterFirstPaint() {
           // rAF אחד (רץ ממש לפני ציור הפריים הראשון) ואז setTimeout(0) — משימה

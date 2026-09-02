@@ -1380,8 +1380,10 @@ async function openSefariaModal(hebTitle, enRef, opts) {
 async function _fetchDafCommentary(name, ref) {
   try {
     const refSpaced = ref.replace(/_/g, " ").replace(/\./g, " ");
+    // pad=0 — בלעדיו ספריא "מרפדת" ref של דף שלם לשורה הראשונה בלבד (רש"י/תוספות הם בעומק 3:
+    // דף→שורה→פירוש), והדף היומי הציג רק את הפירושים של שורה א' (תוקן 09/2026)
     const data = await fetchHebcalWithCache(
-      `https://www.sefaria.org/api/texts/${encodeURIComponent(name + " on " + refSpaced)}?context=0`,
+      `https://www.sefaria.org/api/texts/${encodeURIComponent(name + " on " + refSpaced)}?context=0&pad=0`,
     );
     if (!data || data.error || !data.he) return null;
     const flat = [];
@@ -1603,6 +1605,7 @@ async function renderDafContent() {
         color: "#7c3aed",
         diburColor: "#b45309",
         textColor: "#4c1d95",
+        talmud: true,   // אותו מנגנון שיבוץ כמו בקורא התלמוד (ספרים נוספים)
       });
     } else {
       parasHtml += `<div style="margin-top:0.6rem;padding:0.45rem 0.7rem;border-radius:0.4rem;border:1px dashed rgba(124,58,237,0.3);color:#7c3aed;font-size:0.72rem;font-style:italic;text-align:center;">📝 לא נמצא רש"י על דף זה</div>`;
@@ -1617,6 +1620,7 @@ async function renderDafContent() {
         color: "#0d9488",
         diburColor: "#b45309",
         textColor: "#134e4a",
+        talmud: true,
       });
     } else {
       parasHtml += `<div style="margin-top:0.6rem;padding:0.45rem 0.7rem;border-radius:0.4rem;border:1px dashed rgba(13,148,136,0.3);color:#0d9488;font-size:0.72rem;font-style:italic;text-align:center;">📜 לא נמצאו תוספות על דף זה</div>`;
@@ -1785,30 +1789,38 @@ async function fetchRashiForShmikra(parshaName) {
       };
 
       const heData = rashiData.he;
+      const chapLens = _shmikraData.chapLens;
       if (Array.isArray(heData)) {
         // Check if top level is chapters (array of arrays of arrays)
         if (
-          heData.length > 0 &&
+          (chapLens && chapLens.length > 1 && heData.length > 0 && heData.every(Array.isArray)) ||
+          (heData.length > 0 &&
           Array.isArray(heData[0]) &&
           heData[0].length > 0 &&
-          Array.isArray(heData[0][0])
+          Array.isArray(heData[0][0]))
         ) {
           // Structure: [chapter][verse][comments]
-          heData.forEach((chapter) => {
-            if (Array.isArray(chapter)) {
-              chapter.forEach((verse) => {
-                if (Array.isArray(verse)) {
-                  rashiPerVerse.push(
-                    verse.flat(Infinity).filter((x) => typeof x === "string"),
-                  );
-                } else if (typeof verse === "string") {
-                  rashiPerVerse.push([verse]);
-                } else {
-                  rashiPerVerse.push([]);
-                }
-              });
+          // יישור פרק-פרק: ספריא גוזמת פסוקים ריקים בסוף כל פרק בפירוש, ולכן שיטוח פשוט
+          // הסיט את רש"י לפסוקים הלא-נכונים מהפרק השני ואילך (נח: פרק ז' חסר פסוק אחד,
+          // פרק ט' שניים…) — משלימים כל פרק לאורך הפסוקים בפועל בטקסט התורה (chapLens)
+          heData.forEach((chapter, ci) => {
+            if (!Array.isArray(chapter)) chapter = [];
+            const want = (chapLens && chapLens[ci]) || chapter.length;
+            for (let vi = 0; vi < want; vi++) {
+              const verse = chapter[vi];
+              if (Array.isArray(verse)) {
+                rashiPerVerse.push(
+                  verse.flat(Infinity).filter((x) => typeof x === "string"),
+                );
+              } else if (typeof verse === "string") {
+                rashiPerVerse.push(verse.trim() ? [verse] : []);
+              } else {
+                rashiPerVerse.push([]);
+              }
             }
           });
+          // פרקים שנגזמו לגמרי בסוף התשובה — ממלאים ריק כדי לשמור על היישור
+          if (chapLens) for (let ci = heData.length; ci < chapLens.length; ci++) for (let vi = 0; vi < chapLens[ci]; vi++) rashiPerVerse.push([]);
         } else if (heData.length > 0 && Array.isArray(heData[0])) {
           // Structure: [verse][comments]
           heData.forEach((verse) => {
@@ -1994,6 +2006,8 @@ async function openShnayimMikraModal(hebTitle, enRef) {
       torahVerses: flattenVerses(torahData.he),
       onkelosVerses: flattenVerses(onkelosData?.he),
       rashiVerses: [],
+      // אורכי הפרקים של הפרשה — ליישור רש"י פרק-פרק (ספריא גוזמת פסוקים ריקים בסוף כל פרק בפירוש)
+      chapLens: (Array.isArray(torahData.he) && torahData.he.length && torahData.he.every(Array.isArray)) ? torahData.he.map((c) => c.length) : null,
       parshaName: parshaName,
       torahRef: torahData.ref || "",
     };
@@ -2253,6 +2267,10 @@ function _buildTextWithInlineComments(sourceHtml, comments, opts) {
   // (כשכמה שכבות פעילות יחד, המילים של הדיבור מופיעות גם בתוך פירושי השכבה הקודמת)
   const BLK_OPEN = '<div class="chok-cm-blk" style="';
   const BLK_END = '<!--/cm-->';
+  // פירושים צמודי-פסוק (_snInlineCMHtml: ברטנורא במשניות, רש"י בתנ"ך) מסומנים בתגיות-הערה —
+  // גם הם "בלוק קיים" שאין לשבץ בתוכו (ברטנורא מצטט את לשון המשנה = דיבורי היכין)
+  const NOTE_OPEN = '<!--cm-note-->';
+  const NOTE_END = '<!--/cm-note-->';
   const countIn = (s, needle) => { let n = 0, p = 0; while ((p = s.indexOf(needle, p)) >= 0) { n++; p += needle.length; } return n; };
   // בשכבות boldDibur (נושאי כלים של השו"ע) הפירושים מסודרים בקפדנות לפי סדר הטקסט —
   // מחפשים קודם אחרי הבלוק האחרון ששובץ (מונע תפיסה של מילה נפוצה שמופיעה מוקדם
@@ -2265,7 +2283,8 @@ function _buildTextWithInlineComments(sourceHtml, comments, opts) {
     let mm;
     while ((mm = g.exec(result))) {
       const before = result.slice(0, mm.index);
-      if (countIn(before, BLK_OPEN) <= countIn(before, BLK_END)) return mm;
+      if (countIn(before, BLK_OPEN) <= countIn(before, BLK_END) &&
+          countIn(before, NOTE_OPEN) <= countIn(before, NOTE_END)) return mm;
       if (!mm[0].length) g.lastIndex++;
     }
     return null;
@@ -2327,7 +2346,248 @@ function _buildTextWithInlineComments(sourceHtml, comments, opts) {
   };
 
   let lastCommentHtml = null;  // הבלוק האחרון ששובץ — עבור פירושי "שם"
-  for (const commentText of comments) {
+  const wrapBlock = (inner) => `${BLK_OPEN}${blockBase}"><span class="chok-rashi-label" style="color:${color} !important;">${emoji} ${label}</span>${inner}</div>${BLK_END}`;
+  // מיקום אחרי הבלוק האחרון ששובץ (פירושי "שם" / המשך נקודה קודמת); false אם אין כזה
+  const placeAfterLast = (commentHtml) => {
+    if (!lastCommentHtml) return false;
+    const p = result.indexOf(lastCommentHtml);
+    if (p < 0) return false;
+    const at = p + lastCommentHtml.length;
+    result = result.slice(0, at) + commentHtml + result.slice(at);
+    lastPos = at + commentHtml.length;
+    lastCommentHtml = commentHtml;
+    return true;
+  };
+
+  // ─────────────────────────────────────────────────────────────────────
+  // ── תלמוד (opts.talmud): נושאי הכלים על הש"ס מסודרים לפי סדר הדף, והדיבור-
+  //    המתחיל מגיע בצורות שונות — "דיבור – פירוש" (רש"י/תוספות), "<b>דיבור.</b>"
+  //    (ראשונים, רש"ש, בן יהוידע), או מילת-מיקום בלבד ("<b>בד"ה</b>", "<b>במשנה</b>",
+  //    "<b>בתוס'</b> בד"ה …" — מהרש"א, פני יהושע, גליון הש"ס, חכמת שלמה).
+  //    שלב א: לכל פירוש מסירים את מילות-המיקום, מחלצים דיבור, ומאתרים את כל המיקומים
+  //      האפשריים בטקסט הגמרא (על "תצוגה מקופלת" שבה כל בלוק/הערה שכבר שובצו הם תו
+  //      אחד — מהיר, ומאפשר לדיבור לחצות בלוק של שכבה קודמת) או בתוך בלוקי רש"י/תוספות
+  //      קיימים ("בד"ה X" מוצב מיד אחרי התוספות המתאים).
+  //    שלב ב: בוחרים מיקום אחד לכל פירוש כך שסדר המיקומים תואם את סדר הפירושים
+  //      (שרשרת לא-יורדת ארוכה ביותר). פירוש שמיקומו סותר את השרשרת (מילה נפוצה שנתפסה
+  //      במקום הלא-נכון), "בא"ד" (המשך אותו דיבור) ופירוש שלא אותר — מוצבים אחרי הפירוש
+  //      הקודם; כך פירוש אחד שנתפס בסוף הדף לא גורר את כל הבאים אחריו לסוף.
+  // ─────────────────────────────────────────────────────────────────────
+  const talmudLayer = (list) => {
+    const SKIP = '[\\u0591-\\u05C7\\u034F\\u05F3\\u05F4\'"]';   // ניקוד/טעמים + גרש/גרשיים
+    const HOLE = '\uE000';                                    // תו-מציין (Private Use) לבלוק מקופל בתצוגה
+    const TAIL_T = '(?!' + SKIP + '*[א-ת])(?![^<]*>)';
+    // רווח בדיבור: רווח/מקף/תגית/פיסוק של המהדורה המנוקדת (פסיק, נקודתיים, ״…״, סוגריים)
+    // — וגם בלוק מקופל (שכבה קודמת שכבר שובצה בין המילים)
+    const nikudifyT = (s) => s.split('').map((ch) => {
+      if (ch === ' ') return '(?:[\\s\\u05BE\\uE000,:;?!()\\u05F3\\u05F4"\'\\u2013\\u2014-]|<[^>]*>)+';
+      const esc = ch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      return /[א-ת]/.test(ch) ? esc + SKIP + '*' : esc;
+    }).join('');
+    const deq = (s) => s.replace(/["'׳״]/g, '');
+    const LOC_RX = /^\s*[\[(]?\s*(במתניתין|במתני|מתניתין|מתני|במשנה|בגמרא|בגמ|גמרא|גמ|שם|ברשי|בפרשי|פירשי|פרשי|רשי|בתוספות|בתוס|תוספות|תוס|בתודה|תודה|בתדה|תדה|בדה|דה|באד|בהגה|הגה|בהגהה)(?=[\s:.,\]\)]|$)\s*[\])]?\s*[:.,]?\s*/;
+    const kindOf = (tok) => (/רשי$/.test(tok) ? 'rashi' : /תוס|תודה|תדה/.test(tok) ? 'tosafot' : /^ב?דה$|^באד$/.test(tok) ? 'cm' : tok === 'שם' ? 'sham' : 'text');
+    const plainOf = (h) => h.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+
+    // תצוגה מקופלת של הטקסט: כל בלוק-פירוש (וכל הערה צמודת-פסוק) → תו HOLE אחד;
+    // map[i] = אינדקס מקורי של התו ה-i. נבנית פעם אחת לשכבה (O(n)) — הטקסט לא משתנה עד שלב ג
+    const blocks = [];       // {end, label, text} של כל בלוק-פירוש קיים (לחיפוש "בד"ה")
+    let folded = '', map = [], p0 = 0;
+    for (;;) {
+      const a1 = result.indexOf(BLK_OPEN, p0), a2 = result.indexOf(NOTE_OPEN, p0);
+      if (a1 < 0 && a2 < 0) break;
+      const isBlk = a1 >= 0 && (a2 < 0 || a1 < a2);
+      const a = isBlk ? a1 : a2;
+      const b = result.indexOf(isBlk ? BLK_END : NOTE_END, a);
+      if (b < 0) break;
+      const e = b + (isBlk ? BLK_END : NOTE_END).length;
+      for (let i = p0; i < a; i++) map.push(i);
+      folded += result.slice(p0, a) + HOLE; map.push(a);
+      if (isBlk) {
+        const lblM = result.slice(a, Math.min(e, a + 400)).match(/chok-rashi-label[^>]*>([^<]*)</);
+        blocks.push({ end: e, label: lblM ? lblM[1] : '', text: result.slice(a, e) });
+      }
+      p0 = e;
+    }
+    for (let i = p0; i < result.length; i++) map.push(i);
+    folded += result.slice(p0); map.push(result.length);
+    const MAXP = 6;
+    const rxOf = (cand) => new RegExp('(' + nikudifyT(cand) + ')' + TAIL_T, 'g');
+    // כל המיקומים (אחרי ההתאמה) בטקסט הגמרא, עד MAXP
+    const outsideAll = (rx) => {
+      const out = []; let mm; rx.lastIndex = 0;
+      while ((mm = rx.exec(folded)) && out.length < MAXP) { out.push(map[mm.index + mm[0].length]); if (!mm[0].length) rx.lastIndex++; }
+      return out;
+    };
+    // סופי הבלוקים הקיימים שמכילים את הדיבור (preferLabel: רק בלוקים של השכבה המכוונת)
+    const insideAll = (rx, preferLabel) => {
+      const out = [];
+      for (const bl of blocks) {
+        if (preferLabel && !preferLabel.test(bl.label)) continue;
+        rx.lastIndex = 0;
+        if (rx.test(bl.text)) { out.push(bl.end); if (out.length >= MAXP) break; }
+      }
+      return out;
+    };
+
+    // ── שלב א: ניתוח פירוש בודד → הבלוק המוכן + המיקומים האפשריים ──
+    const plan = (raw) => {
+      let kind = null, hadLoc = false, isBad = false;   // isBad = "בא"ד" (באותו דיבור) — המשך הפירוש הקודם
+      const stripLocs = (plain) => {
+        let m;
+        while ((m = plain.match(LOC_RX))) {
+          hadLoc = true;
+          if (m[1] === 'באד') isBad = true;
+          const k = kindOf(m[1]);
+          if (!kind || kind === 'text' || kind === 'sham') kind = (k === 'text' && kind) ? kind : k;
+          plain = plain.slice(m[0].length);
+        }
+        return plain;
+      };
+      const cleanD = (plain) => {
+        let d = deq(plain).replace(/[֑-ׇ͏]/g, '');
+        // סימוני ס"ק/סעיף בתחילת פירוש ('א) [סעיף א'] …' בכף החיים, '(א) …' במשנה ברורה, '(סעיף א)' בט"ז)
+        // — אינם חלק מהדיבור (התצוגה שומרת את הטקסט המקורי)
+        d = d.replace(/^\s*(?:[\[(]?\s*[א-ת]{1,3}\)\s*)?(?:[\[(]?\s*סעי(?:ף)?\s*[א-ת]{1,6}\s*[\])]?[.,]?\s*)?/, '');
+        d = stripLocs(d);
+        const cut = d.search(/(^|\s)ו?כו(?![א-ת])/);
+        if (cut >= 0) d = d.slice(0, cut);
+        d = d.replace(/\s*\([^)]*\)\s*/g, ' ').replace(/[\[\]()]/g, ' ').replace(/[.:,;?!–—\-]+\s*$/, '').replace(/\s+/g, ' ').trim();
+        return d;
+      };
+      let s = String(raw).replace(/^\s*(?:<br\s*\/?>\s*)+/, '').trim();
+      let head = null, rest = null, inner, lead = '';
+      // טקסט קצר לפני ההדגשה הראשונה: "[מתני']:", "גמרא:", "הכי גריס רש"י ז"ל:" — כותרת/מיקום,
+      // לא חלק מהדיבור לחיפוש; בתצוגה הוא נשמר (בראש הבלוק) כי לפעמים זה תוכן של ממש
+      const pb = s.match(/^([^<]{1,48}?)\s*<b>/);
+      if (pb) {
+        const ld = deq(pb[1]).trim();
+        if (/:\s*$/.test(ld) || !stripLocs(ld).replace(/[:.,\s\[\]()]/g, '')) { lead = pb[1].trim(); s = s.slice(pb[1].length).trim(); }
+      }
+      const bm = s.match(/^<b>\s*([\s\S]*?)\s*<\/b>\s*([-–—:.,]?)\s*/);
+      if (bm) {
+        head = bm[1]; rest = s.slice(bm[0].length).trim();
+        // כותרת בלבד (למשל '<b>ספר קול יעקב</b>' בסימני סת"ם) — אין מה לשבץ
+        if (!rest && !lead && plainOf(head).length < 40) return null;
+      } else {
+        const m = s.match(/^([^.־:–—\-?]{2,90}?)\s*[.־:–—\-?]\s*/);
+        if (m && plainOf(m[1]).length >= 2) { head = m[1]; rest = s.slice(m[0].length).trim(); }
+      }
+      let D = head !== null ? cleanD(plainOf(head)) : '';
+      let headIsLoc = false;
+      if (head !== null && !D) {
+        // ההדגשה היא מילת-מיקום בלבד ("<b>בד"ה</b>", "<b>שם</b>") — הדיבור בטקסט שאחריה
+        headIsLoc = true;
+        let p = cleanD(plainOf(rest || ''));
+        const mm2 = p.match(/^(.{2,90}?)\s*[.:;?!–—\-](?:\s|$)/);
+        p = mm2 ? mm2[1] : p.split(' ').slice(0, 8).join(' ');
+        D = p.trim();
+      } else if (head === null) {
+        // בלי הדגשה ובלי מפריד — מאתרים לפי המילים הראשונות, מציגים כמו שהוא
+        D = cleanD(plainOf(s)).split(' ').slice(0, 6).join(' ');
+      }
+      const leadHtml = lead ? `<span class="chok-rashi-rest" style="color:${textColor} !important;">${lead}</span> ` : '';
+      if (head !== null && !headIsLoc && rest) {
+        inner = leadHtml + `<span class="chok-rashi-dibur" style="color:${diburColor} !important;">${head.trim()}</span>` +
+                `<span class="chok-rashi-sep"> — </span>` +
+                `<span class="chok-rashi-rest" style="color:${textColor} !important;">${rest}</span>`;
+      } else if (head !== null && !headIsLoc && !rest) {
+        inner = leadHtml + `<span class="chok-rashi-dibur" style="color:${diburColor} !important;">${head.trim()}</span>`;
+      } else {
+        inner = leadHtml + `<span class="chok-rashi-rest" style="color:${textColor} !important;">${s}</span>`;
+      }
+      const html = wrapBlock(inner);
+      // "בא"ד" = באותו דיבור, "שם" בלבד = אותו מקום — המשך הפירוש הקודם של אותה שכבה, מוצב מיד אחריו
+      if (isBad || (headIsLoc && kind === 'sham')) return { html, positions: [] };
+
+      // מועמדים לחיפוש: הדיבור המלא, ואז קידומות מתקצרות.
+      // מילה בודדת קצרה: בלי מילת-מיקום — מ-3 אותיות (רש"י: "הבער"); עם מילת-מיקום של
+      // רש"י/תוספות ("תוס' ד"ה ולא") — מותר גם 2-3 אותיות, אבל רק בתוך בלוק של אותה שכבה
+      let words = D ? D.split(' ').filter(Boolean) : [];
+      const insideOnly = hadLoc && (kind === 'rashi' || kind === 'tosafot') && words.length === 1 && words[0].length < 4;
+      const minSingle = hadLoc ? (insideOnly ? 2 : 4) : 3;
+      if (words.length === 1 && words[0].length < minSingle) words = [];
+      const cands = [];
+      if (words.length) {
+        const lens = [words.length];
+        [5, 4, 3, 2].forEach((k) => { if (k < words.length) lens.push(k); });
+        lens.forEach((k) => cands.push(words.slice(0, k).join(' ')));
+        if (words.length > 1 && words[0].length >= 4) cands.push(words[0]);
+      }
+      const blockLabelRx = kind === 'rashi' ? /רש["״]?י/ : kind === 'tosafot' ? /תוספות|תוס/ : null;
+      let positions = [];
+      if (kind === 'rashi' || kind === 'tosafot' || kind === 'cm') {
+        // "בד"ה X" / "בתוס' X" — קודם בתוך הבלוק המתאים, ואז בטקסט
+        for (const cand of cands) {
+          const rx = rxOf(cand);
+          positions = insideAll(rx, blockLabelRx);
+          if (!positions.length && !insideOnly) positions = insideAll(rx, null);
+          if (positions.length) break;
+          if (insideOnly) continue;
+          positions = outsideAll(rx);
+          if (positions.length) break;
+        }
+      } else {
+        // רש"י/תוספות/ראשונים: כל המועמדים בטקסט הגמרא קודם (גם קידומת קצרה בטקסט עדיפה
+        // על התאמה ארוכה בתוך פירוש אחר שמצטט את הגמרא), ורק אז בתוך בלוקים קיימים
+        for (const cand of cands) { positions = outsideAll(rxOf(cand)); if (positions.length) break; }
+        if (!positions.length) for (const cand of cands) { positions = insideAll(rxOf(cand), null); if (positions.length) break; }
+      }
+      return { html, positions };
+    };
+    const plans = list.map(plan).filter(Boolean);
+
+    // ── שלב ב: שרשרת לא-יורדת ארוכה ביותר של מיקומים לפי סדר הפירושים (DP) ──
+    const n = plans.length, best = new Array(n), prev = new Array(n);
+    let bestEnd = -1, bestLen = 0;
+    for (let i = 0; i < n; i++) {
+      const P = plans[i].positions;
+      if (!P.length) continue;
+      let bl = 0, bj = 0, bp = -1;
+      for (let j = 0; j < P.length; j++) {
+        let len = 1, pr = -1;
+        for (let k = 0; k < i; k++) {
+          if (!best[k]) continue;
+          const pk = plans[k].positions[best[k].j];
+          if (pk <= P[j] && best[k].len + 1 > len) { len = best[k].len + 1; pr = k; }
+        }
+        if (len > bl || (len === bl && P[j] < P[bj])) { bl = len; bj = j; bp = pr; }
+      }
+      best[i] = { len: bl, j: bj }; prev[i] = bp;
+      if (bl > bestLen) { bestLen = bl; bestEnd = i; }
+    }
+    const chosen = new Array(n).fill(null);
+    for (let i = bestEnd; i >= 0; i = prev[i]) chosen[i] = plans[i].positions[best[i].j];
+
+    // ── שלב ג: שיבוץ לפי סדר הפירושים — חברי השרשרת במקומם, השאר אחרי הפירוש הקודם ──
+    let offset = 0, lastEnd = null;
+    const pending = [];   // פירושים בלי מיקום לפני חבר-השרשרת הראשון — נכנסים לפניו
+    for (let i = 0; i < n; i++) {
+      const html = plans[i].html;
+      if (chosen[i] !== null) {
+        const pos = chosen[i] + offset;
+        const pend = pending.join(''); pending.length = 0;
+        result = result.slice(0, pos) + pend + html + result.slice(pos);
+        offset += pend.length + html.length;
+        lastEnd = pos + pend.length + html.length;
+      } else if (lastEnd !== null) {
+        result = result.slice(0, lastEnd) + html + result.slice(lastEnd);
+        offset += html.length;
+        lastEnd += html.length;
+      } else {
+        pending.push(html);
+      }
+    }
+    // אף פירוש לא אותר — כולם בסוף הקטע
+    pending.forEach((h) => unmatched.push({ html: h }));
+    // מדדי איכות להרנס (opts._stats) — לא משפיע על הפלט
+    if (opts._stats) Object.assign(opts._stats, { total: n, located: plans.filter((p) => p.positions.length).length, chain: chosen.filter((c) => c !== null).length, pendingEnd: pending.length, perComment: plans.map((p, i) => (chosen[i] !== null ? "C" : p.positions.length ? "x" : "-")) });
+  };
+  // opts.ordered — אותו מנגנון דו-שלבי לכל פירוש מסודר לפי הטקסט (יכין/בועז במשניות, ברטנורא ורש"י
+  // בחוק לישראל, נושאי הכלים בקורא תוכניות הלימוד); opts.talmud = אותו דבר, השם ההיסטורי
+  const twoPass = !!(opts.talmud || opts.ordered);
+  if (twoPass) talmudLayer(comments.filter((t) => t && typeof t === 'string'));
+  for (const commentText of (twoPass ? [] : comments)) {
     if (!commentText || typeof commentText !== 'string') continue;
     const built = buildInner(commentText);
     if (built.skip) continue;
@@ -2367,7 +2627,7 @@ function _buildTextWithInlineComments(sourceHtml, comments, opts) {
           .join('');
       // (?![^<]*>) prevents matching inside an HTML attribute;
       // TAIL — סוף מילה: לא משבצים באמצע מילה ("תהו" בתוך "תהום")
-      const TAIL = '(?![\u0591-\u05C7\u034F]*[א-ת])(?![^<]*>)';
+      const TAIL = '(?![\\u0591-\\u05C7\\u034F]*[א-ת])(?![^<]*>)';
       const rx = new RegExp('(' + nikudify(cleanDibur) + ')' + TAIL, '');
       let mm = cleanDibur.length >= 2 ? findOutside(rx) : null;
       if (mm) {
@@ -2403,6 +2663,7 @@ function _buildTextWithInlineComments(sourceHtml, comments, opts) {
   // Any comment whose dibur wasn't found — each gets its own styled card at the end
   if (unmatched.length) {
     result += unmatched.map((t) => {
+      if (t && typeof t === 'object' && t.html) return t.html;   // תלמוד — הבלוק כבר בנוי
       const b = buildInner(t);
       if (b.skip) return '';
       return `${BLK_OPEN}${blockBase}"><span class="chok-rashi-label" style="color:${color} !important;">${emoji} ${label}</span>${b.inner}</div>${BLK_END}`;
@@ -2417,6 +2678,7 @@ function _buildGemaraWithInlineRashi(gemaraHtml, rashiComments) {
     label: 'רש״י',
     emoji: '📝',
     color: '#7c3aed',
+    ordered: true,   // המנגנון הדו-שלבי — רש"י מסודר לפי הפסוקים/השורות (חוק לישראל)
     diburColor: '#b45309',
     textColor: '#4c1d95',
   });
@@ -2548,6 +2810,9 @@ function renderChokContent() {
             color: '#0891b2',
             diburColor: '#b45309',
             textColor: '#164e63',
+            // הדיבור של ברטנורא הוא <b>…</b> מנוקד (ארוך מ-40 תווים עם הניקוד) — המנגנון הדו-שלבי
+            // מזהה אותו בכל אורך, מחפש בלי ניקוד ושומר על סדר המשניות; בלי זה שליש מהפירושים נערמו בסוף
+            ordered: true,
           });
         } else {
           html += heHtml;
@@ -2602,7 +2867,7 @@ async function fetchChokCommentaries() {
         const _rashiSection = currentSection; // capture for closure
         promises.push(
           fetch(
-            'https://www.sefaria.org/api/texts/' + encodeURIComponent('Rashi on ' + ref) + '?lang=he&context=0',
+            'https://www.sefaria.org/api/texts/' + encodeURIComponent('Rashi on ' + ref) + '?lang=he&context=0&pad=0',
             { signal: AbortSignal.timeout(8000) }
           )
             .then(r => r.json())
@@ -2658,9 +2923,11 @@ async function fetchChokCommentaries() {
 
       if (showBartenura && currentSection === 'משנה' && _chokBartenuraCache[ref] === undefined) {
         _chokBartenuraCache[ref] = 'loading';
+        // pad=0 — ה-ref של המשנה בגיליון הוא פרק שלם ("Mishnah Zevachim 4"); בלי pad=0 ספריא
+        // מחזירה רק את הפירוש על משנה א' (תוקן 09/2026)
         promises.push(
           fetch(
-            'https://www.sefaria.org/api/texts/' + encodeURIComponent('Bartenura on ' + ref) + '?lang=he&context=0',
+            'https://www.sefaria.org/api/texts/' + encodeURIComponent('Bartenura on ' + ref) + '?lang=he&context=0&pad=0',
             { signal: AbortSignal.timeout(8000) }
           )
             .then(r => r.json())
@@ -22836,7 +23103,7 @@ function openSefarimNosafimPage(_pageMode) {
   function saCms(part, exclude) {
     return SA_COMMENTARIES.filter(function(c){ return c.parts[part] && (!exclude || exclude.indexOf(c.id) < 0); }).map(function(c){
       return { id:"sa-" + c.id, he:c.he, short:c.short, emoji:c.emoji, color:c.color, diburColor:c.diburColor, textColor:c.textColor,
-        inline:"dibur", boldDibur:!!c.boldDibur, labelFor:c.labelFor,
+        inline:"dibur", boldDibur:!!c.boldDibur, ordered:true, labelFor:c.labelFor,
         // ה-ref של הפירוש נגזר ממספר הסימן של הטקסט הבסיסי (עובד גם על Mishnah_Berurah.N)
         refFn:function(secRef){ var n = parseInt((String(secRef).match(/\.(\d+)$/) || [])[1], 10); return n ? c.parts[part](n) : null; } };
     });
@@ -22916,7 +23183,7 @@ function openSefarimNosafimPage(_pageMode) {
     { id:"metzudat-zion",  he:"מצודת ציון",    color:"#1e3a8a", group:"acharonim",
       title:_tnTitle("Metzudat Zion on ", _TN_METZUDOT) },
     { id:"malbim",         he:"מלבי\"ם",       color:"#9333ea", group:"acharonim",
-      title:_tnTitle("Malbim on ", _TN_TORAH.concat(_TN_NEVIIM, ["Psalms","Proverbs","Job","Song of Songs","Ruth","Esther","Daniel","Ezra","Nehemiah","I Chronicles","II Chronicles"])) } // לא: איכה, קהלת
+      title:_tnTitle("Malbim on ", ["Genesis","Exodus","Numbers","Deuteronomy"].concat(_TN_NEVIIM, ["Psalms","Proverbs","Job","Song of Songs","Ruth","Esther","Daniel","Ezra","Nehemiah","I Chronicles","II Chronicles"])) } // לא: ויקרא (אינדקס מורכב לפי פרשות — ספריא מחזירה שגיאה), איכה, קהלת
   ];
   var SN_TANAKH_CM_GROUPS = [ { id:"targum", he:"תרגומים" }, { id:"rishonim", he:"ראשונים" }, { id:"acharonim", he:"אחרונים" } ];
 
@@ -22976,8 +23243,28 @@ function openSefarimNosafimPage(_pageMode) {
     { id:"tal-chochmat",    he:"חכמת שלמה (מהרש\"ל)",   emoji:"📖", group:"acharonim", prefix:"Chokhmat_Shlomo_on_",    color:"#0369a1", diburColor:"#b45309", textColor:"#0c4a6e" },
     { id:"tal-benyehoyada", he:"בן יהוידע",             emoji:"📖", group:"acharonim", prefix:"Ben_Yehoyada_on_",       color:"#7c2d12", diburColor:"#b45309", textColor:"#431407" }
   ];
-  function talCms() {
-    return TALMUD_COMMENTARIES.map(function(c) {
+  // כיסוי בפועל בספריא (אומת מול api/shape לכל 12×37 הצירופים, 09/2026): מסכתות שבהן אין
+  // אינדקס לנושא הכלים — הצ'יפ לא מוצג במסכת כזו (במקום "אין X על דף זה" בכל עמוד).
+  // כיסוי חלקי בתוך מסכת (ריטב"א פסחים, מהרש"א חידושי אגדות…) עדיין מטופל ע"י ההערה לפי דף.
+  var TALMUD_CM_MISSING = {
+    "tal-rashi":   ["Tamid"],
+    "tal-tosafot": ["Tamid"],
+    "tal-rashba":  ["Pesachim","Yoma","Sukkah","Taanit","Moed_Katan","Chagigah","Nazir","Sotah","Sanhedrin","Makkot","Horayot","Zevachim","Bekhorot","Arakhin","Temurah","Keritot","Meilah","Tamid"],
+    "tal-ritva":   ["Shabbat","Beitzah","Chagigah","Nazir","Sotah","Gittin","Bava_Kamma","Bava_Metzia","Bava_Batra","Sanhedrin","Horayot","Zevachim","Menachot","Bekhorot","Arakhin","Temurah","Keritot","Meilah","Tamid"],
+    "tal-shita":   ["Shabbat","Eruvin","Pesachim","Rosh_Hashanah","Yoma","Sukkah","Taanit","Megillah","Moed_Katan","Chagigah","Yevamot","Gittin","Kiddushin","Sanhedrin","Makkot","Shevuot","Avodah_Zarah","Horayot","Zevachim","Menachot","Chullin","Bekhorot","Arakhin","Temurah","Keritot","Meilah","Tamid","Niddah"],
+    "tal-mhrsha-h":["Nazir","Zevachim","Arakhin","Temurah","Keritot","Meilah","Tamid"],
+    "tal-mhrsha-a":[],
+    "tal-pnei":    ["Eruvin","Taanit","Moed_Katan","Chagigah","Yevamot","Nedarim","Nazir","Sotah","Bava_Batra","Sanhedrin","Avodah_Zarah","Horayot","Zevachim","Menachot","Bekhorot","Arakhin","Temurah","Keritot","Meilah","Tamid","Niddah"],
+    "tal-rashash": ["Tamid"],
+    "tal-gilyon":  ["Tamid"],
+    "tal-chochmat":["Rosh_Hashanah","Yoma","Taanit","Megillah","Moed_Katan","Chagigah","Nedarim","Nazir","Avodah_Zarah","Horayot","Zevachim","Menachot","Bekhorot","Arakhin","Temurah","Keritot","Meilah","Tamid"],
+    "tal-benyehoyada": ["Temurah","Keritot","Meilah","Tamid"]
+  };
+  function talCms(en) {
+    return TALMUD_COMMENTARIES.filter(function(c) {
+      var miss = TALMUD_CM_MISSING[c.id];
+      return !(en && miss && miss.indexOf(en) >= 0);
+    }).map(function(c) {
       return { id:c.id, he:c.he, emoji:c.emoji, group:c.group, color:c.color,
         diburColor:c.diburColor, textColor:c.textColor, inline:"dibur",
         refFn:(function(prefix){ return function(secRef){ return prefix + secRef; }; })(c.prefix) };
@@ -22989,9 +23276,16 @@ function openSefarimNosafimPage(_pageMode) {
         he: t[1] + " (" + TALMUD_SEDARIM[t[2]].he + ")",
         color: TALMUD_SEDARIM[t[2]].color,
         sections: talDafSecs(t[0], t[3], t[4]),
-        commentaries: talCms() };
+        commentaries: talCms(t[0]) };
     });
   }
+
+  // תפארת ישראל על המשנה: בספריא הפירוש נמצא תחת "Yachin on <מסכת>" ו-"Boaz on <מסכת>" —
+  // הכותרת "Tiferet Yisrael on <מסכת>" מפנה לספר תפארת ישראל של המהר"ל (ספר אחר לגמרי; הוצג
+  // בטעות כפירוש עד 09/2026). המבנה בספריא הוא פרק→הערות ממוספרות (לא פרק→משנה), ולכן
+  // השיבוץ הוא לפי דיבור-המתחיל (inline:"dibur"). מסכת אבות = Pirkei_Avot.
+  function _yachinRef(secRef) { return "Yachin_on_" + String(secRef).replace(/^Mishnah_Avot\./, "Pirkei_Avot."); }
+  function _boazRef(secRef)   { return "Boaz_on_"   + String(secRef).replace(/^Mishnah_Avot\./, "Pirkei_Avot."); }
 
   var BOOKS = [
     { id:"shulchan-aruch", he:"שולחן ערוך", subtitle:"רבי יוסף קארו",
@@ -24200,69 +24494,70 @@ function openSefarimNosafimPage(_pageMode) {
       creditUrl:"https://www.sefaria.org/Mishnah",
       type:"multi",
       subBooks:[
-        {id:"mishnah-berakhot",he:"ברכות (זרעים)",color:"#dc2626",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל",color:"#1e40af",refPrefix:"Tiferet Yisrael on "}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Berakhot.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Berakhot.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Berakhot.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Berakhot.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Berakhot.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Berakhot.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Berakhot.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Berakhot.8"},{he:"פרק "+toHN(9),ref:"Mishnah_Berakhot.9"}]},
-        {id:"mishnah-peah",he:"פאה (זרעים)",color:"#dc2626",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל",color:"#1e40af",refPrefix:"Tiferet Yisrael on "}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Peah.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Peah.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Peah.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Peah.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Peah.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Peah.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Peah.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Peah.8"}]},
-        {id:"mishnah-demai",he:"דמאי (זרעים)",color:"#dc2626",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל",color:"#1e40af",refPrefix:"Tiferet Yisrael on "}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Demai.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Demai.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Demai.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Demai.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Demai.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Demai.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Demai.7"}]},
-        {id:"mishnah-kilayim",he:"כלאים (זרעים)",color:"#dc2626",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל",color:"#1e40af",refPrefix:"Tiferet Yisrael on "}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Kilayim.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Kilayim.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Kilayim.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Kilayim.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Kilayim.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Kilayim.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Kilayim.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Kilayim.8"},{he:"פרק "+toHN(9),ref:"Mishnah_Kilayim.9"}]},
-        {id:"mishnah-sheviit",he:"שביעית (זרעים)",color:"#dc2626",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל",color:"#1e40af",refPrefix:"Tiferet Yisrael on "}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Sheviit.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Sheviit.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Sheviit.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Sheviit.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Sheviit.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Sheviit.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Sheviit.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Sheviit.8"},{he:"פרק "+toHN(9),ref:"Mishnah_Sheviit.9"},{he:"פרק "+toHN(10),ref:"Mishnah_Sheviit.10"}]},
-        {id:"mishnah-terumot",he:"תרומות (זרעים)",color:"#dc2626",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל",color:"#1e40af",refPrefix:"Tiferet Yisrael on "}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Terumot.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Terumot.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Terumot.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Terumot.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Terumot.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Terumot.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Terumot.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Terumot.8"},{he:"פרק "+toHN(9),ref:"Mishnah_Terumot.9"},{he:"פרק "+toHN(10),ref:"Mishnah_Terumot.10"},{he:"פרק "+toHN(11),ref:"Mishnah_Terumot.11"}]},
-        {id:"mishnah-maasrot",he:"מעשרות (זרעים)",color:"#dc2626",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל",color:"#1e40af",refPrefix:"Tiferet Yisrael on "}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Maasrot.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Maasrot.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Maasrot.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Maasrot.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Maasrot.5"}]},
-        {id:"mishnah-maaser-sheni",he:"מעשר שני (זרעים)",color:"#dc2626",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל",color:"#1e40af",refPrefix:"Tiferet Yisrael on "}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Maaser_Sheni.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Maaser_Sheni.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Maaser_Sheni.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Maaser_Sheni.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Maaser_Sheni.5"}]},
-        {id:"mishnah-challah",he:"חלה (זרעים)",color:"#dc2626",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל",color:"#1e40af",refPrefix:"Tiferet Yisrael on "}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Challah.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Challah.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Challah.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Challah.4"}]},
-        {id:"mishnah-orlah",he:"ערלה (זרעים)",color:"#dc2626",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל",color:"#1e40af",refPrefix:"Tiferet Yisrael on "}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Orlah.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Orlah.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Orlah.3"}]},
-        {id:"mishnah-bikkurim",he:"ביכורים (זרעים)",color:"#dc2626",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל",color:"#1e40af",refPrefix:"Tiferet Yisrael on "}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Bikkurim.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Bikkurim.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Bikkurim.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Bikkurim.4"}]},
-        {id:"mishnah-shabbat",he:"שבת (מועד)",color:"#ea580c",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל",color:"#1e40af",refPrefix:"Tiferet Yisrael on "}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Shabbat.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Shabbat.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Shabbat.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Shabbat.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Shabbat.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Shabbat.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Shabbat.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Shabbat.8"},{he:"פרק "+toHN(9),ref:"Mishnah_Shabbat.9"},{he:"פרק "+toHN(10),ref:"Mishnah_Shabbat.10"},{he:"פרק "+toHN(11),ref:"Mishnah_Shabbat.11"},{he:"פרק "+toHN(12),ref:"Mishnah_Shabbat.12"},{he:"פרק "+toHN(13),ref:"Mishnah_Shabbat.13"},{he:"פרק "+toHN(14),ref:"Mishnah_Shabbat.14"},{he:"פרק "+toHN(15),ref:"Mishnah_Shabbat.15"},{he:"פרק "+toHN(16),ref:"Mishnah_Shabbat.16"},{he:"פרק "+toHN(17),ref:"Mishnah_Shabbat.17"},{he:"פרק "+toHN(18),ref:"Mishnah_Shabbat.18"},{he:"פרק "+toHN(19),ref:"Mishnah_Shabbat.19"},{he:"פרק "+toHN(20),ref:"Mishnah_Shabbat.20"},{he:"פרק "+toHN(21),ref:"Mishnah_Shabbat.21"},{he:"פרק "+toHN(22),ref:"Mishnah_Shabbat.22"},{he:"פרק "+toHN(23),ref:"Mishnah_Shabbat.23"},{he:"פרק "+toHN(24),ref:"Mishnah_Shabbat.24"}]},
-        {id:"mishnah-eruvin",he:"עירובין (מועד)",color:"#ea580c",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל",color:"#1e40af",refPrefix:"Tiferet Yisrael on "}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Eruvin.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Eruvin.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Eruvin.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Eruvin.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Eruvin.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Eruvin.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Eruvin.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Eruvin.8"},{he:"פרק "+toHN(9),ref:"Mishnah_Eruvin.9"},{he:"פרק "+toHN(10),ref:"Mishnah_Eruvin.10"}]},
-        {id:"mishnah-pesachim",he:"פסחים (מועד)",color:"#ea580c",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל",color:"#1e40af",refPrefix:"Tiferet Yisrael on "}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Pesachim.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Pesachim.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Pesachim.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Pesachim.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Pesachim.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Pesachim.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Pesachim.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Pesachim.8"},{he:"פרק "+toHN(9),ref:"Mishnah_Pesachim.9"},{he:"פרק "+toHN(10),ref:"Mishnah_Pesachim.10"}]},
-        {id:"mishnah-shekalim",he:"שקלים (מועד)",color:"#ea580c",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל",color:"#1e40af",refPrefix:"Tiferet Yisrael on "}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Shekalim.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Shekalim.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Shekalim.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Shekalim.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Shekalim.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Shekalim.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Shekalim.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Shekalim.8"}]},
-        {id:"mishnah-yoma",he:"יומא (מועד)",color:"#ea580c",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל",color:"#1e40af",refPrefix:"Tiferet Yisrael on "}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Yoma.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Yoma.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Yoma.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Yoma.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Yoma.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Yoma.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Yoma.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Yoma.8"}]},
-        {id:"mishnah-sukkah",he:"סוכה (מועד)",color:"#ea580c",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל",color:"#1e40af",refPrefix:"Tiferet Yisrael on "}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Sukkah.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Sukkah.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Sukkah.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Sukkah.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Sukkah.5"}]},
-        {id:"mishnah-beitzah",he:"ביצה (מועד)",color:"#ea580c",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל",color:"#1e40af",refPrefix:"Tiferet Yisrael on "}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Beitzah.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Beitzah.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Beitzah.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Beitzah.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Beitzah.5"}]},
-        {id:"mishnah-rosh-hashanah",he:"ראש השנה (מועד)",color:"#ea580c",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל",color:"#1e40af",refPrefix:"Tiferet Yisrael on "}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Rosh_Hashanah.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Rosh_Hashanah.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Rosh_Hashanah.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Rosh_Hashanah.4"}]},
-        {id:"mishnah-taanit",he:"תענית (מועד)",color:"#ea580c",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל",color:"#1e40af",refPrefix:"Tiferet Yisrael on "}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Taanit.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Taanit.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Taanit.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Taanit.4"}]},
-        {id:"mishnah-megillah",he:"מגילה (מועד)",color:"#ea580c",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל",color:"#1e40af",refPrefix:"Tiferet Yisrael on "}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Megillah.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Megillah.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Megillah.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Megillah.4"}]},
-        {id:"mishnah-moed-katan",he:"מועד קטן (מועד)",color:"#ea580c",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל",color:"#1e40af",refPrefix:"Tiferet Yisrael on "}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Moed_Katan.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Moed_Katan.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Moed_Katan.3"}]},
-        {id:"mishnah-chagigah",he:"חגיגה (מועד)",color:"#ea580c",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל",color:"#1e40af",refPrefix:"Tiferet Yisrael on "}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Chagigah.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Chagigah.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Chagigah.3"}]},
-        {id:"mishnah-yevamot",he:"יבמות (נשים)",color:"#d97706",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל",color:"#1e40af",refPrefix:"Tiferet Yisrael on "}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Yevamot.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Yevamot.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Yevamot.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Yevamot.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Yevamot.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Yevamot.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Yevamot.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Yevamot.8"},{he:"פרק "+toHN(9),ref:"Mishnah_Yevamot.9"},{he:"פרק "+toHN(10),ref:"Mishnah_Yevamot.10"},{he:"פרק "+toHN(11),ref:"Mishnah_Yevamot.11"},{he:"פרק "+toHN(12),ref:"Mishnah_Yevamot.12"},{he:"פרק "+toHN(13),ref:"Mishnah_Yevamot.13"},{he:"פרק "+toHN(14),ref:"Mishnah_Yevamot.14"},{he:"פרק "+toHN(15),ref:"Mishnah_Yevamot.15"},{he:"פרק "+toHN(16),ref:"Mishnah_Yevamot.16"}]},
-        {id:"mishnah-ketubot",he:"כתובות (נשים)",color:"#d97706",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל",color:"#1e40af",refPrefix:"Tiferet Yisrael on "}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Ketubot.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Ketubot.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Ketubot.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Ketubot.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Ketubot.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Ketubot.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Ketubot.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Ketubot.8"},{he:"פרק "+toHN(9),ref:"Mishnah_Ketubot.9"},{he:"פרק "+toHN(10),ref:"Mishnah_Ketubot.10"},{he:"פרק "+toHN(11),ref:"Mishnah_Ketubot.11"},{he:"פרק "+toHN(12),ref:"Mishnah_Ketubot.12"},{he:"פרק "+toHN(13),ref:"Mishnah_Ketubot.13"}]},
-        {id:"mishnah-nedarim",he:"נדרים (נשים)",color:"#d97706",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל",color:"#1e40af",refPrefix:"Tiferet Yisrael on "}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Nedarim.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Nedarim.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Nedarim.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Nedarim.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Nedarim.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Nedarim.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Nedarim.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Nedarim.8"},{he:"פרק "+toHN(9),ref:"Mishnah_Nedarim.9"},{he:"פרק "+toHN(10),ref:"Mishnah_Nedarim.10"},{he:"פרק "+toHN(11),ref:"Mishnah_Nedarim.11"}]},
-        {id:"mishnah-nazir",he:"נזיר (נשים)",color:"#d97706",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל",color:"#1e40af",refPrefix:"Tiferet Yisrael on "}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Nazir.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Nazir.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Nazir.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Nazir.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Nazir.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Nazir.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Nazir.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Nazir.8"},{he:"פרק "+toHN(9),ref:"Mishnah_Nazir.9"}]},
-        {id:"mishnah-sotah",he:"סוטה (נשים)",color:"#d97706",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל",color:"#1e40af",refPrefix:"Tiferet Yisrael on "}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Sotah.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Sotah.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Sotah.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Sotah.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Sotah.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Sotah.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Sotah.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Sotah.8"},{he:"פרק "+toHN(9),ref:"Mishnah_Sotah.9"}]},
-        {id:"mishnah-gittin",he:"גיטין (נשים)",color:"#d97706",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל",color:"#1e40af",refPrefix:"Tiferet Yisrael on "}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Gittin.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Gittin.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Gittin.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Gittin.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Gittin.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Gittin.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Gittin.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Gittin.8"},{he:"פרק "+toHN(9),ref:"Mishnah_Gittin.9"}]},
-        {id:"mishnah-kiddushin",he:"קידושין (נשים)",color:"#d97706",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל",color:"#1e40af",refPrefix:"Tiferet Yisrael on "}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Kiddushin.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Kiddushin.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Kiddushin.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Kiddushin.4"}]},
-        {id:"mishnah-bava-kamma",he:"בבא קמא (נזיקין)",color:"#059669",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל",color:"#1e40af",refPrefix:"Tiferet Yisrael on "}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Bava_Kamma.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Bava_Kamma.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Bava_Kamma.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Bava_Kamma.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Bava_Kamma.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Bava_Kamma.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Bava_Kamma.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Bava_Kamma.8"},{he:"פרק "+toHN(9),ref:"Mishnah_Bava_Kamma.9"},{he:"פרק "+toHN(10),ref:"Mishnah_Bava_Kamma.10"}]},
-        {id:"mishnah-bava-metzia",he:"בבא מציעא (נזיקין)",color:"#059669",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל",color:"#1e40af",refPrefix:"Tiferet Yisrael on "}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Bava_Metzia.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Bava_Metzia.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Bava_Metzia.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Bava_Metzia.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Bava_Metzia.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Bava_Metzia.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Bava_Metzia.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Bava_Metzia.8"},{he:"פרק "+toHN(9),ref:"Mishnah_Bava_Metzia.9"},{he:"פרק "+toHN(10),ref:"Mishnah_Bava_Metzia.10"}]},
-        {id:"mishnah-bava-batra",he:"בבא בתרא (נזיקין)",color:"#059669",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל",color:"#1e40af",refPrefix:"Tiferet Yisrael on "}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Bava_Batra.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Bava_Batra.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Bava_Batra.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Bava_Batra.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Bava_Batra.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Bava_Batra.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Bava_Batra.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Bava_Batra.8"},{he:"פרק "+toHN(9),ref:"Mishnah_Bava_Batra.9"},{he:"פרק "+toHN(10),ref:"Mishnah_Bava_Batra.10"}]},
-        {id:"mishnah-sanhedrin",he:"סנהדרין (נזיקין)",color:"#059669",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל",color:"#1e40af",refPrefix:"Tiferet Yisrael on "}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Sanhedrin.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Sanhedrin.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Sanhedrin.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Sanhedrin.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Sanhedrin.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Sanhedrin.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Sanhedrin.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Sanhedrin.8"},{he:"פרק "+toHN(9),ref:"Mishnah_Sanhedrin.9"},{he:"פרק "+toHN(10),ref:"Mishnah_Sanhedrin.10"},{he:"פרק "+toHN(11),ref:"Mishnah_Sanhedrin.11"}]},
-        {id:"mishnah-makkot",he:"מכות (נזיקין)",color:"#059669",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל",color:"#1e40af",refPrefix:"Tiferet Yisrael on "}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Makkot.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Makkot.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Makkot.3"}]},
-        {id:"mishnah-shevuot",he:"שבועות (נזיקין)",color:"#059669",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל",color:"#1e40af",refPrefix:"Tiferet Yisrael on "}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Shevuot.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Shevuot.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Shevuot.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Shevuot.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Shevuot.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Shevuot.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Shevuot.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Shevuot.8"}]},
-        {id:"mishnah-eduyot",he:"עדויות (נזיקין)",color:"#059669",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל",color:"#1e40af",refPrefix:"Tiferet Yisrael on "}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Eduyot.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Eduyot.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Eduyot.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Eduyot.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Eduyot.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Eduyot.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Eduyot.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Eduyot.8"}]},
-        {id:"mishnah-avodah-zarah",he:"עבודה זרה (נזיקין)",color:"#059669",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל",color:"#1e40af",refPrefix:"Tiferet Yisrael on "}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Avodah_Zarah.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Avodah_Zarah.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Avodah_Zarah.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Avodah_Zarah.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Avodah_Zarah.5"}]},
-        {id:"mishnah-avot",he:"אבות (נזיקין)",color:"#059669",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל",color:"#1e40af",refPrefix:"Tiferet Yisrael on "}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Avot.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Avot.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Avot.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Avot.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Avot.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Avot.6"}]},
-        {id:"mishnah-horayot",he:"הוריות (נזיקין)",color:"#059669",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל",color:"#1e40af",refPrefix:"Tiferet Yisrael on "}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Horayot.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Horayot.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Horayot.3"}]},
-        {id:"mishnah-zevachim",he:"זבחים (קדשים)",color:"#0891b2",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל",color:"#1e40af",refPrefix:"Tiferet Yisrael on "}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Zevachim.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Zevachim.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Zevachim.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Zevachim.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Zevachim.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Zevachim.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Zevachim.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Zevachim.8"},{he:"פרק "+toHN(9),ref:"Mishnah_Zevachim.9"},{he:"פרק "+toHN(10),ref:"Mishnah_Zevachim.10"},{he:"פרק "+toHN(11),ref:"Mishnah_Zevachim.11"},{he:"פרק "+toHN(12),ref:"Mishnah_Zevachim.12"},{he:"פרק "+toHN(13),ref:"Mishnah_Zevachim.13"},{he:"פרק "+toHN(14),ref:"Mishnah_Zevachim.14"}]},
-        {id:"mishnah-menachot",he:"מנחות (קדשים)",color:"#0891b2",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל",color:"#1e40af",refPrefix:"Tiferet Yisrael on "}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Menachot.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Menachot.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Menachot.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Menachot.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Menachot.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Menachot.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Menachot.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Menachot.8"},{he:"פרק "+toHN(9),ref:"Mishnah_Menachot.9"},{he:"פרק "+toHN(10),ref:"Mishnah_Menachot.10"},{he:"פרק "+toHN(11),ref:"Mishnah_Menachot.11"},{he:"פרק "+toHN(12),ref:"Mishnah_Menachot.12"},{he:"פרק "+toHN(13),ref:"Mishnah_Menachot.13"}]},
-        {id:"mishnah-chullin",he:"חולין (קדשים)",color:"#0891b2",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל",color:"#1e40af",refPrefix:"Tiferet Yisrael on "}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Chullin.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Chullin.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Chullin.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Chullin.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Chullin.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Chullin.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Chullin.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Chullin.8"},{he:"פרק "+toHN(9),ref:"Mishnah_Chullin.9"},{he:"פרק "+toHN(10),ref:"Mishnah_Chullin.10"},{he:"פרק "+toHN(11),ref:"Mishnah_Chullin.11"},{he:"פרק "+toHN(12),ref:"Mishnah_Chullin.12"}]},
-        {id:"mishnah-bekhorot",he:"בכורות (קדשים)",color:"#0891b2",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל",color:"#1e40af",refPrefix:"Tiferet Yisrael on "}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Bekhorot.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Bekhorot.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Bekhorot.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Bekhorot.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Bekhorot.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Bekhorot.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Bekhorot.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Bekhorot.8"},{he:"פרק "+toHN(9),ref:"Mishnah_Bekhorot.9"}]},
-        {id:"mishnah-arakhin",he:"ערכין (קדשים)",color:"#0891b2",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל",color:"#1e40af",refPrefix:"Tiferet Yisrael on "}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Arakhin.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Arakhin.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Arakhin.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Arakhin.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Arakhin.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Arakhin.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Arakhin.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Arakhin.8"},{he:"פרק "+toHN(9),ref:"Mishnah_Arakhin.9"}]},
-        {id:"mishnah-temurah",he:"תמורה (קדשים)",color:"#0891b2",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל",color:"#1e40af",refPrefix:"Tiferet Yisrael on "}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Temurah.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Temurah.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Temurah.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Temurah.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Temurah.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Temurah.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Temurah.7"}]},
-        {id:"mishnah-keritot",he:"כריתות (קדשים)",color:"#0891b2",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל",color:"#1e40af",refPrefix:"Tiferet Yisrael on "}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Keritot.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Keritot.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Keritot.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Keritot.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Keritot.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Keritot.6"}]},
-        {id:"mishnah-meilah",he:"מעילה (קדשים)",color:"#0891b2",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל",color:"#1e40af",refPrefix:"Tiferet Yisrael on "}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Meilah.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Meilah.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Meilah.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Meilah.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Meilah.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Meilah.6"}]},
-        {id:"mishnah-tamid",he:"תמיד (קדשים)",color:"#0891b2",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל",color:"#1e40af",refPrefix:"Tiferet Yisrael on "}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Tamid.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Tamid.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Tamid.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Tamid.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Tamid.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Tamid.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Tamid.7"}]},
-        {id:"mishnah-middot",he:"מידות (קדשים)",color:"#0891b2",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל",color:"#1e40af",refPrefix:"Tiferet Yisrael on "}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Middot.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Middot.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Middot.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Middot.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Middot.5"}]},
-        {id:"mishnah-kinnim",he:"קינים (קדשים)",color:"#0891b2",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל",color:"#1e40af",refPrefix:"Tiferet Yisrael on "}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Kinnim.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Kinnim.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Kinnim.3"}]},
-        {id:"mishnah-kelim",he:"כלים (טהרות)",color:"#7c3aed",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל",color:"#1e40af",refPrefix:"Tiferet Yisrael on "}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Kelim.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Kelim.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Kelim.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Kelim.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Kelim.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Kelim.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Kelim.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Kelim.8"},{he:"פרק "+toHN(9),ref:"Mishnah_Kelim.9"},{he:"פרק "+toHN(10),ref:"Mishnah_Kelim.10"},{he:"פרק "+toHN(11),ref:"Mishnah_Kelim.11"},{he:"פרק "+toHN(12),ref:"Mishnah_Kelim.12"},{he:"פרק "+toHN(13),ref:"Mishnah_Kelim.13"},{he:"פרק "+toHN(14),ref:"Mishnah_Kelim.14"},{he:"פרק "+toHN(15),ref:"Mishnah_Kelim.15"},{he:"פרק "+toHN(16),ref:"Mishnah_Kelim.16"},{he:"פרק "+toHN(17),ref:"Mishnah_Kelim.17"},{he:"פרק "+toHN(18),ref:"Mishnah_Kelim.18"},{he:"פרק "+toHN(19),ref:"Mishnah_Kelim.19"},{he:"פרק "+toHN(20),ref:"Mishnah_Kelim.20"},{he:"פרק "+toHN(21),ref:"Mishnah_Kelim.21"},{he:"פרק "+toHN(22),ref:"Mishnah_Kelim.22"},{he:"פרק "+toHN(23),ref:"Mishnah_Kelim.23"},{he:"פרק "+toHN(24),ref:"Mishnah_Kelim.24"},{he:"פרק "+toHN(25),ref:"Mishnah_Kelim.25"},{he:"פרק "+toHN(26),ref:"Mishnah_Kelim.26"},{he:"פרק "+toHN(27),ref:"Mishnah_Kelim.27"},{he:"פרק "+toHN(28),ref:"Mishnah_Kelim.28"},{he:"פרק "+toHN(29),ref:"Mishnah_Kelim.29"},{he:"פרק "+toHN(30),ref:"Mishnah_Kelim.30"}]},
-        {id:"mishnah-oholot",he:"אהלות (טהרות)",color:"#7c3aed",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל",color:"#1e40af",refPrefix:"Tiferet Yisrael on "}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Oholot.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Oholot.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Oholot.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Oholot.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Oholot.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Oholot.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Oholot.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Oholot.8"},{he:"פרק "+toHN(9),ref:"Mishnah_Oholot.9"},{he:"פרק "+toHN(10),ref:"Mishnah_Oholot.10"},{he:"פרק "+toHN(11),ref:"Mishnah_Oholot.11"},{he:"פרק "+toHN(12),ref:"Mishnah_Oholot.12"},{he:"פרק "+toHN(13),ref:"Mishnah_Oholot.13"},{he:"פרק "+toHN(14),ref:"Mishnah_Oholot.14"},{he:"פרק "+toHN(15),ref:"Mishnah_Oholot.15"},{he:"פרק "+toHN(16),ref:"Mishnah_Oholot.16"},{he:"פרק "+toHN(17),ref:"Mishnah_Oholot.17"},{he:"פרק "+toHN(18),ref:"Mishnah_Oholot.18"}]},
-        {id:"mishnah-negaim",he:"נגעים (טהרות)",color:"#7c3aed",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל",color:"#1e40af",refPrefix:"Tiferet Yisrael on "}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Negaim.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Negaim.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Negaim.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Negaim.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Negaim.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Negaim.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Negaim.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Negaim.8"},{he:"פרק "+toHN(9),ref:"Mishnah_Negaim.9"},{he:"פרק "+toHN(10),ref:"Mishnah_Negaim.10"},{he:"פרק "+toHN(11),ref:"Mishnah_Negaim.11"},{he:"פרק "+toHN(12),ref:"Mishnah_Negaim.12"},{he:"פרק "+toHN(13),ref:"Mishnah_Negaim.13"},{he:"פרק "+toHN(14),ref:"Mishnah_Negaim.14"}]},
-        {id:"mishnah-parah",he:"פרה (טהרות)",color:"#7c3aed",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל",color:"#1e40af",refPrefix:"Tiferet Yisrael on "}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Parah.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Parah.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Parah.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Parah.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Parah.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Parah.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Parah.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Parah.8"},{he:"פרק "+toHN(9),ref:"Mishnah_Parah.9"},{he:"פרק "+toHN(10),ref:"Mishnah_Parah.10"},{he:"פרק "+toHN(11),ref:"Mishnah_Parah.11"},{he:"פרק "+toHN(12),ref:"Mishnah_Parah.12"}]},
-        {id:"mishnah-tohorot",he:"טהרות (טהרות)",color:"#7c3aed",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל",color:"#1e40af",refPrefix:"Tiferet Yisrael on "}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Tohorot.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Tohorot.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Tohorot.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Tohorot.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Tohorot.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Tohorot.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Tohorot.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Tohorot.8"},{he:"פרק "+toHN(9),ref:"Mishnah_Tohorot.9"},{he:"פרק "+toHN(10),ref:"Mishnah_Tohorot.10"}]},
-        {id:"mishnah-mikvaot",he:"מקואות (טהרות)",color:"#7c3aed",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל",color:"#1e40af",refPrefix:"Tiferet Yisrael on "}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Mikvaot.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Mikvaot.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Mikvaot.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Mikvaot.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Mikvaot.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Mikvaot.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Mikvaot.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Mikvaot.8"},{he:"פרק "+toHN(9),ref:"Mishnah_Mikvaot.9"},{he:"פרק "+toHN(10),ref:"Mishnah_Mikvaot.10"}]},
-        {id:"mishnah-niddah",he:"נדה (טהרות)",color:"#7c3aed",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל",color:"#1e40af",refPrefix:"Tiferet Yisrael on "}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Niddah.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Niddah.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Niddah.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Niddah.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Niddah.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Niddah.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Niddah.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Niddah.8"},{he:"פרק "+toHN(9),ref:"Mishnah_Niddah.9"},{he:"פרק "+toHN(10),ref:"Mishnah_Niddah.10"}]},
-        {id:"mishnah-makhshirin",he:"מכשירין (טהרות)",color:"#7c3aed",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל",color:"#1e40af",refPrefix:"Tiferet Yisrael on "}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Makhshirin.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Makhshirin.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Makhshirin.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Makhshirin.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Makhshirin.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Makhshirin.6"}]},
-        {id:"mishnah-zavim",he:"זבים (טהרות)",color:"#7c3aed",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל",color:"#1e40af",refPrefix:"Tiferet Yisrael on "}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Zavim.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Zavim.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Zavim.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Zavim.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Zavim.5"}]},
-        {id:"mishnah-tevul-yom",he:"טבול יום (טהרות)",color:"#7c3aed",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל",color:"#1e40af",refPrefix:"Tiferet Yisrael on "}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Tevul_Yom.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Tevul_Yom.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Tevul_Yom.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Tevul_Yom.4"}]},
-        {id:"mishnah-yadayim",he:"ידיים (טהרות)",color:"#7c3aed",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל",color:"#1e40af",refPrefix:"Tiferet Yisrael on "}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Yadayim.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Yadayim.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Yadayim.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Yadayim.4"}]},
-        {id:"mishnah-uktzin",he:"עוקצים (טהרות)",color:"#7c3aed",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל",color:"#1e40af",refPrefix:"Tiferet Yisrael on "}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Uktzin.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Uktzin.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Uktzin.3"}]}
+        {id:"mishnah-berakhot",he:"ברכות (זרעים)",color:"#dc2626",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל (יכין)",color:"#1e40af",inline:"dibur",ordered:true,refFn:_yachinRef},{id:"boaz",he:"תפארת ישראל (בועז)",color:"#1e3a8a",inline:"dibur",ordered:true,refFn:_boazRef}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Berakhot.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Berakhot.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Berakhot.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Berakhot.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Berakhot.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Berakhot.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Berakhot.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Berakhot.8"},{he:"פרק "+toHN(9),ref:"Mishnah_Berakhot.9"}]},
+        {id:"mishnah-peah",he:"פאה (זרעים)",color:"#dc2626",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל (יכין)",color:"#1e40af",inline:"dibur",ordered:true,refFn:_yachinRef},{id:"boaz",he:"תפארת ישראל (בועז)",color:"#1e3a8a",inline:"dibur",ordered:true,refFn:_boazRef}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Peah.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Peah.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Peah.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Peah.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Peah.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Peah.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Peah.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Peah.8"}]},
+        {id:"mishnah-demai",he:"דמאי (זרעים)",color:"#dc2626",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל (יכין)",color:"#1e40af",inline:"dibur",ordered:true,refFn:_yachinRef},{id:"boaz",he:"תפארת ישראל (בועז)",color:"#1e3a8a",inline:"dibur",ordered:true,refFn:_boazRef}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Demai.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Demai.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Demai.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Demai.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Demai.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Demai.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Demai.7"}]},
+        {id:"mishnah-kilayim",he:"כלאים (זרעים)",color:"#dc2626",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל (יכין)",color:"#1e40af",inline:"dibur",ordered:true,refFn:_yachinRef},{id:"boaz",he:"תפארת ישראל (בועז)",color:"#1e3a8a",inline:"dibur",ordered:true,refFn:_boazRef}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Kilayim.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Kilayim.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Kilayim.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Kilayim.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Kilayim.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Kilayim.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Kilayim.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Kilayim.8"},{he:"פרק "+toHN(9),ref:"Mishnah_Kilayim.9"}]},
+        {id:"mishnah-sheviit",he:"שביעית (זרעים)",color:"#dc2626",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל (יכין)",color:"#1e40af",inline:"dibur",ordered:true,refFn:_yachinRef},{id:"boaz",he:"תפארת ישראל (בועז)",color:"#1e3a8a",inline:"dibur",ordered:true,refFn:_boazRef}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Sheviit.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Sheviit.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Sheviit.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Sheviit.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Sheviit.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Sheviit.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Sheviit.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Sheviit.8"},{he:"פרק "+toHN(9),ref:"Mishnah_Sheviit.9"},{he:"פרק "+toHN(10),ref:"Mishnah_Sheviit.10"}]},
+        {id:"mishnah-terumot",he:"תרומות (זרעים)",color:"#dc2626",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל (יכין)",color:"#1e40af",inline:"dibur",ordered:true,refFn:_yachinRef},{id:"boaz",he:"תפארת ישראל (בועז)",color:"#1e3a8a",inline:"dibur",ordered:true,refFn:_boazRef}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Terumot.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Terumot.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Terumot.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Terumot.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Terumot.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Terumot.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Terumot.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Terumot.8"},{he:"פרק "+toHN(9),ref:"Mishnah_Terumot.9"},{he:"פרק "+toHN(10),ref:"Mishnah_Terumot.10"},{he:"פרק "+toHN(11),ref:"Mishnah_Terumot.11"}]},
+        {id:"mishnah-maasrot",he:"מעשרות (זרעים)",color:"#dc2626",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל (יכין)",color:"#1e40af",inline:"dibur",ordered:true,refFn:_yachinRef},{id:"boaz",he:"תפארת ישראל (בועז)",color:"#1e3a8a",inline:"dibur",ordered:true,refFn:_boazRef}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Maasrot.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Maasrot.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Maasrot.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Maasrot.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Maasrot.5"}]},
+        {id:"mishnah-maaser-sheni",he:"מעשר שני (זרעים)",color:"#dc2626",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל (יכין)",color:"#1e40af",inline:"dibur",ordered:true,refFn:_yachinRef},{id:"boaz",he:"תפארת ישראל (בועז)",color:"#1e3a8a",inline:"dibur",ordered:true,refFn:_boazRef}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Maaser_Sheni.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Maaser_Sheni.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Maaser_Sheni.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Maaser_Sheni.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Maaser_Sheni.5"}]},
+        {id:"mishnah-challah",he:"חלה (זרעים)",color:"#dc2626",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל (יכין)",color:"#1e40af",inline:"dibur",ordered:true,refFn:_yachinRef},{id:"boaz",he:"תפארת ישראל (בועז)",color:"#1e3a8a",inline:"dibur",ordered:true,refFn:_boazRef}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Challah.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Challah.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Challah.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Challah.4"}]},
+        {id:"mishnah-orlah",he:"ערלה (זרעים)",color:"#dc2626",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל (יכין)",color:"#1e40af",inline:"dibur",ordered:true,refFn:_yachinRef},{id:"boaz",he:"תפארת ישראל (בועז)",color:"#1e3a8a",inline:"dibur",ordered:true,refFn:_boazRef}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Orlah.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Orlah.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Orlah.3"}]},
+        {id:"mishnah-bikkurim",he:"ביכורים (זרעים)",color:"#dc2626",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל (יכין)",color:"#1e40af",inline:"dibur",ordered:true,refFn:_yachinRef},{id:"boaz",he:"תפארת ישראל (בועז)",color:"#1e3a8a",inline:"dibur",ordered:true,refFn:_boazRef}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Bikkurim.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Bikkurim.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Bikkurim.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Bikkurim.4"}]},
+        {id:"mishnah-shabbat",he:"שבת (מועד)",color:"#ea580c",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל (יכין)",color:"#1e40af",inline:"dibur",ordered:true,refFn:_yachinRef},{id:"boaz",he:"תפארת ישראל (בועז)",color:"#1e3a8a",inline:"dibur",ordered:true,refFn:_boazRef}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Shabbat.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Shabbat.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Shabbat.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Shabbat.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Shabbat.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Shabbat.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Shabbat.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Shabbat.8"},{he:"פרק "+toHN(9),ref:"Mishnah_Shabbat.9"},{he:"פרק "+toHN(10),ref:"Mishnah_Shabbat.10"},{he:"פרק "+toHN(11),ref:"Mishnah_Shabbat.11"},{he:"פרק "+toHN(12),ref:"Mishnah_Shabbat.12"},{he:"פרק "+toHN(13),ref:"Mishnah_Shabbat.13"},{he:"פרק "+toHN(14),ref:"Mishnah_Shabbat.14"},{he:"פרק "+toHN(15),ref:"Mishnah_Shabbat.15"},{he:"פרק "+toHN(16),ref:"Mishnah_Shabbat.16"},{he:"פרק "+toHN(17),ref:"Mishnah_Shabbat.17"},{he:"פרק "+toHN(18),ref:"Mishnah_Shabbat.18"},{he:"פרק "+toHN(19),ref:"Mishnah_Shabbat.19"},{he:"פרק "+toHN(20),ref:"Mishnah_Shabbat.20"},{he:"פרק "+toHN(21),ref:"Mishnah_Shabbat.21"},{he:"פרק "+toHN(22),ref:"Mishnah_Shabbat.22"},{he:"פרק "+toHN(23),ref:"Mishnah_Shabbat.23"},{he:"פרק "+toHN(24),ref:"Mishnah_Shabbat.24"}]},
+        {id:"mishnah-eruvin",he:"עירובין (מועד)",color:"#ea580c",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל (יכין)",color:"#1e40af",inline:"dibur",ordered:true,refFn:_yachinRef},{id:"boaz",he:"תפארת ישראל (בועז)",color:"#1e3a8a",inline:"dibur",ordered:true,refFn:_boazRef}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Eruvin.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Eruvin.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Eruvin.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Eruvin.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Eruvin.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Eruvin.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Eruvin.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Eruvin.8"},{he:"פרק "+toHN(9),ref:"Mishnah_Eruvin.9"},{he:"פרק "+toHN(10),ref:"Mishnah_Eruvin.10"}]},
+        {id:"mishnah-pesachim",he:"פסחים (מועד)",color:"#ea580c",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל (יכין)",color:"#1e40af",inline:"dibur",ordered:true,refFn:_yachinRef},{id:"boaz",he:"תפארת ישראל (בועז)",color:"#1e3a8a",inline:"dibur",ordered:true,refFn:_boazRef}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Pesachim.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Pesachim.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Pesachim.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Pesachim.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Pesachim.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Pesachim.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Pesachim.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Pesachim.8"},{he:"פרק "+toHN(9),ref:"Mishnah_Pesachim.9"},{he:"פרק "+toHN(10),ref:"Mishnah_Pesachim.10"}]},
+        {id:"mishnah-shekalim",he:"שקלים (מועד)",color:"#ea580c",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל (יכין)",color:"#1e40af",inline:"dibur",ordered:true,refFn:_yachinRef},{id:"boaz",he:"תפארת ישראל (בועז)",color:"#1e3a8a",inline:"dibur",ordered:true,refFn:_boazRef}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Shekalim.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Shekalim.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Shekalim.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Shekalim.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Shekalim.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Shekalim.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Shekalim.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Shekalim.8"}]},
+        {id:"mishnah-yoma",he:"יומא (מועד)",color:"#ea580c",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל (יכין)",color:"#1e40af",inline:"dibur",ordered:true,refFn:_yachinRef},{id:"boaz",he:"תפארת ישראל (בועז)",color:"#1e3a8a",inline:"dibur",ordered:true,refFn:_boazRef}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Yoma.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Yoma.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Yoma.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Yoma.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Yoma.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Yoma.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Yoma.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Yoma.8"}]},
+        {id:"mishnah-sukkah",he:"סוכה (מועד)",color:"#ea580c",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל (יכין)",color:"#1e40af",inline:"dibur",ordered:true,refFn:_yachinRef},{id:"boaz",he:"תפארת ישראל (בועז)",color:"#1e3a8a",inline:"dibur",ordered:true,refFn:_boazRef}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Sukkah.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Sukkah.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Sukkah.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Sukkah.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Sukkah.5"}]},
+        {id:"mishnah-beitzah",he:"ביצה (מועד)",color:"#ea580c",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל (יכין)",color:"#1e40af",inline:"dibur",ordered:true,refFn:_yachinRef},{id:"boaz",he:"תפארת ישראל (בועז)",color:"#1e3a8a",inline:"dibur",ordered:true,refFn:_boazRef}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Beitzah.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Beitzah.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Beitzah.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Beitzah.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Beitzah.5"}]},
+        {id:"mishnah-rosh-hashanah",he:"ראש השנה (מועד)",color:"#ea580c",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל (יכין)",color:"#1e40af",inline:"dibur",ordered:true,refFn:_yachinRef},{id:"boaz",he:"תפארת ישראל (בועז)",color:"#1e3a8a",inline:"dibur",ordered:true,refFn:_boazRef}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Rosh_Hashanah.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Rosh_Hashanah.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Rosh_Hashanah.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Rosh_Hashanah.4"}]},
+        {id:"mishnah-taanit",he:"תענית (מועד)",color:"#ea580c",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל (יכין)",color:"#1e40af",inline:"dibur",ordered:true,refFn:_yachinRef},{id:"boaz",he:"תפארת ישראל (בועז)",color:"#1e3a8a",inline:"dibur",ordered:true,refFn:_boazRef}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Taanit.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Taanit.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Taanit.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Taanit.4"}]},
+        {id:"mishnah-megillah",he:"מגילה (מועד)",color:"#ea580c",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל (יכין)",color:"#1e40af",inline:"dibur",ordered:true,refFn:_yachinRef},{id:"boaz",he:"תפארת ישראל (בועז)",color:"#1e3a8a",inline:"dibur",ordered:true,refFn:_boazRef}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Megillah.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Megillah.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Megillah.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Megillah.4"}]},
+        {id:"mishnah-moed-katan",he:"מועד קטן (מועד)",color:"#ea580c",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל (יכין)",color:"#1e40af",inline:"dibur",ordered:true,refFn:_yachinRef},{id:"boaz",he:"תפארת ישראל (בועז)",color:"#1e3a8a",inline:"dibur",ordered:true,refFn:_boazRef}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Moed_Katan.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Moed_Katan.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Moed_Katan.3"}]},
+        {id:"mishnah-chagigah",he:"חגיגה (מועד)",color:"#ea580c",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל (יכין)",color:"#1e40af",inline:"dibur",ordered:true,refFn:_yachinRef},{id:"boaz",he:"תפארת ישראל (בועז)",color:"#1e3a8a",inline:"dibur",ordered:true,refFn:_boazRef}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Chagigah.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Chagigah.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Chagigah.3"}]},
+        {id:"mishnah-yevamot",he:"יבמות (נשים)",color:"#d97706",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל (יכין)",color:"#1e40af",inline:"dibur",ordered:true,refFn:_yachinRef},{id:"boaz",he:"תפארת ישראל (בועז)",color:"#1e3a8a",inline:"dibur",ordered:true,refFn:_boazRef}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Yevamot.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Yevamot.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Yevamot.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Yevamot.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Yevamot.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Yevamot.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Yevamot.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Yevamot.8"},{he:"פרק "+toHN(9),ref:"Mishnah_Yevamot.9"},{he:"פרק "+toHN(10),ref:"Mishnah_Yevamot.10"},{he:"פרק "+toHN(11),ref:"Mishnah_Yevamot.11"},{he:"פרק "+toHN(12),ref:"Mishnah_Yevamot.12"},{he:"פרק "+toHN(13),ref:"Mishnah_Yevamot.13"},{he:"פרק "+toHN(14),ref:"Mishnah_Yevamot.14"},{he:"פרק "+toHN(15),ref:"Mishnah_Yevamot.15"},{he:"פרק "+toHN(16),ref:"Mishnah_Yevamot.16"}]},
+        {id:"mishnah-ketubot",he:"כתובות (נשים)",color:"#d97706",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל (יכין)",color:"#1e40af",inline:"dibur",ordered:true,refFn:_yachinRef},{id:"boaz",he:"תפארת ישראל (בועז)",color:"#1e3a8a",inline:"dibur",ordered:true,refFn:_boazRef}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Ketubot.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Ketubot.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Ketubot.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Ketubot.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Ketubot.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Ketubot.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Ketubot.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Ketubot.8"},{he:"פרק "+toHN(9),ref:"Mishnah_Ketubot.9"},{he:"פרק "+toHN(10),ref:"Mishnah_Ketubot.10"},{he:"פרק "+toHN(11),ref:"Mishnah_Ketubot.11"},{he:"פרק "+toHN(12),ref:"Mishnah_Ketubot.12"},{he:"פרק "+toHN(13),ref:"Mishnah_Ketubot.13"}]},
+        {id:"mishnah-nedarim",he:"נדרים (נשים)",color:"#d97706",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל (יכין)",color:"#1e40af",inline:"dibur",ordered:true,refFn:_yachinRef},{id:"boaz",he:"תפארת ישראל (בועז)",color:"#1e3a8a",inline:"dibur",ordered:true,refFn:_boazRef}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Nedarim.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Nedarim.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Nedarim.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Nedarim.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Nedarim.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Nedarim.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Nedarim.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Nedarim.8"},{he:"פרק "+toHN(9),ref:"Mishnah_Nedarim.9"},{he:"פרק "+toHN(10),ref:"Mishnah_Nedarim.10"},{he:"פרק "+toHN(11),ref:"Mishnah_Nedarim.11"}]},
+        {id:"mishnah-nazir",he:"נזיר (נשים)",color:"#d97706",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל (יכין)",color:"#1e40af",inline:"dibur",ordered:true,refFn:_yachinRef},{id:"boaz",he:"תפארת ישראל (בועז)",color:"#1e3a8a",inline:"dibur",ordered:true,refFn:_boazRef}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Nazir.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Nazir.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Nazir.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Nazir.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Nazir.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Nazir.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Nazir.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Nazir.8"},{he:"פרק "+toHN(9),ref:"Mishnah_Nazir.9"}]},
+        {id:"mishnah-sotah",he:"סוטה (נשים)",color:"#d97706",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל (יכין)",color:"#1e40af",inline:"dibur",ordered:true,refFn:_yachinRef},{id:"boaz",he:"תפארת ישראל (בועז)",color:"#1e3a8a",inline:"dibur",ordered:true,refFn:_boazRef}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Sotah.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Sotah.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Sotah.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Sotah.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Sotah.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Sotah.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Sotah.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Sotah.8"},{he:"פרק "+toHN(9),ref:"Mishnah_Sotah.9"}]},
+        {id:"mishnah-gittin",he:"גיטין (נשים)",color:"#d97706",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל (יכין)",color:"#1e40af",inline:"dibur",ordered:true,refFn:_yachinRef},{id:"boaz",he:"תפארת ישראל (בועז)",color:"#1e3a8a",inline:"dibur",ordered:true,refFn:_boazRef}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Gittin.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Gittin.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Gittin.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Gittin.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Gittin.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Gittin.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Gittin.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Gittin.8"},{he:"פרק "+toHN(9),ref:"Mishnah_Gittin.9"}]},
+        {id:"mishnah-kiddushin",he:"קידושין (נשים)",color:"#d97706",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל (יכין)",color:"#1e40af",inline:"dibur",ordered:true,refFn:_yachinRef},{id:"boaz",he:"תפארת ישראל (בועז)",color:"#1e3a8a",inline:"dibur",ordered:true,refFn:_boazRef}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Kiddushin.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Kiddushin.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Kiddushin.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Kiddushin.4"}]},
+        {id:"mishnah-bava-kamma",he:"בבא קמא (נזיקין)",color:"#059669",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל (יכין)",color:"#1e40af",inline:"dibur",ordered:true,refFn:_yachinRef},{id:"boaz",he:"תפארת ישראל (בועז)",color:"#1e3a8a",inline:"dibur",ordered:true,refFn:_boazRef}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Bava_Kamma.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Bava_Kamma.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Bava_Kamma.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Bava_Kamma.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Bava_Kamma.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Bava_Kamma.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Bava_Kamma.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Bava_Kamma.8"},{he:"פרק "+toHN(9),ref:"Mishnah_Bava_Kamma.9"},{he:"פרק "+toHN(10),ref:"Mishnah_Bava_Kamma.10"}]},
+        {id:"mishnah-bava-metzia",he:"בבא מציעא (נזיקין)",color:"#059669",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל (יכין)",color:"#1e40af",inline:"dibur",ordered:true,refFn:_yachinRef},{id:"boaz",he:"תפארת ישראל (בועז)",color:"#1e3a8a",inline:"dibur",ordered:true,refFn:_boazRef}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Bava_Metzia.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Bava_Metzia.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Bava_Metzia.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Bava_Metzia.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Bava_Metzia.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Bava_Metzia.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Bava_Metzia.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Bava_Metzia.8"},{he:"פרק "+toHN(9),ref:"Mishnah_Bava_Metzia.9"},{he:"פרק "+toHN(10),ref:"Mishnah_Bava_Metzia.10"}]},
+        {id:"mishnah-bava-batra",he:"בבא בתרא (נזיקין)",color:"#059669",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל (יכין)",color:"#1e40af",inline:"dibur",ordered:true,refFn:_yachinRef},{id:"boaz",he:"תפארת ישראל (בועז)",color:"#1e3a8a",inline:"dibur",ordered:true,refFn:_boazRef}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Bava_Batra.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Bava_Batra.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Bava_Batra.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Bava_Batra.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Bava_Batra.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Bava_Batra.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Bava_Batra.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Bava_Batra.8"},{he:"פרק "+toHN(9),ref:"Mishnah_Bava_Batra.9"},{he:"פרק "+toHN(10),ref:"Mishnah_Bava_Batra.10"}]},
+        {id:"mishnah-sanhedrin",he:"סנהדרין (נזיקין)",color:"#059669",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל (יכין)",color:"#1e40af",inline:"dibur",ordered:true,refFn:_yachinRef},{id:"boaz",he:"תפארת ישראל (בועז)",color:"#1e3a8a",inline:"dibur",ordered:true,refFn:_boazRef}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Sanhedrin.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Sanhedrin.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Sanhedrin.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Sanhedrin.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Sanhedrin.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Sanhedrin.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Sanhedrin.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Sanhedrin.8"},{he:"פרק "+toHN(9),ref:"Mishnah_Sanhedrin.9"},{he:"פרק "+toHN(10),ref:"Mishnah_Sanhedrin.10"},{he:"פרק "+toHN(11),ref:"Mishnah_Sanhedrin.11"}]},
+        {id:"mishnah-makkot",he:"מכות (נזיקין)",color:"#059669",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל (יכין)",color:"#1e40af",inline:"dibur",ordered:true,refFn:_yachinRef},{id:"boaz",he:"תפארת ישראל (בועז)",color:"#1e3a8a",inline:"dibur",ordered:true,refFn:_boazRef}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Makkot.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Makkot.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Makkot.3"}]},
+        {id:"mishnah-shevuot",he:"שבועות (נזיקין)",color:"#059669",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל (יכין)",color:"#1e40af",inline:"dibur",ordered:true,refFn:_yachinRef},{id:"boaz",he:"תפארת ישראל (בועז)",color:"#1e3a8a",inline:"dibur",ordered:true,refFn:_boazRef}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Shevuot.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Shevuot.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Shevuot.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Shevuot.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Shevuot.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Shevuot.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Shevuot.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Shevuot.8"}]},
+        {id:"mishnah-eduyot",he:"עדויות (נזיקין)",color:"#059669",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל (יכין)",color:"#1e40af",inline:"dibur",ordered:true,refFn:_yachinRef},{id:"boaz",he:"תפארת ישראל (בועז)",color:"#1e3a8a",inline:"dibur",ordered:true,refFn:_boazRef}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Eduyot.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Eduyot.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Eduyot.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Eduyot.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Eduyot.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Eduyot.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Eduyot.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Eduyot.8"}]},
+        {id:"mishnah-avodah-zarah",he:"עבודה זרה (נזיקין)",color:"#059669",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל (יכין)",color:"#1e40af",inline:"dibur",ordered:true,refFn:_yachinRef},{id:"boaz",he:"תפארת ישראל (בועז)",color:"#1e3a8a",inline:"dibur",ordered:true,refFn:_boazRef}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Avodah_Zarah.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Avodah_Zarah.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Avodah_Zarah.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Avodah_Zarah.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Avodah_Zarah.5"}]},
+        {id:"mishnah-avot",he:"אבות (נזיקין)",color:"#059669",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל (יכין)",color:"#1e40af",inline:"dibur",ordered:true,refFn:_yachinRef},{id:"boaz",he:"תפארת ישראל (בועז)",color:"#1e3a8a",inline:"dibur",ordered:true,refFn:_boazRef}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Avot.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Avot.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Avot.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Avot.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Avot.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Avot.6"}]},
+        {id:"mishnah-horayot",he:"הוריות (נזיקין)",color:"#059669",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל (יכין)",color:"#1e40af",inline:"dibur",ordered:true,refFn:_yachinRef},{id:"boaz",he:"תפארת ישראל (בועז)",color:"#1e3a8a",inline:"dibur",ordered:true,refFn:_boazRef}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Horayot.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Horayot.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Horayot.3"}]},
+        {id:"mishnah-zevachim",he:"זבחים (קדשים)",color:"#0891b2",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל (יכין)",color:"#1e40af",inline:"dibur",ordered:true,refFn:_yachinRef},{id:"boaz",he:"תפארת ישראל (בועז)",color:"#1e3a8a",inline:"dibur",ordered:true,refFn:_boazRef}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Zevachim.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Zevachim.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Zevachim.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Zevachim.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Zevachim.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Zevachim.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Zevachim.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Zevachim.8"},{he:"פרק "+toHN(9),ref:"Mishnah_Zevachim.9"},{he:"פרק "+toHN(10),ref:"Mishnah_Zevachim.10"},{he:"פרק "+toHN(11),ref:"Mishnah_Zevachim.11"},{he:"פרק "+toHN(12),ref:"Mishnah_Zevachim.12"},{he:"פרק "+toHN(13),ref:"Mishnah_Zevachim.13"},{he:"פרק "+toHN(14),ref:"Mishnah_Zevachim.14"}]},
+        {id:"mishnah-menachot",he:"מנחות (קדשים)",color:"#0891b2",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל (יכין)",color:"#1e40af",inline:"dibur",ordered:true,refFn:_yachinRef},{id:"boaz",he:"תפארת ישראל (בועז)",color:"#1e3a8a",inline:"dibur",ordered:true,refFn:_boazRef}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Menachot.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Menachot.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Menachot.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Menachot.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Menachot.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Menachot.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Menachot.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Menachot.8"},{he:"פרק "+toHN(9),ref:"Mishnah_Menachot.9"},{he:"פרק "+toHN(10),ref:"Mishnah_Menachot.10"},{he:"פרק "+toHN(11),ref:"Mishnah_Menachot.11"},{he:"פרק "+toHN(12),ref:"Mishnah_Menachot.12"},{he:"פרק "+toHN(13),ref:"Mishnah_Menachot.13"}]},
+        {id:"mishnah-chullin",he:"חולין (קדשים)",color:"#0891b2",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל (יכין)",color:"#1e40af",inline:"dibur",ordered:true,refFn:_yachinRef},{id:"boaz",he:"תפארת ישראל (בועז)",color:"#1e3a8a",inline:"dibur",ordered:true,refFn:_boazRef}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Chullin.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Chullin.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Chullin.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Chullin.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Chullin.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Chullin.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Chullin.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Chullin.8"},{he:"פרק "+toHN(9),ref:"Mishnah_Chullin.9"},{he:"פרק "+toHN(10),ref:"Mishnah_Chullin.10"},{he:"פרק "+toHN(11),ref:"Mishnah_Chullin.11"},{he:"פרק "+toHN(12),ref:"Mishnah_Chullin.12"}]},
+        {id:"mishnah-bekhorot",he:"בכורות (קדשים)",color:"#0891b2",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל (יכין)",color:"#1e40af",inline:"dibur",ordered:true,refFn:_yachinRef},{id:"boaz",he:"תפארת ישראל (בועז)",color:"#1e3a8a",inline:"dibur",ordered:true,refFn:_boazRef}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Bekhorot.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Bekhorot.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Bekhorot.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Bekhorot.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Bekhorot.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Bekhorot.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Bekhorot.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Bekhorot.8"},{he:"פרק "+toHN(9),ref:"Mishnah_Bekhorot.9"}]},
+        {id:"mishnah-arakhin",he:"ערכין (קדשים)",color:"#0891b2",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל (יכין)",color:"#1e40af",inline:"dibur",ordered:true,refFn:_yachinRef},{id:"boaz",he:"תפארת ישראל (בועז)",color:"#1e3a8a",inline:"dibur",ordered:true,refFn:_boazRef}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Arakhin.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Arakhin.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Arakhin.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Arakhin.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Arakhin.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Arakhin.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Arakhin.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Arakhin.8"},{he:"פרק "+toHN(9),ref:"Mishnah_Arakhin.9"}]},
+        {id:"mishnah-temurah",he:"תמורה (קדשים)",color:"#0891b2",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל (יכין)",color:"#1e40af",inline:"dibur",ordered:true,refFn:_yachinRef},{id:"boaz",he:"תפארת ישראל (בועז)",color:"#1e3a8a",inline:"dibur",ordered:true,refFn:_boazRef}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Temurah.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Temurah.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Temurah.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Temurah.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Temurah.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Temurah.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Temurah.7"}]},
+        {id:"mishnah-keritot",he:"כריתות (קדשים)",color:"#0891b2",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל (יכין)",color:"#1e40af",inline:"dibur",ordered:true,refFn:_yachinRef},{id:"boaz",he:"תפארת ישראל (בועז)",color:"#1e3a8a",inline:"dibur",ordered:true,refFn:_boazRef}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Keritot.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Keritot.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Keritot.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Keritot.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Keritot.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Keritot.6"}]},
+        {id:"mishnah-meilah",he:"מעילה (קדשים)",color:"#0891b2",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל (יכין)",color:"#1e40af",inline:"dibur",ordered:true,refFn:_yachinRef},{id:"boaz",he:"תפארת ישראל (בועז)",color:"#1e3a8a",inline:"dibur",ordered:true,refFn:_boazRef}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Meilah.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Meilah.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Meilah.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Meilah.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Meilah.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Meilah.6"}]},
+        {id:"mishnah-tamid",he:"תמיד (קדשים)",color:"#0891b2",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל (יכין)",color:"#1e40af",inline:"dibur",ordered:true,refFn:_yachinRef},{id:"boaz",he:"תפארת ישראל (בועז)",color:"#1e3a8a",inline:"dibur",ordered:true,refFn:_boazRef}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Tamid.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Tamid.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Tamid.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Tamid.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Tamid.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Tamid.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Tamid.7"}]},
+        {id:"mishnah-middot",he:"מידות (קדשים)",color:"#0891b2",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל (יכין)",color:"#1e40af",inline:"dibur",ordered:true,refFn:_yachinRef},{id:"boaz",he:"תפארת ישראל (בועז)",color:"#1e3a8a",inline:"dibur",ordered:true,refFn:_boazRef}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Middot.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Middot.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Middot.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Middot.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Middot.5"}]},
+        {id:"mishnah-kinnim",he:"קינים (קדשים)",color:"#0891b2",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל (יכין)",color:"#1e40af",inline:"dibur",ordered:true,refFn:_yachinRef},{id:"boaz",he:"תפארת ישראל (בועז)",color:"#1e3a8a",inline:"dibur",ordered:true,refFn:_boazRef}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Kinnim.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Kinnim.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Kinnim.3"}]},
+        {id:"mishnah-kelim",he:"כלים (טהרות)",color:"#7c3aed",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל (יכין)",color:"#1e40af",inline:"dibur",ordered:true,refFn:_yachinRef},{id:"boaz",he:"תפארת ישראל (בועז)",color:"#1e3a8a",inline:"dibur",ordered:true,refFn:_boazRef}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Kelim.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Kelim.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Kelim.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Kelim.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Kelim.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Kelim.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Kelim.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Kelim.8"},{he:"פרק "+toHN(9),ref:"Mishnah_Kelim.9"},{he:"פרק "+toHN(10),ref:"Mishnah_Kelim.10"},{he:"פרק "+toHN(11),ref:"Mishnah_Kelim.11"},{he:"פרק "+toHN(12),ref:"Mishnah_Kelim.12"},{he:"פרק "+toHN(13),ref:"Mishnah_Kelim.13"},{he:"פרק "+toHN(14),ref:"Mishnah_Kelim.14"},{he:"פרק "+toHN(15),ref:"Mishnah_Kelim.15"},{he:"פרק "+toHN(16),ref:"Mishnah_Kelim.16"},{he:"פרק "+toHN(17),ref:"Mishnah_Kelim.17"},{he:"פרק "+toHN(18),ref:"Mishnah_Kelim.18"},{he:"פרק "+toHN(19),ref:"Mishnah_Kelim.19"},{he:"פרק "+toHN(20),ref:"Mishnah_Kelim.20"},{he:"פרק "+toHN(21),ref:"Mishnah_Kelim.21"},{he:"פרק "+toHN(22),ref:"Mishnah_Kelim.22"},{he:"פרק "+toHN(23),ref:"Mishnah_Kelim.23"},{he:"פרק "+toHN(24),ref:"Mishnah_Kelim.24"},{he:"פרק "+toHN(25),ref:"Mishnah_Kelim.25"},{he:"פרק "+toHN(26),ref:"Mishnah_Kelim.26"},{he:"פרק "+toHN(27),ref:"Mishnah_Kelim.27"},{he:"פרק "+toHN(28),ref:"Mishnah_Kelim.28"},{he:"פרק "+toHN(29),ref:"Mishnah_Kelim.29"},{he:"פרק "+toHN(30),ref:"Mishnah_Kelim.30"}]},
+        {id:"mishnah-oholot",he:"אהלות (טהרות)",color:"#7c3aed",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל (יכין)",color:"#1e40af",inline:"dibur",ordered:true,refFn:_yachinRef},{id:"boaz",he:"תפארת ישראל (בועז)",color:"#1e3a8a",inline:"dibur",ordered:true,refFn:_boazRef}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Oholot.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Oholot.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Oholot.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Oholot.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Oholot.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Oholot.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Oholot.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Oholot.8"},{he:"פרק "+toHN(9),ref:"Mishnah_Oholot.9"},{he:"פרק "+toHN(10),ref:"Mishnah_Oholot.10"},{he:"פרק "+toHN(11),ref:"Mishnah_Oholot.11"},{he:"פרק "+toHN(12),ref:"Mishnah_Oholot.12"},{he:"פרק "+toHN(13),ref:"Mishnah_Oholot.13"},{he:"פרק "+toHN(14),ref:"Mishnah_Oholot.14"},{he:"פרק "+toHN(15),ref:"Mishnah_Oholot.15"},{he:"פרק "+toHN(16),ref:"Mishnah_Oholot.16"},{he:"פרק "+toHN(17),ref:"Mishnah_Oholot.17"},{he:"פרק "+toHN(18),ref:"Mishnah_Oholot.18"}]},
+        {id:"mishnah-negaim",he:"נגעים (טהרות)",color:"#7c3aed",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל (יכין)",color:"#1e40af",inline:"dibur",ordered:true,refFn:_yachinRef},{id:"boaz",he:"תפארת ישראל (בועז)",color:"#1e3a8a",inline:"dibur",ordered:true,refFn:_boazRef}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Negaim.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Negaim.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Negaim.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Negaim.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Negaim.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Negaim.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Negaim.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Negaim.8"},{he:"פרק "+toHN(9),ref:"Mishnah_Negaim.9"},{he:"פרק "+toHN(10),ref:"Mishnah_Negaim.10"},{he:"פרק "+toHN(11),ref:"Mishnah_Negaim.11"},{he:"פרק "+toHN(12),ref:"Mishnah_Negaim.12"},{he:"פרק "+toHN(13),ref:"Mishnah_Negaim.13"},{he:"פרק "+toHN(14),ref:"Mishnah_Negaim.14"}]},
+        {id:"mishnah-parah",he:"פרה (טהרות)",color:"#7c3aed",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל (יכין)",color:"#1e40af",inline:"dibur",ordered:true,refFn:_yachinRef},{id:"boaz",he:"תפארת ישראל (בועז)",color:"#1e3a8a",inline:"dibur",ordered:true,refFn:_boazRef}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Parah.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Parah.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Parah.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Parah.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Parah.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Parah.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Parah.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Parah.8"},{he:"פרק "+toHN(9),ref:"Mishnah_Parah.9"},{he:"פרק "+toHN(10),ref:"Mishnah_Parah.10"},{he:"פרק "+toHN(11),ref:"Mishnah_Parah.11"},{he:"פרק "+toHN(12),ref:"Mishnah_Parah.12"}]},
+        // טהרות/עוקצין: ה-ref בספריא הוא Mishnah_Tahorot / Mishnah_Oktzin (Tohorot/Uktzin לא מזוהים — תוקן 09/2026)
+        {id:"mishnah-tohorot",he:"טהרות (טהרות)",color:"#7c3aed",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל (יכין)",color:"#1e40af",inline:"dibur",ordered:true,refFn:_yachinRef},{id:"boaz",he:"תפארת ישראל (בועז)",color:"#1e3a8a",inline:"dibur",ordered:true,refFn:_boazRef}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Tahorot.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Tahorot.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Tahorot.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Tahorot.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Tahorot.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Tahorot.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Tahorot.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Tahorot.8"},{he:"פרק "+toHN(9),ref:"Mishnah_Tahorot.9"},{he:"פרק "+toHN(10),ref:"Mishnah_Tahorot.10"}]},
+        {id:"mishnah-mikvaot",he:"מקואות (טהרות)",color:"#7c3aed",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל (יכין)",color:"#1e40af",inline:"dibur",ordered:true,refFn:_yachinRef},{id:"boaz",he:"תפארת ישראל (בועז)",color:"#1e3a8a",inline:"dibur",ordered:true,refFn:_boazRef}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Mikvaot.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Mikvaot.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Mikvaot.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Mikvaot.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Mikvaot.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Mikvaot.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Mikvaot.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Mikvaot.8"},{he:"פרק "+toHN(9),ref:"Mishnah_Mikvaot.9"},{he:"פרק "+toHN(10),ref:"Mishnah_Mikvaot.10"}]},
+        {id:"mishnah-niddah",he:"נדה (טהרות)",color:"#7c3aed",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל (יכין)",color:"#1e40af",inline:"dibur",ordered:true,refFn:_yachinRef},{id:"boaz",he:"תפארת ישראל (בועז)",color:"#1e3a8a",inline:"dibur",ordered:true,refFn:_boazRef}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Niddah.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Niddah.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Niddah.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Niddah.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Niddah.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Niddah.6"},{he:"פרק "+toHN(7),ref:"Mishnah_Niddah.7"},{he:"פרק "+toHN(8),ref:"Mishnah_Niddah.8"},{he:"פרק "+toHN(9),ref:"Mishnah_Niddah.9"},{he:"פרק "+toHN(10),ref:"Mishnah_Niddah.10"}]},
+        {id:"mishnah-makhshirin",he:"מכשירין (טהרות)",color:"#7c3aed",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל (יכין)",color:"#1e40af",inline:"dibur",ordered:true,refFn:_yachinRef},{id:"boaz",he:"תפארת ישראל (בועז)",color:"#1e3a8a",inline:"dibur",ordered:true,refFn:_boazRef}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Makhshirin.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Makhshirin.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Makhshirin.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Makhshirin.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Makhshirin.5"},{he:"פרק "+toHN(6),ref:"Mishnah_Makhshirin.6"}]},
+        {id:"mishnah-zavim",he:"זבים (טהרות)",color:"#7c3aed",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל (יכין)",color:"#1e40af",inline:"dibur",ordered:true,refFn:_yachinRef},{id:"boaz",he:"תפארת ישראל (בועז)",color:"#1e3a8a",inline:"dibur",ordered:true,refFn:_boazRef}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Zavim.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Zavim.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Zavim.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Zavim.4"},{he:"פרק "+toHN(5),ref:"Mishnah_Zavim.5"}]},
+        {id:"mishnah-tevul-yom",he:"טבול יום (טהרות)",color:"#7c3aed",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל (יכין)",color:"#1e40af",inline:"dibur",ordered:true,refFn:_yachinRef},{id:"boaz",he:"תפארת ישראל (בועז)",color:"#1e3a8a",inline:"dibur",ordered:true,refFn:_boazRef}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Tevul_Yom.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Tevul_Yom.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Tevul_Yom.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Tevul_Yom.4"}]},
+        {id:"mishnah-yadayim",he:"ידיים (טהרות)",color:"#7c3aed",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל (יכין)",color:"#1e40af",inline:"dibur",ordered:true,refFn:_yachinRef},{id:"boaz",he:"תפארת ישראל (בועז)",color:"#1e3a8a",inline:"dibur",ordered:true,refFn:_boazRef}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Yadayim.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Yadayim.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Yadayim.3"},{he:"פרק "+toHN(4),ref:"Mishnah_Yadayim.4"}]},
+        {id:"mishnah-uktzin",he:"עוקצים (טהרות)",color:"#7c3aed",commentaries:[{id:"bartenura",he:"ברטנורא",color:"#7c2d12",refPrefix:"Bartenura on "},{id:"tiferet-yisrael",he:"תפארת ישראל (יכין)",color:"#1e40af",inline:"dibur",ordered:true,refFn:_yachinRef},{id:"boaz",he:"תפארת ישראל (בועז)",color:"#1e3a8a",inline:"dibur",ordered:true,refFn:_boazRef}],sections:[{he:"פרק "+toHN(1),ref:"Mishnah_Oktzin.1"},{he:"פרק "+toHN(2),ref:"Mishnah_Oktzin.2"},{he:"פרק "+toHN(3),ref:"Mishnah_Oktzin.3"}]}
       ]},
     { id:"talmud-bavli", he:"תלמוד בבלי", subtitle:"כל הש\"ס — עם רש\"י, תוספות ונושאי כלים",
       cat:"limmud", color:"#4338ca", icon:"🎓",
@@ -24495,6 +24790,15 @@ function openSefarimNosafimPage(_pageMode) {
       intro:"תפילות כלליות לכל ציון + תפילות ייחודיות לצדיקים בחוץ לארץ — אומן, מז'יבוז', ליז'נסק, פראג ועוד. קפיצה מהירה — בתוכן העניינים (📑), איתור — בחיפוש (🔍).",
       content:"<div style=\"text-align:right;direction:rtl;line-height:1.95;color:#1e293b;\"><div class=\"sn-head-card\" style=\"background:linear-gradient(135deg,#fef3c7,#fde68a);border-radius:0.85rem;padding:0.7rem 0.9rem;margin-bottom:1rem;border:1px solid #fbbf24;direction:rtl;text-align:right;\"><h2 style=\"text-align:center;color:#78350f;font-size:0.9em;font-weight:900;margin:0 0 0.35rem;\">🌍 תפילות בציוני צדיקים — חוץ לארץ</h2><p style=\"margin:0;color:#92400e;font-size:0.66em;line-height:1.6;text-align:center;\">אוסף תפילות מלאות לאמירה בעת ביקור בציוני הצדיקים בחוץ לארץ — אומן, מז'יבוז', ליז'נסק, ברדיטשב, קרקוב, פראג, ראדין ועוד. הסעיף הראשון — תפילות כלליות הראויות לכל ציון; הסעיף השני — תפילות ייחודיות לכל צדיק.</p></div><h2 style=\"text-align:center;color:#b45309;font-size:1.35em;font-weight:900;margin:2rem 0 1rem;border-bottom:3px solid currentColor;padding-bottom:0.5rem;direction:rtl;\">🕯️ תפילות כלליות לכל ציון</h2><div style=\"background:linear-gradient(135deg,#fffbeb,#fef3c7);border-right:5px solid #b45309;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(180,83,9,0.12);direction:rtl;text-align:right;\"><h3 style=\"color:#b45309;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">תפילה לפני הכניסה לציון</h3><p style=\"font-size:0.85em;color:#78350f;margin:0 0 0.7rem;font-style:italic;\">📜 נוסח קדום — בעל \"מענה לשון\"</p><div style=\"background:rgba(180,83,9,0.08);padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> אומרים בשקט לפני שעוברים אל הקבר.</div><div style=\"line-height:2;font-size:1em;color:#1c1917;\">יְהִי רָצוֹן מִלְּפָנֶיךָ ה' אֱלֹהֵינוּ וֵאלֹהֵי אֲבוֹתֵינוּ, שֶׁתְּקַבֵּל בְּרַחֲמִים וּבְרָצוֹן אֶת תְּפִלָּתִי, בִּזְכוּת הַצַּדִּיק הַטָּמוּן פֹּה. וִיהֵא תְפִלָּתִי לְךָ בְּרָצוֹן וְלֹא תָשׁוּב רֵיקָם, שֶׁכֵּן הַצַּדִּיקִים בְּמִיתָתָם נִקְרָאִים חַיִּים, וְעַצְמוֹתֵיהֶם רוֹמְזוֹת לְהַמְלִיץ טוֹב עָלֵינוּ לִפְנֵי כִּסֵּא כְבוֹדֶךָ. אָמֵן.</div></div><div style=\"background:linear-gradient(135deg,#fffbeb,#fef3c7);border-right:5px solid #b45309;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(180,83,9,0.12);direction:rtl;text-align:right;\"><h3 style=\"color:#b45309;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">פסוקי כניסה לבית הקברות</h3><p style=\"font-size:0.85em;color:#78350f;margin:0 0 0.7rem;font-style:italic;\">📜 נוסח מהסידור — אורח חיים סימן רכ\"ד</p><div style=\"background:rgba(180,83,9,0.08);padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נאמרים כשנכנסים לבית הקברות, לפני שמגיעים לציון (מי שלא ראה קברי ישראל שלושים יום).</div><div style=\"line-height:2;font-size:1em;color:#1c1917;\">בָּרוּךְ אַתָּה ה' אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם אֲשֶׁר יָצַר אֶתְכֶם בַּדִּין, וְזָן וְכִלְכֵּל אֶתְכֶם בַּדִּין, וְהֵמִית אֶתְכֶם בַּדִּין, וְיוֹדֵעַ מִסְפַּר כֻּלְּכֶם בַּדִּין, וְעָתִיד לְהַחֲיוֹתְכֶם וּלְקַיֵּם אֶתְכֶם בַּדִּין. בָּרוּךְ אַתָּה ה' מְחַיֵּה הַמֵּתִים. (כן נוטלים ידיים בצאת מבית הקברות, ולא פונים בגב לציון).</div></div><div style=\"background:linear-gradient(135deg,#fffbeb,#fef3c7);border-right:5px solid #b45309;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(180,83,9,0.12);direction:rtl;text-align:right;\"><h3 style=\"color:#b45309;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">תפילה אצל הציון — כללי</h3><p style=\"font-size:0.85em;color:#78350f;margin:0 0 0.7rem;font-style:italic;\">📜 מסורת מבעלי החסידות — נחלת הכלל</p><div style=\"background:rgba(180,83,9,0.08);padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נאמרת בעמידה אצל הציון, בפנים אל המצבה.</div><div style=\"line-height:2;font-size:1em;color:#1c1917;\">אֲדוֹנֵנוּ צַדִּיק הָאֱמֶת, פֹּה טָמוּן בְּעַפְרֵךְ. אֲנִי בָּא אֶל קִבְרְךָ הַקָּדוֹשׁ לְשַׁפֵּךְ אֶת לִבִּי. אֲבַקֵּשׁ מִמְּךָ שֶׁתַּעֲלֶה תְפִלָּתִי לִפְנֵי כִּסֵּא הַכָּבוֹד, וְשֶׁתָּמְלִיץ טוֹב בַּעֲדִי וּבְעַד כָּל מִשְׁפַּחְתִּי. רַבּוֹתֵינוּ אָמְרוּ: \"צַדִּיקִים בְּמִיתָתָם נִקְרָאִים חַיִּים\". זְכוּתְךָ תַּעֲמֹד לִי וּלְכָל זַרְעִי, לְהוֹשִׁיעֵנוּ בְּכָל אֲשֶׁר אֲנַחְנוּ צְרִיכִים. אָמֵן.</div></div><div style=\"background:linear-gradient(135deg,#fffbeb,#fef3c7);border-right:5px solid #b45309;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(180,83,9,0.12);direction:rtl;text-align:right;\"><h3 style=\"color:#b45309;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">פרקי תהילים הנהוגים בציוני צדיקים</h3><p style=\"font-size:0.85em;color:#78350f;margin:0 0 0.7rem;font-style:italic;\">📜 מסורת קדומה — \"מענה לשון\"</p><div style=\"background:rgba(180,83,9,0.08);padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נהוג לומר אצל הציון פרקי תהילים: ל\"ג, ט\"ז, י\"ז, ע\"ב, צ\"א, ק\"ד, ק\"ל — ולסיים בפרק קי\"ט באותיות שמו של הצדיק. כאן מובא פרק ק\"ל במלואו:</div><div style=\"line-height:2;font-size:1em;color:#1c1917;\">שִׁיר הַמַּעֲלוֹת, מִמַּעֲמַקִּים קְרָאתִיךָ ה': אֲדֹנָי שִׁמְעָה בְקוֹלִי, תִּהְיֶינָה אָזְנֶיךָ קַשֻּׁבוֹת לְקוֹל תַּחֲנוּנָי: אִם עֲוֺנוֹת תִּשְׁמָר יָהּ, אֲדֹנָי מִי יַעֲמֹד: כִּי עִמְּךָ הַסְּלִיחָה לְמַעַן תִּוָּרֵא: קִוִּיתִי ה' קִוְּתָה נַפְשִׁי, וְלִדְבָרוֹ הוֹחָלְתִּי: נַפְשִׁי לַאדֹנָי, מִשֹּׁמְרִים לַבֹּקֶר שֹׁמְרִים לַבֹּקֶר: יַחֵל יִשְׂרָאֵל אֶל ה', כִּי עִם ה' הַחֶסֶד וְהַרְבֵּה עִמּוֹ פְדוּת: וְהוּא יִפְדֶּה אֶת יִשְׂרָאֵל מִכֹּל עֲוֺנוֹתָיו:</div></div><div style=\"background:linear-gradient(135deg,#fffbeb,#fef3c7);border-right:5px solid #b45309;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(180,83,9,0.12);direction:rtl;text-align:right;\"><h3 style=\"color:#b45309;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">תיקון הכללי — 10 מזמורים</h3><p style=\"font-size:0.85em;color:#78350f;margin:0 0 0.7rem;font-style:italic;\">📜 רבי נחמן מברסלב — \"ליקוטי מוהר\"ן\"</p><div style=\"background:rgba(180,83,9,0.08);padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נאמר בשלמותו ליד הציון. עיקר התיקון הוא אצל קברו של רבי נחמן באומן, אך גם ניתן לאמרו בכל מקום.</div><div style=\"line-height:2;font-size:1em;color:#1c1917;\">עשרת המזמורים הם: ט\"ז, ל\"ב, מ\"א, מ\"ב, נ\"ט, ע\"ז, צ', ק\"ה, קל\"ז, ק\"נ. כתב רבי נחמן: \"התיקון הכללי הוא תיקון לכל החטאים והפגמים שבעולם\". מסוגל לכל ישועה — לרפואה, פרנסה, זיווג, ותשובה שלמה.<div style=\"text-align:center;margin-top:0.9rem;\"><a href=\"index.html?prayer=tikkun-haklali\" style=\"display:inline-block;padding:0.85rem 1.4rem;border:none;border-radius:0.7rem;background:linear-gradient(135deg,#b45309,#7c2d12);color:#fffbeb;text-decoration:none;font-size:0.95rem;font-weight:800;box-shadow:0 4px 12px rgba(180,83,9,0.35);\">📖 פתח את התיקון הכללי המלא ←</a></div></div></div><div style=\"background:linear-gradient(135deg,#fffbeb,#fef3c7);border-right:5px solid #b45309;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(180,83,9,0.12);direction:rtl;text-align:right;\"><h3 style=\"color:#b45309;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">תפילה ביציאה מהציון</h3><p style=\"font-size:0.85em;color:#78350f;margin:0 0 0.7rem;font-style:italic;\">📜 מסורת קדומה</p><div style=\"background:rgba(180,83,9,0.08);padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> אומרים בעת היציאה ויוצאים פנים אל הקבר (לא פונים גב).</div><div style=\"line-height:2;font-size:1em;color:#1c1917;\">יְהִי רָצוֹן מִלְּפָנֶיךָ ה' אֱלֹהֵינוּ וֵאלֹהֵי אֲבוֹתֵינוּ, שֶׁתְּקַבֵּל אֶת תְּפִלָּתִי שֶׁהִתְפַּלַּלְתִּי לְפָנֶיךָ בִּזְכוּת הַצַּדִּיק הַטָּמוּן פֹּה. וְתִשְׁמְרֵנִי בְּצֵאתִי וּבְבוֹאִי, וְתִשְׁלַח רְפוּאָה לְחוֹלֵי עַמְּךָ יִשְׂרָאֵל, וּפַרְנָסָה לְמְבַקְּשֶׁיהָ, וְזִוּוּגִים הֲגוּנִים לִמְחֻסְּרֵי בְּנֵי זוּג, וִישׁוּעָה לִכְלַל יִשְׂרָאֵל. אָמֵן.</div></div><h2 style=\"text-align:center;color:#7c3aed;font-size:1.35em;font-weight:900;margin:2rem 0 1rem;border-bottom:3px solid currentColor;padding-bottom:0.5rem;direction:rtl;\">✨ תפילות בציוני הצדיקים בחוץ לארץ</h2><div style=\"background:linear-gradient(135deg,#fffbeb,#fef3c7);border-right:5px solid #7c3aed;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(180,83,9,0.12);direction:rtl;text-align:right;\"><h3 style=\"color:#7c3aed;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">רבי נחמן מברסלב — אומן</h3><p style=\"font-size:0.85em;color:#78350f;margin:0 0 0.7rem;font-style:italic;\">📜 מסורת ברסלב — הבטחת רבי נחמן</p><div style=\"background:rgba(180,83,9,0.08);padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נאמרת אצל ציונו באומן (אוקראינה), או בכל מקום בכוונה אליו. נהוג לומר את התיקון הכללי במלואו ולתת פרוטה לצדקה.</div><div style=\"line-height:2;font-size:1em;color:#1c1917;\">רַבֵּינוּ נַחְמַן, נַחְמַן מֵאוּמַן! אַתָּה אָמַרְתָּ \"אֵשׁ שֶׁלִּי תּוּקַד עַד בִּיאַת הַמָּשִׁיחַ\", וְהִבְטַחְתָּ שֶׁכָּל הַבָּא עַל קִבְרְךָ וְיֹאמַר תִּקּוּן הַכְּלָלִי וְיִתֵּן פְּרוּטָה לִצְדָקָה — אַתָּה תָּמְלִיץ עָלָיו טוֹב לִפְנֵי הַשֵּׁם יִתְבָּרַךְ. אֲנִי בָּא אֵלֶיךָ עַכְשָׁו עִם כָּל צָרוֹתַי, כָּל בְּקָשׁוֹתַי. מָשְׁכֵנִי אַחֲרֶיךָ נָרוּצָה, וְזַכֵּנִי לִתְשׁוּבָה שְׁלֵמָה וּלְכָל הַיְשׁוּעוֹת. אָמֵן.<br><br><strong>נוסח ההתקשרות הנהוג:</strong> הֲרֵינִי מְקַשֵּׁר עַצְמִי בַּאֲמִירַת הָעֲשָׂרָה מִזְמוֹרִים אֵלּוּ לְכָל הַצַּדִּיקִים הָאֲמִתִּיִּים שֶׁבְּדוֹרֵנוּ, וּלְכָל הַצַּדִּיקִים הָאֲמִתִּיִּים שׁוֹכְנֵי עָפָר, קְדוֹשִׁים אֲשֶׁר בָּאָרֶץ הֵמָּה, וּבִפְרָט לְרַבֵּנוּ הַקָּדוֹשׁ, צַדִּיק יְסוֹד עוֹלָם, נַחַל נוֹבֵעַ מְקוֹר חָכְמָה, רַבֵּנוּ נַחְמָן בֶּן פֵיגֶא, זְכוּתוֹ יָגֵן עָלֵינוּ, אָמֵן.</div></div><div style=\"background:linear-gradient(135deg,#fffbeb,#fef3c7);border-right:5px solid #7c3aed;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(180,83,9,0.12);direction:rtl;text-align:right;\"><h3 style=\"color:#7c3aed;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">הבעל שם טוב — מז'יבוז'</h3><p style=\"font-size:0.85em;color:#78350f;margin:0 0 0.7rem;font-style:italic;\">📜 מסורת חסידית — תפילה לכל הצרכים</p><div style=\"background:rgba(180,83,9,0.08);padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נאמרת אצל ציונו של הבעש\"ט במז'יבוז' (אוקראינה), או בכל מקום שמכוונים אליו.</div><div style=\"line-height:2;font-size:1em;color:#1c1917;\">אֲדוֹנֵנוּ הַבַּעַל שֵׁם טוֹב הַקָּדוֹשׁ, מַיְסֵד דֶּרֶךְ הַחֲסִידוּת! גִּלִּיתָ לָנוּ אֶת אַחְדוּת ה' בְּכָל דָּבָר, וְאֶת הַשִּׂמְחָה בַּעֲבוֹדַת ה'. בִּזְכוּתְךָ הָעֲצוּמָה — תְּזַכֵּנוּ לְהַשִּׂיג קְצָת מֵאוֹרֵךְ. שֶׁנַּעֲבֹד אֶת ה' בְּשִׂמְחָה תָּמִיד, בְּלֵב שָׁלֵם וּבְנֶפֶשׁ חֲפֵצָה. וְשֶׁתִּשְׁלַח לָנוּ פַּרְנָסָה בְּהַרְחָבָה, רְפוּאָה לְכָל חוֹלֵי יִשְׂרָאֵל, וְכָל הַיְשׁוּעוֹת. אָמֵן.</div></div><div style=\"background:linear-gradient(135deg,#fffbeb,#fef3c7);border-right:5px solid #7c3aed;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(180,83,9,0.12);direction:rtl;text-align:right;\"><h3 style=\"color:#7c3aed;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">רבי אלימלך מליז'נסק</h3><p style=\"font-size:0.85em;color:#78350f;margin:0 0 0.7rem;font-style:italic;\">📜 מסורת חסידית מתלמידיו</p><div style=\"background:rgba(180,83,9,0.08);padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נאמרת אצל ציונו בליז'נסק (פולין), או בכל מקום שמכוונים אליו. מקובלת כסגולה גדולה.</div><div style=\"line-height:2;font-size:1em;color:#1c1917;\">אֲדוֹנֵנוּ הַצַּדִּיק רַבִּי אֱלִימֶלֶךְ! \"נֹעַם אֱלִימֶלֶךְ\" אֲשֶׁר חִבַּרְתָּ — אַתָּה הוֹרֵיתָ לָנוּ דֶּרֶךְ צַדִּיקִים שֶׁל אַהֲבָה וְעֲנָוָה. בִּזְכוּת הַתְּפִלָּה שֶׁהִתְפַּלַּלְתָּ עֲבוּר כָּל הַבָּא עַל קִבְרְךָ — תַּעֲמֹד לִי וְתַעֲמֹד לְכָל מִשְׁפַּחְתִּי. תָּמְלִיץ עָלַי טוֹב לִפְנֵי כִּסֵּא הַכָּבוֹד, וְתִפְעַל לִי יְשׁוּעָה. אָמֵן.<br><br><strong>מתוך \"תפילה קודם התפילה\" לרבי אלימלך:</strong> אַדְּרַבָּה, תֵּן בְּלִבֵּנוּ שֶׁנִּרְאֶה כָּל אֶחָד מַעֲלַת חֲבֵרֵינוּ וְלֹא חֶסְרוֹנָם, וְשֶׁנְּדַבֵּר כָּל אֶחָד אֶת חֲבֵרוֹ בַּדֶּרֶךְ הַיָּשָׁר וְהָרָצוּי לְפָנֶיךָ, וְאַל יַעֲלֶה בְּלִבֵּנוּ שׁוּם שִׂנְאָה מֵאֶחָד עַל חֲבֵרוֹ חָלִילָה. אָמֵן.</div></div><div style=\"background:linear-gradient(135deg,#fffbeb,#fef3c7);border-right:5px solid #7c3aed;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(180,83,9,0.12);direction:rtl;text-align:right;\"><h3 style=\"color:#7c3aed;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">רבי לוי יצחק מברדיטשב</h3><p style=\"font-size:0.85em;color:#78350f;margin:0 0 0.7rem;font-style:italic;\">📜 מסורת חסידית — סנגורן של ישראל</p><div style=\"background:rgba(180,83,9,0.08);padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נאמרת אצל ציונו בברדיטשב (אוקראינה). נהוג לבקש שילמד זכות עלינו כדרכו בחייו.</div><div style=\"line-height:2;font-size:1em;color:#1c1917;\">הַצַּדִּיק הַקָּדוֹשׁ רַבִּי לֵוִי יִצְחָק מִבַּרְדִיטְשֹׁב, סָנֵגוֹרָן שֶׁל יִשְׂרָאֵל! כָּל יָמֶיךָ לִמַּדְתָּ זְכוּת עַל כָּל אֶחָד וְאֶחָד מִיִּשְׂרָאֵל, וְאָמַרְתָּ לִפְנֵי רִבּוֹנוֹ שֶׁל עוֹלָם: \"אֲפִלּוּ פּוֹשְׁעֵי יִשְׂרָאֵל מְלֵאִים מִצְווֹת כְּרִמּוֹן\".<br><br>יְהִי רָצוֹן מִלְּפָנֶיךָ ה' אֱלֹהֵינוּ וֵאלֹהֵי אֲבוֹתֵינוּ, בִּזְכוּת רַבִּי לֵוִי יִצְחָק בֶּן שָׂרָה סָאשֶׁא, שֶׁיְּלֻמַּד עָלֵינוּ זְכוּת תָּמִיד לִפְנֵי כִּסֵּא כְבוֹדֶךָ, וְתָדוּן אוֹתָנוּ לְכַף זְכוּת, וְתִרְאֶה תָּמִיד אֶת הַטּוֹב שֶׁבָּנוּ, וְתוֹשִׁיעֵנוּ בְּכָל מִשְׁאֲלוֹת לִבֵּנוּ לְטוֹבָה. אָמֵן.</div></div><div style=\"background:linear-gradient(135deg,#fffbeb,#fef3c7);border-right:5px solid #7c3aed;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(180,83,9,0.12);direction:rtl;text-align:right;\"><h3 style=\"color:#7c3aed;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">הרמ\"א — קרקוב</h3><p style=\"font-size:0.85em;color:#78350f;margin:0 0 0.7rem;font-style:italic;\">📜 מסורת אשכנז</p><div style=\"background:rgba(180,83,9,0.08);padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נאמרת אצל ציון רבי משה איסרליש בקרקוב (פולין). נהוג לעלות לציונו ביום ההילולה ל\"ג בעומר.</div><div style=\"line-height:2;font-size:1em;color:#1c1917;\">רַבֵּנוּ מֹשֶׁה אִיסֶרְלִישׂ, הָרָמָ\"א, מָאוֹר הַגּוֹלָה! פָּרַשְׂתָּ אֶת הַ\"מַּפָּה\" עַל הַ\"שֻּׁלְחָן עָרוּךְ\", וְהֶעֱמַדְתָּ אֶת מִנְהֲגֵי אַשְׁכְּנַז לְדוֹרוֹת.<br><br>יְהִי רָצוֹן מִלְּפָנֶיךָ ה' אֱלֹהֵינוּ וֵאלֹהֵי אֲבוֹתֵינוּ, בִּזְכוּת הָרָמָ\"א הַטָּמוּן פֹּה, שֶׁתְּלַמְּדֵנוּ לִשְׁמֹר אֶת מִנְהֲגֵי אֲבוֹתֵינוּ בְּיָדֵינוּ, וְתַדְרִיכֵנוּ בְּדֶרֶךְ הַהֲלָכָה, וְתִתֵּן לָנוּ חַיִּים שֶׁל תּוֹרָה וְיִרְאַת שָׁמַיִם. אָמֵן.</div></div><div style=\"background:linear-gradient(135deg,#fffbeb,#fef3c7);border-right:5px solid #7c3aed;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(180,83,9,0.12);direction:rtl;text-align:right;\"><h3 style=\"color:#7c3aed;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">המהר\"ל מפראג</h3><p style=\"font-size:0.85em;color:#78350f;margin:0 0 0.7rem;font-style:italic;\">📜 מסורת פראג</p><div style=\"background:rgba(180,83,9,0.08);padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נאמרת אצל ציון המהר\"ל בבית העלמין היהודי העתיק בפראג (צ'כיה).</div><div style=\"line-height:2;font-size:1em;color:#1c1917;\">רַבֵּנוּ יְהוּדָה לֵיוָא, הַמַּהֲרָ\"ל מִפְּרָאג! גָּאוֹן הַמַּחֲשָׁבָה וְהַנִּסְתָּר, מָגֵן עַל יִשְׂרָאֵל בְּדוֹרוֹת קָשִׁים.<br><br>יְהִי רָצוֹן מִלְּפָנֶיךָ ה' אֱלֹהֵינוּ וֵאלֹהֵי אֲבוֹתֵינוּ, בִּזְכוּת הַמַּהֲרָ\"ל הַטָּמוּן פֹּה, שֶׁתָּגֵן עַל עַמְּךָ יִשְׂרָאֵל מִכָּל אוֹיֵב וְאוֹרֵב וּמִכָּל עֲלִילוֹת רְשָׁעִים, וְתִתֵּן בָּנוּ דַּעַת לַהֲבִין עֹמֶק תּוֹרָתֶךָ, וְנִצָּחוֹן שֶׁל קְדֻשָּׁה עַל כָּל הַמְּבַקְּשִׁים רָעָתֵנוּ. אָמֵן.</div></div><div style=\"background:linear-gradient(135deg,#fffbeb,#fef3c7);border-right:5px solid #7c3aed;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(180,83,9,0.12);direction:rtl;text-align:right;\"><h3 style=\"color:#7c3aed;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">ה\"חפץ חיים\" — ראדין</h3><p style=\"font-size:0.85em;color:#78350f;margin:0 0 0.7rem;font-style:italic;\">📜 מסורת ליטא</p><div style=\"background:rgba(180,83,9,0.08);padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נאמרת אצל ציון רבי ישראל מאיר הכהן מראדין (בלארוס). נהוג לקבל קבלה בשמירת הלשון.</div><div style=\"line-height:2;font-size:1em;color:#1c1917;\">רַבֵּנוּ יִשְׂרָאֵל מֵאִיר הַכֹּהֵן, הֶ\"חָפֵץ חַיִּים\"! כָּל חַיֶּיךָ לִמַּדְתָּ אֶת יִשְׂרָאֵל לִשְׁמֹר אֶת הַלָּשׁוֹן, עַל פִּי הַפָּסוּק: \"מִי הָאִישׁ הֶחָפֵץ חַיִּים... נְצֹר לְשׁוֹנְךָ מֵרָע וּשְׂפָתֶיךָ מִדַּבֵּר מִרְמָה\".<br><br>יְהִי רָצוֹן מִלְּפָנֶיךָ ה' אֱלֹהֵינוּ וֵאלֹהֵי אֲבוֹתֵינוּ, בִּזְכוּת הֶחָפֵץ חַיִּים, שֶׁתִּשְׁמֹר פִּינוּ וּלְשׁוֹנֵנוּ מִלָּשׁוֹן הָרָע וּרְכִילוּת, וְנִזְכֶּה לוֹמַר רַק דִּבְרֵי תּוֹרָה וּדְבָרִים טוֹבִים עַל כָּל אָדָם, וּבִזְכוּת שְׁמִירַת הַלָּשׁוֹן נִזְכֶּה לְחַיִּים טוֹבִים וַאֲרוּכִים וּלְכָל הַבְּרָכוֹת. אָמֵן.</div></div><div style=\"background:linear-gradient(135deg,#fffbeb,#fef3c7);border-right:5px solid #7c3aed;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(180,83,9,0.12);direction:rtl;text-align:right;\"><h3 style=\"color:#7c3aed;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">אדמו\"ר הזקן — האדיטש</h3><p style=\"font-size:0.85em;color:#78350f;margin:0 0 0.7rem;font-style:italic;\">📜 מסורת חב\"ד</p><div style=\"background:rgba(180,83,9,0.08);padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נאמרת אצל ציון רבי שניאור זלמן מליאדי, בעל התניא, בהאדיטש (אוקראינה).</div><div style=\"line-height:2;font-size:1em;color:#1c1917;\">רַבֵּנוּ שְׁנֵיאוֹר זַלְמָן מִלִּיאָדִי, בַּעַל הַתַּנְיָא וְהַשֻּׁלְחָן עָרוּךְ! לִמַּדְתָּנוּ שֶׁ\"מֹחַ שַׁלִּיט עַל הַלֵּב\", וְשֶׁכָּל אֶחָד יָכוֹל לַעֲבֹד אֶת ה' בְּאַהֲבָה וְיִרְאָה.<br><br>יְהִי רָצוֹן מִלְּפָנֶיךָ ה' אֱלֹהֵינוּ וֵאלֹהֵי אֲבוֹתֵינוּ, בִּזְכוּת בַּעַל הַתַּנְיָא, שֶׁתָּאִיר נַפְשֵׁנוּ בְּאוֹר פְּנִימִיּוּת הַתּוֹרָה, וְתִתֵּן לָנוּ כֹּחַ לִמְשֹׁל בְּיִצְרֵנוּ וּלְהַנְהִיג אֶת לִבֵּנוּ בְּחָכְמָה, וְנַעֲבָדְךָ בְּשִׂמְחָה וּבְטוּב לֵבָב. אָמֵן.</div></div><div style=\"background:linear-gradient(135deg,#fffbeb,#fef3c7);border-right:5px solid #7c3aed;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(180,83,9,0.12);direction:rtl;text-align:right;\"><h3 style=\"color:#7c3aed;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">עזרא הסופר ויחזקאל הנביא — בבל</h3><p style=\"font-size:0.85em;color:#78350f;margin:0 0 0.7rem;font-style:italic;\">📜 מסורת יהדות בבל</p><div style=\"background:rgba(180,83,9,0.08);padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> ציוני עזרא הסופר (אל-עוזיר) ויחזקאל הנביא (אל-כפל) בעירק — מסורת עתיקה של יהדות בבל, שנהגה לעלות אליהם ברגלים.</div><div style=\"line-height:2;font-size:1em;color:#1c1917;\">יְהִי רָצוֹן מִלְּפָנֶיךָ ה' אֱלֹהֵינוּ וֵאלֹהֵי אֲבוֹתֵינוּ, בִּזְכוּת עֶזְרָא הַסּוֹפֵר שֶׁהֶעֱלָה אֶת יִשְׂרָאֵל מִבָּבֶל וְהֵכִין לְבָבָם לִדְרֹשׁ אֶת תּוֹרָתֶךָ, וּבִזְכוּת יְחֶזְקֵאל הַנָּבִיא שֶׁנִּבָּא עַל תְּחִיַּת הָעֲצָמוֹת וְעַל קִבּוּץ גָּלֻיּוֹת — שֶׁתְּקַבֵּץ נִדָּחֵינוּ מֵאַרְבַּע כַּנְפוֹת הָאָרֶץ, וּתְחַדֵּשׁ יָמֵינוּ כְּקֶדֶם, וְנִזְכֶּה לִרְאוֹת בְּבִנְיַן בֵּית מִקְדָּשֶׁךָ בִּמְהֵרָה בְיָמֵינוּ. אָמֵן.</div></div><div style=\"text-align:center;margin-top:2rem;padding:1rem;background:#fef3c7;border-radius:0.7rem;color:#78350f;font-size:0.9em;direction:rtl;\"><strong>הערות חשובות:</strong> בכניסה לבית הקברות יש לטול ידיים ביציאה. אין לפנות גב לציון בעת היציאה. מקובל לתת צדקה בשם הצדיק. תפילה אצל הצדיק היא בקשת המלצה — לא תפילה אליו, אלא בקשת זכות שיעלה את תפילתנו לבורא עולם.</div></div>" },
   ];
+
+  // בועז (תפארת ישראל) — אין אינדקס בספריא למסכתות אלו (אומת 09/2026); הצ'יפ לא מוצג בהן
+  (function() {
+    var mishna = BOOKS.find(function(b){ return b.id === "mishna"; });
+    var noBoaz = ["mishnah-makhshirin", "mishnah-uktzin", "mishnah-tevul-yom", "mishnah-yadayim", "mishnah-zavim"];
+    if (mishna && mishna.subBooks) mishna.subBooks.forEach(function(sb) {
+      if (noBoaz.indexOf(sb.id) >= 0 && sb.commentaries) sb.commentaries = sb.commentaries.filter(function(c){ return c.id !== "boaz"; });
+    });
+  })();
 
   // ── לוח ברכות הנהנין — נבנה מנתונים מובנים (חיפוש פנימי + כרטיסים) ──
   (function buildBirkotBoard() {
@@ -24744,11 +25048,13 @@ function openSefarimNosafimPage(_pageMode) {
   // Each book (or sub-book) declares: commentaries: [{id, he, color, ...}]
   //   verse-aligned (default): title(book) (תנ"ך, SN_TANAKH_CM) או refPrefix (משנה)
   //     → נשלף ב-API v3 ומיושר לפי אינדקס לפסוקי הטקסט הראשי (רש"י, ברטנורא)
-  //   inline:"dibur" + refFn(secRef): משובץ בטקסט לפי דיבור-המתחיל (SA_COMMENTARIES)
+  //   inline:"dibur" + refFn(secRef): משובץ בטקסט לפי דיבור-המתחיל (SA_COMMENTARIES, יכין/בועז)
+  //     ordered:true → המנגנון הדו-שלבי של _buildTextWithInlineComments (כל המיקומים → שרשרת
+  //     מונוטונית → שיבוץ; פירוש שלא אותר מוצב אחרי קודמו) — אותו מנגנון כמו בגמרא
   // The toggle UI is rendered dynamically based on _bk/_sbk.commentaries.
-  // NOTE (משנה, לטיפול נפרד): הכותרת "Tiferet Yisrael on <מסכת>" מפנה בספריא לספר
-  //   תפארת ישראל של המהר"ל (פרקים), לא לפירוש המשנה — הפירוש נמצא תחת
-  //   "Yachin on <מסכת>" / "Boaz on <מסכת>". הרשומות של המשנה לא שונו כאן.
+  // משנה: הכותרת "Tiferet Yisrael on <מסכת>" מפנה בספריא לספר תפארת ישראל של המהר"ל, לא לפירוש
+  //   המשנה — הפירוש נמצא תחת "Yachin on <מסכת>" / "Boaz on <מסכת>". הרשומות של המשנה עברו
+  //   (09/2026) לשכבות inline:"dibur" עם _yachinRef/_boazRef (ראו ליד BOOKS).
   // ─────────────────────────────────────────────────────────────────────
   var _snCMCache = {};  // "{cm.id}|{ref}" → null | "loading" | string[]
 
@@ -24839,7 +25145,8 @@ function openSefarimNosafimPage(_pageMode) {
     "sa-chm": "חלקת מחוקק — נושא כלים מרכזי על אבן העזר",
     "sa-bs": "בית שמואל — נושא כלים מרכזי על אבן העזר",
     "bartenura": "רבי עובדיה מברטנורא — הפירוש היסודי למשנה",
-    "tiferet-yisrael": "רבי ישראל ליפשיץ — ביאור מעשי למשנה",
+    "tiferet-yisrael": 'רבי ישראל ליפשיץ — ביאור "יכין", משובץ לפי דיבור המתחיל',
+    "boaz": 'רבי ישראל ליפשיץ — הערות "בועז" (בסוף הפרק)',
     "tal-rashi": 'רבי שלמה יצחקי — פירוש היסוד לכל דף גמרא',
     "tal-tosafot": "בעלי התוספות — קושיות, תירוצים והשוואות בין סוגיות",
     "tal-rashba": "רבי שלמה בן אדרת — חידושים בעומק הסוגיה",
@@ -25072,7 +25379,8 @@ function openSefarimNosafimPage(_pageMode) {
       if (!he) {
         // pad=0 — בלעדיו ספריא מחזירה רק את הסעיף הראשון בספרים בעומק 3 (ביאור הלכה, כף החיים, ש"ך…)
         var url = "https://www.sefaria.org/api/texts/" + encodeURIComponent(fullRef) + "?pad=0&lang=he&context=0";
-        var res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+        // 15 שניות — שיטה מקובצת/תוספות על עמוד יכולים להגיע ל-150KB; 8 שניות נכשלו ברשת סלולרית
+        var res = await fetch(url, { signal: AbortSignal.timeout(15000) });
         var data = await res.json();
         if (data && data.error) { _snCMCache[key] = null; return null; }
         he = data && data.he;
@@ -25089,7 +25397,8 @@ function openSefarimNosafimPage(_pageMode) {
       _snCMCache[key] = flat.length ? flat : null;
       return _snCMCache[key];
     } catch(e) {
-      _snCMCache[key] = null;
+      // כשל רשת/timeout — לא מקבעים null (אחרת "אין X על דף זה" נשאר עד רענון); הניסיון הבא ישלוף שוב
+      delete _snCMCache[key];
       return null;
     }
   }
@@ -25171,15 +25480,17 @@ function openSefarimNosafimPage(_pageMode) {
 
   // בלוק פירוש קטן המוצג בתוך הטקסט, מיד אחרי הפסוק שעליו הוא נאמר.
   // <span display:block> (ולא <div>) — כי בפרשות החומש הוא משובץ בתוך ה-<p> של הפרק, אחרי כל פסוק
+  // עטוף בתגיות-הערה <!--cm-note-->…<!--/cm-note--> — _buildTextWithInlineComments מדלג על האזור
+  // (ברטנורא מצטט את לשון המשנה; בלי הסימון בלוקי היכין היו משובצים בתוך כרטיס הברטנורא)
   function _snInlineCMHtml(cm, texts) {
     var col = cm.color || "#7c3aed";
-    return '<span style="display:block;margin:0.3rem 0 1.1rem;padding:0.5rem 0.8rem;border-radius:0.5rem;' +
+    return '<!--cm-note--><span style="display:block;margin:0.3rem 0 1.1rem;padding:0.5rem 0.8rem;border-radius:0.5rem;' +
       'background:' + _snCMRgba(col, 0.06) + ';' +
       'border-right:3px solid ' + col + ';' +
       'font-size:0.85em;line-height:1.9;text-align:right;direction:rtl;">' +
       '<span style="color:' + col + ';font-weight:900;font-size:0.8em;display:block;margin-bottom:0.15rem;">📖 ' + cm.he + '</span>' +
       texts.map(function(t) { return '<span style="color:' + col + ';">' + t + '</span>'; }).join('<br>') +
-      '</span>';
+      '</span><!--/cm-note-->';
   }
 
   // ── Bookmark panel ──
@@ -25532,6 +25843,12 @@ function openSefarimNosafimPage(_pageMode) {
   // ── Sub-book view ──
   // בתלמוד היחידה היא עמוד ("קכה עמודים"), בשאר הספרים — סעיפים
   function _snUnitWord() { return _bk && _bk.id === "talmud-bavli" ? "עמודים" : "סעיפים"; }
+  // הערת "אין X על …" לשכבת פירוש שאין לה טקסט ביחידה הנוכחית — לפי סוג הספר
+  function _snCMUnitNote() {
+    if (_bk && _bk.id === "talmud-bavli") return " על דף זה";
+    if (_bk && _bk.id === "mishna") return " על פרק זה";
+    return " על סימן זה";
+  }
   function buildSubBookView(book) {
     var t = document.getElementById("sn-subbook-title");
     var g = document.getElementById("sn-subbook-grid");
@@ -25711,9 +26028,13 @@ function openSefarimNosafimPage(_pageMode) {
 
     // שיבוץ כל שכבות הדיבור-המתחיל הפעילות בתוך HTML נתון (לפי סדר הרשומה)
     async function spliceDibur(html, secRef) {
+      // כל השכבות נשלפות במקביל (12 נושאי כלים בגמרא = 12 בקשות; בטור זה היה 10+ שניות לעמוד);
+      // השיבוץ עצמו נשאר טורי לפי סדר הרשומה (רש"י לפני תוספות לפני האחרונים)
+      var fetched = await Promise.all(diburCms.map(function(c) { return _snFetchCommentary(c, secRef); }));
+      var isTalmud = !!(_bk && _bk.id === "talmud-bavli");
       for (var k = 0; k < diburCms.length; k++) {
         var cm = diburCms[k];
-        var texts = await _snFetchCommentary(cm, secRef);
+        var texts = fetched[k];   // כשל רשת (null, המפתח נמחק) → ההערה "אין…" עכשיו, ניסיון חוזר ברינדור הבא
         if (texts && texts.length) {
           var fullRef = cm.refFn ? cm.refFn(secRef) : null;
           html = _buildTextWithInlineComments(html, texts, {
@@ -25722,10 +26043,14 @@ function openSefarimNosafimPage(_pageMode) {
             color: cm.color,
             diburColor: cm.diburColor,
             textColor: cm.textColor,
-            boldDibur: !!cm.boldDibur
+            boldDibur: !!cm.boldDibur,
+            // המנגנון הדו-שלבי (זיהוי מילות-מיקום, חיפוש על תצוגה מקופלת, שרשרת מונוטונית):
+            // בגמרא — תמיד; בשאר הספרים — לשכבות המסומנות ordered (שו"ע, יכין/בועז)
+            ordered: !!cm.ordered,
+            talmud: isTalmud
           });
         } else {
-          bottomNotes += "<div style=\"margin-top:0.8rem;padding:0.45rem 0.7rem;border-radius:0.4rem;border:1px dashed rgba(0,0,0,0.2);color:" + (cm.color || "#64748b") + ";font-size:0.72rem;font-style:italic;text-align:center;\">" + (cm.emoji || "📖") + " אין " + cm.he + (_bk && _bk.id === "talmud-bavli" ? " על דף זה" : " על סימן זה") + "</div>";
+          bottomNotes += "<div style=\"margin-top:0.8rem;padding:0.45rem 0.7rem;border-radius:0.4rem;border:1px dashed rgba(0,0,0,0.2);color:" + (cm.color || "#64748b") + ";font-size:0.72rem;font-style:italic;text-align:center;\">" + (cm.emoji || "📖") + " אין " + cm.he + _snCMUnitNote() + "</div>";
         }
       }
       return html;

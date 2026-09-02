@@ -5079,8 +5079,8 @@
     var CATALOG = [
       { id: "tehillim", he: "תהילים", icon: "📖", count: 150, unit: "פרק", units: "פרקים", min: 3, ref: function (i) { return "Psalms " + (i + 1); },
         cm: [
-          { he: "רש\"י", ref: function (i) { return "Rashi on Psalms " + (i + 1); } },
-          { he: "מצודת דוד", ref: function (i) { return "Metzudat David on Psalms " + (i + 1); } }
+          { he: "רש\"י", ordered: true, color: "#7c3aed", ref: function (i) { return "Rashi on Psalms " + (i + 1); } },
+          { he: "מצודת דוד", ordered: true, color: "#1e40af", ref: function (i) { return "Metzudat David on Psalms " + (i + 1); } }
         ] },
       { id: "bih-y1", he: "בן איש חי — שנה ראשונה", icon: "📗", count: SPD.bih1.length, unit: "פרשה", units: "פרשות", min: 25,
         ref: function (i) { return "Ben Ish Hai, Halachot 1st Year, " + SPD.bih1[i][1]; },
@@ -5092,18 +5092,22 @@
         ref: function (i) { return MISH_FLAT[i][1]; },
         label: function (i) { return MISH_FLAT[i][0]; },
         cm: [
-          { he: "ברטנורא", ref: function (i) { return "Bartenura on " + MISH_FLAT[i][1]; } },
-          { he: "רמב\"ם", ref: function (i) { return "Rambam on " + MISH_FLAT[i][1]; } },
-          { he: "עיקר תוספות יום טוב", ref: function (i) { return "Ikar Tosafot Yom Tov on " + MISH_FLAT[i][1]; } }
+          { he: "ברטנורא", ordered: true, color: "#7c2d12", ref: function (i) { return "Bartenura on " + MISH_FLAT[i][1]; } },
+          { he: "רמב\"ם", ordered: true, color: "#b91c1c", ref: function (i) { return "Rambam on " + MISH_FLAT[i][1]; } },
+          { he: "עיקר תוספות יום טוב", ordered: true, color: "#0d9488", ref: function (i) { return "Ikar Tosafot Yom Tov on " + MISH_FLAT[i][1]; } },
+          // תפארת ישראל = "Yachin on" בספריא ("Tiferet Yisrael on" מפנה לספר של המהר"ל)
+          { he: "תפארת ישראל (יכין)", ordered: true, color: "#1e40af", ref: function (i) { return "Yachin on " + MISH_FLAT[i][1]; } }
         ] },
       { id: "pirkei-avot", he: "פרקי אבות", icon: "🕊️", count: 6, unit: "פרק", units: "פרקים", min: 10, ref: function (i) { return "Pirkei Avot " + (i + 1); },
         cm: [
-          { he: "ברטנורא", ref: function (i) { return "Bartenura on Pirkei Avot " + (i + 1); } }
+          { he: "ברטנורא", ordered: true, color: "#7c2d12", ref: function (i) { return "Bartenura on Pirkei Avot " + (i + 1); } },
+          { he: "רמב\"ם", ordered: true, color: "#b91c1c", ref: function (i) { return "Rambam on Pirkei Avot " + (i + 1); } },
+          { he: "תפארת ישראל (יכין)", ordered: true, color: "#1e40af", ref: function (i) { return "Yachin on Pirkei Avot " + (i + 1); } }
         ] },
       { id: "mishlei", he: "משלי", icon: "🦉", count: 31, unit: "פרק", units: "פרקים", min: 5, ref: function (i) { return "Proverbs " + (i + 1); },
         cm: [
-          { he: "רש\"י", ref: function (i) { return "Rashi on Proverbs " + (i + 1); } },
-          { he: "מצודת דוד", ref: function (i) { return "Metzudat David on Proverbs " + (i + 1); } }
+          { he: "רש\"י", ordered: true, color: "#7c3aed", ref: function (i) { return "Rashi on Proverbs " + (i + 1); } },
+          { he: "מצודת דוד", ordered: true, color: "#1e40af", ref: function (i) { return "Metzudat David on Proverbs " + (i + 1); } }
         ] },
       { id: "mesillat", he: "מסילת ישרים", icon: "🛤️", count: 26, unit: "פרק", units: "פרקים", min: 12,
         ref: function (i) { return "Mesillat Yesharim " + (i + 1); },
@@ -5129,30 +5133,30 @@
       // ⚠ ה-cm נשמרים לפי אינדקס (lux_plan_cm) — מוסיפים תמיד בסוף המערך, לא באמצע
       { id: "sa-oc", he: "שולחן ערוך — אורח חיים", icon: "📜", count: 697, unit: "סימן", units: "סימנים", min: 6, ref: function (i) { return "Shulchan Arukh, Orach Chayim " + (i + 1); },
         cm: [
-          { he: "משנה ברורה", ref: function (i) { return "Mishnah Berurah " + (i + 1); } },
-          { he: "באר היטב", ref: function (i) { return "Ba'er Hetev on Shulchan Arukh, Orach Chayim " + (i + 1); } },
-          { he: "ביאור הלכה", ref: function (i) { return "Biur Halacha " + (i + 1); } },
-          { he: "כף החיים", ref: kafOC }
+          { he: "משנה ברורה", ordered: true, color: "#7c3aed", ref: function (i) { return "Mishnah Berurah " + (i + 1); } },
+          { he: "באר היטב", ordered: true, color: "#d97706", ref: function (i) { return "Ba'er Hetev on Shulchan Arukh, Orach Chayim " + (i + 1); } },
+          { he: "ביאור הלכה", ordered: true, color: "#0f766e", ref: function (i) { return "Biur Halacha " + (i + 1); } },
+          { he: "כף החיים", ordered: true, color: "#0e7490", ref: kafOC }
         ] },
       { id: "sa-yd", he: "שולחן ערוך — יורה דעה", icon: "📜", count: 403, unit: "סימן", units: "סימנים", min: 6, ref: function (i) { return "Shulchan Arukh, Yoreh Deah " + (i + 1); },
         cm: [
-          { he: "באר היטב", ref: function (i) { return "Ba'er Hetev on Shulchan Arukh, Yoreh Deah " + (i + 1); } },
-          { he: "כף החיים", ref: kafYD }
+          { he: "באר היטב", ordered: true, color: "#d97706", ref: function (i) { return "Ba'er Hetev on Shulchan Arukh, Yoreh De'ah " + (i + 1); } },   // "Yoreh Deah" בלי גרש = שגיאה בספריא (תוקן 09/2026)
+          { he: "כף החיים", ordered: true, color: "#0e7490", ref: kafYD }
         ] },
       { id: "sa-eh", he: "שולחן ערוך — אבן העזר", icon: "📜", count: 178, unit: "סימן", units: "סימנים", min: 6, ref: function (i) { return "Shulchan Arukh, Even HaEzer " + (i + 1); },
         cm: [
-          { he: "באר היטב", ref: function (i) { return "Ba'er Hetev on Shulchan Arukh, Even HaEzer " + (i + 1); } }
+          { he: "באר היטב", ordered: true, color: "#d97706", ref: function (i) { return "Ba'er Hetev on Shulchan Arukh, Even HaEzer " + (i + 1); } }
         ] },
       { id: "sa-cm", he: "שולחן ערוך — חושן משפט", icon: "📜", count: 427, unit: "סימן", units: "סימנים", min: 6, ref: function (i) { return "Shulchan Arukh, Choshen Mishpat " + (i + 1); },
         cm: [
-          { he: "באר היטב", ref: function (i) { return "Ba'er Hetev on Shulchan Arukh, Choshen Mishpat " + (i + 1); } }
+          { he: "באר היטב", ordered: true, color: "#d97706", ref: function (i) { return "Ba'er Hetev on Shulchan Arukh, Choshen Mishpat " + (i + 1); } }
         ] },
       { id: "mb", he: "משנה ברורה", icon: "📖", count: 697, unit: "סימן", units: "סימנים", min: 8, ref: function (i) { return "Mishnah Berurah " + (i + 1); },
         cm: [
-          { he: "שולחן ערוך", ref: function (i) { return "Shulchan Arukh, Orach Chayim " + (i + 1); } },
-          { he: "ביאור הלכה", ref: function (i) { return "Biur Halacha " + (i + 1); } },
-          { he: "באר היטב", ref: function (i) { return "Ba'er Hetev on Shulchan Arukh, Orach Chayim " + (i + 1); } },
-          { he: "כף החיים", ref: kafOC }
+          { he: "שולחן ערוך", ref: function (i) { return "Shulchan Arukh, Orach Chayim " + (i + 1); } },   // טקסט בסיס — מוצג כבלוק, לא משובץ
+          { he: "ביאור הלכה", ordered: true, color: "#0f766e", ref: function (i) { return "Biur Halacha " + (i + 1); } },
+          { he: "באר היטב", ordered: true, color: "#d97706", ref: function (i) { return "Ba'er Hetev on Shulchan Arukh, Orach Chayim " + (i + 1); } },
+          { he: "כף החיים", ordered: true, color: "#0e7490", ref: kafOC }
         ] }
     ];
     function unitsOf(bk) { return bk.units || bk.unit + "ים"; }
@@ -5300,6 +5304,7 @@
         "ברטנורא": "רבי עובדיה מברטנורא — הפירוש היסודי למשנה",
         'רמב"ם': 'פירוש המשנה לרמב"ם',
         "עיקר תוספות יום טוב": "תמצית התוספות יום טוב על המשנה",
+        "תפארת ישראל (יכין)": 'רבי ישראל ליפשיץ — ביאור "יכין" למשנה',
         "משנה ברורה": "החפץ חיים — הלכה למעשה על אורח חיים",
         "באר היטב": "תמצית דברי האחרונים",
         "ביאור הלכה": "הרחבות והכרעות של החפץ חיים",
@@ -5385,19 +5390,34 @@
         var html = "";
         var idx = from;
         area.innerHTML = '<p style="text-align:center;color:#94a3b8;padding:2rem;">טוען את הלימוד של היום...</p>';
-        function loadCms(i, doneCb) {
+        // נושאי הכלים המסומנים ordered משובצים בתוך טקסט היחידה לפי דיבור-המתחיל — אותו מנגנון
+        // כמו בקורא "ספרים נוספים" (_buildTextWithInlineComments, script.js); שכבה בלי ordered
+        // (טקסט השו"ע כ"פירוש" של המשנה ברורה) מוצגת כבלוק אחרי היחידה. בלוקים ששכבה לא
+        // הצליחה לאתר מוצבים אחרי קודמם — לא נערמים בסוף.
+        var isDark = document.documentElement.classList.contains("dark");
+        function loadCms(i, unitHtml, doneCb) {
           var list = [];
           (bk.cm || []).forEach(function (c, k) { if (cmOn.indexOf(k) >= 0) list.push(c); });
+          var tail = "";
           (function next(k) {
             if (token !== loadToken) return;
-            if (k >= list.length) return doneCb();
+            if (k >= list.length) return doneCb(unitHtml + tail);
             var cmRef = list[k].ref(i);
             if (!cmRef) return next(k + 1);   // אין כיסוי לסימן זה (כף החיים יו"ד מעבר לקי"ט)
             fetchRefText(cmRef, function (paras) {
               if (token !== loadToken) return;
               if (paras && paras.length) {
-                html += '<div class="lux-pl-cm"><div class="lux-pl-cm-t">' + esc(list[k].he) + "</div>" +
-                  paras.map(function (p) { return '<p class="lux-pl-cm-p">' + p + "</p>"; }).join("") + "</div>";
+                var c = list[k];
+                if (c.ordered && unitHtml && typeof window._buildTextWithInlineComments === "function") {
+                  unitHtml = window._buildTextWithInlineComments(unitHtml, paras, {
+                    label: c.he, emoji: "📖", color: c.color || "#7c3aed", ordered: true,
+                    // במצב כהה הרקע של הקורא כהה — צבעי הטקסט של הבלוק (inline !important) מותאמים
+                    diburColor: isDark ? "#f2d98a" : "#b45309", textColor: isDark ? "#e2e8f0" : "#334155"
+                  });
+                } else {
+                  tail += '<div class="lux-pl-cm"><div class="lux-pl-cm-t">' + esc(c.he) + "</div>" +
+                    paras.map(function (p) { return '<p class="lux-pl-cm-p">' + p + "</p>"; }).join("") + "</div>";
+                }
               }
               next(k + 1);
             });
@@ -5414,9 +5434,9 @@
           fetchRefText(bk.ref(i), function (paras) {
             if (token !== loadToken) return;
             html += '<h3 class="lux-pl-unit">' + esc(bk.label ? bk.label(i) : bk.unit + " " + (i + 1)) + "</h3>";
-            if (paras) html += paras.map(function (p) { return '<p class="lux-sel-para">' + p + "</p>"; }).join("");
-            else html += '<p style="color:#b45309;text-align:center;">לא הצלחנו לטעון חלק זה — בדקו את החיבור.</p>';
-            loadCms(i, loadNext);
+            var unitHtml = paras ? paras.map(function (p) { return '<p class="lux-sel-para">' + p + "</p>"; }).join("") : "";
+            if (!paras) html += '<p style="color:#b45309;text-align:center;">לא הצלחנו לטעון חלק זה — בדקו את החיבור.</p>';
+            loadCms(i, unitHtml, function (withCms) { html += withCms; loadNext(); });
           });
         }
         loadNext();

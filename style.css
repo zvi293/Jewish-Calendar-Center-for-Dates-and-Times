@@ -2691,6 +2691,83 @@ body.lux-shabbat #shabbat-countdown-bar {
   cursor: pointer;
 }
 .lux-sheet-cancel:hover { color: #475569; }
+/* כפתור פעולה מסוכנת (מחיקה/איפוס) ביריעות lux — אדום רך, באותה שפה עיצובית */
+.lux-sheet-danger {
+  background: linear-gradient(135deg, #fecaca 0%, #f87171 55%, #dc2626 100%);
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  padding: 0.6rem 1.4rem;
+  font-weight: 800;
+  font-size: 0.88rem;
+  cursor: pointer;
+  box-shadow: 0 5px 16px rgba(220, 38, 38, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+.lux-sheet-danger:hover { filter: brightness(1.05); }
+/* ── בורר מטרות התפילה (שמות לתפילה) — צ'יפים רב-בחירה ── */
+.lux-pp-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  justify-content: center;
+  margin: 0.7rem 0 0.4rem;
+}
+.lux-pp-chip {
+  position: relative;
+  border: 1.5px solid rgba(148, 163, 184, 0.5);
+  background: #fff;
+  color: #334155;
+  border-radius: 999px;
+  padding: 0.45rem 0.95rem;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.lux-pp-chip.lux-on {
+  border-color: #c9993a;
+  background: linear-gradient(135deg, #fdf3d0 0%, #f2d98a 100%);
+  color: #7a5b13;
+  box-shadow: 0 0 0 3px rgba(224, 183, 79, 0.18);
+}
+.lux-pp-chip .lux-pp-x {
+  margin-right: 0.35rem;
+  color: #b91c1c;
+  font-weight: 900;
+  cursor: pointer;
+}
+.lux-pp-custom-row {
+  display: flex;
+  gap: 0.4rem;
+  align-items: stretch;
+  margin-top: 0.6rem;
+}
+.lux-pp-custom-row .lux-sheet-input { margin-bottom: 0; flex: 1; }
+/* כפתור פתיחת בורר המטרות — נראה כמו שדה קלט, עם חץ */
+.lux-pp-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  text-align: right;
+  cursor: pointer;
+}
+.lux-pp-trigger .lux-pp-arrow { color: #94a3b8; flex-shrink: 0; }
+/* ── תהילים: פרק שסומן כנקרא — זהב זוהר בדף הפרקים הראשי ── */
+#tehillim-modal .lux-th-goldread {
+  background: linear-gradient(135deg, #fdf3d0 0%, #f2d98a 60%, #e8c85e 100%) !important;
+  border-color: #dfa933 !important;
+  color: #6b4e0a !important;
+  box-shadow: 0 0 12px rgba(224, 183, 79, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.6) !important;
+  animation: lux-goldread-glow 2.6s ease-in-out infinite alternate;
+}
+@keyframes lux-goldread-glow {
+  from { box-shadow: 0 0 6px rgba(224, 183, 79, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.6); }
+  to   { box-shadow: 0 0 14px rgba(224, 183, 79, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.6); }
+}
+@media (prefers-reduced-motion: reduce) {
+  #tehillim-modal .lux-th-goldread { animation: none; }
+}
 .lux-names-add { margin-top: 0.75rem; }
 .lux-nm-row {
   display: flex;

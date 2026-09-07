@@ -2409,6 +2409,44 @@
         b.textContent = isRead(n) ? "✓ נקרא" : "◯ סמן שנקרא";
         ch.appendChild(b);
       });
+      // זהב זוהר לפרקים שנקראו — בדף הפרקים הראשי של התהילים (בקשת בעל האתר 09/2026).
+      // כתיבת class רק בשינוי — כתיבה עיוורת מעירה את ה-MutationObserver בלולאה
+      modal.querySelectorAll('button[onclick^="window._tehillimOpenPsalm("]').forEach(function (btn) {
+        var mm = (btn.getAttribute("onclick") || "").match(/_tehillimOpenPsalm\((\d+)\)/);
+        if (!mm) return;
+        var want = isRead(parseInt(mm[1], 10));
+        if (btn.classList.contains("lux-th-goldread") !== want) btn.classList.toggle("lux-th-goldread", want);
+      });
+    }
+    // איפוס כל הפרקים שסומנו — עם אישור לפני (בקשת בעל האתר 09/2026)
+    function openClearConfirm() {
+      var n = readSet().length;
+      var ov = luxSheet("lux-th-clear-confirm",
+        '<div style="font-size:2.2rem;margin-bottom:0.3rem;">🔄</div>' +
+        '<h3 class="lux-sheet-title">איפוס ההתקדמות</h3>' +
+        '<p class="lux-sheet-note">למחוק את הסימון של <b>' + n + '</b> הפרקים שנקראו ולהתחיל ספר חדש?<br>הפעולה אינה ניתנת לביטול.</p>' +
+        '<div class="lux-sheet-actions">' +
+          '<button type="button" class="lux-sheet-danger" id="lux-th-clear-yes">כן, אפס הכל</button>' +
+          '<button type="button" class="lux-sheet-cancel">ביטול</button>' +
+        "</div>");
+      if (!ov) return;
+      ov.querySelector("#lux-th-clear-yes").addEventListener("click", function () {
+        jset(READ_KEY, []);
+        luxModalClose("lux-th-clear-confirm");
+        luxModalClose("lux-th-readlist");
+        setTimeout(function () {
+          updateProgress();
+          document.querySelectorAll(".lux-th-mark.lux-on").forEach(function (b) {
+            b.classList.remove("lux-on");
+            b.textContent = "◯ סמן שנקרא";
+          });
+          document.querySelectorAll("#tehillim-modal .lux-th-goldread").forEach(function (b) {
+            b.classList.remove("lux-th-goldread");
+          });
+          if (typeof window.showToast === "function") window.showToast("🔄 ההתקדמות אופסה — בהצלחה בספר החדש! 🌟", "success", 2800);
+        }, 150);
+      });
+      ov.querySelector(".lux-sheet-cancel").addEventListener("click", function () { luxModalClose("lux-th-clear-confirm"); });
     }
     // לחיצה על פס ההתקדמות — רשימת כל הפרקים שנקראו
     function openReadList() {
@@ -2432,8 +2470,13 @@
       var ov = luxSheet("lux-th-readlist",
         '<h3 class="lux-sheet-title">📖 הפרקים שקראתי</h3>' +
         body +
-        '<div class="lux-sheet-actions"><button type="button" class="lux-sheet-cancel">סגור</button></div>');
+        '<div class="lux-sheet-actions">' +
+          (s.length ? '<button type="button" class="lux-sheet-danger" id="lux-th-clearread">🔄 אפס הכל והתחל מחדש</button>' : "") +
+          '<button type="button" class="lux-sheet-cancel">סגור</button>' +
+        "</div>");
       if (!ov) return;
+      var clearBtn = ov.querySelector("#lux-th-clearread");
+      if (clearBtn) clearBtn.addEventListener("click", openClearConfirm);
       ov.querySelector(".lux-sheet-cancel").addEventListener("click", function () { luxModalClose("lux-th-readlist"); });
       ov.querySelectorAll(".lux-th-readchip").forEach(function (b) {
         b.addEventListener("click", function () {
@@ -2478,8 +2521,106 @@
   /* ── 29. שמות לתפילה ───────────────────────────────────────────── */
   safe("prayerNames", function () {
     var KEY = "lux_prayer_names";
+    var CKEY = "lux_prayer_custom_purposes";
     var PURPOSES = ["לרפואה שלמה", "לזיווג הגון", "לפרנסה טובה", "להצלחה", 'לעילוי נשמת', "לזרע של קיימא"];
     function names() { return jget(KEY, []); }
+    function customPurposes() { return jget(CKEY, []); }
+    // המטרות שנבחרו לשם הבא שיתווסף (רב-בחירה); נשמר בין פתיחות היריעה
+    var selPurposes = [PURPOSES[0]];
+    function allPurposes() { return PURPOSES.concat(customPurposes()); }
+    function purposeLabel() {
+      if (!selPurposes.length) return "בחרו מטרות לתפילה…";
+      if (selPurposes.length === 1) return selPurposes[0];
+      return selPurposes[0] + " +" + (selPurposes.length - 1);
+    }
+    function syncTrigger() {
+      var t = document.querySelector("#lux-names-editor .lux-pp-trigger span:first-child");
+      if (t) t.textContent = purposeLabel();
+    }
+    // ── בורר המטרות — פופאפ מעוצב רב-בחירה + מטרה חופשית (בקשת בעל האתר 09/2026).
+    // luxSheet = אותה חוקיות כמו כל הפופאפים: היסטוריה (חזור בנייד), לחיצה ברקע ו-X סוגרים.
+    function openPurposePicker() {
+      var ov = luxSheet("lux-names-purposes",
+        '<h3 class="lux-sheet-title">💫 מטרות התפילה</h3>' +
+        '<p class="lux-sheet-note">אפשר לבחור כמה מטרות יחד — או להוסיף מטרה משלכם</p>' +
+        '<div id="lux-pp-grid" class="lux-pp-grid"></div>' +
+        '<div class="lux-pp-custom-row">' +
+          '<input type="text" id="lux-pp-custom" class="lux-sheet-input" maxlength="30" aria-label="מטרה אחרת" placeholder="מטרה אחרת — כתבו בעצמכם…">' +
+          '<button type="button" class="lux-sheet-secondary" id="lux-pp-custom-add">➕</button>' +
+        "</div>" +
+        '<div class="lux-sheet-actions">' +
+          '<button type="button" class="lux-sheet-primary" id="lux-pp-done">✓ אישור</button>' +
+        "</div>");
+      if (!ov) return;
+      function drawChips() {
+        var grid = ov.querySelector("#lux-pp-grid");
+        var customs = customPurposes();
+        grid.innerHTML = allPurposes().map(function (p) {
+          var on = selPurposes.indexOf(p) >= 0;
+          var isCustom = customs.indexOf(p) >= 0;
+          return '<button type="button" class="lux-pp-chip' + (on ? " lux-on" : "") + '" data-p="' + esc(p) + '" aria-pressed="' + (on ? "true" : "false") + '">' +
+            (on ? "✓ " : "") + esc(p) +
+            (isCustom ? '<span class="lux-pp-x" data-del="' + esc(p) + '" title="הסרת המטרה מהרשימה" role="button" aria-label="הסרת המטרה">✕</span>' : "") +
+            "</button>";
+        }).join("");
+        grid.querySelectorAll(".lux-pp-chip").forEach(function (chip) {
+          chip.addEventListener("click", function (e) {
+            var del = e.target.getAttribute && e.target.getAttribute("data-del");
+            if (del) {
+              // הסרת מטרה מותאמת-אישית מהרשימה (וגם מהבחירה הנוכחית)
+              jset(CKEY, customPurposes().filter(function (x) { return x !== del; }));
+              selPurposes = selPurposes.filter(function (x) { return x !== del; });
+              drawChips(); syncTrigger();
+              return;
+            }
+            var p = chip.getAttribute("data-p");
+            var i = selPurposes.indexOf(p);
+            if (i >= 0) selPurposes.splice(i, 1); else selPurposes.push(p);
+            drawChips(); syncTrigger();
+          });
+        });
+      }
+      drawChips();
+      function addCustom() {
+        var inp = ov.querySelector("#lux-pp-custom");
+        var v = (inp.value || "").trim().slice(0, 30);
+        if (!v) return;
+        var customs = customPurposes();
+        if (PURPOSES.indexOf(v) < 0 && customs.indexOf(v) < 0) {
+          customs.push(v);
+          jset(CKEY, customs);
+        }
+        if (selPurposes.indexOf(v) < 0) selPurposes.push(v);
+        inp.value = "";
+        drawChips(); syncTrigger();
+      }
+      ov.querySelector("#lux-pp-custom-add").addEventListener("click", addCustom);
+      ov.querySelector("#lux-pp-custom").addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); addCustom(); } });
+      ov.querySelector("#lux-pp-done").addEventListener("click", function () { luxModalClose("lux-names-purposes"); });
+    }
+    // ── אישור לפני מחיקת שם (בקשת בעל האתר 09/2026) ──
+    function openDeleteConfirm(idx, onDone) {
+      var item = names()[idx];
+      if (!item) return;
+      var ov = luxSheet("lux-names-del-confirm",
+        '<div style="font-size:2.2rem;margin-bottom:0.3rem;">🗑️</div>' +
+        '<h3 class="lux-sheet-title">מחיקת שם מהרשימה</h3>' +
+        '<p class="lux-sheet-note">האם למחוק את <b>' + esc(item.n) + '</b> (' + esc(item.p) + ')?</p>' +
+        '<div class="lux-sheet-actions">' +
+          '<button type="button" class="lux-sheet-danger" id="lux-nm-del-yes">כן, מחק</button>' +
+          '<button type="button" class="lux-sheet-cancel">ביטול</button>' +
+        "</div>");
+      if (!ov) return;
+      ov.querySelector("#lux-nm-del-yes").addEventListener("click", function () {
+        var arr2 = names();
+        arr2.splice(idx, 1);
+        jset(KEY, arr2);
+        luxModalClose("lux-names-del-confirm");
+        if (typeof onDone === "function") onDone();
+        if (typeof window.showToast === "function") window.showToast("🗑️ השם הוסר מהרשימה", "info", 2200);
+      });
+      ov.querySelector(".lux-sheet-cancel").addEventListener("click", function () { luxModalClose("lux-names-del-confirm"); });
+    }
     function openEditor() {
       var ov = luxSheet("lux-names-editor",
         '<h3 class="lux-sheet-title">🙏 שמות לתפילה</h3>' +
@@ -2487,7 +2628,9 @@
         '<div id="lux-names-list"></div>' +
         '<div class="lux-names-add">' +
           '<input type="text" id="lux-nm-name" class="lux-sheet-input" maxlength="40" aria-label="שם לתפילה" placeholder="לדוגמה: רחל בת לאה">' +
-          '<select id="lux-nm-purpose" class="lux-sheet-input" aria-label="מטרת התפילה">' + PURPOSES.map(function (p) { return "<option>" + p + "</option>"; }).join("") + "</select>" +
+          '<button type="button" id="lux-nm-purpose-btn" class="lux-sheet-input lux-pp-trigger" aria-haspopup="dialog" aria-label="בחירת מטרות התפילה">' +
+            "<span>" + esc(purposeLabel()) + '</span><span class="lux-pp-arrow">▾</span>' +
+          "</button>" +
           '<button type="button" class="lux-sheet-primary" id="lux-nm-add">➕ הוסף</button>' +
         "</div>" +
         '<div class="lux-sheet-actions"><button type="button" class="lux-sheet-cancel">סגור</button></div>');
@@ -2502,20 +2645,22 @@
           : '<p class="lux-sheet-note" style="opacity:0.7;">אין עדיין שמות ברשימה</p>';
         list.querySelectorAll("button").forEach(function (b) {
           b.addEventListener("click", function () {
-            var arr2 = names();
-            arr2.splice(parseInt(b.dataset.i, 10), 1);
-            jset(KEY, arr2);
-            drawList();
-            renderBanner();
+            openDeleteConfirm(parseInt(b.dataset.i, 10), function () { drawList(); renderBanner(); });
           });
         });
       }
       drawList();
+      ov.querySelector("#lux-nm-purpose-btn").addEventListener("click", openPurposePicker);
       ov.querySelector("#lux-nm-add").addEventListener("click", function () {
         var n = (ov.querySelector("#lux-nm-name").value || "").trim().slice(0, 40);
         if (!n) return;
+        if (!selPurposes.length) {
+          if (typeof window.showToast === "function") window.showToast("💫 בחרו לפחות מטרה אחת לתפילה", "info", 2600);
+          openPurposePicker();
+          return;
+        }
         var arr = names();
-        arr.push({ n: n, p: ov.querySelector("#lux-nm-purpose").value });
+        arr.push({ n: n, p: selPurposes.join(", ") });
         jset(KEY, arr);
         ov.querySelector("#lux-nm-name").value = "";
         drawList();

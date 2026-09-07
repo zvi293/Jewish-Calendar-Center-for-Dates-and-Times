@@ -1322,7 +1322,7 @@ async function openSefariaModal(hebTitle, enRef, opts) {
   window._dafState = null;
   // ניקוי כפתורי הפירושים של הדף היומי כשפותחים תוכן אחר במודאל
   if (!isDaf) document.getElementById("daf-cm-toggles")?.remove();
-  let cleanRef = enRef.replace("Parashat ", "").replace(/ /g, "_");
+  let cleanRef = _sefariaRefNormalize(enRef).replace("Parashat ", "").replace(/ /g, "_");
   if (/\d/.test(cleanRef)) cleanRef = cleanRef.replace("_", "."); // For Daf Yomi
 
   const m = document.getElementById("sefaria-modal");
@@ -1707,6 +1707,13 @@ function stripNikud(s) {
   return String(s || "").replace(/[֑-ֽֿ-ׇ]/g, "");
 }
 
+// Hebcal עבר לגרש טיפוגרפי (U+2019: "Parashat Ha’azinu") בשמות הפרשות —
+// ספריא מקבלת רק גרש ASCII / בלי גרש (אומת מול ה-API, 09/2026). בלי הנרמול
+// הזה שניים מקרא וקורא הפרשה נשברים בכל פרשה עם גרש (האזינו, ראה, שלח...).
+function _sefariaRefNormalize(ref) {
+  return String(ref || "").replace(/[‘’ʼ׳]/g, "'");
+}
+
 function toggleShmikraDouble() {
   const newVal = !getShmikraDouble();
   localStorage.setItem(SHMIKRA_DOUBLE_KEY, newVal ? "true" : "false");
@@ -1959,7 +1966,7 @@ function renderShmikraContent() {
 
 async function openShnayimMikraModal(hebTitle, enRef) {
   if (!enRef) return;
-  const parshaName = enRef.replace(/^Parashat\s+/, "").replace(/ /g, "_");
+  const parshaName = _sefariaRefNormalize(enRef).replace(/^Parashat\s+/, "").replace(/ /g, "_");
 
   const m = document.getElementById("sefaria-modal");
   document.getElementById("sefaria-modal-title").textContent =
@@ -3470,6 +3477,36 @@ async function fetchLiveCalendarData() {
       });
     }
 
+    // ── חג שחל בשבת (כמו ראש השנה תשפ"ז, 12/09/2026): ל-API של השבת אין פריט
+    // parashat, והפרשה נשארה "שבת" — שניים מקרא, דבר התורה לפרשה ופאנל ערב
+    // שבת נשברו. נופלים לפרשה הבאה שתיקרא (מאירועי השנה, type "parashat"),
+    // כפי שמציגים הלוחות הנפוצים.
+    window._nextParashaFromEvents = function () {
+      try {
+        var evs = (window.ALL_EVENTS_FULL && window.ALL_EVENTS_FULL.length
+          ? window.ALL_EVENTS_FULL
+          : (typeof ALL_EVENTS !== "undefined" ? ALL_EVENTS : [])) || [];
+        var t0 = new Date(); t0.setHours(0, 0, 0, 0);
+        var best = null, bestD = null;
+        for (var pi = 0; pi < evs.length; pi++) {
+          var pe = evs[pi];
+          if (!pe || pe.type !== "parashat" || !pe.date) continue;
+          var pd = new Date(pe.date); pd.setHours(0, 0, 0, 0);
+          if (pd < t0) continue;
+          if (!best || pd < bestD) { best = pe; bestD = pd; }
+        }
+        if (!best) return null;
+        return { he: best.heb || best.name, en: best.titleStr || best.name, date: best.date };
+      } catch (eNP) { return null; }
+    };
+    if (!eTitle) {
+      const _npFb = window._nextParashaFromEvents();
+      if (_npFb && _npFb.en) {
+        p = CURRENT_LANG === "he" ? _npFb.he : _npFb.en;
+        eTitle = _npFb.en;
+      }
+    }
+
     // Override candle lighting & havdalah with KosherZmanim if available
     try {
       const today = new Date(todayDateUI);
@@ -3821,6 +3858,33 @@ async function fetchLiveCalendarData() {
       "moadim_cached_events_full_v3",
       JSON.stringify(window.ALL_EVENTS_FULL),
     );
+
+    // חג שחל בשבת + ביקור ראשון (בלי מטמון אירועים): ה-fallback של הפרשה רץ
+    // לפני שהאירועים נטענו ולא מצא כלום — עכשיו, כשהם כאן, משלימים את הפרשה
+    // הבאה ומחיים את הכפתורים (שניים מקרא, דבר תורה, פרשה בדשבורד)
+    if (!window.SHABBAT_PARASHA_ETITLE && typeof window._nextParashaFromEvents === "function") {
+      try {
+        const _npLate = window._nextParashaFromEvents();
+        if (_npLate && _npLate.en) {
+          const _pLate = CURRENT_LANG === "he" ? _npLate.he : _npLate.en;
+          window.SHABBAT_PARASHA_NAME = _pLate;
+          window.SHABBAT_PARASHA_ETITLE = _npLate.en;
+          const _spEl = document.getElementById("stat-parasha");
+          if (_spEl) _spEl.textContent = _pLate;
+          window._openShabbatParasha = () => openSefariaModal(_pLate, _npLate.en);
+          const _smEl2 = document.getElementById("shnayim-mikra-text");
+          const _smBtn2 = document.getElementById("shnayim-mikra-link");
+          if (_smEl2) _smEl2.textContent = _pLate;
+          if (_smBtn2) {
+            _smBtn2.onclick = (ev2) => {
+              ev2.preventDefault();
+              openShnayimMikraModal(_pLate, _npLate.en);
+            };
+            _smBtn2.dataset.ready = "1";
+          }
+        }
+      } catch (eLP) {}
+    }
 
     showDashboard();
 
@@ -22773,18 +22837,37 @@ document.addEventListener("keydown", (e) => {
       .replace(/^פרשת\s+/, "")
       .replace(/^שבת\s+/, "")
       .trim();
-    var variants = PARSHA_DT[raw] || null;
-    var displayName = raw;
+    // כתיב Hebcal ↔ מפתחות המאגר: Hebcal מחזירה חלק מהפרשות בכתיב חסר
+    // (בהעלתך, בחקתי, קדשים, מצרע) וחלק דווקא בכתיב מלא (קורח, חוקת) —
+    // מיישרים למפתחי PARSHA_DT, אחרת אין דבר תורה בשבועות האלה (אומת 09/2026
+    // מול רשימת השמות המלאה של hebcal לשנת 2026).
+    var PARSHA_KEY_ALIASES = {
+      "קורח": "קרח", "חוקת": "חקת", "בהעלתך": "בהעלותך",
+      "בחקתי": "בחקותי", "בחוקותי": "בחקותי", "בחוקתי": "בחקותי",
+      "קדשים": "קדושים", "מצרע": "מצורע", "אמר": "אמור",
+      "שפטים": "שופטים", "פנחס": "פינחס", "תולדת": "תולדות",
+      "שלח לך": "שלח", "וזאת הברכה": "וזאת הברכה"
+    };
+    var _pdLookup = function (k) {
+      k = (k || "").trim();
+      if (!k) return null;
+      var hit = PARSHA_DT[k] || PARSHA_DT[PARSHA_KEY_ALIASES[k]] || null;
+      return hit ? { v: hit, key: PARSHA_DT[k] ? k : PARSHA_KEY_ALIASES[k] } : null;
+    };
+    var _pdHit = _pdLookup(raw);
+    var variants = _pdHit ? _pdHit.v : null;
+    var displayName = _pdHit ? _pdHit.key : raw;
     // נרמול מקפים: "כי-תצא" (מ-Hebcal) ← "כי תצא" (מפתח המאגר)
     if (!variants) {
       var rawSpaced = raw.replace(/[-־–]/g, " ").replace(/\s+/g, " ").trim();
-      variants = PARSHA_DT[rawSpaced] || null;
+      _pdHit = _pdLookup(rawSpaced);
+      if (_pdHit) { variants = _pdHit.v; displayName = raw; }
     }
-    if (!variants && raw.indexOf("-") >= 0) {
-      var parts = raw.split("-");
+    if (!variants && /[-־–]/.test(raw)) {
+      var parts = raw.split(/[-־–]/);
       for (var pi = 0; pi < parts.length; pi++) {
-        variants = PARSHA_DT[parts[pi].trim()] || null;
-        if (variants) break;
+        _pdHit = _pdLookup(parts[pi]);
+        if (_pdHit) { variants = _pdHit.v; break; }
       }
     }
     var items = variants ? variants[YR] || variants[0] || [] : [];
@@ -22906,6 +22989,12 @@ function openSefarimNosafimPage(_pageMode) {
       var paraBM = (typeof secIdx === "number") ? _snParaBMHtml(secIdx, i) : "";
       // פירושים צמודי-פסוק — מוצגים בתוך הטקסט מיד אחרי הפסוק
       var note = (inlineNotes && inlineNotes[i]) ? inlineNotes[i] : "";
+      // קטעי הוראה/הסבר (תיקון היסוד וכד') — בריבוע הכחול הקטן של תוספות התפילה,
+      // בלי מספור, כדי להבדילם מנוסח התיקון עצמו
+      if (_bk && !_sbk && _bk.instrSegs && _bk.instrSegs.indexOf(i + 1) >= 0) {
+        return paraBM + "<p id=\"sn-para-" + secIdx + "-" + i + "\" data-sn-para=\"" + i + "\" style=\"margin:0 0 1.4rem;\">" +
+          "<span class=\"prayer-supplement\" style=\"text-align:center;\">" + txt + "</span></p>" + note;
+      }
       return paraBM + "<p id=\"sn-para-" + secIdx + "-" + i + "\" data-sn-para=\"" + i + "\" style=\"margin:0 0 1.4rem;line-height:2.3;\">" +
         "<span style=\"color:" + color + ";font-size:0.73em;font-weight:700;margin-left:0.35rem;\">[" + toHN(i + 1) + "]</span>" +
         txt + "</p>" + note;
@@ -24523,6 +24612,11 @@ function openSefarimNosafimPage(_pageMode) {
       // solo: ספר של קטע אחד — לחיצה נכנסת ישר לקורא (בלי מסך בחירת סעיף),
       // בלי כפתורי סימניות לפסקאות ובלי כפתור ניווט פרקים (בקשת בעל האתר 07/09/2026)
       solo:true,
+      // קטעי הוראה/הסבר (לא נוסח התיקון עצמו) — מוצגים בריבוע הכחול הקטן
+      // (.prayer-supplement) כמו תוספות בברכת המזון/תיקון הכללי. מיפוי לפי
+      // תוכן 50 הקטעים של לשון חכמים ח"א ע' (1-based): כותרת, הקדמה, והוראות
+      // "יאמר/יעשה/ילמוד" בין חלקי הנוסח (בקשת בעל האתר 07/09/2026).
+      instrSegs:[1,2,5,8,9,10,13,18,50],
       sections:[
         {he:"סדר תיקון היסוד השלם — כולל סדר \"קום אות הקדוש\"", ref:"Leshon Chakhamim, Part I 70"}
       ]},
@@ -24923,9 +25017,7 @@ function openSefarimNosafimPage(_pageMode) {
           "<p style=\"margin:0 0 0.9rem;\">וּכְשֵׁם שֶׁהִסְכִּימוּ וְהִתִּירוּ לָכֶם בֵּית דִּין שֶׁל מַטָּה, כָּךְ יַסְכִּימוּ וְיַתִּירוּ לָכֶם בֵּית דִּין שֶׁל מַעְלָה.</p>"+
           "<p style=\"margin:0;\">וְכָל הַקְּלָלוֹת וַחֲלוֹמוֹת רָעוֹת יִתְהַפְּכוּ עֲלֵיכֶם וְעָלֵינוּ לְטוֹבָה וְלִבְרָכָה, כְּדִכְתִיב:</p>"+
         "</div>"+
-        "<div style=\"border-right:4px solid #0f766e;background:#f0fdfa;border-radius:0.7rem;padding:0.85rem 1.1rem;margin:0 0 0.8rem;text-align:right;font-weight:700;color:#134e4a;\">\"וַיַּהֲפֹךְ ה' אֱלֹהֶיךָ לְּךָ אֶת הַקְּלָלָה לִבְרָכָה כִּי אֲהֵבְךָ ה' אֱלֹהֶיךָ.\"</div>"+
-        "<p style=\"margin:0 0 0.8rem;font-weight:700;\">וּכְתִיב:</p>"+
-        "<div style=\"border-right:4px solid #0f766e;background:#f0fdfa;border-radius:0.7rem;padding:0.85rem 1.1rem;margin:0 0 0.8rem;text-align:right;font-weight:700;color:#134e4a;\">\"וְאַתֶּם הַדְּבֵקִים בַּה' אֱלֹהֵיכֶם חַיִּים כֻּלְּכֶם הַיּוֹם.\"</div>"+
+        "<div style=\"border-right:4px solid #0f766e;background:#f0fdfa;border-radius:0.7rem;padding:0.85rem 1.1rem;margin:0 0 0.8rem;text-align:right;font-weight:700;color:#134e4a;\">\"וַיַּהֲפֹךְ ה' אֱלֹהֶיךָ לְּךָ אֶת הַקְּלָלָה לִבְרָכָה כִּי אֲהֵבְךָ ה' אֱלֹהֶיךָ.\"<br>וּכְתִיב:<br>\"וְאַתֶּם הַדְּבֵקִים בַּה' אֱלֹהֵיכֶם חַיִּים כֻּלְּכֶם הַיּוֹם.\"</div>"+
         "<div style=\"border-right:4px solid #0f766e;background:#f0fdfa;border-radius:0.7rem;padding:0.85rem 1.1rem;margin:0 0 1.5rem;text-align:right;font-weight:700;color:#134e4a;\">\"יִהְיוּ לְרָצוֹן אִמְרֵי פִי וְהֶגְיוֹן לִבִּי לְפָנֶיךָ, ה' צוּרִי וְגֹאֲלִי.\"</div>"+
       "</div>"},
     { id:"parashat-haman", he:"פרשת המן", subtitle:"סגולה לפרנסה — שמות פרק טז, עם התפילות שלפניה ולאחריה",
@@ -27361,7 +27453,10 @@ function closeSefarimNosafimModal() {
           "https://www.hebcal.com/shabbat?cfg=json" + geo + "&m=50&date=" + todayIsoLocal(),
         );
         var it = (data && data.items || []).find(function (i) { return i.category === "parashat"; });
-        if (it) openShnayimMikraModal(it.hebrew || it.title, it.title);
+        if (it) { openShnayimMikraModal(it.hebrew || it.title, it.title); return; }
+        // חג שחל בשבת — אין פרשה השבוע; נופלים לפרשה הבאה מאירועי השנה
+        var nxP = (typeof window._nextParashaFromEvents === "function") ? window._nextParashaFromEvents() : null;
+        if (nxP && nxP.en) openShnayimMikraModal(nxP.he || nxP.en, nxP.en);
         else if (typeof showToast === "function") showToast("לא נמצאה פרשת השבוע — נסו שוב בעוד רגע", "error");
       } catch (err) {
         if (typeof showToast === "function") showToast("שגיאה בטעינת הפרשה — בדקו את החיבור", "error");

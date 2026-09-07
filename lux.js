@@ -4550,9 +4550,11 @@
               return '<button type="button" class="lux-sn-h' + (i === 0 ? " lux-sn-f-on" : "") + '" data-i="' + i + '">' + em + " " + esc(t.title) + "</button>";
             }).join("") + "</div>"
           : "") +
+        '<div class="lux-sn-lbl">🎨 עיצוב ורקע הכרטיס</div>' +
         '<div class="lux-sn-designs">' + DESIGNS.map(function (d, i) {
           return '<button type="button" class="lux-sn-d' + (i === 0 ? " lux-sn-d-on" : "") + '" data-i="' + i + '" style="background:linear-gradient(160deg,' + d.bg[0] + "," + d.bg[2] + ');color:' + d.ink + ';">' + d.l + "</button>";
         }).join("") + "</div>" +
+        '<div class="lux-sn-lbl">🖋️ סגנון הכתב (פונט)</div>' +
         '<div class="lux-sn-fonts">' + CARD_FONTS.map(function (f, i) {
           return '<button type="button" class="lux-sn-f' + (i === 0 ? " lux-sn-f-on" : "") + '" data-i="' + i + '" style="font-family:' + f.fam + ';">' + f.l + "</button>";
         }).join("") + "</div>" +
@@ -4562,6 +4564,7 @@
           '<button type="button" class="lux-sn-g" data-g="m">👨 לגבר</button>' +
           '<button type="button" class="lux-sn-g" data-g="f">👩 לאישה</button>' +
         "</div>" +
+        '<div class="lux-sn-lbl">💌 השמות והברכה שיופיעו בכרטיס</div>' +
         '<input type="text" id="lux-sn-to" class="lux-sheet-input" maxlength="30" aria-label="לכבוד מי הכרטיס" placeholder="לכבוד... (למשל: משפחת לוי — אופציונלי)">' +
         '<input type="text" id="lux-sn-from" class="lux-sheet-input" maxlength="30" aria-label="השם שלכם" placeholder="השם שלכם (יופיע בכרטיס)" value="' + esc(name) + '">' +
         '<select id="lux-sn-bless" class="lux-sheet-input" aria-label="בחירת ברכה">' + theme.blessings.map(function (b) { return "<option>" + esc(blessTxt(b, selForm)) + "</option>"; }).join("") + "</select>" +

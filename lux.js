@@ -6118,7 +6118,7 @@
       shema: function () { openPrayer("shema", "שמע ישראל", "Shema"); },
       tehillim: function () { if (typeof openTehillimPage === "function") openTehillimPage(); },
       birkot: function () { if (typeof openBirkotBoardPage === "function") openBirkotBoardPage(); },
-      tefilot: function () { if (typeof openTefilotNosafotPage === "function") openTefilotNosafotPage(); },
+      almichya: function () { openPrayer("al-hamichya", "ברכת מעין שלוש", "Al HaMichya"); },
       sefarim: function () { if (typeof openSefarimNosafimPage === "function") openSefarimNosafimPage(); },
       motzei: function () { if (typeof openMotzeiShabbatModal === "function") openMotzeiShabbatModal(); }
     };
@@ -6134,7 +6134,7 @@
         b.push(btn("🍞", "ברכת המזון", "hamazon"));
         b.push(btn("🎵", "תהילים", "tehillim"));
         b.push(btn("🍎", "לוח ברכות הנהנין", "birkot"));
-        b.push(btn(st.entered ? "✨" : "🙏", st.entered ? "סדר מוצאי שבת" : "תפילות נוספות", st.entered ? "motzei" : "tefilot"));
+        b.push(btn(st.entered ? "✨" : "🍇", st.entered ? "סדר מוצאי שבת" : "ברכת מעין שלוש", st.entered ? "motzei" : "almichya"));
       } else {
         var h = holName();
         b.push(btn("🕯️", "זמני כניסת ויציאת " + h, "times", "lux-erev-hot"));
@@ -6145,7 +6145,7 @@
         b.push(btn("🍞", "ברכת המזון", "hamazon"));
         b.push(btn("✡️", "שמע ישראל", "shema"));
         b.push(btn("🍎", "לוח ברכות הנהנין", "birkot"));
-        b.push(btn("🙏", "תפילות נוספות", "tefilot"));
+        b.push(btn("🍇", "ברכת מעין שלוש", "almichya"));
         b.push(btn("📚", "ספרים נוספים", "sefarim"));
       }
       return '<div class="lux-erev-grid-head">' +

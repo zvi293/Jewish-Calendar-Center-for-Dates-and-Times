@@ -2742,6 +2742,26 @@ body.lux-shabbat #shabbat-countdown-bar {
   align-items: stretch;
   margin-top: 0.6rem;
 }
+/* כפתור X בתוך כרטיס בורר המטרות (בקשת בעל האתר 09/2026) */
+#lux-names-purposes .lux-sheet { position: relative; }
+.lux-pp-close {
+  position: absolute;
+  top: 0.75rem;
+  left: 0.75rem;
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 50%;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  background: rgba(15, 23, 42, 0.06);
+  color: #475569;
+  font-size: 0.95rem;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.lux-pp-close:hover { background: rgba(15, 23, 42, 0.12); }
 .lux-pp-custom-row .lux-sheet-input { margin-bottom: 0; flex: 1; }
 /* כפתור פתיחת בורר המטרות — נראה כמו שדה קלט, עם חץ */
 .lux-pp-trigger {

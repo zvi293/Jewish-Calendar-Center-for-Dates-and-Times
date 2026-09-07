@@ -2541,6 +2541,7 @@
     // luxSheet = אותה חוקיות כמו כל הפופאפים: היסטוריה (חזור בנייד), לחיצה ברקע ו-X סוגרים.
     function openPurposePicker() {
       var ov = luxSheet("lux-names-purposes",
+        '<button type="button" class="lux-pp-close" aria-label="סגירת החלון">✕</button>' +
         '<h3 class="lux-sheet-title">💫 מטרות התפילה</h3>' +
         '<p class="lux-sheet-note">אפשר לבחור כמה מטרות יחד — או להוסיף מטרה משלכם</p>' +
         '<div id="lux-pp-grid" class="lux-pp-grid"></div>' +
@@ -2597,6 +2598,7 @@
       ov.querySelector("#lux-pp-custom-add").addEventListener("click", addCustom);
       ov.querySelector("#lux-pp-custom").addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); addCustom(); } });
       ov.querySelector("#lux-pp-done").addEventListener("click", function () { luxModalClose("lux-names-purposes"); });
+      ov.querySelector(".lux-pp-close").addEventListener("click", function () { luxModalClose("lux-names-purposes"); });
     }
     // ── אישור לפני מחיקת שם (בקשת בעל האתר 09/2026) ──
     function openDeleteConfirm(idx, onDone) {

@@ -18049,7 +18049,7 @@ function openBenIshHaiPage() {
             const label = isDrashot ? parshiyot[p].he+" — סעיף "+toHeb(h+1) : parshiyot[p].he+" — הלכה "+toHeb(h+1);
             btn.innerHTML = '<span style="color:'+color+';font-size:0.75rem;font-weight:900;">'+label+'</span>'+
               '<p style="margin:0.2rem 0 0;font-size:0.83rem;color:#374151;line-height:1.5;">'+buildSnippet(stripped,q)+'</p>';
-            btn.onmouseenter=()=>btn.style.background="#f1f5f9";
+            btn.onmouseenter=()=>btn.style.background=document.documentElement.classList.contains("dark")?"rgba(255,255,255,0.06)":"#f1f5f9";
             btn.onmouseleave=()=>btn.style.background="none";
             const cp=p, ch=h;
             const _bihQ = q;
@@ -18073,12 +18073,12 @@ function openBenIshHaiPage() {
     if (isBM(y,p,h)) {
       removeBM(y,p,h);
       const btn=document.getElementById("bih-bm-"+p+"-"+h);
-      if(btn){btn.style.border="1.5px solid #d1d5db";btn.style.background="#fff";btn.style.color="#9ca3af";btn.innerHTML="🔖 סמן";}
+      if(btn){const _dk=document.documentElement.classList.contains("dark");btn.style.border="1.5px solid "+(_dk?"#475569":"#d1d5db");btn.style.background=_dk?"#1e293b":"#fff";btn.style.color="#9ca3af";btn.innerHTML="🔖 סמן";}
       wasAdded = false;
     } else {
       addBM(y,p,h,label);
       const btn=document.getElementById("bih-bm-"+p+"-"+h);
-      if(btn){btn.style.border="1.5px solid #f59e0b";btn.style.background="#fef9c3";btn.style.color="#92400e";btn.innerHTML="🔖 מסומן";}
+      if(btn){const _dk=document.documentElement.classList.contains("dark");btn.style.border="1.5px solid "+(_dk?"#b45309":"#f59e0b");btn.style.background=_dk?"rgba(245,158,11,0.18)":"#fef9c3";btn.style.color=_dk?"#fbbf24":"#92400e";btn.innerHTML="🔖 מסומן";}
       wasAdded = true;
     }
     if (typeof window.showToast === "function") {
@@ -18731,10 +18731,11 @@ openTehillimPage = function () {
     const btn = document.getElementById("th-bm-btn-"+ch);
     if (btn) {
       const active = thIsBM(ch);
+      const _dk = document.documentElement.classList.contains("dark");
       btn.textContent = active ? "🔖 מסומן" : "🔖 סמן";
-      btn.style.border = active ? "1.5px solid #f59e0b" : "1.5px solid #d1d5db";
-      btn.style.color = active ? "#92400e" : "#64748b";
-      btn.style.background = active ? "#fffbeb" : "transparent";
+      btn.style.border = active ? "1.5px solid " + (_dk ? "#b45309" : "#f59e0b") : "1.5px solid " + (_dk ? "#475569" : "#d1d5db");
+      btn.style.color = active ? (_dk ? "#fbbf24" : "#92400e") : (_dk ? "#94a3b8" : "#64748b");
+      btn.style.background = active ? (_dk ? "rgba(245,158,11,0.18)" : "#fffbeb") : "transparent";
     }
     window._thBuildBMPanel();
     if (window._thBuildPsalmBMPanel) window._thBuildPsalmBMPanel();
@@ -23941,6 +23942,14 @@ function openSefarimNosafimPage(_pageMode) {
       sections:secs(697,function(i){return "סימן "+toHN(i);},function(i){return "Mishnah_Berurah."+i;}),
       // נושאי הכלים משובצים בבלוק השולחן ערוך שמעל המשנה ברורה (המ"ב עצמה היא גוף הטקסט)
       commentaries:saCms("oc", ["mb"])},
+    { id:"ben-ish-hai", he:"בן איש חי", subtitle:"רבי יוסף חיים מבגדד — הלכות ודרשות לפי פרשיות השנה",
+      cat:"halakha", color:"#6366f1", icon:"📗",
+      credit:"הטקסט מ-Sefaria.org — נחלת הכלל", creditUrl:"https://www.sefaria.org/Ben_Ish_Hai",
+      type:"external",
+      // נסרק בחיפוש דרך המנוע הייעודי (__bih__ / _snSearchBenIshHai) — לא דרך הסורק הכללי
+      searchExclude:true,
+      _externalAction: function() { openBenIshHaiPage(); }
+    },
     { id:"sefer-hamidot", he:"ספר המידות", subtitle:"רבי נחמן מברסלב",
       cat:"emunah", color:"#16a34a", icon:"🌿",
       credit:"הטקסט מ-Sefaria.org — נחלת הכלל",
@@ -26216,8 +26225,9 @@ function openSefarimNosafimPage(_pageMode) {
     if (!btn || !_bk) return;
     var key = (_sbk ? _sbk.id : "") + "|" + _sec;
     var active = _bmHas(_bk.id, key);
-    btn.style.background = active ? "rgba(245,158,11,0.2)" : "rgba(0,0,0,0.06)";
-    btn.style.color = active ? "#92400e" : "#1e293b";
+    var _dk = document.documentElement.classList.contains("dark");
+    btn.style.background = active ? "rgba(245,158,11,0.2)" : (_dk ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)");
+    btn.style.color = active ? (_dk ? "#fbbf24" : "#92400e") : (_dk ? "#cbd5e1" : "#1e293b");
   }
 
   window._snToggleBookmark = function() {
@@ -26660,9 +26670,10 @@ function openSefarimNosafimPage(_pageMode) {
     // Update this specific button's appearance
     var btn = document.getElementById("sn-parabm-" + secIdx + "-" + paraIdx);
     if (btn) {
-      btn.style.border = wasAdded ? "1.5px solid #f59e0b" : "1.5px solid #d1d5db";
-      btn.style.color = wasAdded ? "#92400e" : "#9ca3af";
-      btn.style.background = wasAdded ? "#fffbeb" : "transparent";
+      var _dk = document.documentElement.classList.contains("dark");
+      btn.style.border = wasAdded ? "1.5px solid " + (_dk ? "#b45309" : "#f59e0b") : "1.5px solid " + (_dk ? "#475569" : "#d1d5db");
+      btn.style.color = wasAdded ? (_dk ? "#fbbf24" : "#92400e") : "#9ca3af";
+      btn.style.background = wasAdded ? (_dk ? "rgba(245,158,11,0.18)" : "#fffbeb") : "transparent";
       btn.innerHTML = wasAdded ? "🔖 מסומן" : "🔖 סמן";
     }
     // Keep the global header button & panels in sync

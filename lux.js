@@ -603,8 +603,6 @@
         document.querySelectorAll(".lux-mark-hl").forEach(function (x) { x.classList.remove("lux-mark-hl"); });
         Object.keys(_lineState).forEach(clearArea);
       }
-      var sw = document.querySelector("#lux-marker-toggle .lux-sw");
-      if (sw) sw.classList.toggle("lux-sw-on", on);
       syncReaderBtns();
       if (quiet) return;
       if (on) {
@@ -712,9 +710,6 @@
         existing.classList.toggle("lux-mk-on", on);
         existing.setAttribute("aria-pressed", on ? "true" : "false");
       });
-      // מתג ההגדרות תמיד משקף את המפתח (גם אם שונה מתוך קורא)
-      var sw = document.querySelector("#lux-marker-toggle .lux-sw");
-      if (sw) sw.classList.toggle("lux-sw-on", on);
     }
     setInterval(function () { if (!document.hidden) syncReaderBtns(); }, 1200);
     var _mkPend = null;
@@ -725,36 +720,6 @@
       }).observe(document.body, { childList: true });
     } catch (e) {}
     setTimeout(syncReaderBtns, 0);
-
-    // מתג בהגדרות — כבוי כברירת מחדל, עם הסבר קצר מה המרקר עושה
-    function injectToggle() {
-      var anchor = document.getElementById("lux-dt-btn") || document.getElementById("lux-stories-auto-toggle") || document.getElementById("lux-tour-btn");
-      if (!anchor || document.getElementById("lux-marker-toggle")) return;
-      var host = anchor.closest("div");
-      var on = enabled();
-      var field = document.createElement("div");
-      field.innerHTML =
-        '<button type="button" id="lux-marker-toggle" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 transition-all flex items-center justify-between gap-3" style="margin-top:0.75rem;">' +
-          '<span style="text-align:right;flex:1;min-width:0;">' +
-            '<span class="font-semibold text-sm" style="display:block;">🖍️ מרקר סימון שורה בספרים</span>' +
-            '<small style="display:block;color:#94a3b8;font-size:0.72rem;font-weight:400;line-height:1.4;margin-top:2px;">כשהמרקר דולק, לחיצה על שורה בספרים ובתפילות צובעת אותה בצהוב — כמו מרקר על דף. הסימון נשמר לפעם הבאה; לחיצה נוספת מוחקת אותו. הכפתור 🖍️ נמצא גם בראש כל ספר ותפילה.</small>' +
-          "</span>" +
-          '<span class="lux-sw' + (on ? " lux-sw-on" : "") + '"><span class="lux-sw-dot"></span></span>' +
-        "</button>";
-      host.insertAdjacentElement("afterend", field);
-      field.querySelector("#lux-marker-toggle").addEventListener("click", function () {
-        var sw = field.querySelector(".lux-sw");
-        var nowOn = !sw.classList.contains("lux-sw-on");
-        // נקודת אמת אחת (מפתח + מתג + כפתורי הקוראים + צביעה/ניקוי); הטוסט המפורט נשאר כאן
-        setMarkerOn(nowOn, true);
-        if (typeof window.showToast === "function") {
-          window.showToast(nowOn ? "🖍️ המרקר הופעל — לחיצה על שורה מסמנת אותה" : "המרקר כובה", "success", 2400);
-        }
-      });
-    }
-    injectToggle();
-    setTimeout(injectToggle, 3000);
-    setTimeout(injectToggle, 5000);
   });
 
   /* ── 8. תמה רביעית: "זהב מלכותי" ──────────────────────────────── */
@@ -833,6 +798,12 @@
       { id: "calendar", icon: "📅", label: "לוח שנה", run: function () { if (typeof window.openCalendar === "function") window.openCalendar(); } },
       { id: "sefarim", icon: "📚", label: "ספרים נוספים", run: function () { if (typeof window.openSefarimNosafimPage === "function") window.openSefarimNosafimPage(); } },
       { id: "tefilot", icon: "🙏", label: "תפילות נוספות", run: function () { if (typeof window.openTefilotNosafotPage === "function") window.openTefilotNosafotPage(); } },
+      { id: "shacharit", icon: "🌅", label: "שחרית", run: function () { if (typeof window.openPrayer === "function") window.openPrayer("shacharit", "תפילת שחרית", "Shacharit"); } },
+      { id: "mincha", icon: "🌤️", label: "מנחה", run: function () { if (typeof window.openPrayer === "function") window.openPrayer("mincha", "תפילת מנחה", "Mincha"); } },
+      { id: "maariv", icon: "🌙", label: "ערבית", run: function () { if (typeof window.openPrayer === "function") window.openPrayer("maariv", "תפילת ערבית", "Maariv"); } },
+      { id: "birchot", icon: "☀️", label: "ברכות השחר", run: function () { if (typeof window.openPrayer === "function") window.openPrayer("birchot-hashachar", "ברכות השחר", "Birchot HaShachar"); } },
+      { id: "shema", icon: "✡️", label: "שמע ישראל", run: function () { if (typeof window.openPrayer === "function") window.openPrayer("shema", "שמע ישראל", "Shema"); } },
+      { id: "birkot", icon: "🍎", label: "ברכות הנהנין", run: function () { if (typeof window.openBirkotBoardPage === "function") window.openBirkotBoardPage(); } },
       { id: "tehillim", icon: "📖", label: "תהילים", run: function () { if (typeof window.openTehillimPage === "function") window.openTehillimPage(); } },
       { id: "plan", icon: "🎯", label: "סדר לימוד אישי", run: function () {
         // יש כבר תוכנית לימוד — פותחים את הקורא שלה; אחרת — אשף יצירת תוכנית
@@ -2117,7 +2088,7 @@
     }
     // כפתור "שינוי שם" בהגדרות — הדרך הקבועה לשנות את השם אחרי הבחירה הראשונה
     function injectNameBtn() {
-      var anchor = document.getElementById("lux-marker-toggle") || document.getElementById("lux-dt-btn") || document.getElementById("lux-tour-btn");
+      var anchor = document.getElementById("lux-dt-btn") || document.getElementById("lux-tour-btn");
       if (!anchor || document.getElementById("lux-name-settings-btn")) return;
       var host = anchor.closest("div");
       var field = document.createElement("div");
@@ -2261,14 +2232,14 @@
       if (!el) {
         el = document.createElement("div");
         el.id = "lux-crit-pill";
-        el.innerHTML = '<span class="lux-crit-txt"></span><button type="button" class="lux-crit-x" aria-label="סגור">✕</button>';
+        el.innerHTML = '<span class="lux-crit-ico" aria-hidden="true">⏰</span><span class="lux-crit-txt"></span><button type="button" class="lux-crit-x" aria-label="סגור">✕</button>';
         document.body.appendChild(el);
         el.querySelector(".lux-crit-x").addEventListener("click", function () {
           try { sessionStorage.setItem(dKey, "1"); } catch (e) {}
           el.remove();
         });
       }
-      var critTxt = "⏰ " + show.l + " בעוד " + mins + " דק' (" + fmtTime(show.iso) + ")";
+      var critTxt = show.l + " בעוד " + mins + " דק' (" + fmtTime(show.iso) + ")";
       var critEl = el.querySelector(".lux-crit-txt");
       // כתיבה רק בשינוי — כתיבה זהה כל דקה מעירה observers ומייצרת עבודה מיותרת
       if (critEl && critEl.textContent !== critTxt) critEl.textContent = critTxt;
@@ -3109,7 +3080,7 @@
       { sel: "#resultsGrid", t: "החגים הקרובים 🗓️", d: "כל המועדים הקרובים עם זמני כניסה ויציאה. בכל כרטיס: סנכרון ליומן, דבר תורה מיוחד ושיתוף בוואטסאפ." },
       { sel: "#lux-pearl", t: "פנינה יומית 💎", d: "ציטוט יומי מתחלף מפרקי אבות ומקורות ישראל — השראה קטנה לכל יום." },
       { sel: "#lux-bottom-nav", t: "ניווט מהיר 📱", d: "סרגל הניווט התחתון — ואפשר לבחור בהגדרות בדיוק אילו קיצורים יופיעו בו." },
-      { sel: ".nav-action-btn", t: "הגדרות ⚙️", d: "נוסח התפילה, שיטת הזמנים, עיצוב, התראות, יארצייטים, הישגים, המרת תאריכים ומרקר סימון שורה בספרים — הכל מתאים את האתר בדיוק אליכם. סיור נעים! 🙌" }
+      { sel: ".nav-action-btn", t: "הגדרות ⚙️", d: "נוסח התפילה, שיטת הזמנים, עיצוב, התראות, יארצייטים, הישגים והמרת תאריכים — הכל מתאים את האתר בדיוק אליכם. סיור נעים! 🙌" }
     ];
     var idx = 0, overlay = null, hi = null, tip = null;
 

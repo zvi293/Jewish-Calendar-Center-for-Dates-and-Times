@@ -17556,7 +17556,7 @@ window._openChapterNavPopup = function(opts) {
 // הפונטים החיצוניים נטענים עצל — רק בפתיחת הבוחר או כשנבחר פונט שאינו ברירת המחדל.
 const READER_FONT_KEY = "moadim_reader_font";
 const READER_FONTS = [
-  { id: "frank", he: "פרנק ריל", desc: "הפונט הרגיל של האתר", fam: "'Frank Ruhl Libre', 'David Libre', serif", gf: null },
+  { id: "frank", he: "פרנק ריל", desc: "הפונט הרגיל של האתר (ברירת מחדל)", fam: "'Frank Ruhl Libre', 'David Libre', serif", gf: null },
   { id: "david", he: "דוד", desc: "David Libre — האות הקלאסית של ספרי הקודש", fam: "'David Libre', 'Frank Ruhl Libre', serif", gf: "David+Libre:wght@400;500;700" },
   { id: "noto", he: "נוטו סריף", desc: "Noto Serif Hebrew — נקי ומאוזן", fam: "'Noto Serif Hebrew', 'Frank Ruhl Libre', serif", gf: "Noto+Serif+Hebrew:wght@400;600;700" },
   { id: "alef", he: "אלף", desc: "Alef — מודרני ואוורירי", fam: "'Alef', 'Frank Ruhl Libre', sans-serif", gf: "Alef:wght@400;700" },

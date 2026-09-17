@@ -1437,6 +1437,11 @@ var __cmPickerOpenState = {};
 function _buildCmPickerBar(fontBar, wrapId, opts) {
   if (!fontBar || !opts || !opts.entries || !opts.entries.length) return;
   var accent = opts.accent || "#7c3aed";
+  // תוויות ניתנות להתאמה (ברירת המחדל — בורר נושאי הכלים): משמש גם את בורר
+  // התצוגה של שניים מקרא ("⚙️ תצוגה") באותה תבנית פופאפ בדיוק
+  var btnLabel = opts.btnLabel || "📖 נושאי כלים";
+  var dlgTitle = opts.title || "📖 נושאי כלים";
+  var kindName = opts.kindName || "נושאי כלים";
   var popId = wrapId + "-pop", bdId = wrapId + "-bd";
   // סרגל משותף (הדף היומי ושניים מקרא חולקים את #sefaria-font-bar): מסירים כל כפתור
   // נושאי-כלים של מצב אחר — כדי שלא יישארו שני כפתורים זה לצד זה (בקשת משתמש 09/2026).
@@ -1465,9 +1470,9 @@ function _buildCmPickerBar(fontBar, wrapId, opts) {
   wrap.className = "cm-picker-wrap";
   wrap.style.cssText = "display:flex;align-items:center;gap:0.45rem;direction:rtl;";
   wrap.innerHTML =
-    '<button type="button" aria-haspopup="dialog" aria-expanded="false" title="נושאי כלים (' + entries.length + " זמינים" + (nOn ? ", " + nOn + " פעילים" : "") + ')" ' +
+    '<button type="button" aria-haspopup="dialog" aria-expanded="false" title="' + kindName + " (" + entries.length + " זמינים" + (nOn ? ", " + nOn + " פעילים" : "") + ')" ' +
     'style="position:relative;display:inline-flex;align-items:center;gap:0.35rem;height:32px;padding:0 0.75rem;border-radius:999px;' +
-    "border:1.5px solid " + accent + ";background:" + accent + "18;color:" + accent + ';font-size:0.74rem;font-weight:900;cursor:pointer;white-space:nowrap;">📖 נושאי כלים' +
+    "border:1.5px solid " + accent + ";background:" + accent + "18;color:" + accent + ';font-size:0.74rem;font-weight:900;cursor:pointer;white-space:nowrap;">' + btnLabel +
     (nOn ? '<span style="min-width:16px;height:16px;padding:0 4px;box-sizing:border-box;border-radius:999px;background:' + accent + ';color:#fff;font-size:0.6rem;font-weight:900;display:inline-flex;align-items:center;justify-content:center;line-height:1;">' + nOn + "</span>" : "") +
     "</button>";
   fontBar.insertAdjacentElement("afterbegin", wrap);
@@ -1497,7 +1502,7 @@ function _buildCmPickerBar(fontBar, wrapId, opts) {
     var pop = document.createElement("div");
     pop.id = popId;
     pop.setAttribute("role", "dialog");
-    pop.setAttribute("aria-label", "בחירת נושאי כלים");
+    pop.setAttribute("aria-label", dlgTitle);
     var r = btn.getBoundingClientRect();
     var bottomPx = Math.max(70, Math.round(window.innerHeight - r.top + 8));
     pop.style.cssText =
@@ -1517,7 +1522,7 @@ function _buildCmPickerBar(fontBar, wrapId, opts) {
     pop.innerHTML =
       '<div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;margin-bottom:0.55rem;">' +
         '<button type="button" data-cmx="1" aria-label="סגור" style="width:30px;height:30px;border-radius:50%;border:1px solid rgba(0,0,0,0.12);background:rgba(0,0,0,0.04);color:#475569;cursor:pointer;font-size:0.9rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✕</button>' +
-        '<div style="flex:1;text-align:center;color:#1e293b;font-weight:900;font-size:0.9rem;">📖 נושאי כלים' + (nOn ? ' <span style="color:#64748b;font-weight:700;font-size:0.75rem;">(' + nOn + " פעילים)</span>" : "") + "</div>" +
+        '<div style="flex:1;text-align:center;color:#1e293b;font-weight:900;font-size:0.9rem;">' + dlgTitle + (nOn ? ' <span style="color:#64748b;font-weight:700;font-size:0.75rem;">(' + nOn + " פעילים)</span>" : "") + "</div>" +
         (nOn ? '<button type="button" data-cmclear="1" style="padding:0.25rem 0.6rem;border-radius:999px;border:1px solid rgba(0,0,0,0.12);background:transparent;color:#64748b;cursor:pointer;font-size:0.68rem;font-weight:800;flex-shrink:0;">נקה הכל</button>' : '<span style="width:30px;flex-shrink:0;"></span>') +
       "</div>" +
       '<div style="display:flex;flex-wrap:wrap;gap:0.35rem;">' + chips + "</div>";
@@ -1525,7 +1530,7 @@ function _buildCmPickerBar(fontBar, wrapId, opts) {
       if (e.target.closest("[data-cmx]")) { close(); return; }
       if (e.target.closest("[data-cmclear]")) {
         entries.forEach(function (en) { if (en.get()) en.set(false); });
-        if (window._btnToastOff) window._btnToastOff("נושאי כלים");
+        if (window._btnToastOff) window._btnToastOff(kindName);
         __cmPickerOpenState[wrapId] = true;
         if (opts.rerender) opts.rerender();
         return;
@@ -1900,37 +1905,48 @@ function renderShmikraContent() {
   const { torahVerses, onkelosVerses, rashiVerses } = _shmikraData;
 
   let textHtml = "";
-  // Toggle bar moved to bottom (inside sefaria-font-bar area)
-  // בשניים מקרא כל השלושה הם תיבות סימון פשוטות — כולל רש"י (בקשת משתמש 09/2026:
-  // לא בורר נושאי כלים, אלא וי כמו "פסוק פעמיים")
-  const toggleBarHtml = `<div id="shmikra-toggles" style="display:flex;flex-wrap:wrap;gap:0.5rem;align-items:center;justify-content:center;">
-          <label style="display:flex;align-items:center;gap:0.25rem;cursor:pointer;font-size:0.7rem;font-weight:700;color:#1e40af;user-select:none;white-space:nowrap;">
-            <input type="checkbox" onchange="toggleShmikraDouble()" ${showDouble ? "checked" : ""} style="width:0.9rem;height:0.9rem;accent-color:#2563eb;cursor:pointer;">
-            פסוק פעמיים
-          </label>
-          <label style="display:flex;align-items:center;gap:0.25rem;cursor:pointer;font-size:0.7rem;font-weight:700;color:#047857;user-select:none;white-space:nowrap;" title="הצגת הטקסט עם או בלי ניקוד וטעמים">
-            <input type="checkbox" onchange="toggleShmikraNikud()" ${showNikud ? "checked" : ""} style="width:0.9rem;height:0.9rem;accent-color:#047857;cursor:pointer;">
-            ניקוד
-          </label>
-          <label style="display:flex;align-items:center;gap:0.25rem;cursor:pointer;font-size:0.7rem;font-weight:700;color:#6d28d9;user-select:none;white-space:nowrap;" title="פירוש רש״י מוצמד לכל פסוק">
-            <input type="checkbox" onchange="toggleShmikraRashi()" ${showRashi ? "checked" : ""} style="width:0.9rem;height:0.9rem;accent-color:#7c3aed;cursor:pointer;">
-            רש"י
-          </label>
-        </div>`;
-  // Inject toggle bar above font bar
+  // בורר תצוגה מאוחד (09/2026): שלושת המתגים — פסוק פעמיים, ניקוד, רש"י — בכפתור
+  // "⚙️ תצוגה" אחד שפותח חלונית בתבנית הפופאפים של האתר (_buildCmPickerBar:
+  // חזור במובייל סוגר את החלונית, נגיעה ברקע סוגרת, ✕, history-safe). הצ'קבוקסים
+  // הישנים גלשו לשורה שנייה במובייל ודחפו את כפתורי הגלילה למטה.
+  // ה-set רק כותב לאחסון — ה-rerender מגיע מהחלונית עצמה (וגם הטוסטים שלה).
   const fontBar = document.getElementById("sefaria-font-bar");
   if (fontBar) {
-    let existingToggles = document.getElementById("shmikra-toggles");
-    if (existingToggles) existingToggles.remove();
-    fontBar.insertAdjacentHTML("afterbegin", toggleBarHtml);
-    // אין בורר נושאי כלים בשניים מקרא — מסירים גם כפתור שנשאר ממצב הדף היומי (סרגל משותף)
-    fontBar.querySelectorAll(".cm-picker-wrap").forEach(function (w) {
-      ["-pop", "-bd"].forEach(function (suf) {
-        const el = document.getElementById(w.id + suf);
-        if (el) el.remove();
-      });
-      if (w.id && typeof __cmPickerOpenState === "object") __cmPickerOpenState[w.id] = false;
-      w.remove();
+    _buildCmPickerBar(fontBar, "shmikra-toggles", {
+      accent: "#2563eb",
+      btnLabel: "⚙️ תצוגה",
+      title: "⚙️ אפשרויות תצוגה",
+      kindName: "אפשרויות תצוגה",
+      entries: [
+        {
+          he: "פסוק פעמיים",
+          desc: "כל פסוק מוצג פעמיים — כמנהג שניים מקרא",
+          color: "#1e40af",
+          get: getShmikraDouble,
+          set: (v) => localStorage.setItem(SHMIKRA_DOUBLE_KEY, v ? "true" : "false"),
+        },
+        {
+          he: "ניקוד וטעמים",
+          desc: "הצגת הטקסט עם או בלי ניקוד וטעמים",
+          color: "#047857",
+          get: getShmikraNikud,
+          set: (v) => localStorage.setItem(SHMIKRA_NIKUD_KEY, v ? "true" : "false"),
+        },
+        {
+          he: 'רש"י',
+          desc: "פירוש רש״י מוצמד לכל פסוק",
+          color: "#7c3aed",
+          get: getShmikraRashi,
+          set: (v) => {
+            localStorage.setItem(SHMIKRA_RASHI_KEY, v ? "true" : "false");
+            // טעינת רש"י בהדלקה ראשונה — הרינדור החוזר מגיע מה-fetch עצמו בסיום
+            if (v && _shmikraData.rashiVerses.length === 0 && _shmikraData.parshaName) {
+              fetchRashiForShmikra(_shmikraData.parshaName);
+            }
+          },
+        },
+      ],
+      rerender: renderShmikraContent,
     });
     fontBar.style.flexWrap = "wrap";
     fontBar.style.gap = "0.5rem";

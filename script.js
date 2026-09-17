@@ -17630,7 +17630,7 @@ window._openReaderFontPopup = function () {
   pop.innerHTML =
     '<div class="rf-pop-head">' +
       '<button type="button" class="rf-pop-x" data-rfx="1" aria-label="סגור">✕</button>' +
-      '<div class="rf-pop-title">אָ פונט הקריאה</div>' +
+      '<div class="rf-pop-title"><span style="font-family:\'Frank Ruhl Libre\',serif;font-weight:900;">אא</span> פונט הקריאה</div>' +
       '<span style="width:30px;flex-shrink:0;"></span>' +
     "</div>" +
     '<div class="rf-rows">' + rowsHtml() + "</div>" +

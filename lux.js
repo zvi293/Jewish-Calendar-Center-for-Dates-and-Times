@@ -5765,16 +5765,25 @@
     function openWizard() {
       var selBook = null, mode = "minutes", minutes = 10, targetDays = 30;
       var ov = luxSheet("lux-plan-wizard",
-        '<h3 class="lux-sheet-title">🎯 סדר לימוד אישי חדש</h3>' +
-        '<p class="lux-sheet-note">בחרו ספר, קבעו קצב — והאתר יחלק לכם אותו לימים ויעקוב אחרי ההתקדמות</p>' +
-        '<h4 class="lux-pw-step">1️⃣ באיזה ספר נלמד?</h4>' +
+        // עיצוב האשף (09/2026): מבנה עשיר — כותרת עם בועת אייקון, מספרי-שלב זהב,
+        // כרטיסי ספרים, מתג-קטעים וסיכום מודגש. כל ה-ids והמחלקות התפקודיות נשמרו;
+        // הסגנון כולו בסקופ #lux-plan-wizard ב-style.css (לא נוגע בשאר ה-luxSheets).
+        '<div class="lux-pw-head">' +
+          '<span class="lux-pw-head-ico" aria-hidden="true">🎯</span>' +
+          '<h3 class="lux-sheet-title">סדר לימוד אישי חדש</h3>' +
+          '<p class="lux-sheet-note">בחרו ספר, קבעו קצב — והאתר יחלק לכם אותו לימים ויעקוב אחרי ההתקדמות</p>' +
+        "</div>" +
+        '<h4 class="lux-pw-step"><span class="lux-pw-stepnum">1</span> באיזה ספר נלמד?</h4>' +
         '<div class="lux-pw-books">' + CATALOG.map(function (b) {
-          return '<button type="button" class="lux-pw-book" data-id="' + b.id + '">' + b.icon + " " + esc(b.he) + '<small>' + b.count + " " + esc(unitsOf(b)) + "</small></button>";
+          return '<button type="button" class="lux-pw-book" data-id="' + b.id + '">' +
+            '<span class="lux-pw-book-ico" aria-hidden="true">' + b.icon + "</span>" +
+            '<span class="lux-pw-book-name">' + esc(b.he) + "</span>" +
+            '<small>' + b.count + " " + esc(unitsOf(b)) + "</small></button>";
         }).join("") + "</div>" +
-        '<h4 class="lux-pw-step">2️⃣ באיזה קצב?</h4>' +
-        '<div style="display:flex;gap:0.4rem;margin-bottom:0.5rem;">' +
-          '<button type="button" id="lux-pw-m-min" class="lux-sheet-secondary lux-pw-mode lux-pw-mode-on" style="flex:1;">⏱️ לפי דקות ביום</button>' +
-          '<button type="button" id="lux-pw-m-days" class="lux-sheet-secondary lux-pw-mode" style="flex:1;">🗓️ לפי תאריך יעד</button>' +
+        '<h4 class="lux-pw-step"><span class="lux-pw-stepnum">2</span> באיזה קצב?</h4>' +
+        '<div class="lux-pw-modes">' +
+          '<button type="button" id="lux-pw-m-min" class="lux-sheet-secondary lux-pw-mode lux-pw-mode-on">⏱️ לפי דקות ביום</button>' +
+          '<button type="button" id="lux-pw-m-days" class="lux-sheet-secondary lux-pw-mode">🗓️ לפי תאריך יעד</button>' +
         "</div>" +
         '<div id="lux-pw-min-box">' +
           '<label class="lux-dt-lbl">כמה דקות ביום נוח לכם ללמוד? <span style="font-weight:400;">(החליקו לבחירה — עד 3 שעות)</span></label>' +
@@ -5816,9 +5825,13 @@
         var end = new Date(Date.now() + c.totalDays * 86400000);
         sum.style.display = "block";
         sum.innerHTML =
-          '<div class="lux-dt-big">📋 התוכנית שלכם</div>' +
-          "בכל יום: <b>" + c.perDay + " " + esc(c.perDay > 1 ? unitsOf(selBook) : selBook.unit) + "</b> (כ־" + c.estMin + " דקות)<br>" +
-          "סיום בעוד: <b>" + c.totalDays + " ימים</b> — בסביבות " + end.toLocaleDateString("he-IL", { day: "numeric", month: "long", year: "numeric" }) + " בע\"ה";
+          '<div class="lux-pw-sum-title">' + selBook.icon + " התוכנית שלכם — " + esc(selBook.he) + "</div>" +
+          '<div class="lux-pw-sum-grid">' +
+            '<div class="lux-pw-sum-cell"><b>' + c.perDay + "</b><span>" + esc(c.perDay > 1 ? unitsOf(selBook) : selBook.unit) + " ביום</span></div>" +
+            '<div class="lux-pw-sum-cell"><b>~' + c.estMin + "</b><span>דקות ביום</span></div>" +
+            '<div class="lux-pw-sum-cell"><b>' + c.totalDays + "</b><span>ימים לסיום</span></div>" +
+          "</div>" +
+          '<div class="lux-pw-sum-date">🗓️ סיום בסביבות <b>' + end.toLocaleDateString("he-IL", { day: "numeric", month: "long", year: "numeric" }) + "</b> בע\"ה</div>";
         btn.disabled = false;
         btn.style.opacity = "1";
       }

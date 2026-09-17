@@ -304,12 +304,12 @@
          ו-preload לגופן הכותרת (העברית של Assistant) — LCP יציב ומהיר. -->
     <link rel="preload" href="/fonts/assistant-hebrew.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="/fonts.css?v=1" />
-    <link rel="stylesheet" href="style.css?v=58" />
+    <link rel="stylesheet" href="style.css?v=59" />
     <!-- הקוד הראשי יורד מוקדם (preload) אך מוזרק ומתבצע רק אחרי הציור הראשון —
          ראו הטוען בסוף ה-body. ה-?v= כאן חייב להיות זהה לזה שבטוען וב-sw.js.
          fetchpriority=low: שלא יתחרו ברוחב-הפס עם ה-CSS החוסם (FCP) — כמו defer. -->
-    <link rel="preload" href="script.js?v=55" as="script" fetchpriority="low" />
-    <link rel="preload" href="lux.js?v=54" as="script" fetchpriority="low" />
+    <link rel="preload" href="script.js?v=56" as="script" fetchpriority="low" />
+    <link rel="preload" href="lux.js?v=55" as="script" fetchpriority="low" />
 
     <!-- OneSignal Web Push SDK -->
     <script>
@@ -2274,8 +2274,8 @@
               });
             },
           });
-          addScript("script.js?v=55");
-          addScript("lux.js?v=54");
+          addScript("script.js?v=56");
+          addScript("lux.js?v=55");
         }
         function afterFirstPaint() {
           // rAF אחד (רץ ממש לפני ציור הפריים הראשון) ואז setTimeout(0) — משימה

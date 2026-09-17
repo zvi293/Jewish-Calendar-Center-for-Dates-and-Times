@@ -3344,6 +3344,7 @@
         '<div class="lux-sel-foot">' +
           '<button type="button" id="lux-sel-fminus" class="lux-sel-fbtn" aria-label="הקטן כתב">−</button>' +
           '<button type="button" id="lux-sel-fplus" class="lux-sel-fbtn" aria-label="הגדל כתב">+</button>' +
+          '<button type="button" class="rf-btn" onclick="if(window._openReaderFontPopup)window._openReaderFontPopup()" aria-label="בחירת פונט קריאה" title="בחירת פונט">א</button>' +
           '<span class="lux-sel-foot-sep"></span>' +
           '<button type="button" class="lux-sel-scroll-btn" onclick="window._toggleAutoScroll(\'#lux-sel-area\', this)" aria-label="התחל גלילה אוטומטית">▶</button>' +
           '<button type="button" class="auto-scroll-speed-btn lux-sel-speed" onclick="window._cycleAutoScrollSpeed(this)" aria-label="מהירות גלילה">1x</button>' +
@@ -3356,7 +3357,7 @@
       // גודל אחיד לכל האתר — אותו מפתח ואותו בסיס (25px ב-100%) כמו בכל הקוראים
       var fs = parseInt(localStorage.getItem("moadim_prayer_font_size") || "100", 10) || 100;
       if (fs < 60 || fs > 200) fs = 100;
-      function applyFs() { area.style.setProperty("font-size", (fs / 100) * 25 + "px", "important"); try { localStorage.setItem("moadim_prayer_font_size", fs); } catch (_) {} if (window._btnToastVal && applyFs._user) window._btnToastVal("גודל כתב: " + fs + "%"); applyFs._user = false; }
+      function applyFs() { var _fsAnc = (applyFs._user && window._fontScrollAnchorCapture) ? window._fontScrollAnchorCapture(area) : null; area.style.setProperty("font-size", (fs / 100) * 25 + "px", "important"); if (_fsAnc && window._fontScrollAnchorRestore) window._fontScrollAnchorRestore(_fsAnc); try { localStorage.setItem("moadim_prayer_font_size", fs); } catch (_) {} if (window._btnToastVal && applyFs._user) window._btnToastVal("גודל כתב: " + fs + "%"); applyFs._user = false; }
       applyFs();
       ov.querySelector("#lux-sel-fplus").addEventListener("click", function () { fs = Math.min(200, fs + 10); applyFs._user = true; applyFs(); });
       ov.querySelector("#lux-sel-fminus").addEventListener("click", function () { fs = Math.max(60, fs - 10); applyFs._user = true; applyFs(); });
@@ -5082,6 +5083,7 @@
         '<div class="lux-sel-foot">' +
           '<button type="button" id="lux-tr-fminus" class="lux-sel-fbtn" aria-label="הקטן כתב">−</button>' +
           '<button type="button" id="lux-tr-fplus" class="lux-sel-fbtn" aria-label="הגדל כתב">+</button>' +
+          '<button type="button" class="rf-btn" onclick="if(window._openReaderFontPopup)window._openReaderFontPopup()" aria-label="בחירת פונט קריאה" title="בחירת פונט">א</button>' +
           '<span class="lux-sel-foot-sep"></span>' +
           '<button type="button" class="lux-sel-scroll-btn" onclick="window._toggleAutoScroll(\'#lux-tr-area\', this)" aria-label="התחל גלילה אוטומטית">▶</button>' +
           '<button type="button" class="auto-scroll-speed-btn lux-sel-speed" onclick="window._cycleAutoScrollSpeed(this)" aria-label="מהירות גלילה">1x</button>' +
@@ -5094,7 +5096,7 @@
       // גודל אחיד לכל האתר — אותו מפתח ואותו בסיס (25px ב-100%) כמו בכל הקוראים
       var fs = parseInt(localStorage.getItem("moadim_prayer_font_size") || "100", 10) || 100;
       if (fs < 60 || fs > 200) fs = 100;
-      function applyFs() { area.style.setProperty("font-size", (fs / 100) * 25 + "px", "important"); try { localStorage.setItem("moadim_prayer_font_size", fs); } catch (_) {} if (window._btnToastVal && applyFs._user) window._btnToastVal("גודל כתב: " + fs + "%"); applyFs._user = false; }
+      function applyFs() { var _fsAnc = (applyFs._user && window._fontScrollAnchorCapture) ? window._fontScrollAnchorCapture(area) : null; area.style.setProperty("font-size", (fs / 100) * 25 + "px", "important"); if (_fsAnc && window._fontScrollAnchorRestore) window._fontScrollAnchorRestore(_fsAnc); try { localStorage.setItem("moadim_prayer_font_size", fs); } catch (_) {} if (window._btnToastVal && applyFs._user) window._btnToastVal("גודל כתב: " + fs + "%"); applyFs._user = false; }
       applyFs();
       ov.querySelector("#lux-tr-fplus").addEventListener("click", function () { fs = Math.min(200, fs + 10); applyFs._user = true; applyFs(); });
       ov.querySelector("#lux-tr-fminus").addEventListener("click", function () { fs = Math.max(60, fs - 10); applyFs._user = true; applyFs(); });
@@ -5382,18 +5384,21 @@
       var ov = document.createElement("div");
       ov.id = "lux-plan-reader";
       ov.__luxOpenedAt = Date.now();
+      var hdPct = Math.min(100, Math.round((pl.done / bk.count) * 100));
       ov.innerHTML =
         '<div class="lux-sel-head">' +
           '<div class="lux-sel-titles">' +
             '<h2>' + bk.icon + " " + esc(bk.he) + "</h2>" +
-            '<p>יום ' + dayNum + " מתוך " + totalDays + " · " + esc(bk.unit) + " " + (from + 1) + (to > from + 1 ? "–" + to : "") + "</p>" +
+            '<p>יום ' + dayNum + " מתוך " + totalDays + " · " + esc(bk.unit) + " " + (from + 1) + (to > from + 1 ? "–" + to : "") + ' · <b style="color:#f2d98a;">' + hdPct + "%</b></p>" +
           "</div>" +
           '<button type="button" class="lux-sel-close" aria-label="סגור">✕</button>' +
+          '<div class="lux-pl-head-prog" aria-hidden="true"><div class="lux-pl-head-fill" style="width:' + hdPct + '%;"></div></div>' +
         "</div>" +
         '<div id="lux-pl-area" class="lux-sel-area holy-text-style"><p style="text-align:center;color:#94a3b8;padding:2rem;">טוען את הלימוד של היום...</p></div>' +
         '<div class="lux-sel-foot">' +
           '<button type="button" id="lux-pl-fminus" class="lux-sel-fbtn" aria-label="הקטן כתב">−</button>' +
           '<button type="button" id="lux-pl-fplus" class="lux-sel-fbtn" aria-label="הגדל כתב">+</button>' +
+          '<button type="button" class="rf-btn" onclick="if(window._openReaderFontPopup)window._openReaderFontPopup()" aria-label="בחירת פונט קריאה" title="בחירת פונט">א</button>' +
           '<span class="lux-sel-foot-sep"></span>' +
           '<button type="button" class="lux-sel-scroll-btn" onclick="window._toggleAutoScroll(\'#lux-pl-area\', this)" aria-label="התחל גלילה אוטומטית">▶</button>' +
           '<button type="button" class="auto-scroll-speed-btn lux-sel-speed" onclick="window._cycleAutoScrollSpeed(this)" aria-label="מהירות גלילה">1x</button>' +
@@ -5405,7 +5410,7 @@
       // גודל אחיד לכל האתר — אותו מפתח ואותו בסיס (25px ב-100%) כמו בכל הקוראים
       var fs = parseInt(localStorage.getItem("moadim_prayer_font_size") || "100", 10) || 100;
       if (fs < 60 || fs > 200) fs = 100;
-      function applyFs() { area.style.setProperty("font-size", (fs / 100) * 25 + "px", "important"); try { localStorage.setItem("moadim_prayer_font_size", fs); } catch (_) {} if (window._btnToastVal && applyFs._user) window._btnToastVal("גודל כתב: " + fs + "%"); applyFs._user = false; }
+      function applyFs() { var _fsAnc = (applyFs._user && window._fontScrollAnchorCapture) ? window._fontScrollAnchorCapture(area) : null; area.style.setProperty("font-size", (fs / 100) * 25 + "px", "important"); if (_fsAnc && window._fontScrollAnchorRestore) window._fontScrollAnchorRestore(_fsAnc); try { localStorage.setItem("moadim_prayer_font_size", fs); } catch (_) {} if (window._btnToastVal && applyFs._user) window._btnToastVal("גודל כתב: " + fs + "%"); applyFs._user = false; }
       applyFs();
       ov.querySelector("#lux-pl-fplus").addEventListener("click", function () { fs = Math.min(200, fs + 10); applyFs._user = true; applyFs(); });
       ov.querySelector("#lux-pl-fminus").addEventListener("click", function () { fs = Math.max(60, fs - 10); applyFs._user = true; applyFs(); });
@@ -5655,6 +5660,30 @@
     }
     /* ── תגי התמדה בלימוד — רצף יומי; מתאפסים בכל תחילת חצי שנה ── */
     var STREAK_KEY = "lux_plan_streak_v1";
+    // רשימת ימי-לימוד (עד 60 אחרונים) — לרצועת השבוע בכרטיסי הסדר; מפתח חדש ונוסף,
+    // אינו משנה את מבני הנתונים הקיימים (lux_study_plans_v1 / lux_plan_streak_v1)
+    var DAYS_KEY = "lux_plan_days_v1";
+    function _recordDayList() {
+      var a = jget(DAYS_KEY, []);
+      var t = todayStr();
+      if (a.indexOf(t) === -1) { a.push(t); if (a.length > 60) a = a.slice(-60); jset(DAYS_KEY, a); }
+    }
+    function _unrecordDayList() {
+      var a = jget(DAYS_KEY, []);
+      var i = a.indexOf(todayStr());
+      if (i !== -1) { a.splice(i, 1); jset(DAYS_KEY, a); }
+    }
+    // ימים שלמים שעברו מתאריך "YYYY-MM-DD" (מקומי) ועד היום — לסטטוס הקצב
+    function _plDayDiff(iso) {
+      try {
+        var p = String(iso || "").split("-");
+        if (p.length !== 3) return 0;
+        var a = new Date(+p[0], +p[1] - 1, +p[2]);
+        var n = new Date();
+        var b = new Date(n.getFullYear(), n.getMonth(), n.getDate());
+        return Math.max(0, Math.round((b - a) / 86400000));
+      } catch (e) { return 0; }
+    }
     function halfYearId() {
       var d = new Date();
       return d.getFullYear() + (d.getMonth() < 6 ? "H1" : "H2");
@@ -5699,6 +5728,7 @@
       el.addEventListener("click", function () { el.remove(); });
     }
     function recordStudyDay() {
+      _recordDayList();
       var s = planStreak();
       var today = todayStr();
       if (s.last === today) return;
@@ -5715,6 +5745,13 @@
     }
     // ביטול יום הלימוד של היום (לחיצה שנייה על "למדתי") — מחזיר את הרצף לאחור
     function unrecordStudyDay() {
+      // אם תוכנית אחרת עדיין מסומנת "נלמד היום" — היום עדיין יום-לימוד:
+      // לא מוחקים את נקודת-היום ברצועה ולא מפחיתים את הרצף
+      try {
+        var t = todayStr();
+        if (plans().some(function (p) { return p.lastDone === t; })) return;
+      } catch (e) {}
+      _unrecordDayList();
       var s = planStreak();
       if (s.last !== todayStr()) return;
       var y = new Date(Date.now() - 86400000);
@@ -5843,6 +5880,48 @@
     window.luxOpenPlanWizard = openWizard;
 
     /* ── הכרטיס בדף הראשי ── */
+    /* ── שינוי קצב לסדר קיים — perDay בלבד; מבנה הנתונים לא משתנה ── */
+    function openPaceSheet(id) {
+      var pl = null;
+      plans().forEach(function (p) { if (p.id === id) pl = p; });
+      var bk = pl ? bookOf(pl.bookId) : null;
+      if (!pl || !bk) return;
+      var maxU = Math.max(1, Math.min(bk.count, 120));
+      var ov = luxSheet("lux-plan-pace",
+        '<h3 class="lux-sheet-title">⚙️ שינוי קצב הלימוד</h3>' +
+        '<p class="lux-sheet-note">' + bk.icon + " <b>" + esc(bk.he) + "</b> — כמה " + esc(unitsOf(bk)) + " ללמוד בכל יום?</p>" +
+        '<div class="lux-pw-slider-row">' +
+          '<input type="range" id="lux-pp-units" min="1" max="' + maxU + '" step="1" value="' + Math.min(maxU, pl.perDay) + '" class="lux-pw-range" aria-label="' + esc(unitsOf(bk)) + ' ביום">' +
+          '<span id="lux-pp-lbl" class="lux-pw-slider-val">' + Math.min(maxU, pl.perDay) + "</span>" +
+        "</div>" +
+        '<div id="lux-pp-sum" class="lux-dt-out"></div>' +
+        '<div class="lux-sheet-actions">' +
+          '<button type="button" id="lux-pp-save" class="lux-sheet-primary">💾 שמירת הקצב החדש</button>' +
+          '<button type="button" class="lux-sheet-cancel">ביטול</button>' +
+        "</div>");
+      if (!ov) return;
+      var rng = ov.querySelector("#lux-pp-units"), lbl = ov.querySelector("#lux-pp-lbl"), sum = ov.querySelector("#lux-pp-sum");
+      function upd() {
+        var v = parseInt(rng.value, 10) || 1;
+        lbl.textContent = v;
+        var leftDays = Math.max(0, Math.ceil((bk.count - pl.done) / v));
+        sum.innerHTML = '<span class="lux-dt-big">' + (v === 1 ? esc(bk.unit) + " אחד" : v + " " + esc(unitsOf(bk))) + " ביום</span> · ~" + fmtMin(v * bk.min) + " ביום · סיום בעוד כ־" + leftDays + " ימים בע\"ה";
+      }
+      rng.addEventListener("input", upd);
+      upd();
+      ov.querySelector("#lux-pp-save").addEventListener("click", function () {
+        var v = parseInt(rng.value, 10) || 1;
+        var all = plans();
+        // עוגן קצב: הציפייה מחושבת מהיום ומההתקדמות הנוכחית — שינוי קצב לא
+        // "ממציא" פיגור רטרואקטיבי על הימים שכבר עברו (שדות נוספים, לא שינוי מבנה)
+        all.forEach(function (p) { if (p.id === id) { p.perDay = v; p.paceFrom = todayStr(); p.paceBaseDone = p.done; } });
+        savePlans(all);
+        luxModalClose("lux-plan-pace");
+        renderRow();
+        if (window._btnToastVal) window._btnToastVal("קצב חדש: " + v + " " + unitsOf(bk) + " ביום ✓");
+      });
+      ov.querySelector(".lux-sheet-cancel").addEventListener("click", function () { luxModalClose("lux-plan-pace"); });
+    }
     function renderRow() {
       var row = document.getElementById("lux-plan-row");
       if (!row) return;
@@ -5856,6 +5935,17 @@
           '<span><b>בניית סדר לימוד אישי</b><br><small>בחרו ספר וקצב — והאתר יחלק לכם אותו לימים, יציג בכל יום את הקטע שלכם ויעקוב אחרי ההתקדמות</small></span>' +
         "</button>";
       } else {
+        // ── רצועת השבוע: נקודת זהב על כל יום שנלמד (מפתח lux_plan_days_v1) ──
+        var daysArr = jget(DAYS_KEY, []);
+        var dots = "";
+        var _nowD = new Date();
+        for (var di = 6; di >= 0; di--) {
+          // חישוב לפי רכיבי תאריך מקומיים (setDate) — עמיד לשעון קיץ, בניגוד לחיסור 24h גולמי
+          var dd = new Date(_nowD.getFullYear(), _nowD.getMonth(), _nowD.getDate() - di);
+          var ds = dd.getFullYear() + "-" + String(dd.getMonth() + 1).padStart(2, "0") + "-" + String(dd.getDate()).padStart(2, "0");
+          dots += '<span class="lux-plan-day' + (daysArr.indexOf(ds) !== -1 ? " on" : "") + (di === 0 ? " today" : "") + '">' + "אבגדהוש".charAt(dd.getDay()) + "</span>";
+        }
+        inner += '<div class="lux-plan-days" title="ימי הלימוד בשבוע האחרון">' + dots + "</div>";
         inner += all.map(function (pl) {
           var bk = bookOf(pl.bookId);
           if (!bk) return "";
@@ -5863,16 +5953,40 @@
           var left = daysLeft(pl, bk);
           var finished = pl.done >= bk.count;
           var doneToday = pl.lastDone === todayStr();
+          var dayNum = Math.min(Math.ceil(bk.count / pl.perDay), Math.floor(pl.done / pl.perDay) + 1);
+          var totalDays = Math.ceil(bk.count / pl.perDay);
+          // סטטוס קצב: כמה היה אמור להילמד עד אתמול-בערב מול מה שנלמד בפועל.
+          // אחרי שינוי קצב — הציפייה נמדדת מנקודת העוגן (paceFrom/paceBaseDone),
+          // כדי שהקצב החדש לא יוחל רטרואקטיבית על העבר
+          var baseDone = (typeof pl.paceBaseDone === "number" && pl.paceFrom) ? pl.paceBaseDone : 0;
+          var daysPassed = _plDayDiff(pl.paceFrom || pl.created);
+          var expected = Math.min(bk.count, baseDone + daysPassed * pl.perDay);
+          var gap = pl.done - expected;
+          var status = finished ? "" :
+            gap >= 0 ? '<span class="lux-plan-status ok">✓ בקצב מצוין</span>' :
+            gap >= -pl.perDay ? '<span class="lux-plan-status ok">כמעט בקצב</span>' :
+            '<span class="lux-plan-status warn">להשלמה: ' + (-gap) + " " + esc(unitsOf(bk)) + "</span>";
           return '<div class="lux-plan-card" data-pl="' + pl.id + '">' +
             '<div class="lux-plan-top">' +
-              '<span class="lux-plan-name">' + bk.icon + " " + esc(bk.he) + "</span>" +
-              '<button type="button" class="lux-plan-del" data-del="' + pl.id + '" title="מחיקת הסדר" aria-label="מחיקה">✕</button>' +
+              '<span class="lux-plan-name"><span class="lux-plan-ico">' + bk.icon + "</span> " + esc(bk.he) +
+                ((pl.streak || 0) >= 2 ? ' <span class="lux-plan-flame" title="רצף ימים בסדר הזה">🔥' + pl.streak + "</span>" : "") +
+              "</span>" +
+              '<span class="lux-plan-top-btns">' +
+                (finished ? "" : '<button type="button" class="lux-plan-edit" data-edit="' + pl.id + '" title="שינוי קצב הלימוד" aria-label="שינוי קצב">⚙</button>') +
+                '<button type="button" class="lux-plan-del" data-del="' + pl.id + '" title="מחיקת הסדר" aria-label="מחיקה">✕</button>' +
+              "</span>" +
             "</div>" +
-            '<div class="lux-plan-bar"><div class="lux-plan-fill" style="width:' + pct + '%;"></div></div>' +
+            '<div class="lux-plan-barrow">' +
+              '<div class="lux-plan-bar"><div class="lux-plan-fill" style="width:' + pct + '%;"></div></div>' +
+              '<span class="lux-plan-pct">' + pct + "%</span>" +
+            "</div>" +
             '<div class="lux-plan-stats">' +
-              "<span>" + pl.done + "/" + bk.count + " " + esc(unitsOf(bk)) + " · " + pct + "%</span>" +
+              "<span>" + pl.done + "/" + bk.count + " " + esc(unitsOf(bk)) +
+                (finished ? "" : " · יום " + dayNum + "/" + totalDays) + "</span>" +
               "<span>" + (finished ? "🎉 הושלם!" : "נותרו כ־" + left + " ימים") + "</span>" +
             "</div>" +
+            (status ? '<div class="lux-plan-statusrow">' + status +
+              '<span class="lux-plan-pace">' + (pl.perDay === 1 ? esc(bk.unit) + " אחד" : pl.perDay + " " + esc(unitsOf(bk))) + " ביום · ~" + fmtMin(pl.perDay * bk.min) + "</span></div>" : "") +
             (finished
               ? '<button type="button" class="lux-plan-open" data-open="' + pl.id + '">📖 עיון חוזר</button>'
               : '<button type="button" class="lux-plan-open' + (doneToday ? " lux-plan-open-done" : "") + '" data-open="' + pl.id + '">' + (doneToday ? "✓ הלימוד של היום הושלם" : "📖 ללימוד של היום") + "</button>") +
@@ -5885,6 +5999,12 @@
       if (add) add.addEventListener("click", openWizard);
       row.querySelectorAll("[data-open]").forEach(function (b) {
         b.addEventListener("click", function () { openPlanReader(b.getAttribute("data-open")); });
+      });
+      row.querySelectorAll("[data-edit]").forEach(function (b) {
+        b.addEventListener("click", function (ev) {
+          ev.stopPropagation();
+          openPaceSheet(b.getAttribute("data-edit"));
+        });
       });
       row.querySelectorAll("[data-del]").forEach(function (b) {
         b.addEventListener("click", function (ev) {
@@ -6178,31 +6298,66 @@
      הכותרת והרקע מתחלפים לאווירת שבת, וגריד התפילות הרגיל מוחלף בכפתורים
      שרלוונטיים לשבת (שיר השירים, שניים מקרא, פרשה, זמנים...). הספירה לאחור
      נשארת במקומה. המצב נמשך עד מוצאי שבת/חג (~25.5 שעות מההדלקה).
-     בדיקה ידנית: ?erev=shabbat או ?erev=chag בכתובת (?erev=0 מבטל). */
+     שבת+חג יחד (חג שחל בשבת / חלונות צמודים) → "שבת שלום וחג שמח";
+     יום כיפור → "גמר חתימה טובה"; ראש השנה → "שנה טובה ומתוקה".
+     בדיקה ידנית: ?erev=shabbat / ?erev=chag / ?erev=both בכתובת (?erev=0 מבטל). */
   safe("erevShabbatMode", function () {
     var LEAD_MS = 3 * 3600000;         // שלוש שעות לפני ההדלקה
     var AFTER_MS = 25.5 * 3600000;     // עד אחרי ההבדלה
     var force = null;
     try {
       var q = new URLSearchParams(location.search).get("erev");
-      if (q === "shabbat" || q === "chag") force = q;
+      if (q === "shabbat" || q === "chag" || q === "both") force = q;
     } catch (e) {}
 
-    // מחזיר {kind:"shabbat"|"chag", candles:Date, entered:bool} או null
+    // תאריך מקומי בפורמט של ALL_EVENTS (YYYY-MM-DD)
+    function isoOf(d) {
+      var m = d.getMonth() + 1, dd = d.getDate();
+      return d.getFullYear() + "-" + (m < 10 ? "0" : "") + m + "-" + (dd < 10 ? "0" : "") + dd;
+    }
+    // אירוע יום-טוב אמיתי בתאריך נתון — לזיהוי "חג שחל בשבת". משתמש בפרדיקט
+    // המשותף מ-script.js: type:"major" לבדו תופס בטעות גם חנוכה, פורים, ערבי-חגים
+    // וחול-המועד (כולם subcat major בהזנת hebcal) — ואז כל שבת חנוכה הייתה
+    // מוצגת כ"שבת שלום וחג שמח" בלי פרשת השבוע.
+    function holidayEventOn(iso) {
+      var pred = window._isYomTovHavdalaEvent;
+      if (typeof pred !== "function") return null; // שמרני: בלי הפרדיקט אין שילוב
+      var evs = window.ALL_EVENTS_FULL || window.ALL_EVENTS || [];
+      for (var i = 0; i < evs.length; i++) {
+        var ev = evs[i];
+        if (ev && ev.date === iso && pred(ev)) return ev;
+      }
+      return null;
+    }
+    // מחזיר {kind:"shabbat"|"chag", candles:Date, entered:bool, both:bool, holEvent} או null.
+    // both=true כששבת וחג חלים יחד (חג שחל בשבת, או חלונות שבת+חג צמודים פעילים בו-זמנית).
     function state() {
       var now = new Date();
-      if (force) return { kind: force, candles: new Date(now.getTime() + 47 * 60000), entered: false };
+      if (force) return { kind: force === "chag" ? "chag" : "shabbat", candles: new Date(now.getTime() + 47 * 60000), entered: false, both: force === "both", holEvent: null };
       var sc = window.SHABBAT_CANDLES_TIME, hc = window.HOLIDAY_CANDLES_TIME;
-      var best = null;
+      var best = null, saw = { shabbat: null, chag: null };
       function consider(kind, t) {
         if (!(t instanceof Date) || isNaN(t)) return;
         var d = t - now;
         if (d > LEAD_MS || d < -AFTER_MS) return;
-        if (!best || Math.abs(d) < Math.abs(best.candles - now)) best = { kind: kind, candles: t, entered: d <= 0 };
+        var cand = { kind: kind, candles: t, entered: d <= 0, both: false, holEvent: null };
+        saw[kind] = cand;
+        if (!best || Math.abs(d) < Math.abs(best.candles - now)) best = cand;
       }
       // שבת — רק אם ההדלקה היא ביום שישי (SHABBAT_CANDLES_TIME הוא תמיד שישי הקרוב)
       if (sc && sc.getDay() === 5) consider("shabbat", sc);
       if (hc) consider("chag", hc);
+      if (best) {
+        // חלונות שבת וחג פעילים יחד (למשל שבת שאחריה חג במוצאה, או חג ביום שישי)
+        if (saw.shabbat && saw.chag) best.both = true;
+        // חג שחל בשבת עצמה: נרות שבת בלבד (נרות-חג מסוננים בימי שישי), אבל יום
+        // השבת הוא יום-טוב — למשל סוכות א' או שמיני עצרת שחלים בשבת
+        if (best.kind === "shabbat") {
+          var satIso = isoOf(new Date(best.candles.getTime() + 24 * 3600000));
+          var ev = holidayEventOn(satIso);
+          if (ev) { best.both = true; best.holEvent = ev; }
+        }
+      }
       return best;
     }
 
@@ -6215,6 +6370,39 @@
       return (p && p !== "--") ? p : "";
     }
     function holName() { return window.HOLIDAY_NAME_HE || "חג"; }
+    // HOLIDAY_NAME_HE מגיע לעיתים באנגלית (למשל "Erev Yom Kippur" מפריט hebcal ללא
+    // שדה עברי) — מתרגמים לשמות עבריים לתצוגה ולזיהוי סוג הברכה
+    function _holHebName(n) {
+      n = String(n || "");
+      if (!/[A-Za-z]/.test(n)) return n; // כבר בעברית
+      if (/Kippur/i.test(n)) return "יום הכיפורים";
+      if (/Rosh Hashana/i.test(n)) return "ראש השנה";
+      if (/Simchat Torah/i.test(n)) return "שמחת תורה";
+      if (/Shmini Atzeret/i.test(n)) return "שמיני עצרת";
+      if (/Sukkot/i.test(n)) return "סוכות";
+      if (/Pesach|Passover/i.test(n)) return "פסח";
+      if (/Shavuot/i.test(n)) return "שבועות";
+      return n;
+    }
+    // שם החג לתצוגה — כשחג חל בשבת עצמה שם החג מגיע מהאירוע שנמצא ב-state()
+    // (צינור נרות-החג מסנן הדלקות של ימי שישי ולכן HOLIDAY_NAME_HE עלול להיות ריק/ישן)
+    function dispHolName(st) {
+      // name (המנורמל) עדיף על heb — שדה heb של hebcal כולל לעיתים את מספר השנה
+      // ("ראש השנה 5787"); בסוף מוסר גם ספיח-שנה אם נשאר
+      var raw = st && st.holEvent ? (st.holEvent.name || st.holEvent.heb || holName()) : holName();
+      return _holHebName(String(raw).replace(/\s+\d{4,4}\s*$/, ""));
+    }
+    // סוג הברכה לפי החג: ביום כיפור אין "חג שמח" אלא "גמר חתימה טובה"; בראש השנה "שנה טובה"
+    function holGreetKind(st) {
+      var n = String(dispHolName(st));
+      if (/כיפור|כפור/.test(n)) return "yk";
+      if (/ראש השנה/.test(n)) return "rh";
+      return "chag";
+    }
+    function chagGreetWord(st) {
+      var gk = holGreetKind(st);
+      return gk === "yk" ? "גמר חתימה טובה" : gk === "rh" ? "שנה טובה ומתוקה" : "חג שמח";
+    }
     function hasDvarTorah(name) {
       try { var k = window._matchMoad && window._matchMoad(name); return !!(k && window._DT && window._DT[k]); } catch (e) { return false; }
     }
@@ -6245,7 +6433,7 @@
     };
     function gridHtml(st) {
       var b = [];
-      if (st.kind === "shabbat") {
+      if (st.kind === "shabbat" || st.both) {
         var p = parshaName();
         b.push(btn("🌹", "שיר השירים", "shir", "lux-erev-hot"));
         b.push(btn("📜", "שניים מקרא ואחד תרגום", "shnayim", "lux-erev-hot"));
@@ -6270,7 +6458,8 @@
         b.push(btn("📚", "ספרים נוספים", "sefarim"));
       }
       return '<div class="lux-erev-grid-head">' +
-          (st.kind === "shabbat" ? "🕯️ לכבוד שבת קודש" : "🕯️ לכבוד " + esc(holName())) +
+          (st.both ? "🕯️ לכבוד שבת קודש ו" + esc(dispHolName(st)) :
+           st.kind === "shabbat" ? "🕯️ לכבוד שבת קודש" : "🕯️ לכבוד " + esc(dispHolName(st))) +
         "</div>" +
         '<div class="grid grid-cols-3 gap-2">' + b.join("") + "</div>";
     }
@@ -6278,20 +6467,35 @@
     // כדי שהעיטורים המונפשים (אבק, נרות, הילה) לא ייבנו מחדש ולא ירצדו
     function panelDynHtml(st) {
       var isS = st.kind === "shabbat";
-      var enter = isS ? (window.SHABBAT_CANDLES_STR || txt("shabbat-enter")) : (window.HOLIDAY_CANDLES_STR || "");
-      var exit = isS ? (window.SHABBAT_HAVDALAH_STR || txt("shabbat-exit")) : (window.HOLIDAY_HAVDALAH_STR || "");
-      var p = isS ? parshaName() : "";
-      var hn = holName();
-      var sub = isS ? (p ? "פרשת " + p : "") : (hn !== "חג" ? hn : "");
-      return '<div class="lux-erev-title">' + (isS ? "שבת שלום" : "חג שמח") + "</div>" +
+      var showShabbat = isS || st.both; // בשילוב שבת+חג — זמני השבת הם הקובעים בתצוגה
+      var enter = showShabbat ? (window.SHABBAT_CANDLES_STR || txt("shabbat-enter")) : (window.HOLIDAY_CANDLES_STR || "");
+      var exit = showShabbat ? (window.SHABBAT_HAVDALAH_STR || txt("shabbat-exit")) : (window.HOLIDAY_HAVDALAH_STR || "");
+      var p = showShabbat && !st.both ? parshaName() : "";
+      var hn = dispHolName(st);
+      var gk = holGreetKind(st);
+      var chagWord = st.both ? (gk === "rh" ? "שנה טובה" : gk === "yk" ? "גמר חתימה טובה" : "חג שמח") : chagGreetWord(st);
+      var title = st.both ? "שבת שלום ו" + chagWord : (isS ? "שבת שלום" : chagWord);
+      // כשחג חל בשבת אין פרשת-שבוע רגילה (קוראים בחג) — מציגים את שם החג
+      var sub = st.both ? (hn !== "חג" ? hn : "") : (isS ? (p ? "פרשת " + p : "") : (hn !== "חג" ? hn : ""));
+      var tag = st.both ? "בואי כלה שבת המלכה — ומועדים לשמחה" :
+        isS ? "בואי כלה, שבת המלכה" :
+        gk === "yk" ? "יהי רצון שתיחתמו בספר החיים" :
+        gk === "rh" ? "כתיבה וחתימה טובה" :
+        "מועדים לשמחה, חגים וזמנים לששון";
+      var entered = st.both ? "שבת שלום ו" + chagWord + " 🕊️" :
+        isS ? "שבת שלום ומבורך 🕊️" :
+        gk === "yk" ? "גמר חתימה טובה 🕊️" :
+        gk === "rh" ? "שנה טובה ומתוקה 🕊️" :
+        "מועדים לשמחה 🕊️";
+      return '<div class="lux-erev-title">' + title + "</div>" +
         '<div class="lux-erev-orn" aria-hidden="true"><span>✡</span></div>' +
         (sub ? '<div class="lux-erev-sub">' + esc(sub) + "</div>" : "") +
-        '<div class="lux-erev-tag">' + (isS ? "בואי כלה, שבת המלכה" : "מועדים לשמחה, חגים וזמנים לששון") + "</div>" +
+        '<div class="lux-erev-tag">' + tag + "</div>" +
         '<div class="lux-erev-times">' +
           (enter && enter !== "--:--" ? '<span>🕯️ הדלקת נרות <b dir="ltr">' + esc(enter) + "</b></span>" : "") +
-          (exit && exit !== "--:--" ? '<span>✨ ' + (isS ? "הבדלה" : "צאת החג") + ' <b dir="ltr">' + esc(exit) + "</b></span>" : "") +
+          (exit && exit !== "--:--" ? '<span>✨ ' + (showShabbat ? "הבדלה" : "צאת החג") + ' <b dir="ltr">' + esc(exit) + "</b></span>" : "") +
         "</div>" +
-        (st.entered ? '<div class="lux-erev-entered">' + (isS ? "שבת שלום ומבורך 🕊️" : "מועדים לשמחה 🕊️") + "</div>" : "");
+        (st.entered ? '<div class="lux-erev-entered">' + entered + "</div>" : "");
     }
     function panelHtml(st) {
       var dust = "";
@@ -6329,7 +6533,8 @@
       }
       if (!wrap || !gridWrap) return;
       body.classList.add("lux-erev");
-      body.classList.toggle("lux-erev-chag", st.kind === "chag");
+      // בשילוב שבת+חג — עיצוב השבת (הזהוב) קובע
+      body.classList.toggle("lux-erev-chag", st.kind === "chag" && !st.both);
       body.classList.toggle("lux-erev-entered", !!st.entered);
       // במצב כפוי לבדיקה — הספירה לאחור מוצגת עם ערך דמו (startShabbatCountdown מסתיר אותה כשאין יעד אמיתי)
       if (force && wrap.classList.contains("hidden")) {
@@ -6337,9 +6542,9 @@
         wrap.style.opacity = "1";
         var dd = document.getElementById("countdown-display"), tt = document.getElementById("countdown-event-type");
         if (dd) dd.textContent = "00:47:12";
-        if (tt) tt.textContent = st.kind === "chag" ? "כניסת החג" : "כניסת שבת";
+        if (tt) tt.textContent = st.both ? "כניסת שבת וחג" : st.kind === "chag" ? "כניסת החג" : "כניסת שבת";
       }
-      var key = [st.kind, st.entered ? 1 : 0, parshaName(), holName(), window.SHABBAT_CANDLES_STR, window.SHABBAT_HAVDALAH_STR, window.HOLIDAY_CANDLES_STR, window.HOLIDAY_HAVDALAH_STR].join("|");
+      var key = [st.kind, st.both ? 1 : 0, st.entered ? 1 : 0, parshaName(), dispHolName(st), window.SHABBAT_CANDLES_STR, window.SHABBAT_HAVDALAH_STR, window.HOLIDAY_CANDLES_STR, window.HOLIDAY_HAVDALAH_STR].join("|");
       if (panel && grid && key === lastKey) return;
       lastKey = key;
       if (!panel) {

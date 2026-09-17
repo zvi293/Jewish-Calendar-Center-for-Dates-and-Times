@@ -29,7 +29,7 @@
       /* Chok L'Israel Rashi inline colors — must override .holy-text-style */
       .chok-rashi-dibur { color: #b45309 !important; font-weight: 700; }
       .chok-rashi-sep   { color: #374151 !important; }
-      .chok-rashi-rest  { color: #4c1d95 !important; }
+      .chok-rashi-rest  { color: #000000 !important; }
       .chok-rashi-label { color: #7c3aed !important; font-size: 0.75em; font-weight: 700; display: block; margin-bottom: 0.15rem; }
       /* טקסטי-עזר בחוק לישראל (מראה-מקום, הערות, קרדיט) — היו אפור בהיר וקשה לקריאה;
          כהה על הקלף בשני ערכות הנושא (לרקע המודאל אין גרסה כהה), אותו גודל */
@@ -4902,12 +4902,12 @@ html.dark .lux-pl-cmchip2-d { color: #94a3b8; }
 .lux-pl-cm-p {
   font-size: 0.88em;
   line-height: 1.9;
-  color: #4c1d95;
+  color: #000000;
   margin: 0 0 0.35em;
 }
 html.dark .lux-pl-cm { background: rgba(124, 58, 237, 0.1); }
 html.dark .lux-pl-cm-t { color: #c4b5fd; }
-html.dark .lux-pl-cm-p { color: #ddd6fe; }
+html.dark .lux-pl-cm-p { color: #e2e8f0; }
 
 /* ── פופאפ מצב הירח — לפני מעבר לברכת הלבנה ── */
 #lux-moon-pop {
@@ -5278,6 +5278,169 @@ html.dark .lux-plan-stats { color: #b8a97a; }
   margin-top: 0.2rem;
 }
 html.dark .lux-plan-more { color: #d9c48a; }
+
+/* ── שדרוג עיצוב סדר הלימוד האישי (09/2026) — כרטיסים עשירים, רצועת שבוע,
+   סטטוס קצב, כפתור שינוי קצב, פס התקדמות בכותרת הקורא. הכללים כאן באים
+   אחרי הבסיס וגוברים עליו; המחלקות הישנות נשמרות (JS תלוי בהן). ── */
+.lux-plan-card {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(150deg, #fffdf5 0%, #faf3df 100%);
+  border: 1.5px solid rgba(201, 153, 58, 0.4);
+  border-radius: 1.25rem;
+  box-shadow: 0 8px 24px rgba(160, 118, 42, 0.1);
+  padding: 1rem 1.05rem 0.95rem;
+}
+.lux-plan-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: linear-gradient(to left, transparent, rgba(224, 183, 79, 0.9), transparent);
+}
+html.dark .lux-plan-card {
+  background: linear-gradient(150deg, #16233f 0%, #101a35 100%);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+.lux-plan-ico {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  border-radius: 0.6rem;
+  background: linear-gradient(135deg, rgba(224, 183, 79, 0.25), rgba(201, 153, 58, 0.12));
+  border: 1px solid rgba(201, 153, 58, 0.35);
+  font-size: 1rem;
+  vertical-align: middle;
+}
+.lux-plan-flame {
+  display: inline-block;
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(234, 88, 12, 0.12);
+  border: 1px solid rgba(234, 88, 12, 0.3);
+  color: #c2410c;
+  font-size: 0.66rem;
+  font-weight: 900;
+  vertical-align: middle;
+}
+html.dark .lux-plan-flame { background: rgba(251, 146, 60, 0.14); color: #fdba74; border-color: rgba(251, 146, 60, 0.35); }
+.lux-plan-top-btns { display: inline-flex; align-items: center; gap: 0.3rem; flex-shrink: 0; }
+.lux-plan-edit {
+  width: 1.7rem;
+  height: 1.7rem;
+  border-radius: 50%;
+  border: 1px solid rgba(201, 153, 58, 0.4);
+  background: rgba(224, 183, 79, 0.12);
+  color: #a1762a;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: transform 0.15s ease;
+}
+.lux-plan-edit:hover { transform: rotate(35deg) scale(1.1); }
+html.dark .lux-plan-edit { color: #f2d98a; background: rgba(242, 217, 138, 0.1); }
+.lux-plan-barrow { display: flex; align-items: center; gap: 0.55rem; }
+.lux-plan-barrow .lux-plan-bar { flex: 1; margin: 0; }
+.lux-plan-pct {
+  font-size: 0.72rem;
+  font-weight: 900;
+  color: #a1762a;
+  min-width: 2.2rem;
+  text-align: left;
+}
+html.dark .lux-plan-pct { color: #f2d98a; }
+.lux-plan-statusrow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin: 0.35rem 0 0.55rem;
+}
+.lux-plan-status {
+  display: inline-block;
+  padding: 0.14rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.64rem;
+  font-weight: 900;
+}
+.lux-plan-status.ok {
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #047857;
+}
+html.dark .lux-plan-status.ok { color: #6ee7b7; background: rgba(16, 185, 129, 0.14); }
+.lux-plan-status.warn {
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  color: #92400e;
+}
+html.dark .lux-plan-status.warn { color: #fcd34d; background: rgba(245, 158, 11, 0.14); }
+.lux-plan-pace { font-size: 0.62rem; font-weight: 700; color: #8a7434; }
+html.dark .lux-plan-pace { color: #b8a97a; }
+.lux-plan-days {
+  display: flex;
+  justify-content: center;
+  gap: 0.45rem;
+  margin: -0.15rem 0 0.65rem;
+  direction: rtl;
+}
+.lux-plan-day {
+  width: 1.65rem;
+  height: 1.65rem;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.62rem;
+  font-weight: 800;
+  color: #b3a06b;
+  background: rgba(201, 153, 58, 0.09);
+  border: 1px dashed rgba(201, 153, 58, 0.35);
+}
+.lux-plan-day.on {
+  background: linear-gradient(135deg, #e0b74f, #c9993a);
+  border: 1px solid rgba(201, 153, 58, 0.7);
+  color: #211603;
+  box-shadow: 0 2px 7px rgba(201, 153, 58, 0.4);
+}
+.lux-plan-day.today { outline: 2px solid rgba(201, 153, 58, 0.5); outline-offset: 1.5px; }
+html.dark .lux-plan-day { color: #8a7c55; background: rgba(242, 217, 138, 0.06); }
+/* חשוב: כלל ה-dark הבסיסי (0,2,1) גובר על .lux-plan-day.on (0,2,0) — לכן
+   הרקע הזהוב חייב להישנות כאן, אחרת נקודת יום-שנלמד נעלמת בערכה הכהה */
+html.dark .lux-plan-day.on {
+  color: #211603;
+  background: linear-gradient(135deg, #e0b74f, #c9993a);
+  border: 1px solid rgba(201, 153, 58, 0.7);
+}
+/* פס התקדמות דק בתחתית כותרת קורא הסדר */
+#lux-plan-reader .lux-sel-head { position: relative; }
+.lux-pl-head-prog {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: rgba(242, 217, 138, 0.14);
+}
+.lux-pl-head-fill {
+  height: 100%;
+  background: linear-gradient(to left, #e0b74f, #f2d98a);
+  border-radius: 0 2px 2px 0;
+  box-shadow: 0 0 8px rgba(224, 183, 79, 0.6);
+  transition: width 0.6s ease;
+}
+/* מובייל: ריווח נדיב ונגיעה נוחה */
+@media (max-width: 520px) {
+  .lux-plan-card { padding: 0.95rem 0.9rem 0.85rem; }
+  .lux-plan-day { width: 1.8rem; height: 1.8rem; }
+  .lux-plan-edit, .lux-plan-del { width: 1.9rem; height: 1.9rem; }
+}
 
 /* ── אשף סדר הלימוד ── */
 .lux-pw-step {
@@ -7297,6 +7460,120 @@ body { overscroll-behavior-y: contain; }
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
+   בחירת פונט קריאה (09/2026) — data-reader-font על <html> נקבע ב-script.js
+   (מפתח moadim_reader_font). ההחלה היא CSS בלבד: הכללים כאן גוברים (!important)
+   גם על font-family שנכתב inline בתבניות הקוראים, בלי לגעת ב-style של האלמנטים —
+   כך התאמות ה-[style*=] של המצב הכהה בהמשך הקובץ נשארות שלמות.
+   מיכלי הקריאה המכוסים: .holy-text-style (תפילה/דף יומי/חוק לישראל/תהילים/קוראי lux),
+   ספרים נוספים (#sn-reader-content), בן איש חי (#bih-content-area), שיר השירים
+   (#shir-scroll-area). ברירת המחדל (פרנק ריל) = בלי attribute = אפס שינוי. ── */
+html[data-reader-font="david"] .holy-text-style, html[data-reader-font="david"] .holy-text-style *,
+html[data-reader-font="david"] #sn-reader-content, html[data-reader-font="david"] #sn-reader-content *,
+html[data-reader-font="david"] #bih-content-area, html[data-reader-font="david"] #bih-content-area *,
+html[data-reader-font="david"] #shir-scroll-area, html[data-reader-font="david"] #shir-scroll-area *,
+html[data-reader-font="david"] #prayer-modal .holy-text-style, html[data-reader-font="david"] #prayer-modal .holy-text-style * {
+  font-family: 'David Libre', 'Frank Ruhl Libre', serif !important;
+}
+html[data-reader-font="noto"] .holy-text-style, html[data-reader-font="noto"] .holy-text-style *,
+html[data-reader-font="noto"] #sn-reader-content, html[data-reader-font="noto"] #sn-reader-content *,
+html[data-reader-font="noto"] #bih-content-area, html[data-reader-font="noto"] #bih-content-area *,
+html[data-reader-font="noto"] #shir-scroll-area, html[data-reader-font="noto"] #shir-scroll-area *,
+html[data-reader-font="noto"] #prayer-modal .holy-text-style, html[data-reader-font="noto"] #prayer-modal .holy-text-style * {
+  font-family: 'Noto Serif Hebrew', 'Frank Ruhl Libre', serif !important;
+}
+html[data-reader-font="alef"] .holy-text-style, html[data-reader-font="alef"] .holy-text-style *,
+html[data-reader-font="alef"] #sn-reader-content, html[data-reader-font="alef"] #sn-reader-content *,
+html[data-reader-font="alef"] #bih-content-area, html[data-reader-font="alef"] #bih-content-area *,
+html[data-reader-font="alef"] #shir-scroll-area, html[data-reader-font="alef"] #shir-scroll-area *,
+html[data-reader-font="alef"] #prayer-modal .holy-text-style, html[data-reader-font="alef"] #prayer-modal .holy-text-style * {
+  font-family: 'Alef', 'Frank Ruhl Libre', sans-serif !important;
+}
+html[data-reader-font="tinos"] .holy-text-style, html[data-reader-font="tinos"] .holy-text-style *,
+html[data-reader-font="tinos"] #sn-reader-content, html[data-reader-font="tinos"] #sn-reader-content *,
+html[data-reader-font="tinos"] #bih-content-area, html[data-reader-font="tinos"] #bih-content-area *,
+html[data-reader-font="tinos"] #shir-scroll-area, html[data-reader-font="tinos"] #shir-scroll-area *,
+html[data-reader-font="tinos"] #prayer-modal .holy-text-style, html[data-reader-font="tinos"] #prayer-modal .holy-text-style * {
+  font-family: 'Tinos', 'Frank Ruhl Libre', serif !important;
+}
+
+/* כפתור בחירת הפונט בסרגלים התחתונים — עיגול ענבר לצד ה-± האינדיגו וה-▶ הירוק */
+.rf-btn {
+  width: 38px; height: 38px; border-radius: 50%;
+  border: 1.5px solid rgba(180, 83, 9, 0.35);
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+  color: #b45309;
+  font-family: 'Frank Ruhl Libre', serif;
+  font-size: 1.2rem; font-weight: 900; line-height: 1;
+  cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 6px rgba(180, 83, 9, 0.15);
+  flex-shrink: 0;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  padding: 0;
+}
+.rf-btn:hover { transform: scale(1.08); box-shadow: 0 4px 10px rgba(180, 83, 9, 0.25); }
+html.dark .rf-btn {
+  background: linear-gradient(135deg, #292524 0%, #1c1917 100%);
+  color: #fbbf24;
+  border-color: rgba(251, 191, 36, 0.4);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+@media (max-width: 400px) {
+  .rf-btn { width: 34px; height: 34px; font-size: 1.05rem; }
+}
+
+/* חלונית בחירת הפונט — בסגנון חלונית "נושאי כלים", history-safe */
+.rf-pop {
+  position: fixed; left: 0.75rem; right: 0.75rem; bottom: 84px; z-index: 10050;
+  max-height: 62vh; overflow-y: auto;
+  background: #fff; border: 1px solid rgba(0, 0, 0, 0.1); border-radius: 1rem;
+  padding: 0.75rem 0.9rem 0.6rem;
+  direction: rtl; text-align: right;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.22);
+  max-width: 480px; margin: 0 auto;
+}
+.rf-pop-head { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.55rem; }
+.rf-pop-title { flex: 1; text-align: center; color: #1e293b; font-weight: 900; font-size: 0.92rem; }
+.rf-pop-x {
+  width: 30px; height: 30px; border-radius: 50%; border: 1px solid rgba(0, 0, 0, 0.12);
+  background: rgba(0, 0, 0, 0.04); color: #475569; cursor: pointer;
+  font-size: 0.9rem; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.rf-rows { display: flex; flex-direction: column; gap: 0.4rem; }
+.rf-row {
+  display: flex; align-items: center; gap: 0.6rem;
+  width: 100%; text-align: right; direction: rtl;
+  font-family: inherit;
+  padding: 0.55rem 0.7rem; border-radius: 0.8rem; cursor: pointer;
+  border: 1.5px solid rgba(0, 0, 0, 0.1); background: rgba(0, 0, 0, 0.02);
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.rf-row:hover { border-color: rgba(180, 83, 9, 0.45); }
+.rf-row-on { border-color: #b45309; background: rgba(180, 83, 9, 0.07); }
+.rf-row-check {
+  width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 0.8rem; font-weight: 900; color: #fff;
+  background: rgba(0, 0, 0, 0.08);
+}
+.rf-row-on .rf-row-check { background: #b45309; }
+.rf-row-main { display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; flex: 1; }
+.rf-row-name { font-size: 0.85rem; font-weight: 900; color: #1e293b; }
+.rf-row-desc { font-size: 0.66rem; font-weight: 600; color: #64748b; line-height: 1.3; }
+.rf-row-sample { font-size: 1.05rem; color: #0f172a; line-height: 1.6; margin-top: 0.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rf-pop-note { margin-top: 0.55rem; text-align: center; font-size: 0.64rem; font-weight: 600; color: #94a3b8; }
+html.dark .rf-pop { background: #1e293b; border-color: rgba(255, 255, 255, 0.12); }
+html.dark .rf-pop-title { color: #f1f5f9; }
+html.dark .rf-pop-x { background: rgba(255, 255, 255, 0.08); border-color: rgba(255, 255, 255, 0.15); color: #cbd5e1; }
+html.dark .rf-row { border-color: rgba(255, 255, 255, 0.12); background: rgba(255, 255, 255, 0.04); }
+html.dark .rf-row-on { border-color: #fbbf24; background: rgba(251, 191, 36, 0.1); }
+html.dark .rf-row-on .rf-row-check { background: #d97706; }
+html.dark .rf-row-name { color: #f1f5f9; }
+html.dark .rf-row-desc { color: #94a3b8; }
+html.dark .rf-row-sample { color: #e2e8f0; }
+html.dark .rf-pop-note { color: #64748b; }
+
+/* ═══════════════════════════════════════════════════════════════════════
    עיצוב כהה כלל-אתרי (09/2026) — כשנבחר עיצוב רקע כהה, גם הקוראים, התפילות
    והפופאפים שהיו בהירים מוחשכים. כל הכללים בסקופ html.dark בלבד, ומוגבלים
    למודאלים שהיו בהירים — המשטחים הכהים-בעיצובם (מעטפת ספרים נוספים, פאנלי
@@ -7581,7 +7858,7 @@ html.dark #chok-israel-modal-content .chok-meta { color: #cbd5e1 !important; }
 html.dark #chok-israel-modal-content .chok-meta a { color: #93c5fd !important; }
 html.dark #chok-israel-modal .chok-rashi-dibur { color: #fbbf24 !important; }
 html.dark #chok-israel-modal .chok-rashi-sep { color: #cbd5e1 !important; }
-html.dark #chok-israel-modal .chok-rashi-rest { color: #c4b5fd !important; }
+html.dark #chok-israel-modal .chok-rashi-rest { color: #e2e8f0 !important; }
 html.dark #chok-israel-modal .chok-rashi-label { color: #a78bfa !important; }
 html.dark #chok-israel-modal .chok-targum,
 html.dark #chok-israel-modal .chok-targum small,

@@ -1322,8 +1322,16 @@ async function openSefariaModal(hebTitle, enRef, opts) {
   window._dafState = null;
   // ניקוי כפתורי הפירושים של הדף היומי כשפותחים תוכן אחר במודאל
   if (!isDaf) document.getElementById("daf-cm-toggles")?.remove();
-  let cleanRef = _sefariaRefNormalize(enRef).replace("Parashat ", "").replace(/ /g, "_");
-  if (/\d/.test(cleanRef)) cleanRef = cleanRef.replace("_", "."); // For Daf Yomi
+  // פרשת השבוע: שומרים את הקידומת "Parashat" — כך ספריא מזהה את כל הפרשות.
+  // בלעדיה, פרשות עם גרש (האזינו, שלח, בהעלותך) לא נמצאו כלל ("לא נמצא טקסט"),
+  // ושאר הפרשות החזירו רק את הפרק הראשון של הספר במקום את הפרשה המלאה.
+  // שני איותים ש-hebcal וספריא חלוקים בהם מיושרים כאן (אומת מול כל 61 הפרשות
+  // והצירופים ב-18/09/2026).
+  let cleanRef = _sefariaRefNormalize(enRef)
+    .replace(/^Parashat Lech-Lecha$/, "Parashat Lech Lecha")
+    .replace(/^Parashat Vezot Haberakhah$/, "Parashat V'Zot HaBerachah")
+    .replace(/ /g, "_");
+  if (!/^Parashat_/.test(cleanRef) && /\d/.test(cleanRef)) cleanRef = cleanRef.replace("_", "."); // For Daf Yomi
 
   const m = document.getElementById("sefaria-modal");
   document.getElementById("sefaria-modal-title").textContent =

@@ -562,8 +562,21 @@
     var _relayoutT = null;
     window.addEventListener("resize", function () { clearTimeout(_relayoutT); _relayoutT = setTimeout(function () { Object.keys(_lineState).forEach(function (k) { var st = _lineState[k]; if (st && st.block && st.block.isConnected) paintLine(k, st.block, st.off); }); }, 150); });
     // שחזור הסימון — גם אחרי שהמודאל נבנה מחדש (innerHTML)
+    // iOS/ספארי: הקשה על טקסט "לא-אינטראקטיבי" לא מייצרת אירוע click למאזין
+    // שעל document, אלא אם לאלמנט או לאב שלו יש מאזין click ישיר — לכן כל
+    // אזור קריאה מקבל מאזין ריק פעם אחת (באנדרואיד/מחשב אין לכך שום השפעה).
+    // נקרא גם מה-MutationObserver של כפתורי הקוראים — כך קורא שנבנה זה עתה
+    // (innerHTML) נהיה לחיץ מיד ולא רק בטיק ה-1.2s הבא.
+    function ensureTapHosts() {
+      if (!enabled()) return;
+      AREAS.forEach(function (k) {
+        var host = document.querySelector(k);
+        if (host && !host.__luxMkTap) { host.__luxMkTap = 1; host.addEventListener("click", function () {}); }
+      });
+    }
     function restore() {
       if (!enabled() || document.hidden) return;
+      ensureTapHosts();
       // עטיפת שורות בקוראי התפילות (טקסט מבוסס <br>)
       document.querySelectorAll("#prayer-modal .modal-body").forEach(wrapLines);
       var marks = loadAll();
@@ -716,7 +729,7 @@
     try {
       new MutationObserver(function () {
         if (_mkPend) return;
-        _mkPend = setTimeout(function () { _mkPend = null; syncReaderBtns(); }, 150);
+        _mkPend = setTimeout(function () { _mkPend = null; syncReaderBtns(); ensureTapHosts(); }, 150);
       }).observe(document.body, { childList: true });
     } catch (e) {}
     setTimeout(syncReaderBtns, 0);

@@ -862,6 +862,14 @@
   box-shadow: 0 0 0 3px rgba(254, 240, 138, 0.2);
 }
 /* ── מרקר אוניברסלי — סימון שורה בכל הספרים והתפילות ── */
+/* iOS: אזורי הקריאה מקבלים מאזין click ישיר (תיקון המרקר בספארי, lux.js) —
+   בלי זה ספארי מהבהב הדגשה אפורה על כל נגיעה בטקסט */
+#sefaria-modal-content, #chok-israel-modal-content, #sn-reader-content,
+#psalm-text-area, #bih-content-area, #shir-scroll-area,
+#lux-sel-area, #lux-tr-area, #prayer-modal-body, #lux-pl-area,
+#prayer-modal .modal-body {
+  -webkit-tap-highlight-color: transparent;
+}
 .lux-mark-hl {
   background: linear-gradient(to bottom, transparent 6%, rgba(254, 240, 138, 0.55) 6%, rgba(254, 240, 138, 0.55) 90%, transparent 90%) !important;
   border-radius: 5px;

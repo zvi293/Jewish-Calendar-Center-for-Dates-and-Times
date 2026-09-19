@@ -107,18 +107,21 @@ function weekdayCell(a, b) {
   return `${WEEKDAY(a)}–${WEEKDAY(b)}`;
 }
 
-async function buildTable(tableHebYear, tableLabel) {
+async function fetchHebcalItems(tableHebYear) {
   const url =
     "https://www.hebcal.com/hebcal?v=1&cfg=json&year=" + tableHebYear +
-    "&yt=H&maj=on&min=on&mod=on&i=on&lg=he&geo=none";
+    "&yt=H&maj=on&min=on&mod=on&mf=on&i=on&lg=he&geo=none";
   const res = await fetch(url);
   if (!res.ok) throw new Error("Hebcal HTTP " + res.status);
   const data = await res.json();
   // כותרות מנורמלות: גרשיים טיפוגרפיים → ASCII, להתאמה יציבה
-  const items = (data.items || []).map((it) => ({
+  return (data.items || []).map((it) => ({
     t: (it.hebrew || it.title || "").replace(/[׳’]/g, "'").replace(/״/g, '"'),
     d: noon(it.date),
   }));
+}
+
+function buildTable(items, tableHebYear, tableLabel) {
   const all = (pred) => items.filter(pred).map((x) => x.d).sort((a, b) => a - b);
   const one = (pred) => {
     const r = all(pred);
@@ -150,18 +153,19 @@ async function buildTable(tableHebYear, tableLabel) {
     ? ` (שושן פורים: ${shushan.getUTCDate()}.${shushan.getUTCMonth() + 1})`
     : "";
 
+  // yt: יום טוב שיש לו זמני כניסה ויציאה בלוח (משפיע על ניסוח תשובות ה"מתי")
   const rows = [
-    { n: `ראש השנה ${tableLabel}`, a: rh[0], b: rh[rh.length - 1] },
-    { n: "יום כיפור", a: one((x) => x.t.startsWith("יום כיפור") && !x.t.startsWith("ערב")) },
-    { n: "סוכות", a: sukkot[0], b: sukkot[sukkot.length - 1] },
-    { n: "שמיני עצרת ושמחת תורה", a: one((x) => x.t.startsWith("שמיני עצרת")) },
+    { n: `ראש השנה ${tableLabel}`, a: rh[0], b: rh[rh.length - 1], yt: true },
+    { n: "יום כיפור", a: one((x) => x.t.startsWith("יום כיפור") && !x.t.startsWith("ערב")), yt: true },
+    { n: "סוכות", a: sukkot[0], b: sukkot[sukkot.length - 1], yt: true },
+    { n: "שמיני עצרת ושמחת תורה", a: one((x) => x.t.startsWith("שמיני עצרת")), yt: true },
     { n: "חנוכה", a: chanDay1, b: chanDay8, gregSuffix: chanNote },
     { n: 'ט"ו בשבט', a: one((x) => x.t.includes("בשבט")) },
     { n: "פורים", a: purim, gregSuffix: purimNote },
-    { n: "פסח", a: pesach[0], b: pesach[pesach.length - 1] },
+    { n: "פסח", a: pesach[0], b: pesach[pesach.length - 1], yt: true },
     { n: "יום העצמאות", a: one((x) => x.t.startsWith("יום העצמאות")) },
     { n: 'ל"ג בעומר', a: one((x) => x.t.includes("בעומר") && x.t.startsWith("ל")) },
-    { n: "שבועות", a: one((x) => x.t === "שבועות") },
+    { n: "שבועות", a: one((x) => x.t === "שבועות"), yt: true },
     { n: "תשעה באב", a: one((x) => x.t.startsWith("תשעה באב") && !x.t.startsWith("ערב")) },
   ];
 
@@ -178,7 +182,7 @@ async function buildTable(tableHebYear, tableLabel) {
     .join("\n");
 
   const gy = rh[0].getUTCFullYear();
-  return `<div class="mt-8 overflow-x-auto">
+  const html = `<div class="mt-8 overflow-x-auto">
           <h2 class="text-base font-black text-slate-600 dark:text-slate-300 mb-4">מועדי ישראל ${tableLabel} — תאריכים לועזיים</h2>
           <table class="w-full text-sm text-right text-slate-500 dark:text-slate-400 border-collapse">
             <caption class="sr-only">תאריכים לועזיים של מועדי ישראל בשנת ${tableLabel} (${gy}–${gy + 1})</caption>
@@ -195,6 +199,87 @@ ${tr}
             </tbody>
           </table>
           <p class="mt-2 text-xs text-slate-400 dark:text-slate-500">התאריכים לפי הלוח הנהוג בארץ ישראל. ללוח המלא, לזמני החגים המדויקים ולייצוא ליומן — השתמשו בלוח האינטראקטיבי שבראש הדף.</p>
+        </div>`;
+  return { html, rows };
+}
+
+/* ── שלב 3ב: תוכן תלוי-תאריך נוסף — טבלת צומות + שאלות "מתי חל..." ──
+   נבנה בין סמני LUACH-AUTO:EXTRA מאותם נתוני Hebcal, כדי שהתאריכים
+   לעולם לא יירקבו בגלגול שנה. */
+function buildExtra(items, tableLabel, rows) {
+  const all = (pred) => items.filter(pred).map((x) => x.d).sort((a, b) => a - b);
+  const first = (pred) => all(pred)[0] || null;
+  // שמות תצוגה משלנו; ההתאמה לכותרות Hebcal גמישה (הנוסח שלהם משתנה בין גרסאות)
+  const fasts = [
+    { n: "צום גדליה", d: first((x) => x.t.includes("גדליה")) },
+    { n: "צום עשרה בטבת", d: first((x) => x.t.includes("עשרה בטבת")) },
+    { n: "תענית אסתר", d: first((x) => x.t.includes("תענית אסתר")) },
+    { n: "תענית בכורות", d: first((x) => x.t.includes("בכורות")) },
+    { n: "צום שבעה עשר בתמוז", d: first((x) => x.t.includes("בתמוז") && (x.t.includes("צום") || x.t.includes("שבעה עשר"))) },
+    { n: "תשעה באב", d: first((x) => x.t.startsWith("תשעה באב") && !x.t.startsWith("ערב")) },
+  ].filter((f) => f.d);
+  if (fasts.length < 5) throw new Error("צומות חסרים בתשובת Hebcal (" + fasts.length + ")");
+
+  const fastTr = fasts
+    .map((f, i) => {
+      const border = i < fasts.length - 1 ? ' class="border-b border-slate-100 dark:border-slate-800"' : "";
+      return (
+        `              <tr${border}><td class="py-2 pl-4 font-semibold">${f.n}</td>` +
+        `<td class="py-2 pl-4">${hebDateCell(f.d)}</td>` +
+        `<td class="py-2 pl-4">${gregDateCell(f.d)}</td>` +
+        `<td class="py-2">${weekdayCell(f.d)}</td></tr>`
+      );
+    })
+    .join("\n");
+
+  // שאלות "מתי" — תשובה ישירה של משפט אחד מכל שורת חג בטבלה הראשית
+  const whenItems = rows
+    .map((r) => {
+      const name = r.n.includes(tableLabel) ? r.n : r.n + " " + tableLabel;
+      const range = r.b && r.a.getTime() !== r.b.getTime();
+      const answer = range
+        ? `${name} חל בתאריכים ${gregDateCell(r.a, r.b)} (${hebDateCell(r.a, r.b)}), בימים ${weekdayCell(r.a, r.b)}.`
+        : `${name} חל ביום ${weekdayCell(r.a)}, ${gregDateCell(r.a)} (${hebDateCell(r.a)}).`;
+      // רק ליום טוב יש זמני כניסה ויציאה; לשאר הימים — הפניה כללית ללוח
+      const tail = r.yt
+        ? " זמני כניסת החג ויציאתו מוצגים בלוח לפי העיר שלך."
+        : " פרטים נוספים וזמני היום — בלוח האינטראקטיבי שבראש הדף.";
+      return `            <details class="group">
+              <summary class="font-bold text-slate-600 dark:text-slate-300 cursor-pointer list-none flex justify-between items-center py-2 border-b border-slate-100 dark:border-slate-800">
+                מתי ${name}?
+                <span class="text-blue-500 group-open:rotate-180 transition-transform">▾</span>
+              </summary>
+              <div class="pt-2 pb-3 text-slate-500 dark:text-slate-400">
+                <p>${answer}${tail}</p>
+              </div>
+            </details>`;
+    })
+    .join("\n");
+
+  return `<div class="mt-8 overflow-x-auto">
+          <h2 class="text-base font-black text-slate-600 dark:text-slate-300 mb-4">צומות ותעניות ${tableLabel} — תאריכים לועזיים</h2>
+          <table class="w-full text-sm text-right text-slate-500 dark:text-slate-400 border-collapse">
+            <caption class="sr-only">תאריכים לועזיים של הצומות והתעניות בשנת ${tableLabel}</caption>
+            <thead>
+              <tr class="border-b border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300">
+                <th scope="col" class="py-2 pl-4 font-bold">הצום</th>
+                <th scope="col" class="py-2 pl-4 font-bold">תאריך עברי</th>
+                <th scope="col" class="py-2 pl-4 font-bold">תאריך לועזי</th>
+                <th scope="col" class="py-2 font-bold">יום בשבוע</th>
+              </tr>
+            </thead>
+            <tbody>
+${fastTr}
+            </tbody>
+          </table>
+          <p class="mt-2 text-xs text-slate-400 dark:text-slate-500">הצומות מתחילים בעלות השחר ומסתיימים בצאת הכוכבים, מלבד תשעה באב ויום הכיפורים הנמשכים מהערב עד צאת הכוכבים למחרת. עלות השחר וצאת הכוכבים לפי מיקומך מוצגים בלוח הזמנים שבראש הדף.</p>
+        </div>
+
+        <div class="mt-8">
+          <h2 class="text-base font-black text-slate-600 dark:text-slate-300 mb-4">מתי חלים החגים בשנת ${tableLabel}? — תשובות מהירות</h2>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+${whenItems}
+          </div>
         </div>`;
 }
 
@@ -217,8 +302,41 @@ try {
   const si = html.indexOf(START);
   const ei = html.indexOf(END);
   if (si === -1 || ei === -1 || ei < si) throw new Error("סמני LUACH-AUTO לא נמצאו");
-  const tableHtml = await buildTable(tableHebYear, tableLabel);
-  html = html.slice(0, si + START.length) + "\n        " + tableHtml + "\n        " + html.slice(ei);
+  const items = await fetchHebcalItems(tableHebYear);
+  const table = buildTable(items, tableHebYear, tableLabel);
+  html = html.slice(0, si + START.length) + "\n        " + table.html + "\n        " + html.slice(ei);
+
+  // 2ב) בלוק הצומות ושאלות "מתי" — כשל כאן לא מפיל את שאר העדכונים,
+  //     אבל חובה לרוקן את הבלוק הישן: replaceYearTokens כבר החליף בו את תוויות
+  //     השנה, ותוכן ישן עם תווית שנה חדשה = תאריכים שגויים (גרוע מבלוק חסר).
+  {
+    const XS = "<!-- LUACH-AUTO:EXTRA:START -->";
+    const XE = "<!-- LUACH-AUTO:EXTRA:END -->";
+    const xsi = html.indexOf(XS);
+    const xei = html.indexOf(XE);
+    if (xsi === -1 || xei === -1 || xei < xsi) {
+      console.warn("[build-year] extra block skipped: סמני LUACH-AUTO:EXTRA לא נמצאו");
+    } else {
+      let extraHtml = "";
+      try {
+        extraHtml = "\n        " + buildExtra(items, tableLabel, table.rows) + "\n        ";
+      } catch (e) {
+        console.warn("[build-year] extra block emptied (build failed):", e.message);
+        extraHtml = "\n        ";
+      }
+      html = html.slice(0, xsi + XS.length) + extraHtml + html.slice(xei);
+    }
+  }
+
+  // 2ג) חותמת "עודכן לאחרונה" הגלויה בבלוק ה-SEO
+  try {
+    const hebToday = today.toLocaleDateString("he-IL", {
+      day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Jerusalem",
+    });
+    html = html.replace(/(<span id="seo-updated">)[^<]*(<\/span>)/, `$1${hebToday}$2`);
+  } catch (e) {
+    console.warn("[build-year] seo-updated stamp skipped:", e.message);
+  }
 
   // 3) חותמות רעננות — בכל בילד (דיפלוי = תוכן חדש): שנת הפוטר, dateModified
   //    ב-JSON-LD של דף הבית, ו-lastmod בסייטמאפ (דף הבית = תאריך הבילד; שאר

@@ -5787,6 +5787,12 @@ html.dark #lux-plan-pace .lux-dt-out { color: #e2e8f0; }
   border-color: #a1762a;
   color: #211603;
 }
+/* לחלונית יש X דביק משלה — לכן ה-X הפינתי של האשף שמתחתיה מוסתר כל עוד היא פתוחה,
+   אחרת נראים שני ✕ בו-זמנית (זו היריעה המקוננת הראשונה שבה ה-X של הילד אינו מתלכד
+   עם של ההורה). אותה תבנית כמו body:has(#chapter-nav-popup) למטה: כשהחלונית מוסרת
+   מה-DOM הכלל מפסיק לחול מאליו — בלי קוד שחזור שעלול להיכשל ולהשאיר יריעה בלי X. */
+body:has(#lux-pw-pick) > .lux-ux,
+body:has(#lux-pw-pick) #lux-plan-wizard > .lux-ux { display: none !important; }
 /* X דביק בראש החלונית — לא נגלל החוצה עם התוכן (חוק ה-X של האתר); בקצה השמאלי */
 .lux-pw-pick-x {
   position: sticky;

@@ -1,4 +1,4 @@
-const STATIC_CACHE = "moadim-static-v88";
+const STATIC_CACHE = "moadim-static-v89";
 // מטמון ריצה: תשובות API וקבצים חיצוניים (ספריא, hebcal, פונטים, ספריות CDN)
 // נשמרים אחרי הצפייה הראשונה — כך האתר, התפילות והספרים עובדים גם בלי אינטרנט.
 const RUNTIME_CACHE = "moadim-runtime-v1";
@@ -18,7 +18,7 @@ const STATIC_ASSETS = [
   // בדיוק; סטייה עתידית מכוסה ע"י ה-fallback עם ignoreSearch.
   "/script.js?v=58",
   "/lux.js?v=57",
-  "/style.css?v=61",
+  "/style.css?v=62",
   "/tailwind.css?v=2",
   "/fonts.css?v=1",
   "/fonts/assistant-hebrew.woff2",

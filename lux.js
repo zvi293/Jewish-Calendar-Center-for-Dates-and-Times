@@ -5251,6 +5251,131 @@
     var KY_YD = [270, 271, 272, 273, 274, 275, 276, 277, 278, 279, 280, 281, 288, 290, 291];
     function kafOC(i) { var n = i + 1; return KY_OC.indexOf(n) >= 0 ? "Kol Yaakov, Orach Chayim " + n : "Kaf HaChayim on Shulchan Arukh, Orach Chayim " + n; }
     function kafYD(i) { var n = i + 1; return n <= 119 ? "Kaf HaChayim on Shulchan Arukh, Yoreh De'ah " + n : (KY_YD.indexOf(n) >= 0 ? "Kol Yaakov, Yoreh De'ah " + n : null); }
+    // ── תנ"ך — כל 39 הספרים; מספרי הפרקים אומתו אחד-אחד מול api/shape של ספריא (09/2026).
+    //    [ref באנגלית בספריא, שם עברי, פרקים, חטיבה 0=תורה 1=נביאים 2=כתובים] ──
+    var TAN_BOOKS = [
+      ["Genesis", "בראשית", 50, 0], ["Exodus", "שמות", 40, 0], ["Leviticus", "ויקרא", 27, 0],
+      ["Numbers", "במדבר", 36, 0], ["Deuteronomy", "דברים", 34, 0],
+      ["Joshua", "יהושע", 24, 1], ["Judges", "שופטים", 21, 1],
+      ["I Samuel", "שמואל א", 31, 1], ["II Samuel", "שמואל ב", 24, 1],
+      ["I Kings", "מלכים א", 22, 1], ["II Kings", "מלכים ב", 25, 1],
+      ["Isaiah", "ישעיהו", 66, 1], ["Jeremiah", "ירמיהו", 52, 1], ["Ezekiel", "יחזקאל", 48, 1],
+      ["Hosea", "הושע", 14, 1], ["Joel", "יואל", 4, 1], ["Amos", "עמוס", 9, 1],
+      ["Obadiah", "עובדיה", 1, 1], ["Jonah", "יונה", 4, 1], ["Micah", "מיכה", 7, 1],
+      ["Nahum", "נחום", 3, 1], ["Habakkuk", "חבקוק", 3, 1], ["Zephaniah", "צפניה", 3, 1],
+      ["Haggai", "חגי", 2, 1], ["Zechariah", "זכריה", 14, 1], ["Malachi", "מלאכי", 3, 1],
+      ["Psalms", "תהילים", 150, 2], ["Proverbs", "משלי", 31, 2], ["Job", "איוב", 42, 2],
+      ["Song of Songs", "שיר השירים", 8, 2], ["Ruth", "רות", 4, 2], ["Lamentations", "איכה", 5, 2],
+      ["Ecclesiastes", "קהלת", 12, 2], ["Esther", "אסתר", 10, 2], ["Daniel", "דניאל", 12, 2],
+      ["Ezra", "עזרא", 10, 2], ["Nehemiah", "נחמיה", 13, 2],
+      ["I Chronicles", "דברי הימים א", 29, 2], ["II Chronicles", "דברי הימים ב", 36, 2]
+    ];
+    // רש"י קיים בספריא על כל 39 הספרים (אומת 09/2026); מצודת דוד — על כל הנ"ך פרט לשלושתם:
+    var TAN_NO_METZUDAT = ["Ruth", "Lamentations", "Esther"];
+    // תהילים ומשלי כבר קיימים בקטלוג הראשי — חלונית הבחירה מפנה אליהם במקום לשכפל
+    function tanBookId(b) {
+      if (b[0] === "Psalms") return "tehillim";
+      if (b[0] === "Proverbs") return "mishlei";
+      return "tan-" + b[0].toLowerCase().replace(/ /g, "-");
+    }
+    // ── תלמוד בבלי — 37 מסכתות; אינדקסי העמודים הגלובליים זהים ל-TALMUD_TRACTATES
+    //    שב-script.js (אומתו שם מול api/shape) — משוכפלים כאן כי הם כלואים בסקופ אחר.
+    //    דף = ceil(k/2), אי-זוגי = עמוד א ("Berakhot.2a" הוא k=3) ──
+    var TAL_BOOKS = [
+      ["Berakhot", "ברכות", 0, 3, 127],
+      ["Shabbat", "שבת", 1, 3, 314], ["Eruvin", "עירובין", 1, 3, 209], ["Pesachim", "פסחים", 1, 3, 242],
+      ["Rosh_Hashanah", "ראש השנה", 1, 3, 69], ["Yoma", "יומא", 1, 3, 175], ["Sukkah", "סוכה", 1, 3, 112],
+      ["Beitzah", "ביצה", 1, 3, 80], ["Taanit", "תענית", 1, 3, 61], ["Megillah", "מגילה", 1, 3, 63],
+      ["Moed_Katan", "מועד קטן", 1, 3, 57], ["Chagigah", "חגיגה", 1, 3, 53],
+      ["Yevamot", "יבמות", 2, 3, 244], ["Ketubot", "כתובות", 2, 3, 224], ["Nedarim", "נדרים", 2, 3, 182],
+      ["Nazir", "נזיר", 2, 3, 132], ["Sotah", "סוטה", 2, 3, 98], ["Gittin", "גיטין", 2, 3, 180],
+      ["Kiddushin", "קידושין", 2, 3, 164],
+      ["Bava_Kamma", "בבא קמא", 3, 3, 238], ["Bava_Metzia", "בבא מציעא", 3, 3, 237],
+      ["Bava_Batra", "בבא בתרא", 3, 3, 352], ["Sanhedrin", "סנהדרין", 3, 3, 226], ["Makkot", "מכות", 3, 3, 48],
+      ["Shevuot", "שבועות", 3, 3, 98], ["Avodah_Zarah", "עבודה זרה", 3, 3, 152], ["Horayot", "הוריות", 3, 3, 27],
+      ["Zevachim", "זבחים", 4, 3, 240], ["Menachot", "מנחות", 4, 3, 219], ["Chullin", "חולין", 4, 3, 283],
+      ["Bekhorot", "בכורות", 4, 3, 121], ["Arakhin", "ערכין", 4, 3, 67], ["Temurah", "תמורה", 4, 3, 67],
+      ["Keritot", "כריתות", 4, 3, 56], ["Meilah", "מעילה", 4, 3, 43], ["Tamid", "תמיד", 4, 50, 66],
+      ["Niddah", "נדה", 5, 3, 145]
+    ];
+    var TAL_SEDARIM_HE = ["זרעים", "מועד", "נשים", "נזיקין", "קדשים", "טהרות"];
+    // מספר → אותיות עבריות בלי גרשיים ("קיט") — אותה טבלה כמו toHN של קורא הספרים
+    function heNum(n) {
+      if (n <= 0) return String(n);
+      var tbl = [[400, "ת"], [300, "ש"], [200, "ר"], [100, "ק"], [90, "צ"], [80, "פ"], [70, "ע"],
+        [60, "ס"], [50, "נ"], [40, "מ"], [30, "ל"], [20, "כ"], [19, "יט"], [18, "יח"], [17, "יז"], [16, "טז"], [15, "טו"], [10, "י"],
+        [9, "ט"], [8, "ח"], [7, "ז"], [6, "ו"], [5, "ה"], [4, "ד"], [3, "ג"], [2, "ב"], [1, "א"]];
+      var r = "";
+      for (var _i = 0; _i < tbl.length; _i++) {
+        var v = tbl[_i][0], h = tbl[_i][1];
+        while (n >= v) { r += h; n -= v; }
+      }
+      return r;
+    }
+    // טווח ספרי תנ"ך (רשימת אינדקסים ב-TAN_BOOKS) → מיפוי אינדקס-גלובלי ← ספר+פרק
+    function tanScope(idxs) {
+      var starts = [], total = 0;
+      idxs.forEach(function (bi) { starts.push(total); total += TAN_BOOKS[bi][2]; });
+      function at(g) {
+        for (var i = idxs.length - 1; i >= 0; i--) {
+          if (g >= starts[i]) return { b: TAN_BOOKS[idxs[i]], c: g - starts[i] + 1 };
+        }
+        return { b: TAN_BOOKS[idxs[0]], c: 1 };
+      }
+      return { count: total, at: at };
+    }
+    function tanEntry(id, he, idxs) {
+      var sc = tanScope(idxs);
+      var cm = [
+        { he: "רש\"י", ordered: true, color: "#7c3aed", ref: function (i) { var a = sc.at(i); return "Rashi on " + a.b[0] + " " + a.c; } }
+      ];
+      // מצודת דוד — רק אם בטווח יש ספר נ"ך שבו היא באמת קיימת (על התורה אין מצודות,
+      // וברות/איכה/אסתר אין "מצודת דוד" בספריא — בלעדי הבדיקה הצ'יפ יוצג ולעולם לא יביא תוכן)
+      if (idxs.some(function (bi) { return TAN_BOOKS[bi][3] > 0 && TAN_NO_METZUDAT.indexOf(TAN_BOOKS[bi][0]) === -1; })) {
+        cm.push({ he: "מצודת דוד", ordered: true, color: "#1e40af", ref: function (i) {
+          var a = sc.at(i);
+          return (a.b[3] > 0 && TAN_NO_METZUDAT.indexOf(a.b[0]) === -1) ? "Metzudat David on " + a.b[0] + " " + a.c : null;
+        } });
+      }
+      return {
+        id: id, he: he, icon: "📕", hidden: true, count: sc.count, unit: "פרק", units: "פרקים", min: 6,
+        ref: function (i) { var a = sc.at(i); return a.b[0] + " " + a.c; },
+        label: function (i) { var a = sc.at(i); return a.b[1] + " — פרק " + heNum(a.c); },
+        cm: cm
+      };
+    }
+    // טווח מסכתות (רשימת אינדקסים ב-TAL_BOOKS) → אינדקס-גלובלי ← מסכת+עמוד(k)
+    function talScope(idxs) {
+      var starts = [], total = 0;
+      idxs.forEach(function (ti) { var t = TAL_BOOKS[ti]; starts.push(total); total += t[4] - t[3] + 1; });
+      function at(g) {
+        for (var i = idxs.length - 1; i >= 0; i--) {
+          if (g >= starts[i]) return { t: TAL_BOOKS[idxs[i]], k: TAL_BOOKS[idxs[i]][3] + (g - starts[i]) };
+        }
+        return { t: TAL_BOOKS[idxs[0]], k: TAL_BOOKS[idxs[0]][3] };
+      }
+      return { count: total, at: at };
+    }
+    function talEntry(id, he, idxs) {
+      var sc = talScope(idxs);
+      function amud(g) {
+        var a = sc.at(g);
+        return { t: a.t, daf: Math.ceil(a.k / 2), side: (a.k % 2 === 1) ? "a" : "b" };
+      }
+      var e = {
+        id: id, he: he, icon: "📖", hidden: true, count: sc.count, unit: "עמוד", units: "עמודים", min: 20,
+        ref: function (i) { var a = amud(i); return a.t[0] + "." + a.daf + a.side; },
+        label: function (i) { var a = amud(i); return a.t[1] + " — דף " + heNum(a.daf) + (a.side === "a" ? "." : ":"); }
+      };
+      // רש"י ותוספות כבלוק אחרי העמוד (לא משובצים — בלי ordered); על תמיד אין (אומת ב-script.js)
+      if (idxs.some(function (ti) { return TAL_BOOKS[ti][0] !== "Tamid"; })) {
+        e.cm = [
+          { he: "רש\"י", color: "#7c3aed", ref: function (i) { var a = amud(i); return a.t[0] === "Tamid" ? null : "Rashi_on_" + a.t[0] + "." + a.daf + a.side; } },
+          { he: "תוספות", color: "#0d9488", ref: function (i) { var a = amud(i); return a.t[0] === "Tamid" ? null : "Tosafot_on_" + a.t[0] + "." + a.daf + a.side; } }
+        ];
+      }
+      return e;
+    }
     var CATALOG = [
       { id: "tehillim", he: "תהילים", icon: "📖", count: 150, unit: "פרק", units: "פרקים", min: 3, ref: function (i) { return "Psalms " + (i + 1); },
         cm: [
@@ -5334,11 +5459,51 @@
           { he: "כף החיים", ordered: true, color: "#0e7490", ref: kafOC }
         ] }
     ];
+    // ── תנ"ך ותלמוד בבלי — נבחרים דרך חלונית-משנה באשף (hidden: לא ברשת הספרים הראשית).
+    //    המזהים נשמרים ב-lux_study_plans_v1 — לא לשנות מזהה קיים לעולם ──
+    (function () {
+      var tanAll = TAN_BOOKS.map(function (_, i) { return i; });
+      function tanGrp(g) { return tanAll.filter(function (i) { return TAN_BOOKS[i][3] === g; }); }
+      CATALOG.push(tanEntry("tan-all", "כל התנ\"ך", tanAll));
+      CATALOG.push(tanEntry("tan-torah", "חמישה חומשי תורה", tanGrp(0)));
+      CATALOG.push(tanEntry("tan-neviim", "תנ\"ך — נביאים", tanGrp(1)));
+      CATALOG.push(tanEntry("tan-ketuvim", "תנ\"ך — כתובים", tanGrp(2)));
+      TAN_BOOKS.forEach(function (b, i) {
+        if (b[0] === "Psalms" || b[0] === "Proverbs") return;   // קיימים בקטלוג הראשי
+        CATALOG.push(tanEntry(tanBookId(b), "ספר " + b[1], [i]));
+      });
+      CATALOG.push(talEntry("tal-all", "כל התלמוד הבבלי", TAL_BOOKS.map(function (_, i) { return i; })));
+      TAL_BOOKS.forEach(function (t, i) {
+        CATALOG.push(talEntry("tal-" + t[0].toLowerCase().replace(/_/g, "-"), "מסכת " + t[1], [i]));
+      });
+    })();
     function unitsOf(bk) { return bk.units || bk.unit + "ים"; }
-    function bookOf(id) {
+    function findBook(id) {
       for (var i = 0; i < CATALOG.length; i++) if (CATALOG[i].id === id) return CATALOG[i];
       return null;
     }
+    // סדר לימוד מרובה-ספרים ("tan-multi-0.5.26" / "tal-multi-1.4") — הרשומה נבנית
+    // מהמזהה עצמו, ולכן מזהה שנשמר ב-lux_study_plans_v1 תקף גם בטעינות הבאות.
+    // האינדקסים מצביעים על TAN_BOOKS/TAL_BOOKS — סדר המערכים קפוא (append-only בלבד!),
+    // אחרת מזהים שמורים יצביעו על ספרים אחרים. המזהה קנוני: אינדקסים עולים בלבד.
+    function multiBookOf(id) {
+      var m = /^(tan|tal)-multi-(\d+(?:\.\d+)*)$/.exec(String(id || ""));
+      if (!m) return null;
+      var isTan = m[1] === "tan";
+      var books = isTan ? TAN_BOOKS : TAL_BOOKS;
+      var idxs = m[2].split(".").map(Number);
+      for (var i = 0; i < idxs.length; i++) {
+        var v = idxs[i];
+        if (!isFinite(v) || v < 0 || v >= books.length || (i > 0 && v <= idxs[i - 1])) return null;
+      }
+      var names = idxs.map(function (bi) { return books[bi][1]; });
+      var he = idxs.length <= 3 ? names.join(" + ")
+        : (isTan ? "תנ\"ך — " + idxs.length + " ספרים" : "תלמוד בבלי — " + idxs.length + " מסכתות");
+      var e = isTan ? tanEntry(id, he, idxs) : talEntry(id, he, idxs);
+      CATALOG.push(e);
+      return e;
+    }
+    function bookOf(id) { return findBook(id) || multiBookOf(id); }
     function plans() { return jget(KEY, []); }
     function savePlans(p) { jset(KEY, p); }
     // תאריך מקומי (לא UTC) — כדי ש"היום" יתחלף בחצות המקומית
@@ -5487,7 +5652,8 @@
         "באר היטב": "תמצית דברי האחרונים",
         "ביאור הלכה": "הרחבות והכרעות של החפץ חיים",
         "כף החיים": "הלכה עם קבלה — מנהגי הספרדים",
-        "שולחן ערוך": "לשון מרן רבי יוסף קארו"
+        "שולחן ערוך": "לשון מרן רבי יוסף קארו",
+        "תוספות": "בעלי התוספות — קושיות, השוואות והעמקה"
       };
       if (bk.cm && bk.cm.length) {
         var cmBar = document.createElement("div");
@@ -5671,6 +5837,19 @@
       var m2 = Math.round((d - 730) / 30.4);
       return m2 > 0 ? "שנתיים ו־" + m2 + " חודשים" : "שנתיים";
     }
+    // תאריך עברי מלא ("כ"ג בתשרי תשפ"ז") — נשען על העזרים הגלובליים של script.js
+    // (getHebrewDateString / hebrewizeYearDigits); בכשל מחזיר "" והמציג נופל ללועזי בלבד
+    var _hebYearFmt = null;
+    function hebDateFull(d) {
+      try {
+        var s = (typeof window.getHebrewDateString === "function") ? window.getHebrewDateString(d) : "";
+        if (!s) return "";
+        if (!_hebYearFmt) _hebYearFmt = new Intl.DateTimeFormat("he-IL-u-ca-hebrew", { year: "numeric" });
+        var y = _hebYearFmt.format(d);
+        if (typeof window.hebrewizeYearDigits === "function") y = window.hebrewizeYearDigits(y);
+        return s + " " + y;
+      } catch (e) { return ""; }
+    }
     /* ── תגי התמדה בלימוד — רצף יומי; מתאפסים בכל תחילת חצי שנה ── */
     var STREAK_KEY = "lux_plan_streak_v1";
     // רשימת ימי-לימוד (עד 60 אחרונים) — לרצועת השבוע בכרטיסי הסדר; מפתח חדש ונוסף,
@@ -5787,7 +5966,17 @@
           '<p class="lux-sheet-note">בחרו ספר, קבעו קצב — והאתר יחלק לכם אותו לימים ויעקוב אחרי ההתקדמות</p>' +
         "</div>" +
         '<h4 class="lux-pw-step"><span class="lux-pw-stepnum">1</span> באיזה ספר נלמד?</h4>' +
-        '<div class="lux-pw-books">' + CATALOG.map(function (b) {
+        '<div class="lux-pw-books">' +
+        // תנ"ך ותלמוד בבלי — כרטיסי-שער: לחיצה פותחת חלונית לבחירת ספר/מסכת או הכל
+        '<button type="button" class="lux-pw-book lux-pw-group" data-group="tanach">' +
+          '<span class="lux-pw-book-ico" aria-hidden="true">📕</span>' +
+          '<span class="lux-pw-book-name">תנ"ך <span class="lux-pw-group-arrow" aria-hidden="true">▾</span></span>' +
+          '<small>ספר אחד, כמה ספרים — או הכל</small></button>' +
+        '<button type="button" class="lux-pw-book lux-pw-group" data-group="talmud">' +
+          '<span class="lux-pw-book-ico" aria-hidden="true">📖</span>' +
+          '<span class="lux-pw-book-name">תלמוד בבלי <span class="lux-pw-group-arrow" aria-hidden="true">▾</span></span>' +
+          '<small>מסכת אחת, כמה מסכתות — או כל הש"ס</small></button>' +
+        CATALOG.filter(function (b) { return !b.hidden; }).map(function (b) {
           return '<button type="button" class="lux-pw-book" data-id="' + b.id + '">' +
             '<span class="lux-pw-book-ico" aria-hidden="true">' + b.icon + "</span>" +
             '<span class="lux-pw-book-name">' + esc(b.he) + "</span>" +
@@ -5836,6 +6025,9 @@
         var c = calc();
         if (!c) { sum.style.display = "none"; btn.disabled = true; btn.style.opacity = "0.5"; return; }
         var end = new Date(Date.now() + c.totalDays * 86400000);
+        // תאריך הסיום — עברי תחילה (בקשת בעל האתר, 09/2026), הלועזי בסוגריים
+        var hd = hebDateFull(end);
+        var gd = end.toLocaleDateString("he-IL", { day: "numeric", month: "long", year: "numeric" });
         sum.style.display = "block";
         sum.innerHTML =
           '<div class="lux-pw-sum-title">' + selBook.icon + " התוכנית שלכם — " + esc(selBook.he) + "</div>" +
@@ -5844,16 +6036,178 @@
             '<div class="lux-pw-sum-cell"><b>~' + c.estMin + "</b><span>דקות ביום</span></div>" +
             '<div class="lux-pw-sum-cell"><b>' + c.totalDays + "</b><span>ימים לסיום</span></div>" +
           "</div>" +
-          '<div class="lux-pw-sum-date">🗓️ סיום בסביבות <b>' + end.toLocaleDateString("he-IL", { day: "numeric", month: "long", year: "numeric" }) + "</b> בע\"ה</div>";
+          '<div class="lux-pw-sum-date">🗓️ סיום בסביבות <b>' + (hd || gd) + "</b>" +
+            (hd ? ' <span class="lux-pw-sum-greg">(' + gd + ")</span>" : "") + " בע\"ה</div>";
         btn.disabled = false;
         btn.style.opacity = "1";
       }
-      ov.querySelectorAll(".lux-pw-book").forEach(function (b) {
+      // כרטיסי-השער (תנ"ך/תלמוד) מציגים את הבחירה שנעשתה בחלונית; בבחירת ספר רגיל —
+      // מחזירים אותם לכיתוב המקורי
+      function resetGroupCards() {
+        ov.querySelectorAll(".lux-pw-group").forEach(function (g) {
+          var s = g.querySelector("small");
+          if (s && g.__defSmall) s.textContent = g.__defSmall;
+        });
+      }
+      ov.querySelectorAll(".lux-pw-book[data-id]").forEach(function (b) {
         b.addEventListener("click", function () {
           selBook = bookOf(b.getAttribute("data-id"));
           ov.querySelectorAll(".lux-pw-book").forEach(function (x) { x.classList.toggle("lux-pw-book-on", x === b); });
+          resetGroupCards();
           repaint();
         });
+      });
+      /* ── חלונית בחירת-משנה: מסמנים ספר/מסכת אחד או כמה יחד — ומאשרים למטה.
+         בחירה של ספר בודד/חטיבה שלמה/הכל ממופה למזהה הקנוני הקיים; כל צירוף
+         אחר נשמר כמזהה tan-multi-/tal-multi- (משוחזר ב-bookOf בכל טעינה). ── */
+      function resolvePick(isTan, idxs) {
+        var books = isTan ? TAN_BOOKS : TAL_BOOKS;
+        if (idxs.length === books.length) return bookOf(isTan ? "tan-all" : "tal-all");
+        if (idxs.length === 1) {
+          var b1 = books[idxs[0]];
+          return bookOf(isTan ? tanBookId(b1) : "tal-" + b1[0].toLowerCase().replace(/_/g, "-"));
+        }
+        if (isTan) {
+          var GRP_IDS = ["tan-torah", "tan-neviim", "tan-ketuvim"];
+          for (var g = 0; g < 3; g++) {
+            var gi = [];
+            TAN_BOOKS.forEach(function (bb, bi) { if (bb[3] === g) gi.push(bi); });
+            if (gi.length === idxs.length && gi.every(function (v, k) { return v === idxs[k]; })) return bookOf(GRP_IDS[g]);
+          }
+        }
+        return bookOf((isTan ? "tan-multi-" : "tal-multi-") + idxs.join("."));
+      }
+      function openSubPicker(group, card) {
+        var isTan = group === "tanach";
+        var books = isTan ? TAN_BOOKS : TAL_BOOKS;
+        function amudim(t) { return t[4] - t[3] + 1; }
+        function chip(idx, he, sub) {
+          return '<button type="button" class="lux-pw-pick-chip" data-idx="' + idx + '" aria-pressed="false">' +
+            '<span class="lux-pw-pick-chip-t">' + esc(he) + "</span>" +
+            '<small>' + esc(sub) + "</small></button>";
+        }
+        var html = '<button type="button" class="lux-pw-pick-x" aria-label="סגור">✕</button>' +
+          '<div class="lux-pw-head">' +
+          '<span class="lux-pw-head-ico" aria-hidden="true">' + (isTan ? "📕" : "📖") + "</span>" +
+          '<h3 class="lux-sheet-title">' + (isTan ? "תנ\"ך — מה נלמד?" : "תלמוד בבלי — מה נלמד?") + "</h3>" +
+          '<p class="lux-sheet-note">' + (isTan
+            ? "סמנו ספר אחד או כמה ספרים יחד — ובסיום אשרו למטה"
+            : "סמנו מסכת אחת או כמה מסכתות יחד — ובסיום אשרו למטה") + "</p>" +
+        "</div>" +
+          '<button type="button" class="lux-pw-pick-all" aria-pressed="false">' + (isTan ? "📕 כל התנ\"ך" : "📖 כל התלמוד הבבלי") +
+          '<small>' + (isTan
+            ? bookOf("tan-all").count + " פרקים · מבראשית עד דברי הימים"
+            : bookOf("tal-all").count + " עמודים · כל 37 המסכתות") + "</small></button>";
+        if (isTan) {
+          [["תורה", 0], ["נביאים", 1], ["כתובים", 2]].forEach(function (grp) {
+            var gUnits = 0;
+            TAN_BOOKS.forEach(function (b) { if (b[3] === grp[1]) gUnits += b[2]; });
+            html += '<div class="lux-pw-pick-grp"><span>' + grp[0] + "</span>" +
+              '<button type="button" class="lux-pw-pick-grpall" data-grpall="' + grp[1] + '" aria-pressed="false">הכל · ' + gUnits + " פרקים</button></div>" +
+              '<div class="lux-pw-pick-grid">' + TAN_BOOKS.map(function (b, i) {
+                if (b[3] !== grp[1]) return "";
+                return chip(i, b[1], b[2] + " פרקים");
+              }).join("") + "</div>";
+          });
+        } else {
+          TAL_SEDARIM_HE.forEach(function (sname, si) {
+            var sUnits = 0;
+            var chips = TAL_BOOKS.map(function (t, i) {
+              if (t[2] !== si) return "";
+              sUnits += amudim(t);
+              return chip(i, t[1], amudim(t) + " עמודים");
+            }).join("");
+            if (!chips) return;
+            html += '<div class="lux-pw-pick-grp"><span>סדר ' + sname + "</span>" +
+              '<button type="button" class="lux-pw-pick-grpall" data-grpall="' + si + '" aria-pressed="false">הכל · ' + sUnits + " עמודים</button></div>" +
+              '<div class="lux-pw-pick-grid">' + chips + "</div>";
+          });
+        }
+        html += '<div class="lux-pw-pick-actions">' +
+          '<button type="button" id="lux-pw-pick-ok" class="lux-sheet-primary" disabled>' +
+          (isTan ? "סמנו ספרים לבחירה" : "סמנו מסכתות לבחירה") + "</button></div>";
+        var pv = luxSheet("lux-pw-pick", html);
+        if (!pv) return;
+        // ה-X הפינתי של היריעה מוחלף ב-X דביק בראש החלונית עצמה (בקשת בעל האתר);
+        // הסורק האוניברסלי (§46) מזהה אותו לפי טקסט ✕ בראש הפאנל — לא יוזרק X כפול
+        var cux = pv.querySelector(":scope > .lux-ux");
+        if (cux) cux.remove();
+        var okBtn = pv.querySelector("#lux-pw-pick-ok");
+        var allBtn = pv.querySelector(".lux-pw-pick-all");
+        function allChips() { return Array.prototype.slice.call(pv.querySelectorAll(".lux-pw-pick-chip")); }
+        function grpKey(i) { return isTan ? books[i][3] : books[i][2]; }
+        function selIdxs() {
+          return allChips().filter(function (c) { return c.classList.contains("on"); })
+            .map(function (c) { return parseInt(c.getAttribute("data-idx"), 10); })
+            .sort(function (a, b) { return a - b; });
+        }
+        function setOn(el, on) {
+          el.classList.toggle("on", on);
+          el.setAttribute("aria-pressed", on ? "true" : "false");
+        }
+        function syncUi() {
+          var idxs = selIdxs();
+          setOn(allBtn, idxs.length === books.length);
+          Array.prototype.slice.call(pv.querySelectorAll("[data-grpall]")).forEach(function (p) {
+            var g = parseInt(p.getAttribute("data-grpall"), 10);
+            var total = 0, on = 0;
+            allChips().forEach(function (c) {
+              if (grpKey(parseInt(c.getAttribute("data-idx"), 10)) !== g) return;
+              total++;
+              if (c.classList.contains("on")) on++;
+            });
+            setOn(p, total > 0 && on === total);
+          });
+          if (!idxs.length) {
+            okBtn.disabled = true;
+            okBtn.textContent = isTan ? "סמנו ספרים לבחירה" : "סמנו מסכתות לבחירה";
+            return;
+          }
+          var units = 0;
+          idxs.forEach(function (bi) { units += isTan ? books[bi][2] : amudim(books[bi]); });
+          okBtn.disabled = false;
+          okBtn.textContent = "✓ המשך — " + (isTan
+            ? (idxs.length === 1 ? "ספר אחד" : idxs.length + " ספרים") + " · " + units + " פרקים"
+            : (idxs.length === 1 ? "מסכת אחת" : idxs.length + " מסכתות") + " · " + units + " עמודים");
+        }
+        pv.addEventListener("click", function (e) {
+          if (e.target.closest(".lux-pw-pick-x")) { luxModalClose("lux-pw-pick"); return; }
+          var ch = e.target.closest(".lux-pw-pick-chip");
+          if (ch) { setOn(ch, !ch.classList.contains("on")); syncUi(); return; }
+          var ga = e.target.closest("[data-grpall]");
+          if (ga) {
+            var g2 = parseInt(ga.getAttribute("data-grpall"), 10);
+            var grpChips = allChips().filter(function (c) { return grpKey(parseInt(c.getAttribute("data-idx"), 10)) === g2; });
+            var turnOn = grpChips.some(function (c) { return !c.classList.contains("on"); });
+            grpChips.forEach(function (c) { setOn(c, turnOn); });
+            syncUi();
+            return;
+          }
+          if (e.target.closest(".lux-pw-pick-all")) {
+            var on = selIdxs().length !== books.length;
+            allChips().forEach(function (c) { setOn(c, on); });
+            syncUi();
+            return;
+          }
+          if (e.target.closest("#lux-pw-pick-ok")) {
+            var idxs = selIdxs();
+            if (!idxs.length) return;
+            var bk2 = resolvePick(isTan, idxs);
+            if (!bk2) return;
+            selBook = bk2;
+            ov.querySelectorAll(".lux-pw-book").forEach(function (x) { x.classList.toggle("lux-pw-book-on", x === card); });
+            resetGroupCards();
+            var s = card.querySelector("small");
+            if (s) s.textContent = "✓ " + bk2.he + " · " + bk2.count + " " + unitsOf(bk2);
+            luxModalClose("lux-pw-pick");
+            repaint();
+          }
+        });
+      }
+      ov.querySelectorAll(".lux-pw-group").forEach(function (g) {
+        var s0 = g.querySelector("small");
+        g.__defSmall = s0 ? s0.textContent : "";
+        g.addEventListener("click", function () { openSubPicker(g.getAttribute("data-group"), g); });
       });
       function setMode(m) {
         mode = m;
@@ -5931,7 +6285,12 @@
         var v = parseInt(rng.value, 10) || 1;
         lbl.textContent = v;
         var leftDays = Math.max(0, Math.ceil((bk.count - pl.done) / v));
-        sum.innerHTML = '<span class="lux-dt-big">' + (v === 1 ? esc(bk.unit) + " אחד" : v + " " + esc(unitsOf(bk))) + " ביום</span> · ~" + fmtMin(v * bk.min) + " ביום · סיום בעוד כ־" + leftDays + " ימים בע\"ה";
+        // תאריך הסיום המשוער גם בעברית (אותו עזר כמו בסיכום האשף)
+        var endD = new Date();
+        endD.setDate(endD.getDate() + leftDays);
+        var hd = hebDateFull(endD);
+        sum.innerHTML = '<span class="lux-dt-big">' + (v === 1 ? esc(bk.unit) + " אחד" : v + " " + esc(unitsOf(bk))) + " ביום</span> · ~" + fmtMin(v * bk.min) + " ביום · סיום בעוד כ־" + leftDays + " ימים בע\"ה" +
+          (hd ? '<div class="lux-pp-end">🗓️ בסביבות ' + hd + "</div>" : "");
       }
       rng.addEventListener("input", upd);
       upd();

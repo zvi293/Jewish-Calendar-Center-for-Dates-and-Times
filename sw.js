@@ -16,7 +16,7 @@ const STATIC_ASSETS = [
   // חשוב: ה-?v= כאן חייב להיות זהה לזה שב-index.html — כך ההתקנה נענית
   // מ-HTTP cache (בלי הורדה כפולה של ~3MB) והבקשות מהדף פוגעות במטמון
   // בדיוק; סטייה עתידית מכוסה ע"י ה-fallback עם ignoreSearch.
-  "/script.js?v=57",
+  "/script.js?v=58",
   "/lux.js?v=57",
   "/style.css?v=61",
   "/tailwind.css?v=2",

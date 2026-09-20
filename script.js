@@ -7487,8 +7487,7 @@ window._buildSederMotzashFullHtml = function () {
     (story ? (
       h2("📖 סיפור מהבעל שם טוב") +
       card('<span style="display:block;font-size:0.9em;color:#b45309;font-weight:800;margin-bottom:0.5rem;">✨ ' + story.title + "</span>" +
-        '<span style="display:block;font-size:0.92em;line-height:2;text-align:right;">' + story.text + "</span>" +
-        (story.source ? '<span style="display:block;margin-top:0.6rem;padding-top:0.5rem;border-top:1px dashed rgba(180,83,9,0.25);font-size:0.68em;color:#64748b;">📜 ' + story.source + "</span>" : "")) +
+        '<span style="display:block;font-size:0.92em;line-height:2;text-align:right;">' + story.text + "</span>") +
       '<span style="display:block;text-align:center;margin:0.4rem 0 1rem;"><button type="button" onclick="if(window._snOpenBook){window._snOpenBook(\'seder-motzash\');setTimeout(function(){var c=document.getElementById(\'sn-reader-content\');if(!c)return;var hs=c.querySelectorAll(\'h2\');if(hs.length)c.scrollTop=Math.max(0,hs[hs.length-1].offsetTop-90);},250);}" style="padding:0.5rem 1.3rem;border-radius:999px;border:1.5px solid rgba(180,83,9,0.4);background:rgba(180,83,9,0.08);color:#b45309;font-size:0.72em;font-weight:800;cursor:pointer;">🔄 סיפור אחר</button></span>'
     ) : "")
   );
@@ -7723,7 +7722,6 @@ function openMotzeiShabbatModal(activeTab) {
     <div style="background:rgba(255,255,255,0.07);border-radius:14px;padding:16px;margin-bottom:12px;">
       <div style="font-size:0.78em;color:#fbbf24;font-weight:800;margin-bottom:10px;">✨ ${story.title}</div>
       <p style="font-size:0.82em;line-height:1.9;color:rgba(255,255,255,0.9);">${story.text}</p>
-      ${story.source ? `<div style="margin-top:10px;padding-top:8px;border-top:1px dashed rgba(255,255,255,0.15);font-size:0.68em;color:rgba(255,255,255,0.45);line-height:1.6;">📜 ${story.source}</div>` : ``}
     </div>
     <button onclick="openMotzeiShabbatModal('besht')" style="width:100%;padding:10px;border:1px solid rgba(255,255,255,0.15);border-radius:12px;background:transparent;color:rgba(255,255,255,0.55);font-size:0.8em;font-weight:700;cursor:pointer;transition:all .2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='transparent'">🔄 סיפור אחר</button>
   </div>`;

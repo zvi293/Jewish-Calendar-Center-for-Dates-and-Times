@@ -20626,7 +20626,11 @@ window._openReaderFontPopup = function () {
     const f = READER_FONTS.find(function (x) { return x.id === id; });
     if (!f) return;
     try { localStorage.setItem(READER_FONT_KEY, id); } catch (err) {}
+    // הפונט החדש נשפך אחרת — שורת הקריאה (או השורה המסומנת) נשארת במקומה בכל קורא
+    // פתוח מתחת לחלונית; חלון ארוך יותר כי קובצי הפונט עשויים להגיע באיחור
+    const _fsAnc = _fontScrollAnchorCaptureAll(null);
     _applyReaderFontAttr();
+    _fontScrollAnchorRestore(_fsAnc, { windowMs: 6000 });
     const rows = pop.querySelector(".rf-rows");
     if (rows) rows.innerHTML = rowsHtml();
     if (window._btnToastVal) window._btnToastVal("פונט: " + f.he + " ✓");
@@ -20654,12 +20658,317 @@ function createFontSizeBar(targetSelector, scrollTargetSelector) {
   return bar;
 }
 
-// ── עוגן גלילה לשינוי גודל כתב ──────────────────────────────
-// בשינוי גודל הכתב הטקסט נשפך מחדש והמיקום היחסי "בורח" — המשתמש מאבד את השורה שקרא.
-// שומרים את נקודת אמצע-המסך כיחס מתוך גובה התוכן הכולל, ומחזירים אליה מיד אחרי ההחלה
-// (הטקסט מתרחב/מתכווץ באופן אחיד, ולכן היחס נשמר מדויק). מאתרים את מיכל הגלילה בפועל
-// בטיפוס מעלה מהאלמנט (כמו resolveScrollable של הגלילה האוטומטית). לא מפריע לגלילה
-// האוטומטית — היא קוראת scrollTop טרי בכל פריים וממשיכה מהמיקום החדש.
+// ── עוגן גלילה לשינוי גודל/פונט כתב — מדויק לשורה ──────────────────────
+// בשינוי גודל הכתב (או פונט הקריאה) הטקסט נשפך מחדש, והשורה שהמשתמש קרא "בורחת".
+// הגרסה הקודמת עיגנה את האלמנט שב-elementFromPoint באמצע המסך — אבל בתפילות זה לרוב
+// כל מיכל ה-.prayer-richtext (גובה ~130,000px, כשהנקודה נופלת ברווח שבין פסקאות) או
+// פסקה של עשרות שורות: ראש האלמנט נשאר במקום והשורה שבאמצע ברחה מאות/אלפי פיקסלים.
+// עכשיו העוגן הוא תו טקסט (צומת + היסט):
+//  1. שורת המיקוד = השורה המסומנת במרקר (lux.js _luxMarkCaret) כשהיא גלויה במסך — היא
+//     חוזרת בדיוק לאמצע; אחרת התו שבאמצע אזור הקריאה (caretPositionFromPoint /
+//     caretRangeFromPoint; כשמשהו מכסה את הקורא — טוסט, חלונית בחירת הפונט, מודאל מעליו —
+//     חיפוש גאומטרי בצמתי הטקסט), והשורה שלו נשארת באותו גובה בדיוק.
+//  2. אחרי השינוי מודדים את מלבן התו (Range) ומזיזים את scrollTop של מיכל הגלילה בפועל
+//     (הצבה ישירה — מיידית). ההחלה חוזרת אחרי rAF×2, כמה טיימרים קצרים ו-document.fonts
+//     (ready/loadingdone — פונט שנטען באיחור משנה שוב את הפריסה), ונעצרת מיד כשהמשתמש
+//     נוגע/גולל או כשמשהו אחר הזיז את הגלילה (גלילה אוטומטית, קפיצת תוכן עניינים).
+//     בחלון הזה overflow-anchor מושבת — עיגון-הגלילה של הדפדפן לא "מתקן" אחרינו.
+//  3. רצף לחיצות (או כמה פונטים ברצף בחלונית) בלי שהמשתמש נגע/גלל ביניהן ממשיך עם העוגן
+//     המקורי — בלי סחיפה מצטברת (בקצוות אי אפשר למרכז, ובשפיכה מחדש שורת האמצע מתחלפת).
+//  4. נסיגה כשאין API/טקסט: האלמנט שבמרכז (רק אם אינו גבוה מהמסך) או יחס הגלילה.
+//  5. בראש הטקסט (scrollTop=0, בלי שורה מסומנת גלויה) — נשארים בראש, כמו קודם.
+// לא מפריע לגלילה האוטומטית — היא קוראת scrollTop טרי בכל פריים וממשיכה מהמיקום החדש.
+var _FSA_READERS = [
+  "#prayer-modal-body", "#sn-reader-content", "#bih-content-area", "#psalm-text-area",
+  "#shir-scroll-area", "#sefaria-modal-content", "#chok-israel-modal-content",
+  "#motzei-tab-content", "#lux-sel-area", "#lux-tr-area", "#lux-pl-area"
+];
+var _FSA_REUSE_MS = 60000;
+// מיכל הגלילה בפועל — טיפוס מעלה מהאלמנט (כמו resolveScrollable של הגלילה האוטומטית).
+// אם אף מיכל עדיין לא נגלל (התוכן נכנס כולו, למשל בסדר מוצ"ש) — המיכל הגלילתי הקרוב:
+// אחרי ההגדלה הוא כן ייגלל, ושורה מסומנת גלויה צריכה לחזור לאמצע כבר מהלחיצה הזו
+function _fsaScroller(el) {
+  var sc = el, first = null;
+  while (sc && sc !== document.body && sc !== document.documentElement) {
+    var oy = window.getComputedStyle(sc).overflowY;
+    if (oy === "auto" || oy === "scroll" || oy === "overlay") {
+      if (sc.scrollHeight > sc.clientHeight + 1) return sc;
+      if (!first) first = sc;
+    }
+    sc = sc.parentElement;
+  }
+  return first;
+}
+function _fsaShown(el) {
+  if (!el || !el.isConnected) return false;
+  var rs = el.getClientRects();
+  return !!(rs.length && rs[0].width > 0 && rs[0].height > 0);
+}
+// אזור הקריאה הגלוי של המיכל (חיתוך עם חלון התצוגה) ונקודת האמצע שלו
+function _fsaView(sc) {
+  var r = sc.getBoundingClientRect();
+  var vh = window.innerHeight || document.documentElement.clientHeight || 0;
+  var t0 = r.top + (sc.clientTop || 0), b0 = t0 + sc.clientHeight;
+  var top = Math.max(t0, 0), bot = vh ? Math.min(b0, vh) : b0;
+  if (bot - top < 20) { top = t0; bot = b0; }
+  return { top: top, bot: bot, mid: (top + bot) / 2, left: r.left + (sc.clientLeft || 0), width: sc.clientWidth || r.width };
+}
+// תו "ממשי" קרוב (לא רווח / ניקוד / טעם / סימן כיווניות) — המלבן שלו יציב ומייצג את השורה
+function _fsaNorm(node, off) {
+  var d = node.data || "", n = d.length;
+  if (!n) return -1;
+  var o = Math.max(0, Math.min(off, n - 1));
+  var good = function (i) { return !/[\s\u0591-\u05C7\u200b-\u200f\u00ad]/.test(d.charAt(i)); };
+  if (good(o)) return o;
+  for (var k = 1; k < 16; k++) {
+    if (o - k >= 0 && good(o - k)) return o - k;
+    if (o + k < n && good(o + k)) return o + k;
+  }
+  return o;
+}
+function _fsaCharRect(node, off) {
+  try {
+    var n = node.data.length;
+    if (!n) return null;
+    var o = Math.max(0, Math.min(off, n - 1));
+    var rg = document.createRange();
+    rg.setStart(node, o); rg.setEnd(node, o + 1);
+    var rs = rg.getClientRects();
+    for (var i = 0; i < rs.length; i++) if (rs[i].height > 0) return rs[i];
+    var b = rg.getBoundingClientRect();
+    return b && b.height > 0 ? b : null;
+  } catch (e) { return null; }
+}
+function _fsaCaretAt(x, y) {
+  var c = null;
+  try {
+    if (document.caretPositionFromPoint) {
+      var p = document.caretPositionFromPoint(x, y);
+      if (p && p.offsetNode) c = { node: p.offsetNode, offset: p.offset };
+    }
+    if (!c && document.caretRangeFromPoint) {
+      var r = document.caretRangeFromPoint(x, y);
+      if (r && r.startContainer) c = { node: r.startContainer, offset: r.startOffset };
+    }
+  } catch (e) {}
+  // תחת user-select:none (חלק מהקוראים במובייל) מתקבל אלמנט + אינדקס ילד — יורדים לצומת הטקסט
+  if (c && c.node && c.node.nodeType === 1) {
+    var k = c.node.childNodes[c.offset] || c.node.childNodes[c.offset - 1] || c.node;
+    if (k.nodeType !== 3) {
+      var w = document.createTreeWalker(k, NodeFilter.SHOW_TEXT, null), t;
+      while ((t = w.nextNode()) && !/\S/.test(t.data)) {}
+      k = t || null;
+    }
+    c = k ? { node: k, offset: _fsaCharAtY(k, y) } : null;
+  }
+  return c;
+}
+// תו באמצע השורה (בתוך הצומת) הקרובה ביותר לגובה y — חיפוש בינארי (גובה השורות עולה עם
+// הטקסט). כש-y נופל ברווח שבין שורות (line-height גבוה) — השורה שמרכזה קרוב יותר, מעל או מתחת
+function _fsaCharAtY(node, y) {
+  var a = 0, z = node.data.length - 1;
+  while (a < z) {
+    var m = (a + z) >> 1, r = _fsaCharRect(node, m);
+    if (r && r.bottom < y) a = m + 1; else z = m;
+  }
+  a = Math.max(0, a);
+  var r0 = _fsaCharRect(node, a), rp = a > 0 ? _fsaCharRect(node, a - 1) : null;
+  if (r0 && rp && rp.bottom <= r0.top + 1 &&
+      Math.abs(rp.top + rp.height / 2 - y) < Math.abs(r0.top + r0.height / 2 - y)) a--;
+  return _fsaLineMidAt(node, a);
+}
+// אמצע השורה שמכילה את התו i (בתוך הצומת): בשפיכה מחדש סוף השורה עובר לשורה הבאה,
+// ואמצע השורה מייצג את מה שנקרא טוב יותר מתחילתה
+function _fsaLineMidAt(node, i) {
+  var r0 = _fsaCharRect(node, i);
+  if (!r0) return i;
+  var tol = Math.max(2, r0.height * 0.5), lo = 0, hi = i;
+  while (lo < hi) {
+    var m = (lo + hi) >> 1, r = _fsaCharRect(node, m);
+    if (r && r.top < r0.top - tol) lo = m + 1; else hi = m;
+  }
+  var st = lo;
+  lo = i; hi = node.data.length;
+  while (lo < hi) {
+    var m2 = (lo + hi) >> 1, r2 = _fsaCharRect(node, m2);
+    if (r2 && r2.top > r0.top + tol) hi = m2; else lo = m2 + 1;
+  }
+  return (st + Math.max(i, lo - 1)) >> 1;
+}
+// צומת בתוך אלמנט fixed/sticky (כותרת דביקה, כפתור צף) לא נגלל עם הטקסט — לא עוגן
+function _fsaPinned(node, sc) {
+  var el = node.parentElement;
+  while (el && el !== sc) {
+    var pos = window.getComputedStyle(el).position;
+    if (pos === "fixed" || pos === "sticky") return true;
+    el = el.parentElement;
+  }
+  return false;
+}
+// התו שבגובה y: קודם לפי נקודת המסך (מהיר ומדויק), ובנסיגה חיפוש גאומטרי (עובד גם כשהקורא מכוסה)
+// כשהאמצע נופל ברווח שבין פסקאות — השורה הקרובה ביותר אליו (מעל או מתחת)
+function _fsaPickAt(sc, v, y) {
+  var xs = [0.5, 0.38, 0.62, 0.25, 0.75], levels = [[0], [-10, 10], [-22, 22], [-40, 40]];
+  for (var l = 0; l < levels.length; l++) {
+    var best = null, bestD = Infinity;
+    for (var j = 0; j < levels[l].length; j++) {
+      var dy = levels[l][j], yy = y + dy;
+      if (yy < v.top || yy > v.bot) continue;
+      for (var i = 0; i < xs.length; i++) {
+        var c = _fsaCaretAt(v.left + v.width * xs[i], yy);
+        if (!c || !c.node || c.node.nodeType !== 3 || !sc.contains(c.node)) continue;
+        var o = _fsaNorm(c.node, c.offset);
+        if (o < 0) continue;
+        var rc = _fsaCharRect(c.node, o);
+        if (!rc) continue;
+        var dd = Math.abs(rc.top + rc.height / 2 - y);
+        if (dd > Math.max(rc.height, 24) + Math.abs(dy) || dd >= bestD || _fsaPinned(c.node, sc)) continue;
+        best = { node: c.node, offset: o }; bestD = dd;
+        if (dd <= rc.height / 2) return best; // השורה עוברת בדיוק באמצע
+      }
+    }
+    if (best) return best;
+  }
+  return _fsaGeomAt(sc, y);
+}
+// חיפוש בינארי בצמתי הטקסט (סדר המסמך = סדר אנכי) ואז בתווים שבצומת
+function _fsaGeomAt(sc, y) {
+  try {
+    var nodes = [], w = document.createTreeWalker(sc, NodeFilter.SHOW_TEXT, null), n;
+    while ((n = w.nextNode())) { if (/\S/.test(n.data)) nodes.push(n); }
+    if (!nodes.length) return null;
+    var rg = document.createRange();
+    var box = function (nd) { rg.selectNodeContents(nd); var b = rg.getBoundingClientRect(); return (b.width || b.height) ? b : null; };
+    var lo = 0, hi = nodes.length - 1, found = -1;
+    while (lo <= hi) {
+      var mid = (lo + hi) >> 1, k = mid, b = box(nodes[k]);
+      while (!b && k < hi) { k++; b = box(nodes[k]); } // צמתים מוסתרים — לשכן הקרוב שיש לו פריסה
+      if (!b) { hi = mid - 1; continue; }
+      if (b.bottom < y) lo = k + 1;
+      else if (b.top > y) hi = mid - 1;
+      else { found = k; break; }
+    }
+    if (found < 0) found = Math.min(lo, nodes.length - 1); // נפל ברווח שבין פסקאות — הצומת הבא
+    var node = nodes[found], off = _fsaCharAtY(node, y);
+    // הצומת הקודם (סוף הפסקה שמעל) קרוב יותר לגובה y?
+    var prev = found > 0 ? nodes[found - 1] : null;
+    if (prev) {
+      var rc = _fsaCharRect(node, off), rpv = _fsaCharRect(prev, prev.data.length - 1);
+      if (rpv && (!rc || Math.abs(rpv.top + rpv.height / 2 - y) < Math.abs(rc.top + rc.height / 2 - y))) {
+        node = prev; off = _fsaLineMidAt(prev, prev.data.length - 1);
+      }
+    }
+    if (_fsaPinned(node, sc)) return null;
+    var o = _fsaNorm(node, off);
+    return o < 0 ? null : { node: node, offset: o };
+  } catch (e) { return null; }
+}
+// השורה המסומנת במרקר — רק אם היא גלויה כרגע באזור הקריאה
+function _fsaMarkAt(sc, v) {
+  try {
+    var m = typeof window._luxMarkCaret === "function" ? window._luxMarkCaret(sc) : null;
+    if (m && m.node && m.node.nodeType === 3 && m.node.isConnected) {
+      var o = _fsaNorm(m.node, m.offset);
+      var rc = o < 0 ? null : _fsaCharRect(m.node, o);
+      var cy = rc ? rc.top + rc.height / 2 : -1;
+      if (rc && cy >= v.top && cy <= v.bot) return { node: m.node, offset: o };
+    }
+    // דף יומי — מרקר ייעודי משלו (.daf-line-marked, קטע שלם): אמצע הקטע המסומן חוזר לאמצע.
+    // קטע גבוה מרוב המסך — שורת האמצע של המסך מייצגת טוב יותר את מה שנקרא
+    var dm = sc.querySelector(".daf-line-marked");
+    if (dm) {
+      var dr = dm.getBoundingClientRect();
+      if (dr.height > 0 && dr.height < (v.bot - v.top) * 0.8 && dr.bottom > v.top && dr.top < v.bot) {
+        var dc = _fsaGeomAt(dm, dr.top + dr.height / 2);
+        if (dc) dc.el = dm; // המרכוז לפי מלבן הקטע כולו (לא לפי שורת התו שבאמצעו)
+        return dc;
+      }
+    }
+  } catch (e) {}
+  return null;
+}
+// נסיגה (אין caret API / אין טקסט): האלמנט שבמרכז — רק אם אינו גבוה מהמסך — או יחס הגלילה
+function _fsaLegacy(sc, v) {
+  if (sc.scrollTop <= 0) return null;
+  var a = { sc: sc, kind: "legacy", ratio: (sc.scrollTop + sc.clientHeight / 2) / sc.scrollHeight, el: null, off: 0 };
+  try {
+    var pt = document.elementFromPoint(v.left + v.width / 2, v.mid);
+    if (pt && pt !== sc && sc.contains(pt)) {
+      var pr = pt.getBoundingClientRect();
+      if (pr.height <= v.bot - v.top) { a.el = pt; a.off = pr.top - v.top; }
+    }
+  } catch (e) {}
+  return a;
+}
+// נגיעה/גלילה של המשתמש במיכל עוצרת את ההחלות החוזרות (לא נלחמים באצבע)
+function _fsaHookUser(sc) {
+  if (sc.__fsaHooked) return;
+  sc.__fsaHooked = true;
+  var mark = function () { if (sc.__fsa) sc.__fsa.userAt = Date.now(); };
+  ["wheel", "touchstart", "pointerdown", "keydown"].forEach(function (t) {
+    try { sc.addEventListener(t, mark, { passive: true }); } catch (e) {}
+  });
+}
+// חתימת צומת העוגן: האב הקרוב עם id בתוך המיכל (פסקה sn-para-*, פרק) + התוכן + מספר המופע,
+// כדי לאתר את אותו טקסט אם הפרק רונדר מחדש באמצע חלון ההחלה (שכבת פירושים / שו"ע שהגיעה
+// מספריא מחליפה את ה-innerHTML של הפרק ומוסיפה תוכן מעל השורה שקוראים)
+function _fsaSig(node, sc) {
+  var el = node.parentElement;
+  while (el && el !== sc && !el.id) el = el.parentElement;
+  if (!el || el === sc) return null;
+  var w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null), n, k = 0;
+  while ((n = w.nextNode()) && n !== node) { if (n.data === node.data) k++; }
+  return { id: el.id, data: node.data, k: k };
+}
+function _fsaRebind(a) {
+  try {
+    if (a.kind === "mark") {
+      var m = typeof window._luxMarkCaret === "function" ? window._luxMarkCaret(a.sc) : null;
+      var mo = m && m.node && m.node.nodeType === 3 && m.node.isConnected ? _fsaNorm(m.node, m.offset) : -1;
+      if (mo >= 0) { a.node = m.node; a.offset = mo; return true; }
+    }
+    var g = a.sig, host = g && document.getElementById(g.id);
+    if (!host || !a.sc.contains(host)) return false;
+    var w = document.createTreeWalker(host, NodeFilter.SHOW_TEXT, null), n, k = 0;
+    while ((n = w.nextNode())) { if (n.data === g.data && k++ === g.k) { a.node = n; return true; } }
+  } catch (e) {}
+  return false;
+}
+function _fsaCaptureSc(sc) {
+  var v = _fsaView(sc), now = Date.now(), S = sc.__fsa, a = null;
+  var mk = _fsaMarkAt(sc, v);
+  if (mk) {
+    a = { sc: sc, kind: "mark", node: mk.node, offset: mk.offset, d0: 0, markEl: mk.el || null };
+  } else if (S && S.anchor && S.anchor.node && (S.anchor.node.isConnected || _fsaRebind(S.anchor)) && now - S.t < _FSA_REUSE_MS &&
+             !(S.userAt >= S.t) && S.setTop != null && Math.abs(sc.scrollTop - S.setTop) <= 2) {
+    a = S.anchor; // לא גללו מאז השינוי הקודם — ממשיכים עם העוגן המקורי
+  } else if (sc.scrollTop <= 0) {
+    // בראש הטקסט (עוד לא גללו — קוראים מההתחלה): נשארים בראש, הכותרת והשורות הראשונות
+    // לא "בורחות" למעלה. שורה מסומנת גלויה עדיין חוזרת לאמצע (הענף הראשון)
+    return null;
+  } else {
+    var c = _fsaPickAt(sc, v, v.mid);
+    var rc = c && _fsaCharRect(c.node, c.offset);
+    if (rc) a = { sc: sc, kind: "center", node: c.node, offset: c.offset, d0: rc.top + rc.height / 2 - v.mid };
+  }
+  if (a && a.node && a.sig === undefined) a.sig = _fsaSig(a.node, sc);
+  if (!a) a = _fsaLegacy(sc, v);
+  if (!a) return null;
+  _fsaNoAnchor(sc, true); // עיגון-הגלילה של הדפדפן מושבת עד סוף חלון ההחלה
+  return a;
+}
+// overflow-anchor:none דרך מחלקה ולא דרך el.style — כתיבה ל-style מסדרת מחדש את כל
+// המאפיין (#faf9f6 → rgb(...)) ושוברת את התאמות ה-[style*=] של המצב הכהה.
+// scroll-behavior:auto — הצבת scrollTop מיידית גם אם מיכל יקבל פעם גלילה "חלקה" ב-CSS
+function _fsaNoAnchor(sc, on) {
+  if (on && !document.getElementById("fsa-style")) {
+    var st = document.createElement("style");
+    st.id = "fsa-style";
+    st.textContent = ".fsa-anchoring{overflow-anchor:none !important;scroll-behavior:auto !important}";
+    (document.head || document.documentElement).appendChild(st);
+  }
+  sc.classList.toggle("fsa-anchoring", !!on);
+}
 function _fontScrollAnchorCapture(targetSelector) {
   try {
     var el = null;
@@ -20671,55 +20980,132 @@ function _fontScrollAnchorCapture(targetSelector) {
       for (var i = all.length - 1; i >= 0; i--) { if (all[i].offsetParent !== null) { el = all[i]; break; } }
       if (!el && all.length) el = all[all.length - 1];
     }
-    if (!el) return null;
-    var sc = el;
-    while (sc && sc !== document.body && sc !== document.documentElement) {
-      var oy = window.getComputedStyle(sc).overflowY;
-      if ((oy === "auto" || oy === "scroll" || oy === "overlay") && sc.scrollHeight > sc.clientHeight + 1) break;
-      sc = sc.parentElement;
-    }
-    if (!sc || sc === document.body || sc === document.documentElement) return null;
-    // בראש התוכן אין מה לעגן — נשארים בראש (שינוי גודל לא "יקפיץ" פנימה)
-    if (sc.scrollHeight <= sc.clientHeight + 1 || sc.scrollTop <= 0) return null;
-    var mid = sc.scrollTop + sc.clientHeight / 2;
-    var anchor = { sc: sc, ratio: mid / sc.scrollHeight, el: null, off: 0 };
-    // עוגן מבוסס-אלמנט: האלמנט שנמצא חזותית במרכז המיכל נשאר באותו מקום על
-    // המסך אחרי השינוי. מדויק מעוגן-היחס (רווחים ב-rem לא גדלים עם הכתב ולכן
-    // היחס לבדו סוחף את השורה); היחס נשמר כנסיגה אם האלמנט נעלם ב-rerender.
-    try {
-      var r = sc.getBoundingClientRect();
-      var cy = r.top + Math.min(r.height, Math.max(120, r.height)) / 2;
-      var pt = document.elementFromPoint(r.left + r.width / 2, cy);
-      if (pt && pt !== sc && sc.contains(pt)) {
-        anchor.el = pt;
-        anchor.off = pt.getBoundingClientRect().top - r.top;
-      }
-    } catch (e2) {}
-    return anchor;
+    var sc = el && _fsaScroller(el);
+    return sc ? _fsaCaptureSc(sc) : null;
   } catch (e) { return null; }
 }
-function _fontScrollAnchorRestore(anchor) {
-  if (!anchor || !anchor.sc) return;
+// עוגן לכל הקוראים הגלויים שהשינוי נוגע בהם: היעד + כל מיכל קריאה מוכר שמוצג (למשל
+// ספרים נוספים מתחת לתפילה — _snSyncFontFromGlobal משנה גם אותו; חלונית הפונט מעל הקורא)
+function _fontScrollAnchorCaptureAll(targetSelector) {
+  var out = [], seen = [];
+  var add = function (el) {
+    if (!_fsaShown(el)) return;
+    var sc = _fsaScroller(el);
+    if (!sc || seen.indexOf(sc) !== -1) return;
+    seen.push(sc);
+    var a = _fsaCaptureSc(sc);
+    if (a) out.push(a);
+  };
   try {
-    var sc = anchor.sc;
-    var apply = function () {
-      try {
-        var maxTop = Math.max(0, sc.scrollHeight - sc.clientHeight);
-        if (anchor.el && sc.contains(anchor.el)) {
-          var r = sc.getBoundingClientRect();
-          var cur = anchor.el.getBoundingClientRect().top - r.top;
-          sc.scrollTop = Math.max(0, Math.min(sc.scrollTop + (cur - anchor.off), maxTop));
-        } else {
-          sc.scrollTop = Math.max(0, Math.min(anchor.ratio * sc.scrollHeight - sc.clientHeight / 2, maxTop));
+    if (targetSelector && targetSelector.nodeType === 1) add(targetSelector);
+    else if (targetSelector) Array.prototype.forEach.call(document.querySelectorAll(targetSelector), add);
+    _FSA_READERS.forEach(function (s) { add(document.querySelector(s)); });
+  } catch (e) {}
+  return out.length ? out : null;
+}
+function _fsaRelayoutMark() {
+  // השורה הצהובה מחושבת מחדש מיד (בלי להמתין לטיק של המרקר)
+  try { if (typeof window._luxMarkRelayout === "function") window._luxMarkRelayout(); } catch (e) {}
+}
+function _fontScrollAnchorRestore(anchor, opts) {
+  if (!anchor) return;
+  if (Array.isArray(anchor)) { anchor.forEach(function (a) { _fontScrollAnchorRestore(a, opts); }); return; }
+  var sc = anchor.sc;
+  if (!sc || !sc.isConnected) return;
+  var S = sc.__fsa || (sc.__fsa = {});
+  var run = { alive: true, t: Date.now() };
+  if (S.run) S.run.alive = false; // החלות של לחיצה קודמת — מבוטלות
+  S.run = run; S.anchor = anchor; S.t = run.t; S.applied = false;
+  _fsaHookUser(sc);
+  var relaid = false;
+  var apply = function () {
+    if (!run.alive || !sc.isConnected) return false;
+    if (S.userAt >= run.t) { run.alive = false; return false; }
+    try {
+      // משהו אחר הזיז את הגלילה מאז ההחלה הקודמת (גלילה אוטומטית / קפיצה) — עוצרים
+      if (S.applied && Math.abs(sc.scrollTop - S.setTop) > 2) { run.alive = false; return false; }
+      var target = null;
+      if (anchor.node) {
+        // הפרק רונדר מחדש (תוכן שנטען באיחור) — אותו טקסט בצומת החדש, ואם לא נמצא — עוצרים
+        if (!anchor.node.isConnected && !_fsaRebind(anchor)) { run.alive = false; return false; }
+        var rc = _fsaCharRect(anchor.node, anchor.offset);
+        // שורת המרקר אחרי הציור-מחדש: מרכז השורה הצהובה עצמה (בגבול מילים שבשבירת שורה
+        // התו השמור והשורה המודגשת עשויים ליפול בשורות סמוכות); בדף יומי — מרכז הקטע המסומן
+        var lr = null;
+        if (anchor.kind === "mark" && anchor.markEl) {
+          if (!anchor.markEl.isConnected) anchor.markEl = sc.querySelector(".daf-line-marked");
+          var mr = anchor.markEl && anchor.markEl.getBoundingClientRect();
+          if (mr && mr.height > 0) lr = { top: mr.top, bottom: mr.bottom };
+        } else if (anchor.kind === "mark" && relaid && typeof window._luxMarkLineRect === "function") {
+          lr = window._luxMarkLineRect(sc);
         }
-      } catch (e) {}
-    };
-    apply();                      // הדפדפן כבר ביצע reflow סינכרוני אחרי שינוי font-size
-    requestAnimationFrame(apply); // ליתר ביטחון אם ה-layout הסתיים רק בפריים הבא
+        if (lr || rc) {
+          var d = (lr ? (lr.top + lr.bottom) / 2 : rc.top + rc.height / 2) - (_fsaView(sc).mid + anchor.d0);
+          if (Math.abs(d) >= 1) target = sc.scrollTop + d;
+        }
+      } else if (anchor.el && sc.contains(anchor.el)) {
+        target = sc.scrollTop + (anchor.el.getBoundingClientRect().top - _fsaView(sc).top - anchor.off);
+      } else if (anchor.ratio != null) {
+        target = anchor.ratio * sc.scrollHeight - sc.clientHeight / 2;
+      }
+      if (target != null) sc.scrollTop = Math.max(0, Math.min(target, sc.scrollHeight - sc.clientHeight));
+      S.setTop = sc.scrollTop; S.applied = true;
+    } catch (e) {}
+    return true;
+  };
+  var raf = window.requestAnimationFrame ? window.requestAnimationFrame.bind(window) : function (f) { return setTimeout(f, 16); };
+  apply(); // המדידה מאלצת reflow סינכרוני אחרי שינוי ה-font-size
+  raf(function () { apply(); raf(function () { _fsaRelayoutMark(); relaid = true; apply(); }); });
+  [120, 300, 700].forEach(function (ms) { setTimeout(apply, ms); });
+  var fonts = document.fonts;
+  var onFonts = function () { raf(apply); };
+  if (fonts) {
+    try { if (fonts.ready && fonts.ready.then) fonts.ready.then(onFonts); } catch (e) {}
+    try { fonts.addEventListener("loadingdone", onFonts); } catch (e) {}
+  }
+  setTimeout(function () {
+    if (fonts) { try { fonts.removeEventListener("loadingdone", onFonts); } catch (e) {} }
+    _fsaRelayoutMark(); relaid = true;
+    apply();
+    if (S.run === run) { S.run = null; _fsaNoAnchor(sc, false); }
+  }, (opts && opts.windowMs) || 1600);
+}
+// האם שינוי גודל/פונט כתב עיגן את מיכל הקריאה מאז t. קוראים שטוענים פרקים מספריא ובסוף
+// הטעינה גוללים לראש הפרק הנבחר (ספרים נוספים / תהילים) בודקים את זה: אם המשתמש כבר
+// הגדיל/הקטין בזמן הטעינה — הוא כבר קורא, השורה שלו נשמרה, ולא "מקפיצים" אותו לראש הפרק
+function _fontScrollAnchorSince(el, t) {
+  var sc = el && _fsaScroller(el);
+  return !!(sc && sc.__fsa && sc.__fsa.t > t);
+}
+// שורת הקריאה נשארת במקומה סביב רינדור-מחדש של תוכן שנטען באיחור (fn מחליף innerHTML):
+// למשל פרק בספרים נוספים שנבנה מחדש כששכבת השו"ע/הפירושים מגיעה מספריא — התוכן החדש
+// נכנס גם מעל השורה שנקראת, והקורא "קפץ" אלפי פיקסלים (עיגון הדפדפן לא עוזר — הצומת הוחלף).
+// אותו עוגן-תו כמו בשינוי גודל כתב, חד-פעמי; בראש הטקסט (scrollTop=0) — לא נוגעים
+function _fsaKeepAround(el, fn) {
+  var sc = null, a = null;
+  try {
+    sc = el && _fsaScroller(el);
+    if (sc && sc.scrollTop > 0) {
+      var v = _fsaView(sc), c = _fsaPickAt(sc, v, v.mid), rc = c && _fsaCharRect(c.node, c.offset);
+      if (rc) a = { sc: sc, kind: "keep", node: c.node, offset: c.offset, sig: _fsaSig(c.node, sc), d0: rc.top + rc.height / 2 - v.mid };
+    }
+  } catch (e) { a = null; }
+  fn();
+  if (!a) return;
+  try {
+    if (!a.node.isConnected && !_fsaRebind(a)) return;
+    var r2 = _fsaCharRect(a.node, a.offset);
+    if (!r2) return;
+    var d = r2.top + r2.height / 2 - (_fsaView(sc).mid + a.d0);
+    if (Math.abs(d) >= 1) sc.scrollTop = Math.max(0, Math.min(sc.scrollTop + d, sc.scrollHeight - sc.clientHeight));
+    // חלון החלה של שינוי כתב שעדיין רץ ממשיך (זו לא גלילה "זרה"), ומעגן מחדש את העוגן שלו
+    var S = sc.__fsa;
+    if (S && S.run && S.run.alive && S.applied) S.setTop = sc.scrollTop;
   } catch (e) {}
 }
 // חשופים גם לקוראי lux.js (סליחות / מסלולים / תוכנית לימוד) ולסרגל מוצ"ש
 window._fontScrollAnchorCapture = _fontScrollAnchorCapture;
+window._fontScrollAnchorCaptureAll = _fontScrollAnchorCaptureAll;
 window._fontScrollAnchorRestore = _fontScrollAnchorRestore;
 
 function changePrayerFontSize(delta, targetSelector) {
@@ -20727,17 +21113,18 @@ function changePrayerFontSize(delta, targetSelector) {
   _syncPrayerFontFromStorage();
   _prayerFontSize = Math.max(60, Math.min(200, _prayerFontSize + delta));
   localStorage.setItem(FONT_SIZE_KEY, _prayerFontSize);
-  // עוגן מיקום קריאה — נלכד לפני ההחלה ומשוחזר מיד אחריה
-  const _fsAnchor = delta !== 0 ? _fontScrollAnchorCapture(targetSelector) : null;
+  // עוגן מיקום קריאה — נלכד לפני ההחלה (בכל הקוראים הגלויים שהשינוי נוגע בהם)
+  // ומשוחזר אחרי שכולם קיבלו את הגודל החדש
+  const _fsAnchor = delta !== 0 ? _fontScrollAnchorCaptureAll(targetSelector) : null;
   applyPrayerFontSize(targetSelector);
+  // גודל אחיד — מסנכרנים גם קוראים עם סרגל עצמאי (ספרים נוספים / בן איש חי) אם פתוחים
+  if (window._snSyncFontFromGlobal) window._snSyncFontFromGlobal();
+  if (window._bihSyncFontFromGlobal) window._bihSyncFontFromGlobal();
   _fontScrollAnchorRestore(_fsAnchor);
   // Update label
   document.querySelectorAll(".font-size-label").forEach((el) => {
     el.textContent = _prayerFontSize + "%";
   });
-  // גודל אחיד — מסנכרנים גם קוראים עם סרגל עצמאי (ספרים נוספים / בן איש חי) אם פתוחים
-  if (window._snSyncFontFromGlobal) window._snSyncFontFromGlobal();
-  if (window._bihSyncFontFromGlobal) window._bihSyncFontFromGlobal();
   if (delta !== 0 && window._btnToastVal) window._btnToastVal("גודל כתב: " + _prayerFontSize + "%");
 }
 
@@ -22611,6 +22998,7 @@ openTehillimPage = function () {
     pane.style.display = "flex";
     window._tehillimLoadedChapters = new Set();
     window._tehillimCurrentChapter = chapter;
+    const _thOpenT = Date.now();
     title.textContent = `תהילים פרק ${toHebrewPsalmNumber(chapter)}`;
     area.innerHTML = "";
     area.style.cssText =
@@ -22620,9 +23008,9 @@ openTehillimPage = function () {
     if (chapter > 1) await loadPsalmChapter(chapter - 1, area, false);
     await loadPsalmChapter(chapter, area, false);
     if (chapter < 150) await loadPsalmChapter(chapter + 1, area, false);
-    // Scroll to current chapter
+    // Scroll to current chapter — לא אם כבר שינו גודל כתב בזמן הטעינה (השורה שנקראת נשמרה)
     const currentEl = document.getElementById(`psalm-chapter-${chapter}`);
-    if (currentEl) currentEl.scrollIntoView({ block: "start" });
+    if (currentEl && !_fontScrollAnchorSince(area, _thOpenT)) currentEl.scrollIntoView({ block: "start" });
     // Infinite scroll: load more chapters on scroll
     // שמירת state ל-throttle ו-guard (מניעת race conditions בגלילה מהירה/אוטומטית)
     let _thScrollBusy = false;
@@ -30611,7 +30999,9 @@ function openSefarimNosafimPage(_pageMode) {
     // (בספר משנה ברורה הם כבר שובצו בבלוק השולחן ערוך למעלה)
     if (!isMBBook && diburCms.length) parasHtml = await spliceDibur(parasHtml, sec.ref);
 
-    chapterDiv.innerHTML = heading + saBlockHtml + parasHtml + bottomNotes;
+    // השכבות (שו"ע / פירושים) נכנסות גם מעל השורה שנקראת — שורת הקריאה נשארת במקומה
+    var _snFinalHtml = heading + saBlockHtml + parasHtml + bottomNotes;
+    _fsaKeepAround(area, function() { chapterDiv.innerHTML = _snFinalHtml; });
   }
 
   // ── הדגשה וגלילה למיקום מדויק של תוצאת חיפוש ──
@@ -30726,15 +31116,17 @@ function openSefarimNosafimPage(_pageMode) {
     content.appendChild(cred);
 
     _snLoadedIdx = new Set();
+    var _snOpenT = Date.now();
 
     // Load prev (if exists), current, next (if exists)
     if (idx > 0) await _snLoadChapter(idx - 1, area, false);
     await _snLoadChapter(idx, area, false);
     if (idx < sections.length - 1) await _snLoadChapter(idx + 1, area, false);
 
-    // Scroll to current chapter
+    // Scroll to current chapter — אלא אם המשתמש כבר הגדיל/הקטין כתב בזמן הטעינה (ספריא איטית):
+    // עוגן הגלילה שמר את השורה שהוא קורא, והקפיצה לראש הפרק הייתה "מבריחה" אותה
     var currentEl = document.getElementById("sn-chapter-" + idx);
-    if (currentEl) currentEl.scrollIntoView({ block: "start" });
+    if (currentEl && !_fontScrollAnchorSince(content, _snOpenT)) currentEl.scrollIntoView({ block: "start" });
     // אם החיפוש העביר אותנו לכאן — קפיצה למיקום המדויק של המילים בתוך הפרק
     if (hlWords && hlWords.length) {
       setTimeout(function() {

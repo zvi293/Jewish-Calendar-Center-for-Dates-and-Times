@@ -2960,6 +2960,10 @@
       };
     }
     var orig = navigator.geolocation.getCurrentPosition.bind(navigator.geolocation);
+    // העטיפה כאן מחזירה מיקום שמור בלי לשאול — לקוראים כלליים. מיקום האתר עצמו
+    // (script.js: כפתור ה-GPS והרענון האוטומטי בכל כניסה, דגל moadim_geo_auto)
+    // צריך מיקום ושגיאות אמיתיים ולכן קורא לפונקציה המקורית, ומעדכן את KEY בעצמו.
+    window.__luxGeoNativeGetPos = orig;
     function realCall(success, error, opts) {
       orig(function (pos) {
         try {

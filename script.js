@@ -74,6 +74,21 @@ const HEBCAL_REVALIDATE_MS = 60 * 60 * 1000;
 // בקשת רשת אחת לכתובת (בקשות מקבילות לאותה כתובת חולקות אותה) — נכתבת למטמון
 function _hebcalNetRequest(url, cacheKey, timeoutMs) {
   if (API_INFLIGHT_CACHE.has(url)) return API_INFLIGHT_CACHE.get(url);
+  // ספריא (פרשת השבוע, דף יומי, רש"י, אונקלוס, חק לישראל) — שליפה עמידה עם נתיבים חלופיים
+  if (/^https:\/\/www\.sefaria\.org(\.il)?\/api\//.test(url)) {
+    const sreq = _sefariaJson(url, { timeout: Math.max(timeoutMs, 12000) })
+      .then((data) => {
+        if (data && !data.error) {
+          safeCacheSetItem(cacheKey, JSON.stringify({ timestamp: Date.now(), data }));
+        }
+        return data;
+      })
+      .finally(() => {
+        API_INFLIGHT_CACHE.delete(url);
+      });
+    API_INFLIGHT_CACHE.set(url, sreq);
+    return sreq;
+  }
   const request = fetch(url, { signal: AbortSignal.timeout(timeoutMs) })
     .then((res) =>
       res.json().then((data) => {
@@ -455,6 +470,80 @@ function sanitizeExternalHtml(html) {
     return escapeHtml(html);
   }
 }
+// ── שליפה עמידה מ-API של ספריא (09/2026) ──
+// הבעיה: "לא נמצא טקסט" בכל ספר שנפתח, לסירוגין, בכמה מכשירים — ואחרי כמה דקות
+// הכול עובד. ספריא (Cloudflare) מחזירה מדי פעם שגיאה/חסימה זמנית (5xx / 429 /
+// דף אתגר בלי CORS ⇒ TypeError) או נתקעת; בקשה בודדת בלי ניסיון חוזר הפכה כל תקלה
+// רגעית ל"אין טקסט". כאן: כמה נתיבים לאותו API — ספריא ישירות, פרוקסי דרך האתר
+// שלנו (/sefaria-api — netlify.toml; יוצא מכתובת IP אחרת, כך שחסימה זמנית של
+// המשתמש לא משפיעה), ומראת sefaria.org.il — עם timeout לכל ניסיון וסבב שני אחרי
+// המתנה קצרה. מחזיר JSON (גם JSON של שגיאה אמיתית — "אין ספר כזה" אינו תקלת רשת);
+// זורק רק כשכל הנתיבים נכשלו. בקשות זהות במקביל חולקות שליפה אחת.
+const _sefariaInflight = new Map();
+function _sefariaCandidates(url) {
+  const m = String(url).match(/^https:\/\/www\.sefaria\.org(?:\.il)?(\/api\/.*)$/);
+  if (!m) return [String(url)];
+  const path = m[1];
+  const list = ["https://www.sefaria.org" + path];
+  // הפרוקסי קיים רק באתר המפורסם (Netlify) — בשרת פיתוח מקומי הוא סתם 404
+  if (location.protocol === "https:") list.push(location.origin + "/sefaria-api" + path.slice(4));
+  list.push("https://www.sefaria.org.il" + path);
+  return list;
+}
+function _sefariaJson(url, opts) {
+  opts = opts || {};
+  const outer = opts.signal || null;
+  const key = outer ? null : String(url);
+  if (key && _sefariaInflight.has(key)) return _sefariaInflight.get(key);
+  const cands = _sefariaCandidates(url);
+  const rounds = opts.rounds || 2;
+  const perTry = opts.timeout || 15000;
+  const deadline = Date.now() + (opts.deadline || 40000);
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  const run = (async () => {
+    let lastErr = null;
+    for (let round = 0; round < rounds; round++) {
+      if (round) await wait(1500 * round);
+      for (let i = 0; i < cands.length; i++) {
+        if (outer && outer.aborted) throw new DOMException("Aborted", "AbortError");
+        if (Date.now() > deadline) throw lastErr || new Error("Sefaria deadline");
+        const ctrl = new AbortController();
+        const onOuter = () => ctrl.abort();
+        if (outer) outer.addEventListener("abort", onOuter, { once: true });
+        const timer = setTimeout(() => ctrl.abort(), perTry);
+        try {
+          const res = await fetch(cands[i], { signal: ctrl.signal });
+          if (res.status === 429) {
+            // עומס — מכבדים Retry-After (עד 4 שניות) ועוברים לנתיב הבא
+            const ra = parseInt(res.headers.get("Retry-After") || "0", 10);
+            lastErr = new Error("Sefaria 429");
+            await wait(Math.min(4000, Math.max(600, (ra || 1) * 1000)));
+            continue;
+          }
+          if (res.status >= 500) { lastErr = new Error("Sefaria " + res.status); continue; }
+          // 4xx עם JSON = תשובה אמיתית של ספריא ("אין טקסט/אין ספר כזה") — מוחזרת כמו שהיא
+          let data;
+          try { data = await res.json(); } catch (eJ) { lastErr = eJ; continue; } // דף HTML (אתגר/חסימה/404 של פרוקסי)
+          if (data && typeof data === "object") return data;
+          lastErr = new Error("Sefaria bad payload");
+        } catch (e) {
+          if (outer && outer.aborted) throw e;
+          lastErr = e;
+        } finally {
+          clearTimeout(timer);
+          if (outer) outer.removeEventListener("abort", onOuter);
+        }
+      }
+    }
+    throw lastErr || new Error("Sefaria unavailable");
+  })();
+  if (key) {
+    _sefariaInflight.set(key, run);
+    run.then(() => _sefariaInflight.delete(key), () => _sefariaInflight.delete(key));
+  }
+  return run;
+}
+window._sefariaJson = _sefariaJson;
 // html.lux-modal-open — סימון מרכזי "פופאפ כלשהו פתוח": משהה את קנבס הכוכבים,
 // את שעוני-הכפייה ואת האנימציות האינסופיות שברקע (כללי CSS בסוף style.css).
 // הבדיקה משקפת את ה-DOM עצמו ולכן עמידה גם מול פופאפים שלא נועלים גלילה.
@@ -2591,11 +2680,10 @@ async function fetchChokLeIsraelData() {
 
     // Fetch collection sheet index once per session (in-memory only — too large for localStorage)
     if (!_chokLeIsraelSheetsIndex) {
-      const res = await fetch(
+      const collData = await _sefariaJson(
         'https://www.sefaria.org/api/collections/%D7%97%D7%A7-%D7%9C%D7%99%D7%A9%D7%A8%D7%90%D7%9C',
-        { signal: AbortSignal.timeout(10000) }
+        { timeout: 12000 }
       );
-      const collData = await res.json();
       _chokLeIsraelSheetsIndex = collData.sheets || [];
     }
 
@@ -2664,11 +2752,10 @@ async function openChokLeIsraelModal() {
 
   try {
     if (!_chokLeIsraelSheetCache[_chokLeIsraelData.sheetId]) {
-      const res = await fetch(
+      _chokLeIsraelSheetCache[_chokLeIsraelData.sheetId] = await _sefariaJson(
         'https://www.sefaria.org/api/sheets/' + _chokLeIsraelData.sheetId,
-        { signal: AbortSignal.timeout(10000) }
+        { timeout: 12000 }
       );
-      _chokLeIsraelSheetCache[_chokLeIsraelData.sheetId] = await res.json();
     }
     _chokCurrentSheet = _chokLeIsraelSheetCache[_chokLeIsraelData.sheetId];
     renderChokContent();
@@ -3329,11 +3416,10 @@ async function fetchChokCommentaries() {
         _chokRashiCache[ref] = 'loading';
         const _rashiSection = currentSection; // capture for closure
         promises.push(
-          fetch(
+          _sefariaJson(
             'https://www.sefaria.org/api/texts/' + encodeURIComponent('Rashi on ' + ref) + '?lang=he&context=0&pad=0',
-            { signal: AbortSignal.timeout(8000) }
+            { timeout: 10000 }
           )
-            .then(r => r.json())
             .then(data => {
               if (data && data.he) {
                 const raw = data.he;
@@ -3389,11 +3475,10 @@ async function fetchChokCommentaries() {
         // pad=0 — ה-ref של המשנה בגיליון הוא פרק שלם ("Mishnah Zevachim 4"); בלי pad=0 ספריא
         // מחזירה רק את הפירוש על משנה א' (תוקן 09/2026)
         promises.push(
-          fetch(
+          _sefariaJson(
             'https://www.sefaria.org/api/texts/' + encodeURIComponent('Bartenura on ' + ref) + '?lang=he&context=0&pad=0',
-            { signal: AbortSignal.timeout(8000) }
+            { timeout: 10000 }
           )
-            .then(r => r.json())
             .then(data => {
               if (data && data.he) {
                 const flat = [].concat(...[data.he].flat(3)).filter(t => typeof t === 'string' && t.trim());
@@ -11147,11 +11232,10 @@ function buildPrayerQueries(key, context, nusachLabel) {
 
 async function fetchSefariaTextRef(ref) {
   const url = `https://www.sefaria.org/api/texts/${encodeURIComponent(ref)}?lang=he&context=0&commentary=0`;
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`Sefaria ${response.status} for ${ref}`);
+  const data = await _sefariaJson(url);
+  if (data && data.error) {
+    throw new Error(`Sefaria error for ${ref}: ${data.error}`);
   }
-  const data = await response.json();
   const flatten = (value) => {
     if (Array.isArray(value)) return value.flatMap(flatten);
     if (typeof value === "string") return [value];
@@ -11271,19 +11355,8 @@ function resolveSeasonalPrayerAdditions(key, context) {
       `<div class="seasonal-block"><strong>ברכת הלבנה:</strong><div>מברכים כשהלבנה נראית ובמנהג רוב הקהילות לא בשבת ויום טוב. יש להעדיף אמירה מתוך שמחה ובלבוש מכובד.</div><div class="lv-prayer-times" data-levana-live="1"></div></div>`,
     );
   }
-  if (
-    key === "tikkun-chatzot" &&
-    (context.isShabbat ||
-      context.isRoshHaShana ||
-      context.isYomKippur ||
-      context.isPesach ||
-      context.isShavuot ||
-      context.isSukkot)
-  ) {
-    blocks.push(
-      `<div class="seasonal-block"><strong>היום:</strong><div>ברוב הקהילות אין אומרים תיקון חצות בשבת, ימים טובים וימים שאין אומרים בהם תחנון מסוג זה.</div></div>`,
-    );
-  }
+  // תיקון חצות: אין כאן בלוק עונתי — הסטטוס המדויק של הלילה (רחל/לאה/אין אומרים) נקבע בכל
+  // פתיחה ע"י _tikkunChatzotApply (ה-HTML של התפילה נשמר במטמון ואינו יודע את השעה והלילה)
   return blocks.join("");
 }
 
@@ -22859,7 +22932,7 @@ function openShirHashirimPage() {
   (async () => {
     try {
       const fetches = Array.from({ length: CHAPTERS }, (_, i) =>
-        fetch(`https://www.sefaria.org/api/texts/Song_of_Songs.${i + 1}?lang=he&context=0`).then(r => r.json())
+        _sefariaJson(`https://www.sefaria.org/api/texts/Song_of_Songs.${i + 1}?lang=he&context=0`)
       );
       const results = await Promise.all(fetches);
 
@@ -23137,13 +23210,12 @@ function openBenIshHaiPage() {
     const ref = "Ben_Ish_Hai,_"+year.en.replace(/ /g,"_")+",_"+parsha.en.replace(/ /g,"_");
     const url = "https://www.sefaria.org/api/texts/"+encodeURIComponent(ref)+"?pad=0&lang=he";
     try {
-      const res = await fetch(url);
-      if (!res.ok) throw new Error("fail");
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
+      // שליפה עמידה; תקלת רשת לא נשמרת כ"ריק" במטמון — הפתיחה הבאה תנסה שוב
+      const data = await _sefariaJson(url);
+      if (data.error) { _cache[key] = []; return []; }
       _cache[key] = flatten(data.he);
       return _cache[key];
-    } catch(e) { _cache[key] = []; return []; }
+    } catch(e) { return []; }
   }
 
   async function fetchDrashot(drKey) {
@@ -23153,13 +23225,12 @@ function openBenIshHaiPage() {
     const ref = "Ben_Ish_Hai,_Drashot,_"+drKey.replace(/ /g,"_");
     const url = "https://www.sefaria.org/api/texts/"+encodeURIComponent(ref)+"?pad=0&lang=he";
     try {
-      const res = await fetch(url);
-      if (!res.ok) throw new Error("fail");
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
+      // שליפה עמידה; תקלת רשת לא נשמרת כ"ריק" במטמון — הפתיחה הבאה תנסה שוב
+      const data = await _sefariaJson(url);
+      if (data.error) { _cache[key] = []; return []; }
       _cache[key] = flatten(data.he);
       return _cache[key];
-    } catch(e) { _cache[key] = []; return []; }
+    } catch(e) { return []; }
   }
 
   // ── Create DOM section: halachot with drashot preface ──
@@ -23590,7 +23661,8 @@ function openBenIshHaiPage() {
     '<div id="bih-reading-pane" style="display:none;position:absolute;inset:0;background:#faf9f6;z-index:10;flex-direction:column;overflow:hidden;">'+
       // כפתורי פעולה ראשונים = צד ימין; הכותרת אחרונה; ריווח 3.6rem בצד שמאל ל-X האוניברסלי (09/2026)
       '<div style="display:flex;align-items:center;justify-content:space-between;padding:0.7rem 1rem 0.7rem 3.6rem;border-bottom:1px solid rgba(0,0,0,0.09);background:#faf9f6;flex-shrink:0;gap:0.5rem;">'+
-        '<button onclick="window._bihGoToChapters()" style="background:rgba(0,0,0,0.06);border:none;color:#1e293b;padding:0.4rem 0.55rem;border-radius:999px;cursor:pointer;font-size:0.82rem;flex-shrink:0;margin-left:0.35rem;" title="כל הפרשיות">📑</button>'+
+        // תוכן עניינים — כפתור ☰ אחיד בכל האתר (כמו בשחרית/מנחה/ערבית)
+        '<button class="toc-nav-btn" onclick="window._bihGoToChapters()" style="background:rgba(0,0,0,0.06);border:none;color:#64748b;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.15rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-left:0.35rem;" title="תוכן העניינים — כל הפרשיות" aria-label="תוכן העניינים">☰</button>'+
         '<button onclick="window._bihToggleReaderBMPanel()" id="bih-reader-bm-pin" style="background:rgba(0,0,0,0.06);border:none;color:#1e293b;padding:0.4rem 0.55rem;border-radius:999px;cursor:pointer;font-size:0.82rem;flex-shrink:0;margin-left:0.35rem;" title="סימניות">📌</button>'+
         '<button onclick="window._bihOpenSearch()" style="background:rgba(0,0,0,0.06);border:none;color:#1e293b;padding:0.4rem 0.75rem;border-radius:999px;cursor:pointer;font-size:0.8rem;font-weight:700;white-space:nowrap;flex-shrink:0;">🔍 חיפוש</button>'+
         '<h3 id="bih-reading-title" style="color:#1e293b;font-size:0.95rem;font-weight:900;margin:0;text-align:center;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></h3>'+
@@ -23994,12 +24066,15 @@ function renderPrayerModalShell(title, isPopup, prayerKey) {
   modal.id = "prayer-modal";
   const _showPrayerNavBtn = (prayerKey === "shacharit" || prayerKey === "mincha" || prayerKey === "maariv");
   const _prayerNavBtnHtml = _showPrayerNavBtn
-    ? `<button onclick="openPrayerNavPopup()" title="תפריט תפילה" aria-label="תפריט תפילה" style="background:rgba(0,0,0,0.06);border:none;color:#64748b;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.15rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;">☰</button>`
+    ? `<button class="toc-nav-btn" onclick="openPrayerNavPopup()" title="תפריט תפילה" aria-label="תפריט תפילה" style="background:rgba(0,0,0,0.06);border:none;color:#64748b;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.15rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;">☰</button>`
     : "";
   // מצפן כיוון התפילה — ליד כפתור המרקר (lux.js מזריק את 🖍️ כילד ראשון, כלומר מימין לו).
   // נפתח מעל התפילה בלי לסגור אותה; onclick ישיר — אישור החיישנים ב-iOS דורש מחוות משתמש.
   // בלי "סגור"/"חזרה" ב-aria-label ובלי close במחלקה/onclick — שה-X האוניברסלי לא יחשוב שזה כפתור סגירה.
-  const _prayerCompassBtnHtml = `<button type="button" class="prayer-cmp-btn" onclick="openCompass()" aria-label="מצפן כיוון התפילה" title="מצפן — כיוון התפילה לירושלים">🧭</button>`;
+  // לבקשת בעל האתר (09/2026): המצפן רק בשחרית, מנחה וערבית — לא בשאר התפילות
+  const _prayerCompassBtnHtml = _showPrayerNavBtn
+    ? `<button type="button" class="prayer-cmp-btn" onclick="openCompass()" aria-label="מצפן כיוון התפילה" title="מצפן — כיוון התפילה לירושלים">🧭</button>`
+    : "";
   if (isPopup) {
     modal.style.cssText =
       "position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);display:flex;align-items:flex-start;justify-content:center;padding:1rem;overflow-y:auto;";
@@ -24194,9 +24269,18 @@ openPrayer = async function (key, heLabel, enLabel) {
   const doOpen = async () => {
     const entry = PRAYER_DB[key] || { title: heLabel || enLabel || key };
     const isPopup = false;
+    // מעבר ישיר מתפילה לתפילה (כפתור "המשך ל..." בסוף התפילה): המודאל מוחלף במקום —
+    // רשומת ההיסטוריה של הקודם מוחלפת (replaceState), כך ש"חזרה" אחת סוגרת ולא נשאר עודף
+    const swapInPlace = !!window.__prayerSwapInPlace && !!document.getElementById("prayer-modal");
+    window.__prayerSwapInPlace = false;
     renderPrayerModalShell(entry.title || heLabel || enLabel || key, isPopup, key);
     lockBodyScroll();
-    pushModalState("prayer-modal");
+    if (swapInPlace) {
+      _activeModals.push("prayer-modal");
+      try { history.replaceState({ modal: "prayer-modal" }, ""); } catch (e) {}
+    } else {
+      pushModalState("prayer-modal");
+    }
     try {
       const content = await getFullPrayerContent(key);
       const meta = document.getElementById("prayer-modal-meta");
@@ -24223,6 +24307,7 @@ openPrayer = async function (key, heLabel, enLabel) {
                   ${content.seasonalHtml ? '<div style="background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.18);border-radius:0.75rem;padding:0.7rem 0.85rem;margin-bottom:1.25rem;font-size:0.82em;color:#1e40af;line-height:1.65;border-right:3px solid rgba(37,99,235,0.4);">' + content.seasonalHtml + "</div>" : ""}
                   ${content.html}
                 </div>
+                ${_prayerNextCtaHtml(key)}
                 <div style="border-top:1px solid rgba(0,0,0,0.08);margin-top:1.5rem;padding-top:0.75rem;color:#94a3b8;font-size:0.72rem;text-align:center;">
                   מקור התוכן: <strong>${content.sourceLabel}</strong>${content.sourceUrl ? ` · <a href="${content.sourceUrl}" target="_blank" rel="noopener noreferrer" style="color:#3b82f6;">קישור למקור</a>` : ""}
                 </div>`;
@@ -24231,6 +24316,10 @@ openPrayer = async function (key, heLabel, enLabel) {
       // ברכת הלבנה: זמני החודש והמצב העדכני (תחילה/סוף לפי המולד) בבאנר העליון
       if (key === "kiddush-levana" && body) {
         try { _levanaFillPrayerTimes(body); } catch (e) {}
+      }
+      // תיקון חצות: מה אומרים הלילה (רחל ולאה / לאה בלבד / רחל בלבד / אין אומרים) — מחושב בכל פתיחה
+      if (key === "tikkun-chatzot" && body) {
+        try { _tikkunChatzotApply(body); } catch (e) {}
       }
       // מנחה נפתחת ישירות בקורבנות (למנצח על הגיתית); אפשר לגלול מעלה לפתח אליהו
       if (key === "mincha") {
@@ -24255,6 +24344,217 @@ openPrayer = async function (key, heLabel, enLabel) {
     }
   };
   ensureNusachChosen(doOpen);
+};
+
+// ── תיקון חצות לפי הלילה (09/2026) ──
+// המקורות: כף החיים סימן א, בן איש חי (וישלח שנה א), ילקוט יוסף (הל' השכמת הבוקר) — ואותם הכללים
+// שבהוראת הסידור עצמו (ספריא, סידור עדות המזרח). הלילה שייך ליום העברי שמתחיל בצאת הכוכבים:
+// לפני עלות השחר — הלילה של היום העברי הנוכחי; מעלות השחר והלאה — הלילה הקרוב (של מחר).
+//   אין אומרים כלל: ליל שבת, ימים טובים (ר"ה, יוה"כ, סוכות, שמיני עצרת, פסח, שבועות), חוה"מ פסח.
+//   תיקון רחל בלבד: ליל תשעה באב.
+//   תיקון לאה בלבד (בלי וידוי ובלי תיקון רחל): ימים שאין אומרים בהם תחנון, ימי העומר, עשרת ימי
+//   תשובה, חוה"מ סוכות, אחרי המולד וקודם ראש חודש, ושנת השמיטה בארץ ישראל.
+//   בימים שאין אומרים תחנון אין אומרים בתיקון לאה את "למנצח... יענך" ואת "עד אנה בכיה בציון".
+function _tikkunChatzotStatus(now) {
+  now = now || new Date();
+  const K = window.KosherZmanim;
+  if (!K || !K.JewishCalendar) return null;
+  let alot = null;
+  try {
+    const z = window._lastZData;
+    if (z && z.times && z.times.alotHaShachar) alot = new Date(z.times.alotHaShachar);
+  } catch (e) {}
+  // שעת עלות השחר של היום (מנתוני הזמנים), מוחלת על התאריך של now — כדי שהחישוב נכון לכל תאריך
+  alot = (!alot || isNaN(alot))
+    ? new Date(now.getFullYear(), now.getMonth(), now.getDate(), 4, 45)
+    : new Date(now.getFullYear(), now.getMonth(), now.getDate(), alot.getHours(), alot.getMinutes());
+  const base = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12);
+  const target = now < alot ? base : new Date(base.getFullYear(), base.getMonth(), base.getDate() + 1, 12);
+  const jc = new K.JewishCalendar(target);
+  try { jc.setInIsrael(true); } catch (e) {}
+  const m = jc.getJewishMonth(), d = jc.getJewishDayOfMonth(), yr = jc.getJewishYear();
+  const leap = jc.isJewishLeapYear();
+  const dow = jc.getDayOfWeek(); // 1=ראשון … 7=שבת
+  const NISSAN = 1, IYAR = 2, SIVAN = 3, TAMMUZ = 4, AV = 5, ELUL = 6, TISHREI = 7, SHEVAT = 11, ADAR = 12, ADAR_II = 13;
+  const nusach = typeof CURRENT_NUSACH === "string" ? CURRENT_NUSACH : "mizrahi";
+  const st = { target: target, rachel: true, leah: true, noTachanun: false, reason: "", notes: [] };
+  let dateLabel = "";
+  try { dateLabel = getHebrewDateString(target) || ""; } catch (e) {}
+  st.nightLabel = dateLabel ? "ליל " + dateLabel : "הלילה";
+  // ── אין אומרים כלל ──
+  let none = "";
+  if (dow === 7) none = "ליל שבת";
+  else if (jc.isRoshHashana()) none = "ראש השנה";
+  else if (jc.isYomKippur()) none = "יום הכיפורים";
+  else if (jc.isCholHamoedPesach()) none = "חול המועד פסח";
+  else if (jc.isYomTovAssurBemelacha()) {
+    none = m === NISSAN ? "פסח" : m === SIVAN ? "חג השבועות" : (m === TISHREI && d === 22) ? "שמיני עצרת ושמחת תורה" : "חג הסוכות";
+  }
+  if (none) { st.rachel = false; st.leah = false; st.reason = none; return st; }
+  // ── ליל תשעה באב — תיקון רחל בלבד ──
+  if (jc.isTishaBav()) { st.leah = false; st.reason = "תשעה באב"; return st; }
+  // ── ימים שאין אומרים בהם תחנון (לפי מנהג הנוסח; אותה רשימה כמו בתפילות) ──
+  let nt = "";
+  const purimMonth = leap ? ADAR_II : ADAR;
+  if (jc.isRoshChodesh()) nt = "ראש חודש";
+  else if (m === NISSAN) nt = "חודש ניסן";
+  else if (jc.isCholHamoedSuccos()) nt = "חול המועד סוכות";
+  else if (m === TISHREI && d >= 11 && (nusach !== "ashkenaz" || d <= 23)) nt = "ימי החג שבחודש תשרי";
+  else if (m === ELUL && d === 29) nt = "ערב ראש השנה";
+  else if (jc.isChanukah()) nt = "חנוכה";
+  else if (m === purimMonth && (d === 14 || d === 15)) nt = d === 14 ? "פורים" : "שושן פורים";
+  else if (leap && m === ADAR && (d === 14 || d === 15)) nt = "פורים קטן";
+  else if (m === IYAR && (d === 14 || d === 18)) nt = d === 14 ? "פסח שני" : 'ל"ג בעומר';
+  else if (m === SIVAN && d <= 12) nt = "ימי חג השבועות";
+  else if (m === AV && d === 15) nt = 'ט"ו באב';
+  else if (m === SHEVAT && d === 15) nt = 'ט"ו בשבט';
+  if (nt) { st.noTachanun = true; st.rachel = false; st.reason = nt; }
+  // ── תיקון לאה בלבד אף שאומרים תחנון ──
+  if (st.rachel) {
+    let why = "";
+    if (jc.getDayOfOmer() > 0) why = "ימי ספירת העומר";
+    else if (jc.isAseresYemeiTeshuva()) why = "עשרת ימי תשובה";
+    else if (yr % 7 === 0) why = "שנת השמיטה בארץ ישראל";
+    else {
+      // אחרי המולד וקודם ראש חודש
+      try {
+        if (d >= 20) {
+          let nm = m + 1, ny = yr;
+          if (m === ELUL) { nm = TISHREI; ny = yr + 1; }
+          else if ((m === ADAR && !leap) || m === ADAR_II) nm = NISSAN;
+          const nx = new K.JewishCalendar(ny, nm, 1);
+          const molad = nx.getMoladAsDate();
+          const ms = molad && (molad.getTime ? molad.getTime() : (molad.toJSDate ? molad.toJSDate().getTime() : (molad.toMillis ? molad.toMillis() : NaN)));
+          const nightStart = new Date(target.getFullYear(), target.getMonth(), target.getDate(), 0, 30);
+          if (!isNaN(ms) && ms <= nightStart.getTime()) why = "אחרי המולד וקודם ראש חודש";
+        }
+      } catch (e) {}
+    }
+    if (why) { st.rachel = false; st.reason = why; }
+  }
+  // בין המצרים (י"ז בתמוז – ט' באב): תיקון רחל גם בחצות היום
+  if ((m === TAMMUZ && d >= 17) || (m === AV && d <= 9)) {
+    st.notes.push("בימי בין המצרים נוהגים לומר תיקון רחל גם אחרי חצות היום.");
+  }
+  return st;
+}
+
+function _tikkunChatzotApply(body) {
+  if (!body) return;
+  const st = _tikkunChatzotStatus();
+  const root = body.querySelector(".holy-text-style");
+  const rich = root && root.querySelector(".prayer-richtext");
+  if (!st || !rich) return;
+  const strip = (t) => String(t || "").replace(/[֑-ׇ]/g, "").replace(/\s+/g, " ").trim();
+  const ps = Array.prototype.slice.call(rich.children);
+  const isRule = (t) => /^בימים שאין אומרים תחנון לא יאמר/.test(t);
+  // קטע שכולו באותיות קטנות בסידור (מזמור כ' / "עד אנה") — כשאומרים אותו הוא מוצג בגודל רגיל
+  const unsmall = (el) => {
+    if (!el) return;
+    const kids = Array.prototype.filter.call(el.childNodes, (n) => n.nodeType === 1 || strip(n.textContent));
+    if (kids.length === 1 && kids[0].tagName === "SMALL") {
+      const sm = kids[0];
+      while (sm.firstChild) el.insertBefore(sm.firstChild, sm);
+      sm.remove();
+    }
+  };
+  let section = "pre"; // pre → viduy → rachel → leah
+  ps.forEach((p, i) => {
+    const t = strip(p.textContent);
+    if (t === "תיקון רחל") section = "rachel";
+    else if (t === "תיקון לאה") section = "leah";
+    else if (section === "pre" && /^אנא יהוה אלהינו/.test(t)) section = "viduy";
+    p.setAttribute("data-tc", section);
+    // ── לשם יחוד: הוראת הסידור הארוכה מוחלפת בכרטיס הלילה; הנוסח מותאם למה שאומרים ──
+    if (section === "pre" && t.indexOf("אין אומרים תיקון חצות") >= 0 && !p.__tcDone) {
+      p.__tcDone = true;
+      const inner = p.querySelector("small > small");
+      if (inner) {
+        let n = inner.nextSibling;
+        inner.remove();
+        for (let k = 0; k < 2 && n; k++) { const nx = n.nextSibling; if (n.nodeName === "BR") n.remove(); n = nx; }
+      }
+      unsmall(p);
+      let h = p.innerHTML;
+      h = h.replace(/\s*<small>\(בימים מיוחדים[\s\S]*?<\/small>/, "");
+      const both = "תִיקוּן רָחֵל וְתִיקוּן לֵאָה";
+      // "(שָׁרְשׁוֹ)" החלופי מוסר; כשאומרים תיקון אחד בלבד — "שָׁרְשָׁם" הופך ל"שָׁרְשׁוֹ"
+      // (סדר סימני הניקוד בטקסט של ספריא משתנה — התאמה לפי האותיות בלבד)
+      const NQ = "[\\u0591-\\u05C7]*";
+      h = h.replace(new RegExp("\\s*<small>\\(ש" + NQ + "ר" + NQ + "ש" + NQ + "ו" + NQ + "\\)</small>"), "");
+      const shorsham = new RegExp("ש" + NQ + "ר" + NQ + "ש" + NQ + "ם");
+      if (!st.rachel && st.leah) h = h.replace(both, "תִיקוּן לֵאָה").replace(shorsham, "שָׁרְשׁוֹ");
+      else if (st.rachel && !st.leah) h = h.replace(both, "תִיקוּן רָחֵל").replace(shorsham, "שָׁרְשׁוֹ");
+      p.innerHTML = h;
+    }
+    // ── תיקון לאה: הוראות "בימים שאין אומרים תחנון" — מוחלות לפי הלילה ──
+    if (section === "leah" && isRule(t)) {
+      p.setAttribute("data-tc-rule", "1");
+      const next = ps[i + 1];
+      if (next) {
+        if (st.noTachanun) next.setAttribute("data-tc-skip", "1");
+        else unsmall(next);
+      }
+    }
+  });
+  const show = (sec, on) => rich.querySelectorAll('[data-tc="' + sec + '"]').forEach((el) => {
+    const off = !on || el.hasAttribute("data-tc-rule") || el.hasAttribute("data-tc-skip");
+    el.style.display = off ? "none" : "";
+  });
+  const none = !st.rachel && !st.leah;
+  show("pre", true);
+  show("viduy", st.rachel); // הוידוי שייך לתיקון רחל — בתיקון לאה בלבד אין אומרים וידוי
+  show("rachel", st.rachel);
+  show("leah", st.leah);
+  // ── כרטיס הלילה ──
+  let chz = "";
+  try {
+    const z = window._lastZData;
+    const c = z && z.times && z.times.chatzotNight ? new Date(z.times.chatzotNight) : null;
+    if (c && !isNaN(c)) chz = c.toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit", hour12: false });
+  } catch (e) {}
+  let what;
+  if (none) what = "הלילה אין אומרים תיקון חצות (" + escapeHtml(st.reason) + ").";
+  else if (st.rachel && st.leah) what = "אומרים <b>תיקון רחל ותיקון לאה</b> — ולפני תיקון רחל את הוידוי.";
+  else if (st.leah) what = "אומרים <b>תיקון לאה בלבד</b> (" + escapeHtml(st.reason) + ") — בלי וידוי ובלי תיקון רחל." +
+    (st.noTachanun ? " ביום שאין אומרים בו תחנון מדלגים בתיקון לאה על \"למנצח... יענך\" ועל \"עד אנה בכיה בציון\" — והם אינם מוצגים." : "");
+  else what = "אומרים <b>תיקון רחל בלבד</b> (" + escapeHtml(st.reason) + ").";
+  const card = document.createElement("div");
+  card.className = "tc-status-card";
+  card.innerHTML =
+    '<div class="tc-status-title">🌙 ' + escapeHtml(st.nightLabel) + "</div>" +
+    '<div class="tc-status-what">' + what + "</div>" +
+    '<div class="tc-status-time">זמן האמירה: מחצות הלילה' + (chz ? " (" + chz + ")" : "") + " ועד עלות השחר.</div>" +
+    st.notes.map((n) => '<div class="tc-status-note">' + escapeHtml(n) + "</div>").join("") +
+    '<div class="tc-status-note">אבל, חתן, ואבי הבן ביום הברית — אומרים תיקון לאה בלבד.</div>' +
+    (none ? '<button type="button" class="tc-show-full">הצג את הנוסח לימות החול</button>' : "");
+  const old = root.querySelector(".tc-status-card");
+  if (old) old.remove();
+  root.insertBefore(card, root.firstChild);
+  rich.style.display = none ? "none" : "";
+  if (none) {
+    const btn = card.querySelector(".tc-show-full");
+    if (btn) btn.onclick = function () {
+      rich.style.display = "";
+      show("viduy", true); show("rachel", true); show("leah", true);
+      btn.remove();
+    };
+  }
+}
+
+// ── כפתור הנעה לפעולה בסוף תפילה: מעבר ישיר לתפילה הבאה בסדר ──
+// ברכות השחר (הכפתור העצמאי, לא בתוך שחרית) → קריאת שמע (הכפתור העצמאי "שמע ישראל")
+const PRAYER_NEXT_CTA = {
+  "birchot-hashachar": { key: "shema", he: "שמע ישראל", en: "Shema", label: "המשך לקריאת שמע ישראל" },
+};
+function _prayerNextCtaHtml(key) {
+  const n = PRAYER_NEXT_CTA[key];
+  if (!n) return "";
+  return `<div class="prayer-next-cta-wrap"><button type="button" class="prayer-next-cta" onclick="window._prayerSwapTo('${n.key}','${n.he}','${n.en}')"><span class="prayer-next-cta-ico" aria-hidden="true">📜</span><span>${n.label}</span><span class="prayer-next-cta-arrow" aria-hidden="true">←</span></button></div>`;
+}
+window._prayerSwapTo = function (key, he, en) {
+  window.__prayerSwapInPlace = true;
+  openPrayer(key, he, en);
 };
 
 function toHebrewPsalmNumber(num) {
@@ -24385,7 +24685,7 @@ openTehillimPage = function () {
             <div id="psalm-content-pane" style="display:none;position:absolute;inset:0;background:#faf9f6;z-index:10;flex-direction:column;overflow:hidden;">
               <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border-bottom:1px solid rgba(0,0,0,0.08);background:#faf9f6;gap:0.5rem;">
                 <div style="display:flex;align-items:center;gap:0.4rem;flex-shrink:0;">
-                  <button onclick="window._tehillimGoToChapters()" style="background:rgba(0,0,0,0.06);border:none;color:#1e293b;padding:0.4rem 0.55rem;border-radius:999px;cursor:pointer;font-size:0.82rem;flex-shrink:0;" title="כל הפרקים">📑</button>
+                  <button class="toc-nav-btn" onclick="window._tehillimGoToChapters()" style="background:rgba(0,0,0,0.06);border:none;color:#64748b;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.15rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;" title="תוכן העניינים — כל הפרקים" aria-label="תוכן העניינים">☰</button>
                   <button onclick="window._thTogglePsalmBMPanel()" id="th-psalm-bm-toggle-btn" style="background:rgba(0,0,0,0.06);border:none;color:#64748b;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1rem;" title="סמניות">📌</button>
                 </div>
                 <h3 id="psalm-title" style="color:#000000;font-size:1rem;font-weight:900;margin:0;flex:1;text-align:center;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">תהילים</h3>
@@ -24599,10 +24899,9 @@ openTehillimPage = function () {
       area.appendChild(chapterDiv);
     }
     try {
-      const response = await fetch(
+      const data = await _sefariaJson(
         `https://www.sefaria.org/api/texts/Psalms.${chapter}?lang=he&context=0`,
       );
-      const data = await response.json();
       const verses = (data.he || [])
         .map(
           (verse, index) =>
@@ -25057,10 +25356,34 @@ document.addEventListener("keydown", (e) => {
         name: "רבי נחמן מברסלב",
         title: 'בעל ספר ליקוטי מוהר"ן, אוּמַן',
         icon: "🕯️",
+        hint: "לחץ לדברי תורה, סיפורים וציטוטים",
         torah:
+          '<div class="hil-torah-h">📜 דברי תורה</div>' +
+          '<b>אזמרה — הנקודה הטובה.</b> רבי נחמן מלמד שצריך לדון את כל אדם לכף זכות: גם באדם שנראה רחוק מאוד, מחפשים ומוצאים בו מעט טוב — ועל ידי זה מעלים אותו באמת לכף זכות. וכך יעשה האדם גם עם עצמו: אל יפול ברוחו מחמת חסרונותיו, אלא יחפש בעצמו את הנקודות הטובות, ומתוכן ישוב לשמחה ויוכל להתפלל — "אֲזַמְּרָה לֵאלֹהַי בְּעוֹדִי", בעוד המעט הטוב שנשאר בי.<span class="hil-torah-src">— ליקוטי מוהר"ן, תורה רפ"ב</span>' +
+          '<hr class="hil-torah-sep">' +
+          '<b>ההתבודדות.</b> עיקר עצתו של רבי נחמן: להתבודד בכל יום עם הקב"ה ולפרש לפניו את כל אשר בלבו, בשפה שהוא רגיל בה, כבן המדבר עם אביו — ובמיוחד במקום שקט, בשדה או בחדר מיוחד. לדבריו ההתבודדות היא מעלה עליונה וגדולה מן הכל, וכך זוכים להתקרב אל ה\'.<span class="hil-torah-src">— ליקוטי מוהר"ן תנינא, תורה כ"ה</span>' +
+          '<hr class="hil-torah-sep">' +
+          '<b>התיקון הכללי.</b> רבי נחמן גילה עשרה מזמורי תהילים שהם "תיקון כללי" לנפש: ט"ז, ל"ב, מ"א, מ"ב, נ"ט, ע"ז, צ\', ק"ה, קל"ז, ק"נ — ואמירתם בכוונה מתקנת את שורש הפגמים. לפני פטירתו הבטיח, שכל מי שיבוא על קברו, ייתן פרוטה לצדקה ויאמר את עשרת המזמורים — ישתדל בעדו בכל כוחו.<span class="hil-torah-src">— שיחות הר"ן וחיי מוהר"ן</span>' +
+          '<hr class="hil-torah-sep">' +
+          '<div class="hil-torah-h">📖 סיפורים קצרים</div>' +
+          '<b>על קבר סבא־רבא.</b> רבי נחמן נולד במז\'יבוז\' בשנת תקל"ב, נינו של הבעל שם טוב. כבר בילדותו היה יוצא לבדו בלילות אל קברו של הבעש"ט הסמוך, ומתחנן שם שיזכה להתקרב אל הקב"ה באמת.' +
+          '<hr class="hil-torah-sep">' +
+          '<b>הנסיעה לארץ ישראל.</b> בשנת תקנ"ח יצא רבי נחמן בדרך מסוכנת לארץ ישראל. כשהגיע לחוף חיפה ודרך על אדמת הקודש, אמר שכבר השיג את מה שבא בשבילו — ורצה לשוב מיד לביתו. מאז היה אומר שכל מה שהשיג, השיג רק אחרי שהיה בארץ ישראל.' +
+          '<hr class="hil-torah-sep">' +
+          '<b>הנסיך שחשב שהוא תרנגול הודו.</b> משל ידוע מבית מדרשו: בן מלך השתגע, חשב שהוא תרנגול הודו, ישב ערום תחת השולחן ואכל פירורים. כל הרופאים התייאשו, עד שבא חכם אחד, פשט את בגדיו וישב עמו תחת השולחן. "מי אתה?" שאל הנסיך. "גם אני תרנגול הודו." לאט־לאט לבש החכם חולצה — ואמר שגם תרנגול הודו יכול ללבוש חולצה; אחר כך אכל מאכל רגיל, ולבסוף ישב אל השולחן — והנסיך אחריו, עד שנרפא לגמרי. כך צריך המחנך: לרדת אל מקומו של האדם, ומשם להעלות אותו צעד אחר צעד.' +
+          '<hr class="hil-torah-sep">' +
+          '<b>אומן.</b> בחודשים האחרונים לחייו עבר רבי נחמן לעיר אומן, ואמר שבחר להיקבר שם כדי לתקן את נשמות אלפי היהודים שנהרגו שם בפרעות. הוא נסתלק בגיל שלושים ושמונה, ביום ד\' של חול המועד סוכות, י"ח בתשרי תקע"א — ועד היום נוהרים לציונו רבבות, ובמיוחד בראש השנה.' +
+          '<hr class="hil-torah-sep">' +
+          '<div class="hil-torah-h">💬 מדבריו</div>' +
           '"מִצְוָה גְּדוֹלָה לִהְיוֹת בְּשִׂמְחָה תָּמִיד, וּלְהִתְגַּבֵּר לְהַרְחִיק הָעַצְבוּת וְהַמָּרָה שְׁחֹרָה בְּכָל כֹּחוֹ"<span class="hil-torah-src">— ליקוטי מוהר"ן תנינא, תורה כ"ד</span>' +
           '<hr class="hil-torah-sep">' +
-          '"אֵין שׁוּם יֵאוּשׁ בָּעוֹלָם כְּלָל"<span class="hil-torah-src">— ליקוטי מוהר"ן תנינא, תורה ע"ח</span>',
+          '"אֵין שׁוּם יֵאוּשׁ בָּעוֹלָם כְּלָל"<span class="hil-torah-src">— ליקוטי מוהר"ן תנינא, תורה ע"ח</span>' +
+          '<hr class="hil-torah-sep">' +
+          '"ודע, שהאדם צריך לעבור על גשר צר מאד מאד — והכלל והעיקר שלא יתפחד כלל"<span class="hil-torah-src">— ליקוטי מוהר"ן תנינא, תורה מ"ח</span>' +
+          '<hr class="hil-torah-sep">' +
+          '"אם אתה מאמין שיכולין לקלקל — תאמין שיכולין לתקן"<span class="hil-torah-src">— ליקוטי מוהר"ן תנינא, תורה קי"ב</span>' +
+          '<hr class="hil-torah-sep">' +
+          '"דע, כי צריך לדון את כל אדם לכף זכות"<span class="hil-torah-src">— ליקוטי מוהר"ן, תורה רפ"ב</span>',
       },
     ],
     "תשרי-19": [
@@ -25357,8 +25680,30 @@ document.addEventListener("keydown", (e) => {
       {
         name: "הבעל שם טוב",
         title: "רבי ישראל בעל שם טוב, מייסד תנועת החסידות",
+        hint: "לחץ לדברי תורה, סיפורים וציטוטים",
         torah:
-          'לימד הבעש"ט על הפסוק "ה\' צִלְּךָ" (תהלים קכ"א, ה): כשם שהצל עושה כל מה שהאדם עושה — כך הקב"ה מתנהג עם האדם מידה כנגד מידה; כשהאדם מתנהג ברחמים וחסד עם הבריות, כך מתנהגים עמו מן השמים<span class="hil-torah-src">— כתר שם טוב, בשם הבעש"ט</span>',
+          '<div class="hil-torah-h">📜 דברי תורה</div>' +
+          'לימד הבעש"ט על הפסוק "ה\' צִלְּךָ" (תהלים קכ"א, ה): כשם שהצל עושה כל מה שהאדם עושה — כך הקב"ה מתנהג עם האדם מידה כנגד מידה; כשהאדם מתנהג ברחמים וחסד עם הבריות, כך מתנהגים עמו מן השמים<span class="hil-torah-src">— כתר שם טוב, בשם הבעש"ט</span>' +
+          '<hr class="hil-torah-sep">' +
+          '<b>"בֹּא אַתָּה וְכָל בֵּיתְךָ אֶל הַתֵּבָה".</b> הבעש"ט דרש: "תֵּבָה" היא גם מילה. כשהאדם מתפלל — ייכנס בכל כוחו ובכל לבו אל תוך תיבות התפילה, כנח שנכנס אל התיבה ונשמר בה מן המבול; כך התפילה בדבקות שומרת את האדם מטרדות העולם ומבלבוליו.<span class="hil-torah-src">— בשם הבעש"ט, בספרי תלמידיו</span>' +
+          '<hr class="hil-torah-sep">' +
+          '<b>ללמוד מכל דבר.</b> הבעש"ט לימד שכל מה שהאדם רואה ושומע אינו במקרה אלא בהשגחה פרטית, ויש לו ללמוד ממנו דבר בעבודת ה\'. גם מעשה פשוט שנקרה בדרכו, או מילה ששמע מפי אדם, הם רמז ומוסר מן השמים.<span class="hil-torah-src">— כתר שם טוב</span>' +
+          '<hr class="hil-torah-sep">' +
+          '<div class="hil-torah-h">📖 סיפורים קצרים</div>' +
+          '<b>הנער והחליל.</b> ביום הכיפורים נכנס לבית המדרש של הבעש"ט נער כפרי פשוט, שלא ידע להתפלל. כשראה את כל הקהל בוכה, שלף את חלילו ותקע בכל כוחו. המתפללים נזעקו, אבל הבעש"ט אמר: "תקיעתו של הנער, מתוך לב שבור ותמים, קרעה את השערים ששאר התפילות לא הצליחו לפתוח".' +
+          '<hr class="hil-torah-sep">' +
+          '<b>"אימתי קאתי מר?"</b> באגרת ששלח הבעש"ט לגיסו, רבי גרשון מקיטוב, סיפר שבראש השנה תק"ז עלתה נשמתו לעולמות העליונים ונכנס להיכל המשיח, ושאל אותו: "אימתי קאתי מר?" — מתי יבוא אדוני? והמשיח השיב: "לכשיפוצו מעיינותיך חוצה" — כשתורתך ודרכך יתפשטו בעולם.' +
+          '<hr class="hil-torah-sep">' +
+          '<b>האל"ף־בי"ת של התמים.</b> יהודי פשוט שלא ידע לקרוא את נוסח התפילה עמד והתחנן: "ריבונו של עולם, איני יודע להתפלל — הרי לפניך האותיות, אתה תסדר מהן את התפילה", ואמר את כל האל"ף־בי"ת בדמעות. אמר הבעש"ט לתלמידיו: תפילה זו עלתה למעלה ופתחה את השערים לכל התפילות.' +
+          '<hr class="hil-torah-sep">' +
+          '<b>מפתח אחד לפתח אחר.</b> הבעש"ט נסתלק בחג השבועות, ו\' בסיוון תק"כ, בעיר מז\'יבוז\'. כשראה את תלמידיו בוכים סביבו אמר להם: "איני דואג — כי אני יודע בבירור שאצא בפתח זה ואכנס בפתח אחר".' +
+          '<hr class="hil-torah-sep">' +
+          '<div class="hil-torah-h">💬 מדבריו</div>' +
+          '"במקום שאדם חושב — שם הוא נמצא"<span class="hil-torah-src">— כתר שם טוב, בשם הבעש"ט</span>' +
+          '<hr class="hil-torah-sep">' +
+          '"השכחה היא סיבת הגלות, והזכרון הוא סוד הגאולה"<span class="hil-torah-src">— מיוחס לבעש"ט</span>' +
+          '<hr class="hil-torah-sep">' +
+          '"כל מה שאדם רואה או שומע — יש לו ללמוד ממנו בעבודת ה\'"<span class="hil-torah-src">— כתר שם טוב</span>',
         icon: "🕯️",
       },
     ],
@@ -26376,7 +26721,7 @@ document.addEventListener("keydown", (e) => {
             '<div class="hil-info">' +
             '<div class="hil-name">' + t.name + "</div>" +
             '<div class="hil-sub">' + t.title + "</div>" +
-            (hasTorah ? '<div class="hil-torah-hint">📖 לחץ לדבר תורה <span class="hil-torah-arrow">▾</span></div>' : "") +
+            (hasTorah ? '<div class="hil-torah-hint">📖 ' + (t.hint || "לחץ לדבר תורה") + ' <span class="hil-torah-arrow">▾</span></div>' : "") +
             "</div>" +
             '<span class="hil-flame-mini" aria-hidden="true"></span>' +
             "</div>" +
@@ -29072,7 +29417,8 @@ function openSefarimNosafimPage(_pageMode) {
 
   function renderParagraphs(he, color, secIdx, inlineNotes, secRef) {
     if (!Array.isArray(he) || he.length === 0)
-      return "<p style=\"color:#9ca3af;text-align:center;padding:2rem;\">לא נמצא טקסט לסעיף זה</p>";
+      // ריק אמיתי (לא תקלת רשת — זו מטופלת בכרטיס "נסה שוב"): היחידה ריקה במהדורת ספריא (למשל נזיר לג ע"ב)
+      return "<p style=\"color:#9ca3af;text-align:center;padding:2rem;\">אין טקסט ביחידה זו במהדורה הדיגיטלית</p>";
     // ── טווח רב-פרקי (פרשות חומש: "Genesis 1:1-6:8") — כל איבר במערך הוא פרק
     // שלם. בלי טיפול מיוחד המשתמש רואה רק מספור רץ בלי לדעת באיזה פרק הוא.
     // מציגים כותרת "פרק X" אמיתית לכל פרק + מספור פסוקים בתוך הפרק.
@@ -29278,13 +29624,33 @@ function openSefarimNosafimPage(_pageMode) {
         }
         return [];
       }
-      // ── מסלול רגיל: Sefaria ──
-      var r = await fetch("https://www.sefaria.org/api/texts/" + encodeURIComponent(ref) + "?pad=0&lang=he&context=0", opts);
-      var d = await r.json();
-      var he = d.he || [];
-      if (he && (Array.isArray(he) ? he.length : true)) _snCacheSet(ref, he);
-      return he;
-    } catch(e) { return []; }
+      // ── מסלול רגיל: Sefaria — שליפה עמידה (ניסיונות חוזרים + נתיבים חלופיים) ──
+      // בחיפוש (signal) — סבב אחד וקצר, כדי לא לעכב את הסריקה על סעיף תקוע
+      var sOpts = signal ? { signal: signal, rounds: 1, timeout: 12000, deadline: 20000 } : {};
+      var d = await _sefariaJson("https://www.sefaria.org/api/texts/" + encodeURIComponent(ref) + "?pad=0&lang=he&context=0", sOpts);
+      var he = (d && d.he) || [];
+      if (!_snHasText(he) && d && !d.error) {
+        // v1 החזירה ריק בלי שגיאה — מנסים את הגרסה העברית הראשית ב-v3 (מבנה זהה)
+        try {
+          var d3 = await _sefariaJson("https://www.sefaria.org/api/v3/texts/" + encodeURIComponent(ref) + "?version=hebrew", sOpts);
+          var t3 = d3 && d3.versions && d3.versions[0] && d3.versions[0].text;
+          if (_snHasText(t3)) he = t3;
+        } catch (e3) {}
+      }
+      if (_snHasText(he)) { _snCacheSet(ref, he); return he; }
+      return [];
+    } catch(e) {
+      // כשל רשת אמיתי (כל הנתיבים נכשלו) — מסומן, כדי שהקורא יציג "נסה שוב" ולא "לא נמצא טקסט"
+      var failed = [];
+      failed._snFailed = true;
+      return failed;
+    }
+  }
+  function _snHasText(v) {
+    if (v == null) return false;
+    if (typeof v === "string") return !!v.trim();
+    if (Array.isArray(v)) return v.some(_snHasText);
+    return false;
   }
 
   // ── חיפוש חכם – נירמול טקסט וחיפוש מילים ──
@@ -29920,6 +30286,7 @@ function openSefarimNosafimPage(_pageMode) {
       creditUrl:"https://www.sefaria.org/Orchot_Tzadikim",
       type:"flat",
       sections:[
+        {he:"הקדמה",           ref:"Orchot Tzadikim, Introduction"},
         {he:"שער הגאווה",      ref:"Orchot_Tzadikim.1"},
         {he:"שער הענווה",      ref:"Orchot_Tzadikim.2"},
         {he:"שער הבושה",       ref:"Orchot_Tzadikim.3"},
@@ -29955,6 +30322,7 @@ function openSefarimNosafimPage(_pageMode) {
       creditUrl:"https://www.sefaria.org/Mesillat_Yesharim",
       type:"flat",
       sections:[
+        {he:"הקדמה", ref:"Mesillat Yesharim, Introduction"},
         {he:"בביאור כלל חובת האדם בעולמו", ref:"Mesillat_Yesharim.1"},
         {he:"בביאור מדת הזהירות", ref:"Mesillat_Yesharim.2"},
         {he:"בחלקי הזהירות", ref:"Mesillat_Yesharim.3"},
@@ -29990,6 +30358,7 @@ function openSefarimNosafimPage(_pageMode) {
       subBooks:[
         {id:"intro", he:"הקדמה ולאוין", sections:[
           {he:"הקדמה", ref:"Chafetz Chaim, Preface"},
+          {he:"פתיחה", ref:"Chafetz Chaim, Introduction to the Laws of the Prohibition of Lashon Hara and Rechilut, Opening Comments"},
           {he:"לאוין", ref:"Chafetz Chaim, Introduction to the Laws of the Prohibition of Lashon Hara and Rechilut, Negative Commandments"},
           {he:"עשין",  ref:"Chafetz Chaim, Introduction to the Laws of the Prohibition of Lashon Hara and Rechilut, Positive Commandments"},
           {he:"ארורים",ref:"Chafetz Chaim, Introduction to the Laws of the Prohibition of Lashon Hara and Rechilut, Curses"}
@@ -30004,10 +30373,20 @@ function openSefarimNosafimPage(_pageMode) {
           [{he:"הקדמה", ref:"Shemirat HaLashon, Book I, Introduction"}].concat(
           secs(17,function(i){return "שער הזכירה "+toHN(i);},function(i){return "Shemirat HaLashon, Book I, The Gate of Remembering."+i;})).concat(
           secs(17,function(i){return "שער התבונה "+toHN(i);},function(i){return "Shemirat HaLashon, Book I, The Gate of Discerning."+i;})).concat(
-          secs(10,function(i){return "שער התורה "+toHN(i);},function(i){return "Shemirat HaLashon, Book I, The Gate of Torah."+i;}))
+          secs(10,function(i){return "שער התורה "+toHN(i);},function(i){return "Shemirat HaLashon, Book I, The Gate of Torah."+i;})).concat(
+          secs(7,function(i){return "חתימת הספר "+toHN(i);},function(i){return "Shemirat HaLashon, Book I, Epilogue."+i;}))
         },
         {id:"drashot2", he:"דרשות שמירת הלשון — חלק ב", sections:
-          secs(30,function(i){return "פרק "+toHN(i);},function(i){return "Shemirat HaLashon, Book II."+i;})
+          secs(30,function(i){return "פרק "+toHN(i);},function(i){return "Shemirat HaLashon, Book II."+i;}).concat(
+          secs(4,function(i){return "חתימת הספר "+toHN(i);},function(i){return "Shemirat HaLashon, Book II, Epilogue."+i;}))
+        },
+        {id:"tziyurim", he:"ציורים ונספחים", sections:
+          secs(11,function(i){return "ציור "+toHN(i);},function(i){return "Chafetz Chaim, Illustrations, Illustration "+i;}).concat([
+            {he:"תשובת חות יאיר", ref:"Chafetz Chaim, Responsa of the Chavot Yair"},
+            {he:"תשובת מהרי\"ק", ref:"Chafetz Chaim, Responsa of the Maharik"},
+            {he:"תשובת מהרי\"ק סימן קכט", ref:"Chafetz Chaim, Responsa of the Maharik Siman 129"},
+            {he:"עליות רבינו יונה", ref:"Chafetz Chaim, Aliyot d'Rabeinu Yonah, from the Shitah Mekubetzet"}
+          ])
         }
       ]},
     { id:"chovot-halevavot", he:"חובת הלבבות", subtitle:"רבי בחיי אבן פקודה",
@@ -30026,7 +30405,10 @@ function openSefarimNosafimPage(_pageMode) {
         {he:"שער התשובה",           ref:"Duties of the Heart, Seventh Treatise on Repentance"},
         {he:"שער חשבון הנפש",       ref:"Duties of the Heart, Eighth Treatise on Examining the Soul"},
         {he:"שער הפרישות",          ref:"Duties of the Heart, Ninth Treatise on Abstinence"},
-        {he:"שער אהבת ה׳",          ref:"Duties of the Heart, Tenth Treatise on Devotion to God"}
+        {he:"שער אהבת ה׳",          ref:"Duties of the Heart, Tenth Treatise on Devotion to God"},
+        {he:"הוספות — עשרת הבתים (פיוט)", ref:"Duties of the Heart, Addenda, Ten Sections (Poem)"},
+        {he:"הוספות — תוכחה", ref:"Duties of the Heart, Addenda, Admonition"},
+        {he:"הוספות — בקשה", ref:"Duties of the Heart, Addenda, Prayer"}
       ]},
     { id:"noam-elimelech", he:"נועם אלימלך", subtitle:"רבי אלימלך מליז\'נסק",
       cat:"musar", color:"#6d28d9", icon:"✨",
@@ -30034,6 +30416,11 @@ function openSefarimNosafimPage(_pageMode) {
       creditUrl:"https://www.sefaria.org/Noam_Elimelech",
       type:"multi",
       subBooks:[
+        {id:"intro", he:"פתיחה", sections:[
+          {he:"הסכמות", ref:"Noam Elimelekh, Introduction, Approbations"},
+          {he:"התנצלות בן המחבר", ref:"Noam Elimelekh, Introduction, A Note from the Author's Son"},
+          {he:"הצעטיל הקטן", ref:"Noam Elimelekh, Introduction, The Tzetel Katan"}
+        ]},
         {id:"b1", he:"ספר בראשית", sections:[
           {he:"בראשית",   ref:"Noam Elimelekh, Sefer Bereshit, Bereshit"},
           {he:"נח",        ref:"Noam Elimelekh, Sefer Bereshit, Noach"},
@@ -30093,6 +30480,13 @@ function openSefarimNosafimPage(_pageMode) {
           {he:"כי תצא",   ref:"Noam Elimelekh, Sefer Devarim, Ki Teitzei"},
           {he:"כי תבוא",  ref:"Noam Elimelekh, Sefer Devarim, Ki Tavo"},
           {he:"האזינו",   ref:"Noam Elimelekh, Sefer Devarim, Ha'Azinu"}
+        ]},
+        {id:"additions", he:"נספחים", sections:[
+          {he:"ליקוטי שושנה", ref:"Noam Elimelekh, Additions, Likutei Shoshana"},
+          {he:"אגרת הקודש", ref:"Noam Elimelekh, Additions, Iggeret HaKodesh"},
+          {he:"אגרות שונות", ref:"Noam Elimelekh, Additions, Epistles"},
+          {he:"הנהגות האדם", ref:"Noam Elimelekh, Additions, Hanhagot HaAdam"},
+          {he:"תפילה קודם התפילה", ref:"Noam Elimelekh, Additions, A Prayer before Praying"}
         ]}
       ]},
     { id:"likutey-moharan", he:'ליקוטי מוהר"ן', subtitle:"רבי נחמן מברסלב",
@@ -30110,60 +30504,91 @@ function openSefarimNosafimPage(_pageMode) {
       creditUrl:"https://www.sefaria.org/Kedushat_Levi",
       type:"flat",
       sections:[
-        {he:"בראשית",   ref:"Kedushat Levi, Genesis, Bereshit"},
-        {he:"נח",        ref:"Kedushat Levi, Genesis, Noach"},
-        {he:"לך לך",    ref:"Kedushat Levi, Genesis, Lech Lecha"},
-        {he:"וירא",     ref:"Kedushat Levi, Genesis, Vayera"},
-        {he:"חיי שרה",  ref:"Kedushat Levi, Genesis, Chayei Sara"},
-        {he:"תולדות",   ref:"Kedushat Levi, Genesis, Toldot"},
-        {he:"ויצא",     ref:"Kedushat Levi, Genesis, Vayetzei"},
-        {he:"וישלח",    ref:"Kedushat Levi, Genesis, Vayishlach"},
-        {he:"וישב",     ref:"Kedushat Levi, Genesis, Vayeshev"},
-        {he:"מקץ",      ref:"Kedushat Levi, Genesis, Miketz"},
-        {he:"ויגש",     ref:"Kedushat Levi, Genesis, Vayigash"},
-        {he:"ויחי",     ref:"Kedushat Levi, Genesis, Vayechi"},
-        {he:"שמות",     ref:"Kedushat Levi, Exodus, Shemot"},
-        {he:"וארא",     ref:"Kedushat Levi, Exodus, Vaera"},
-        {he:"בא",       ref:"Kedushat Levi, Exodus, Bo"},
-        {he:"בשלח",     ref:"Kedushat Levi, Exodus, Beshalach"},
-        {he:"יתרו",     ref:"Kedushat Levi, Exodus, Yitro"},
-        {he:"משפטים",   ref:"Kedushat Levi, Exodus, Mishpatim"},
-        {he:"תרומה",    ref:"Kedushat Levi, Exodus, Terumah"},
-        {he:"תצוה",     ref:"Kedushat Levi, Exodus, Tetzaveh"},
-        {he:"כי תשא",   ref:"Kedushat Levi, Exodus, Ki Tisa"},
-        {he:"ויקהל",    ref:"Kedushat Levi, Exodus, Vayakhel"},
-        {he:"פקודי",    ref:"Kedushat Levi, Exodus, Pekudei"},
-        {he:"ויקרא",    ref:"Kedushat Levi, Leviticus, Vayikra"},
-        {he:"צו",       ref:"Kedushat Levi, Leviticus, Tzav"},
-        {he:"שמיני",    ref:"Kedushat Levi, Leviticus, Shemini"},
-        {he:"תזריע",    ref:"Kedushat Levi, Leviticus, Tazria"},
-        {he:"מצורע",    ref:"Kedushat Levi, Leviticus, Metzora"},
-        {he:"אחרי מות", ref:"Kedushat Levi, Leviticus, Acharei Mot"},
-        {he:"קדושים",   ref:"Kedushat Levi, Leviticus, Kedoshim"},
-        {he:"אמור",     ref:"Kedushat Levi, Leviticus, Emor"},
-        {he:"בהר",      ref:"Kedushat Levi, Leviticus, Behar"},
-        {he:"בחוקותי",  ref:"Kedushat Levi, Leviticus, Bechukotai"},
-        {he:"במדבר",    ref:"Kedushat Levi, Numbers, Bamidbar"},
-        {he:"נשא",      ref:"Kedushat Levi, Numbers, Naso"},
-        {he:"בהעלותך",  ref:"Kedushat Levi, Numbers, Beha'alotcha"},
-        {he:"שלח",      ref:"Kedushat Levi, Numbers, Shelach"},
-        {he:"קרח",      ref:"Kedushat Levi, Numbers, Korach"},
-        {he:"חוקת",     ref:"Kedushat Levi, Numbers, Chukat"},
-        {he:"בלק",      ref:"Kedushat Levi, Numbers, Balak"},
-        {he:"פינחס",    ref:"Kedushat Levi, Numbers, Pinchas"},
-        {he:"מטות",     ref:"Kedushat Levi, Numbers, Matot"},
-        {he:"מסעי",     ref:"Kedushat Levi, Numbers, Masei"},
-        {he:"דברים",    ref:"Kedushat Levi, Deuteronomy, Devarim"},
-        {he:"ואתחנן",   ref:"Kedushat Levi, Deuteronomy, Vaetchanan"},
-        {he:"עקב",      ref:"Kedushat Levi, Deuteronomy, Eikev"},
-        {he:"ראה",      ref:"Kedushat Levi, Deuteronomy, Re'eh"},
-        {he:"שופטים",   ref:"Kedushat Levi, Deuteronomy, Shoftim"},
-        {he:"כי תצא",   ref:"Kedushat Levi, Deuteronomy, Ki Teitzei"},
-        {he:"כי תבוא",  ref:"Kedushat Levi, Deuteronomy, Ki Tavo"},
-        {he:"נצבים",    ref:"Kedushat Levi, Deuteronomy, Nitzavim"},
-        {he:"וילך",     ref:"Kedushat Levi, Deuteronomy, Vayeilech"},
-        {he:"האזינו",   ref:"Kedushat Levi, Deuteronomy, Ha'Azinu"},
-        {he:"וזאת הברכה",ref:"Kedushat Levi, Deuteronomy, V'Zot HaBerachah"}
+        {he:"הסכמות", ref:"Kedushat Levi, Letters of Approbation"},
+        {he:"בראשית", ref:"Kedushat Levi, Genesis, Bereshit"},
+        {he:"נח", ref:"Kedushat Levi, Genesis, Noach"},
+        {he:"לך לך", ref:"Kedushat Levi, Genesis, Lech Lecha"},
+        {he:"וירא", ref:"Kedushat Levi, Genesis, Vayera"},
+        {he:"חיי שרה", ref:"Kedushat Levi, Genesis, Chayei Sara"},
+        {he:"תולדות", ref:"Kedushat Levi, Genesis, Toldot"},
+        {he:"ויצא", ref:"Kedushat Levi, Genesis, Vayetzei"},
+        {he:"וישלח", ref:"Kedushat Levi, Genesis, Vayishlach"},
+        {he:"וישב", ref:"Kedushat Levi, Genesis, Vayeshev"},
+        {he:"מקץ", ref:"Kedushat Levi, Genesis, Miketz"},
+        {he:"דרושים לחנוכה", ref:"Kedushat Levi, Genesis, Homilies for Chanukah"},
+        {he:"ויגש", ref:"Kedushat Levi, Genesis, Vayigash"},
+        {he:"ויחי", ref:"Kedushat Levi, Genesis, Vayechi"},
+        {he:"שמות", ref:"Kedushat Levi, Exodus, Shemot"},
+        {he:"וארא", ref:"Kedushat Levi, Exodus, Vaera"},
+        {he:"בא", ref:"Kedushat Levi, Exodus, Bo"},
+        {he:"בשלח", ref:"Kedushat Levi, Exodus, Beshalach"},
+        {he:"יתרו", ref:"Kedushat Levi, Exodus, Yitro"},
+        {he:"משפטים", ref:"Kedushat Levi, Exodus, Mishpatim"},
+        {he:"תרומה", ref:"Kedushat Levi, Exodus, Terumah"},
+        {he:"תצוה", ref:"Kedushat Levi, Exodus, Tetzaveh"},
+        {he:"דרוש לפורים", ref:"Kedushat Levi, Exodus, Homily for Purim"},
+        {he:"כי תשא", ref:"Kedushat Levi, Exodus, Ki Tisa"},
+        {he:"שקלים", ref:"Kedushat Levi, Exodus, Shekalim"},
+        {he:"פרה", ref:"Kedushat Levi, Exodus, Parah"},
+        {he:"ויקהל", ref:"Kedushat Levi, Exodus, Vayakhel"},
+        {he:"פקודי", ref:"Kedushat Levi, Exodus, Pekudei"},
+        {he:"ויקרא", ref:"Kedushat Levi, Leviticus, Vayikra"},
+        {he:"צו", ref:"Kedushat Levi, Leviticus, Tzav"},
+        {he:"שמיני", ref:"Kedushat Levi, Leviticus, Shmini"},
+        {he:"דרוש לפסח", ref:"Kedushat Levi, Leviticus, Homily for Pesach"},
+        {he:"שיר השירים", ref:"Kedushat Levi, Leviticus, Shir HaShirim"},
+        {he:"תזריע", ref:"Kedushat Levi, Leviticus, Tazria"},
+        {he:"מצורע", ref:"Kedushat Levi, Leviticus, Metzora"},
+        {he:"אחרי מות", ref:"Kedushat Levi, Leviticus, Achrei Mot"},
+        {he:"קדושים", ref:"Kedushat Levi, Leviticus, Kedoshim"},
+        {he:"אמור", ref:"Kedushat Levi, Leviticus, Emor"},
+        {he:"בהר", ref:"Kedushat Levi, Leviticus, Behar"},
+        {he:"בחוקותי", ref:"Kedushat Levi, Leviticus, Bechukotai"},
+        {he:"במדבר", ref:"Kedushat Levi, Numbers, Bamidbar"},
+        {he:"נשא", ref:"Kedushat Levi, Numbers, Nasso"},
+        {he:"לספירה", ref:"Kedushat Levi, Numbers, For the Sefira"},
+        {he:"דרוש לשבועות", ref:"Kedushat Levi, Numbers, Homily for Shavuot"},
+        {he:"בהעלותך", ref:"Kedushat Levi, Numbers, Beha'alotcha"},
+        {he:"שלח", ref:"Kedushat Levi, Numbers, Sh'lach"},
+        {he:"קרח", ref:"Kedushat Levi, Numbers, Korach"},
+        {he:"חוקת", ref:"Kedushat Levi, Numbers, Chukat"},
+        {he:"בלק", ref:"Kedushat Levi, Numbers, Balak"},
+        {he:"פינחס", ref:"Kedushat Levi, Numbers, Pinchas"},
+        {he:"מטות", ref:"Kedushat Levi, Numbers, Matot"},
+        {he:"מסעי", ref:"Kedushat Levi, Numbers, Masei"},
+        {he:"דברים", ref:"Kedushat Levi, Deuteronomy, Devarim"},
+        {he:"מגילת איכה", ref:"Kedushat Levi, Deuteronomy, Megillat Eicha"},
+        {he:"ואתחנן", ref:"Kedushat Levi, Deuteronomy, Vaetchanan"},
+        {he:"לשבת נחמו", ref:"Kedushat Levi, Deuteronomy, For Shabbat Nachamu"},
+        {he:"עקב", ref:"Kedushat Levi, Deuteronomy, Eikev"},
+        {he:"ראה", ref:"Kedushat Levi, Deuteronomy, Re'eh"},
+        {he:"שופטים", ref:"Kedushat Levi, Deuteronomy, Shoftim"},
+        {he:"כי תצא", ref:"Kedushat Levi, Deuteronomy, Ki Teitzei"},
+        {he:"כי תבוא", ref:"Kedushat Levi, Deuteronomy, Ki Tavo"},
+        {he:"נצבים", ref:"Kedushat Levi, Deuteronomy, Nitzavim"},
+        {he:"הפטרת נצבים", ref:"Kedushat Levi, Deuteronomy, Haftarah of Nitzavim"},
+        {he:"לראש השנה", ref:"Kedushat Levi, Deuteronomy, For Rosh HaShanah"},
+        {he:"וילך", ref:"Kedushat Levi, Deuteronomy, Vayeilech"},
+        {he:"האזינו", ref:"Kedushat Levi, Deuteronomy, Ha'Azinu"},
+        {he:"וזאת הברכה", ref:"Kedushat Levi, Deuteronomy, V'Zot HaBerachah"},
+        {he:"ליקוטים", ref:"Kedushat Levi, Likutim"},
+        {he:"ליקוטים לאבות", ref:"Kedushat Levi, Likutim on Avot"},
+        {he:"הגדה מסבי דבי אתוני", ref:"Kedushat Levi, Haggadah MiSavi De'vey Atuni"},
+        {he:"קדושות לפורים — הקדמה", ref:"Kedushat Levi, Kedushot for Purim, Introduction"},
+        {he:"קדושות לפורים — קדושה ראשונה", ref:"Kedushat Levi, Kedushot for Purim, Kedusha Rishona"},
+        {he:"קדושות לפורים — קדושה שניה", ref:"Kedushat Levi, Kedushot for Purim, Kedusha Shniya"},
+        {he:"קדושות לפורים — קדושה שלישית", ref:"Kedushat Levi, Kedushot for Purim, Kedusha Shlishit"},
+        {he:"קדושות לפורים — קדושה רביעית", ref:"Kedushat Levi, Kedushot for Purim, Kedusha Revi'it"},
+        {he:"כללות ימים טובים", ref:"Kedushat Levi, The Rules of Festivals"},
+        {he:"חידושי אגדות", ref:"Kedushat Levi, Chidushei Agadot"},
+        {he:"חידושי הלכות", ref:"Kedushat Levi, Chidushei Halachot"},
+        {he:"קדושות לחנוכה — קדושה ראשונה", ref:"Kedushat Levi, Kedushot for Chanukah, Kedusha Rishona"},
+        {he:"קדושות לחנוכה — קדושה שניה", ref:"Kedushat Levi, Kedushot for Chanukah, Kedusha Shniya"},
+        {he:"קדושות לחנוכה — קדושה שלישית", ref:"Kedushat Levi, Kedushot for Chanukah, Kedusha Shlishit"},
+        {he:"קדושות לחנוכה — קדושה רביעית", ref:"Kedushat Levi, Kedushot for Chanukah, Kedusha Revi'it"},
+        {he:"קדושות לחנוכה — קדושה חמישית", ref:"Kedushat Levi, Kedushot for Chanukah, Kedusha Chamishit"},
+        {he:"כללות הנסים", ref:"Kedushat Levi, The Rules of Miracles"},
+        {he:"פירושי אגדות", ref:"Kedushat Levi, Explanations of Aggadot"}
       ]},
     { id:"likutei-halachot", he:"ליקוטי הלכות", subtitle:"רבי נתן מברסלב — תלמיד רבי נחמן",
       cat:"halakha", color:"#0d9488", icon:"📖",
@@ -30175,49 +30600,157 @@ function openSefarimNosafimPage(_pageMode) {
           {he:"הקדמת המחבר", ref:"Likutei Halakhot, Author's Introduction"}
         ]},
         {id:"oc", he:"אורח חיים", sections:[
-          {he:"השכמת הבוקר",        ref:"Likutei Halakhot, Orach Chaim, Laws of Morning Conduct"},
-          {he:"נטילת ידיים שחרית", ref:"Likutei Halakhot, Orach Chaim, Laws for the Morning Washing of Hands"},
-          {he:"ברכות השחר",         ref:"Likutei Halakhot, Orach Chaim, Laws for Morning Blessings"},
-          {he:"ציצית",              ref:"Likutei Halakhot, Orach Chaim, Laws of Fringes"},
-          {he:"תפילין",             ref:"Likutei Halakhot, Orach Chaim, Laws of Phylacteries"},
-          {he:"קריאת שמע",          ref:"Likutei Halakhot, Orach Chaim, Laws of the Recitation of the Shema"},
-          {he:"תפילה",              ref:"Likutei Halakhot, Orach Chaim, Laws of Prayer"},
-          {he:"נשיאת כפיים",        ref:"Likutei Halakhot, Orach Chaim, Laws of the Priestly Blessing"},
-          {he:"קריאת התורה",        ref:"Likutei Halakhot, Orach Chaim, Laws of the Reading of the Torah"},
-          {he:"בית הכנסת",          ref:"Likutei Halakhot, Orach Chaim, Laws of the Synagogue"},
-          {he:"ברכת הפירות",        ref:"Likutei Halakhot, Orach Chaim, Laws of Blessings on Fruit"},
-          {he:"שבת",                ref:"Likutei Halakhot, Orach Chaim, Laws of the Sabbath"},
-          {he:"ראש חודש",           ref:"Likutei Halakhot, Orach Chaim, Laws of the New Moon"},
-          {he:"פסח",                ref:"Likutei Halakhot, Orach Chaim, Laws of Passover"},
-          {he:"שבועות",             ref:"Likutei Halakhot, Orach Chaim, Laws of Shavuot"},
-          {he:"ראש השנה",           ref:"Likutei Halakhot, Orach Chaim, Laws of Rosh Hashanah"},
-          {he:"יום כיפור",          ref:"Likutei Halakhot, Orach Chaim, Laws of the Day of Atonement"},
-          {he:"סוכה",               ref:"Likutei Halakhot, Orach Chaim, Laws of Sukkot"},
-          {he:"חנוכה",              ref:"Likutei Halakhot, Orach Chaim, Laws of Chanukah"},
-          {he:"פורים",              ref:"Likutei Halakhot, Orach Chaim, Laws of Purim"}
+          {he:"השכמת הבוקר", ref:"Likutei Halakhot, Orach Chaim, Laws of Morning Conduct"},
+          {he:"נטילת ידים שחרית", ref:"Likutei Halakhot, Orach Chaim, Laws of Morning Hand Washing"},
+          {he:"ציצית", ref:"Likutei Halakhot, Orach Chaim, Laws of Fringes"},
+          {he:"תפילין", ref:"Likutei Halakhot, Orach Chaim, Laws of Phylacteries"},
+          {he:"ברכת השחר", ref:"Likutei Halakhot, Orach Chaim, Laws for Morning Blessings"},
+          {he:"ברכות התורה", ref:"Likutei Halakhot, Orach Chaim, Laws of Torah Blessings"},
+          {he:"קדיש", ref:"Likutei Halakhot, Orach Chaim, Laws of Kaddish"},
+          {he:"קריאת שמע", ref:"Likutei Halakhot, Orach Chaim, Laws of Reciting Shema"},
+          {he:"תפלה", ref:"Likutei Halakhot, Orach Chaim, Laws of Prayer"},
+          {he:"נשיאת כפים", ref:"Likutei Halakhot, Orach Chaim, Laws of Priestly Blessings"},
+          {he:"נפילת אפים", ref:"Likutei Halakhot, Orach Chaim, Laws of Tachanun"},
+          {he:"קדושה דסידרא", ref:"Likutei Halakhot, Orach Chaim, Laws of Sidra Kaddish"},
+          {he:"קריאת התורה", ref:"Likutei Halakhot, Orach Chaim, Laws of Reading the Torah"},
+          {he:"בית הכנסת", ref:"Likutei Halakhot, Orach Chaim, Laws of the Synagogue"},
+          {he:"משא ומתן", ref:"Likutei Halakhot, Orach Chaim, Laws of Business"},
+          {he:"נטילת ידים לסעודה ובציעת הפת", ref:"Likutei Halakhot, Orach Chaim, Laws of Washing One's Hands for a Meal"},
+          {he:"סעודה", ref:"Likutei Halakhot, Orach Chaim, Laws of Meals"},
+          {he:"ברכת המזון ומים אחרונים", ref:"Likutei Halakhot, Orach Chaim, Laws of Grace After Meals and Washing after Meals"},
+          {he:"ברכת הפרות", ref:"Likutei Halakhot, Orach Chaim, Laws of Blessings Over Fruit"},
+          {he:"ברכת הריח", ref:"Likutei Halakhot, Orach Chaim, Laws of Blessing on Fragrance"},
+          {he:"ברכת הודאה", ref:"Likutei Halakhot, Orach Chaim, Laws of Thanksgiving Blessings"},
+          {he:"ברכות הראיה וברכות פרטיות", ref:"Likutei Halakhot, Orach Chaim, Laws of Blessing on Sights and Other Blessings"},
+          {he:"תפלת המנחה", ref:"Likutei Halakhot, Orach Chaim, Laws for Afternoon Prayer"},
+          {he:"תפלת ערבית", ref:"Likutei Halakhot, Orach Chaim, Laws for Evening Prayer"},
+          {he:"קריאת שמע שעל המטה", ref:"Likutei Halakhot, Orach Chaim, Laws of Reciting Shema Before Retiring"},
+          {he:"שבת", ref:"Likutei Halakhot, Orach Chaim, Laws of the Sabbath"},
+          {he:"תחומין וערובי תחומין", ref:"Likutei Halakhot, Orach Chaim, Laws of Joining Domains"},
+          {he:"ראש חדש", ref:"Likutei Halakhot, Orach Chaim, Laws of the New Moon"},
+          {he:"פסח", ref:"Likutei Halakhot, Orach Chaim, Laws of Passover"},
+          {he:"ספירת העמר", ref:"Likutei Halakhot, Orach Chaim, Laws of Counter the Omer"},
+          {he:"שבועות", ref:"Likutei Halakhot, Orach Chaim, Laws of the Shavuot Festival"},
+          {he:"יום טוב", ref:"Likutei Halakhot, Orach Chaim, Laws of the Festival Day"},
+          {he:"חול המועד", ref:"Likutei Halakhot, Orach Chaim, Laws of the Week Days of a Festival"},
+          {he:"תשעה באב ותעניות", ref:"Likutei Halakhot, Orach Chaim, Laws of the Ninth of Av and Other Fast Days"},
+          {he:"ראש השנה", ref:"Likutei Halakhot, Orach Chaim, Laws of the New Year"},
+          {he:"יום הכפורים", ref:"Likutei Halakhot, Orach Chaim, Laws of the Day of Atonement"},
+          {he:"סוכה", ref:"Likutei Halakhot, Orach Chaim, Laws of the Festival of Booths"},
+          {he:"לולב ואתרוג", ref:"Likutei Halakhot, Orach Chaim, Laws of the Palm Branch"},
+          {he:"הושענא רבה", ref:"Likutei Halakhot, Orach Chaim, Laws of the Hoshana Rabba Festival"},
+          {he:"חנוכה", ref:"Likutei Halakhot, Orach Chaim, Laws of the Hannukah Festival"},
+          {he:"ארבע פרשיות", ref:"Likutei Halakhot, Orach Chaim, Laws of the Four Festive Torah Portions"},
+          {he:"פורים", ref:"Likutei Halakhot, Orach Chaim, Laws of Purim"}
         ]},
         {id:"yd", he:"יורה דעה", sections:[
-          {he:"שחיטה",              ref:"Likutei Halakhot, Yoreh Deah, Laws of Slaughtering"},
-          {he:"בשר וחלב",           ref:"Likutei Halakhot, Yoreh Deah, Laws of Meat and Milk"},
-          {he:"ריבית",              ref:"Likutei Halakhot, Yoreh Deah, Laws of Interest"},
-          {he:"מקוואות",            ref:"Likutei Halakhot, Yoreh Deah, Laws of Ritual Baths"},
-          {he:"תלמוד תורה",         ref:"Likutei Halakhot, Yoreh Deah, Laws of Torah Study"},
-          {he:"צדקה",               ref:"Likutei Halakhot, Yoreh Deah, Laws of Charity"},
-          {he:"מילה",               ref:"Likutei Halakhot, Yoreh Deah, Laws of Circumcision"},
-          {he:"אבילות",             ref:"Likutei Halakhot, Yoreh Deah, Laws of Mourning"}
+          {he:"שחיטה", ref:"Likutei Halakhot, Yoreh Deah, Laws of Slaughtering"},
+          {he:"טרפות", ref:"Likutei Halakhot, Yoreh Deah, Laws of Unfit Animals"},
+          {he:"מתנות כהונה", ref:"Likutei Halakhot, Yoreh Deah, Laws of Priestly Gifts"},
+          {he:"אבר מן החי", ref:"Likutei Halakhot, Yoreh Deah, Laws of a Limb from a Live Animal"},
+          {he:"בשר שנתעלם מן העין", ref:"Likutei Halakhot, Yoreh Deah, Laws of Meat that was Unobserved"},
+          {he:"חלב ודם", ref:"Likutei Halakhot, Yoreh Deah, Laws of Fat and Blood"},
+          {he:"דם", ref:"Likutei Halakhot, Yoreh Deah, Laws of Blood"},
+          {he:"מליחה", ref:"Likutei Halakhot, Yoreh Deah, Laws of Salting"},
+          {he:"סימני בהמה וחיה טהורה", ref:"Likutei Halakhot, Yoreh Deah, Laws of Domesticated and Undomesticated Animals"},
+          {he:"דברים היוצאים מן החי", ref:"Likutei Halakhot, Yoreh Deah, Laws of Things that Come from a Live Animal"},
+          {he:"סימני עוף טהור", ref:"Likutei Halakhot, Yoreh Deah, Laws of Birds"},
+          {he:"דגים", ref:"Likutei Halakhot, Yoreh Deah, Laws of Fish"},
+          {he:"תולעים", ref:"Likutei Halakhot, Yoreh Deah, Laws of Insects"},
+          {he:"ביצים", ref:"Likutei Halakhot, Yoreh Deah, Laws of Eggs"},
+          {he:"בשר בחלב", ref:"Likutei Halakhot, Yoreh Deah, Laws of Meat and Milk"},
+          {he:"תערובות", ref:"Likutei Halakhot, Yoreh Deah, Laws of Mixtures"},
+          {he:"מאכלי עכו\"ם", ref:"Likutei Halakhot, Yoreh Deah, Laws of Non Jewish Food"},
+          {he:"הכשר כלים", ref:"Likutei Halakhot, Yoreh Deah, Laws of Kashering Vessels"},
+          {he:"נותן טעם לפגם", ref:"Likutei Halakhot, Yoreh Deah, Laws of Taste Transfer"},
+          {he:"יין נסך", ref:"Likutei Halakhot, Yoreh Deah, Laws of Libational Wine"},
+          {he:"כלי היין", ref:"Likutei Halakhot, Yoreh Deah, Laws of Wine Vessels"},
+          {he:"עבודת אלילים", ref:"Likutei Halakhot, Yoreh Deah, Laws of Idol Worship"},
+          {he:"ריבית", ref:"Likutei Halakhot, Yoreh Deah, Laws of Interest"},
+          {he:"חוקות העכו\"ם", ref:"Likutei Halakhot, Yoreh Deah, Laws of Idolatrous Practices"},
+          {he:"מעונן ומנחש", ref:"Likutei Halakhot, Yoreh Deah, Laws of Sourcerers and Enchanters"},
+          {he:"קרחה וכתובת קעקע", ref:"Likutei Halakhot, Yoreh Deah, Laws of Shaving and Tatooing"},
+          {he:"גילוח", ref:"Likutei Halakhot, Yoreh Deah, Laws of Shaving"},
+          {he:"לא ילבש", ref:"Likutei Halakhot, Yoreh Deah, Laws of Forbidden Dresss"},
+          {he:"נדה", ref:"Likutei Halakhot, Yoreh Deah, Laws of a Menstruant"},
+          {he:"מקוואות", ref:"Likutei Halakhot, Yoreh Deah, Laws of Ritual Baths"},
+          {he:"נדרים", ref:"Likutei Halakhot, Yoreh Deah, Laws of Vows"},
+          {he:"שבועות", ref:"Likutei Halakhot, Yoreh Deah, Laws of Oaths"},
+          {he:"כבוד אב ואם", ref:"Likutei Halakhot, Yoreh Deah, Laws of Honouring One's Father and Mother"},
+          {he:"כבוד רבו ותלמיד חכם", ref:"Likutei Halakhot, Yoreh Deah, Laws of Honouring One's Rabbi and a Torah Scholar"},
+          {he:"מלמדים", ref:"Likutei Halakhot, Yoreh Deah, Laws of Teachers"},
+          {he:"תלמוד תורה", ref:"Likutei Halakhot, Yoreh Deah, Laws of Torah Study"},
+          {he:"צדקה", ref:"Likutei Halakhot, Yoreh Deah, Laws of Charity"},
+          {he:"מילה", ref:"Likutei Halakhot, Yoreh Deah, Laws of Circumcision"},
+          {he:"עבדים", ref:"Likutei Halakhot, Yoreh Deah, Laws of Slaves"},
+          {he:"גרים", ref:"Likutei Halakhot, Yoreh Deah, Laws of Converts"},
+          {he:"ספר תורה", ref:"Likutei Halakhot, Yoreh Deah, Laws of a Torah Scroll"},
+          {he:"מזוזה", ref:"Likutei Halakhot, Yoreh Deah, Laws of a Mezuzah"},
+          {he:"שלוח הקן", ref:"Likutei Halakhot, Yoreh Deah, Laws of Sending Away the Mother Bird"},
+          {he:"חדש", ref:"Likutei Halakhot, Yoreh Deah, Laws of New Grain"},
+          {he:"ערלה", ref:"Likutei Halakhot, Yoreh Deah, Laws of Three Year Old Trees"},
+          {he:"כלאי הכרם ואילן", ref:"Likutei Halakhot, Yoreh Deah, Laws of Mixed Crops"},
+          {he:"כלאי בהמה", ref:"Likutei Halakhot, Yoreh Deah, Laws of Mixed Breeding"},
+          {he:"כלאי בגדים", ref:"Likutei Halakhot, Yoreh Deah, Laws of Fobidden Fabric Blends"},
+          {he:"פדיון בכור", ref:"Likutei Halakhot, Yoreh Deah, Laws of Redeeming the Firstborn"},
+          {he:"בכור בהמה טהורה", ref:"Likutei Halakhot, Yoreh Deah, Laws of Firstborn Kosher Animals"},
+          {he:"פדיון פטר חמור", ref:"Likutei Halakhot, Yoreh Deah, Laws of Firstborn Donkey"},
+          {he:"חלה", ref:"Likutei Halakhot, Yoreh Deah, Laws of Separating From Dough"},
+          {he:"תרומות ומעשרות", ref:"Likutei Halakhot, Yoreh Deah, Laws of Tithes"},
+          {he:"ראשית הגז", ref:"Likutei Halakhot, Yoreh Deah, Laws of First Shearings"}
         ]},
         {id:"eh", he:"אבן העזר", sections:[
-          {he:"פריה ורביה",        ref:"Likutei Halakhot, Even HaEzer, Laws of Being Fruitful and Multiplying"},
-          {he:"קידושין",            ref:"Likutei Halakhot, Even HaEzer, Laws of Betrothal"},
-          {he:"כתובות",             ref:"Likutei Halakhot, Even HaEzer, Laws of Ketubot"},
-          {he:"גירושין",            ref:"Likutei Halakhot, Even HaEzer, Laws of Divorce"}
+          {he:"פריה ורביה ואישות", ref:"Likutei Halakhot, Even HaEzer, Laws of Procreation"},
+          {he:"אישות", ref:"Likutei Halakhot, Even HaEzer, Laws of Matrimony"},
+          {he:"קדושין", ref:"Likutei Halakhot, Even HaEzer, Laws of Sanctification"},
+          {he:"כתובות", ref:"Likutei Halakhot, Even HaEzer, Laws of a Bill of Marriage"},
+          {he:"גטין", ref:"Likutei Halakhot, Even HaEzer, Laws of a Bill of Divorce"},
+          {he:"יבום", ref:"Likutei Halakhot, Even HaEzer, Laws of Levirate Marriage"},
+          {he:"סוטה", ref:"Likutei Halakhot, Even HaEzer, Laws of Adulterer"},
+          {he:"אונס ומפתה", ref:"Likutei Halakhot, Even HaEzer, Laws of Rape and Seduction"}
         ]},
         {id:"cm", he:"חושן משפט", sections:[
-          {he:"הלוואה",             ref:"Likutei Halakhot, Choshen Mishpat, Laws of Loans"},
-          {he:"מקח וממכר",          ref:"Likutei Halakhot, Choshen Mishpat, Laws of Buying and Selling"},
-          {he:"גזילה",              ref:"Likutei Halakhot, Choshen Mishpat, Laws of Theft"},
-          {he:"נזיקין",             ref:"Likutei Halakhot, Choshen Mishpat, Laws of Damages"},
-          {he:"נחלות",              ref:"Likutei Halakhot, Choshen Mishpat, Laws of Inheritance"}
+          {he:"דינים", ref:"Likutei Halakhot, Choshen Mishpat, Laws for Judges"},
+          {he:"עדות", ref:"Likutei Halakhot, Choshen Mishpat, Laws of Testimony"},
+          {he:"הלואה", ref:"Likutei Halakhot, Choshen Mishpat, Laws of Loans"},
+          {he:"טוען ונטען", ref:"Likutei Halakhot, Choshen Mishpat, Laws of Plaintiffs and Defendants"},
+          {he:"גבית מלוה", ref:"Likutei Halakhot, Choshen Mishpat, Laws of Collecting Loans"},
+          {he:"גבית חוב מהיתומים", ref:"Likutei Halakhot, Choshen Mishpat, Laws of Collecting Loans from Orphans"},
+          {he:"גבית חוב מהלקוחות ואפותיקי", ref:"Likutei Halakhot, Choshen Mishpat, Laws of Collecting Loans from Purchasers and Laws Designated Collection"},
+          {he:"העושה שליח לגבות חובו", ref:"Likutei Halakhot, Choshen Mishpat, Laws of an Agent Collecting Debts and Authorisation"},
+          {he:"כח והרשאה", ref:"Likutei Halakhot, Choshen Mishpat, Laws of Authorisation"},
+          {he:"ערב", ref:"Likutei Halakhot, Choshen Mishpat, Laws of Guaranteeing"},
+          {he:"חזקת מטלטלין", ref:"Likutei Halakhot, Choshen Mishpat, Laws of Movable Property"},
+          {he:"חזקת קרקעות", ref:"Likutei Halakhot, Choshen Mishpat, Laws of Immovable Property"},
+          {he:"נזקי שכנים", ref:"Likutei Halakhot, Choshen Mishpat, Laws of Neighbor Damages"},
+          {he:"שותפים בקרקע", ref:"Likutei Halakhot, Choshen Mishpat, Laws of Immovable Partnerships"},
+          {he:"חלקת שתפים", ref:"Likutei Halakhot, Choshen Mishpat, Laws of Divisions of Partnerships"},
+          {he:"מצרנות", ref:"Likutei Halakhot, Choshen Mishpat, Laws of Boundaries"},
+          {he:"שתפין", ref:"Likutei Halakhot, Choshen Mishpat, Laws of Partners"},
+          {he:"שלוחין", ref:"Likutei Halakhot, Choshen Mishpat, Laws of Emissaries"},
+          {he:"מקח וממכר", ref:"Likutei Halakhot, Choshen Mishpat, Laws of Buying and Selling"},
+          {he:"אונאה", ref:"Likutei Halakhot, Choshen Mishpat, Laws of Over and Under Charging"},
+          {he:"מתנה", ref:"Likutei Halakhot, Choshen Mishpat, Laws of Gifting"},
+          {he:"מתנת שכיב מרע", ref:"Likutei Halakhot, Choshen Mishpat, Laws of a Deathly Ill Person"},
+          {he:"אבדה ומציאה", ref:"Likutei Halakhot, Choshen Mishpat, Laws of Lost and Found"},
+          {he:"פריקה וטעינה", ref:"Likutei Halakhot, Choshen Mishpat, Laws of Unloading and Loading"},
+          {he:"הפקר ונכסי הגר", ref:"Likutei Halakhot, Choshen Mishpat, Laws of Ownerless Property and Property of Non Jews"},
+          {he:"נחלות", ref:"Likutei Halakhot, Choshen Mishpat, Laws of Inheritance"},
+          {he:"אפטרופוס", ref:"Likutei Halakhot, Choshen Mishpat, Laws of an Apotropos"},
+          {he:"פקדון וארבעה שומרים", ref:"Likutei Halakhot, Choshen Mishpat, Laws of Deposit and Four Guards"},
+          {he:"שומר שכר", ref:"Likutei Halakhot, Choshen Mishpat, Laws for Paid Guardians"},
+          {he:"אמנין", ref:"Likutei Halakhot, Choshen Mishpat, Laws of Artisans"},
+          {he:"שוכר", ref:"Likutei Halakhot, Choshen Mishpat, Laws of Hiring"},
+          {he:"חכירות וקבלנות", ref:"Likutei Halakhot, Choshen Mishpat, Laws of Leasing and Contract Work"},
+          {he:"שכירות פועלים", ref:"Likutei Halakhot, Choshen Mishpat, Laws of Hiring Labourers"},
+          {he:"שאלה", ref:"Likutei Halakhot, Choshen Mishpat, Laws of Borrowing"},
+          {he:"גנבה", ref:"Likutei Halakhot, Choshen Mishpat, Laws of Theft"},
+          {he:"גזלה", ref:"Likutei Halakhot, Choshen Mishpat, Laws of Stealing"},
+          {he:"נזיקין", ref:"Likutei Halakhot, Choshen Mishpat, Laws of Damages"},
+          {he:"מאבד ממון חברו ומסור", ref:"Likutei Halakhot, Choshen Mishpat, Laws of Causing a Loss and Reporting to Government"},
+          {he:"נזקי ממון", ref:"Likutei Halakhot, Choshen Mishpat, Laws of Monetary Damages"},
+          {he:"חובל בחברו", ref:"Likutei Halakhot, Choshen Mishpat, Laws of Injuring a Person"},
+          {he:"מעקה ושמירת הנפש", ref:"Likutei Halakhot, Choshen Mishpat, Laws of Roof Rails and Preservation of Life"}
         ]}
       ]},
     { id:"pele-yoetz", he:"פלא יועץ", subtitle:"רבי אליעזר פאפו",
@@ -30226,6 +30759,7 @@ function openSefarimNosafimPage(_pageMode) {
       creditUrl:"https://www.sefaria.org/Pele_Yoetz",
       type:"flat",
       sections:[
+        {he:"הקדמה", ref:"Pele Yoetz, Introduction"},
         {he:"אהבה להקדוש ברוך הוא", ref:"Pele Yoetz 1"},
         {he:"אהבת עצמו", ref:"Pele Yoetz 2"},
         {he:"אהבת הבנים והבנות", ref:"Pele Yoetz 3"},
@@ -30616,7 +31150,8 @@ function openSefarimNosafimPage(_pageMode) {
         {he:"תוספת", ref:"Pele Yoetz 388"},
         {he:"תוקע", ref:"Pele Yoetz 389"},
         {he:"תשעה באב", ref:"Pele Yoetz 390"},
-        {he:"תשועה", ref:"Pele Yoetz 391"}
+        {he:"תשועה", ref:"Pele Yoetz 391"},
+        {he:"נספח", ref:"Pele Yoetz, Supplement"}
       ]},
     { id:"perek-shirah", he:"פרק שירה", subtitle:"שירת כל הברואים — ששה פרקים",
       cat:"tefilot", color:"#059669", icon:"🦋",
@@ -30624,12 +31159,14 @@ function openSefarimNosafimPage(_pageMode) {
       creditUrl:"https://www.sefaria.org/Perek_Shirah",
       type:"flat",
       sections:[
+        {he:"הקדמה", ref:"Perek Shirah, Introductory Text"},
         {he:"פרק ראשון — שמים וארץ", ref:"Perek Shirah 1"},
         {he:"פרק שני — יום ולילה, מאורות", ref:"Perek Shirah 2"},
         {he:"פרק שלישי — אילנות וצמחים", ref:"Perek Shirah 3"},
         {he:"פרק רביעי — העופות", ref:"Perek Shirah 4"},
         {he:"פרק חמישי — הבהמות והחיות", ref:"Perek Shirah 5"},
-        {he:"פרק שישי — שרצים ובעלי חיים קטנים", ref:"Perek Shirah 6"}
+        {he:"פרק שישי — שרצים ובעלי חיים קטנים", ref:"Perek Shirah 6"},
+        {he:"תפילה לאחר פרק שירה", ref:"Perek Shirah, Concluding Prayer"}
       ]},
     { id:"hafrashat-challah", he:"הפרשת חלה", subtitle:"סדר ההפרשה והברכה",
       cat:"tefilot", color:"#d97706", icon:"🍞",
@@ -30959,7 +31496,7 @@ function openSefarimNosafimPage(_pageMode) {
         {id:"zephaniah",he:"צפניה",color:"#0891b2",commentaries:SN_TANAKH_CM,sections:[{he:"פרק "+toHN(1)+" — צפניה",ref:"Zephaniah.1"},{he:"פרק "+toHN(2)+" — צפניה",ref:"Zephaniah.2"},{he:"פרק "+toHN(3)+" — צפניה",ref:"Zephaniah.3"}]},
         {id:"haggai",he:"חגי",color:"#0284c7",commentaries:SN_TANAKH_CM,sections:[{he:"פרק "+toHN(1)+" — חגי",ref:"Haggai.1"},{he:"פרק "+toHN(2)+" — חגי",ref:"Haggai.2"}]},
         {id:"zechariah",he:"זכריה",color:"#2563eb",commentaries:SN_TANAKH_CM,sections:[{he:"פרק "+toHN(1)+" — זכריה",ref:"Zechariah.1"},{he:"פרק "+toHN(2)+" — זכריה",ref:"Zechariah.2"},{he:"פרק "+toHN(3)+" — זכריה",ref:"Zechariah.3"},{he:"פרק "+toHN(4)+" — זכריה",ref:"Zechariah.4"},{he:"פרק "+toHN(5)+" — זכריה",ref:"Zechariah.5"},{he:"פרק "+toHN(6)+" — זכריה",ref:"Zechariah.6"},{he:"פרק "+toHN(7)+" — זכריה",ref:"Zechariah.7"},{he:"פרק "+toHN(8)+" — זכריה",ref:"Zechariah.8"},{he:"פרק "+toHN(9)+" — זכריה",ref:"Zechariah.9"},{he:"פרק "+toHN(10)+" — זכריה",ref:"Zechariah.10"},{he:"פרק "+toHN(11)+" — זכריה",ref:"Zechariah.11"},{he:"פרק "+toHN(12)+" — זכריה",ref:"Zechariah.12"},{he:"פרק "+toHN(13)+" — זכריה",ref:"Zechariah.13"},{he:"פרק "+toHN(14)+" — זכריה",ref:"Zechariah.14"}]},
-        {id:"malachi",he:"מלאכי",color:"#4f46e5",commentaries:SN_TANAKH_CM,sections:[{he:"פרק "+toHN(1)+" — מלאכי",ref:"Malachi.1"},{he:"פרק "+toHN(2)+" — מלאכי",ref:"Malachi.2"},{he:"פרק "+toHN(3)+" — מלאכי",ref:"Malachi.3"},{he:"פרק "+toHN(4)+" — מלאכי",ref:"Malachi.4"}]},
+        {id:"malachi",he:"מלאכי",color:"#4f46e5",commentaries:SN_TANAKH_CM,sections:[{he:"פרק "+toHN(1)+" — מלאכי",ref:"Malachi.1"},{he:"פרק "+toHN(2)+" — מלאכי",ref:"Malachi.2"},{he:"פרק "+toHN(3)+" — מלאכי",ref:"Malachi.3"}]},
         {id:"psalms",he:"תהילים",color:"#7c3aed",commentaries:SN_TANAKH_CM,sections:[{he:"פרק "+toHN(1)+" — תהילים",ref:"Psalms.1"},{he:"פרק "+toHN(2)+" — תהילים",ref:"Psalms.2"},{he:"פרק "+toHN(3)+" — תהילים",ref:"Psalms.3"},{he:"פרק "+toHN(4)+" — תהילים",ref:"Psalms.4"},{he:"פרק "+toHN(5)+" — תהילים",ref:"Psalms.5"},{he:"פרק "+toHN(6)+" — תהילים",ref:"Psalms.6"},{he:"פרק "+toHN(7)+" — תהילים",ref:"Psalms.7"},{he:"פרק "+toHN(8)+" — תהילים",ref:"Psalms.8"},{he:"פרק "+toHN(9)+" — תהילים",ref:"Psalms.9"},{he:"פרק "+toHN(10)+" — תהילים",ref:"Psalms.10"},{he:"פרק "+toHN(11)+" — תהילים",ref:"Psalms.11"},{he:"פרק "+toHN(12)+" — תהילים",ref:"Psalms.12"},{he:"פרק "+toHN(13)+" — תהילים",ref:"Psalms.13"},{he:"פרק "+toHN(14)+" — תהילים",ref:"Psalms.14"},{he:"פרק "+toHN(15)+" — תהילים",ref:"Psalms.15"},{he:"פרק "+toHN(16)+" — תהילים",ref:"Psalms.16"},{he:"פרק "+toHN(17)+" — תהילים",ref:"Psalms.17"},{he:"פרק "+toHN(18)+" — תהילים",ref:"Psalms.18"},{he:"פרק "+toHN(19)+" — תהילים",ref:"Psalms.19"},{he:"פרק "+toHN(20)+" — תהילים",ref:"Psalms.20"},{he:"פרק "+toHN(21)+" — תהילים",ref:"Psalms.21"},{he:"פרק "+toHN(22)+" — תהילים",ref:"Psalms.22"},{he:"פרק "+toHN(23)+" — תהילים",ref:"Psalms.23"},{he:"פרק "+toHN(24)+" — תהילים",ref:"Psalms.24"},{he:"פרק "+toHN(25)+" — תהילים",ref:"Psalms.25"},{he:"פרק "+toHN(26)+" — תהילים",ref:"Psalms.26"},{he:"פרק "+toHN(27)+" — תהילים",ref:"Psalms.27"},{he:"פרק "+toHN(28)+" — תהילים",ref:"Psalms.28"},{he:"פרק "+toHN(29)+" — תהילים",ref:"Psalms.29"},{he:"פרק "+toHN(30)+" — תהילים",ref:"Psalms.30"},{he:"פרק "+toHN(31)+" — תהילים",ref:"Psalms.31"},{he:"פרק "+toHN(32)+" — תהילים",ref:"Psalms.32"},{he:"פרק "+toHN(33)+" — תהילים",ref:"Psalms.33"},{he:"פרק "+toHN(34)+" — תהילים",ref:"Psalms.34"},{he:"פרק "+toHN(35)+" — תהילים",ref:"Psalms.35"},{he:"פרק "+toHN(36)+" — תהילים",ref:"Psalms.36"},{he:"פרק "+toHN(37)+" — תהילים",ref:"Psalms.37"},{he:"פרק "+toHN(38)+" — תהילים",ref:"Psalms.38"},{he:"פרק "+toHN(39)+" — תהילים",ref:"Psalms.39"},{he:"פרק "+toHN(40)+" — תהילים",ref:"Psalms.40"},{he:"פרק "+toHN(41)+" — תהילים",ref:"Psalms.41"},{he:"פרק "+toHN(42)+" — תהילים",ref:"Psalms.42"},{he:"פרק "+toHN(43)+" — תהילים",ref:"Psalms.43"},{he:"פרק "+toHN(44)+" — תהילים",ref:"Psalms.44"},{he:"פרק "+toHN(45)+" — תהילים",ref:"Psalms.45"},{he:"פרק "+toHN(46)+" — תהילים",ref:"Psalms.46"},{he:"פרק "+toHN(47)+" — תהילים",ref:"Psalms.47"},{he:"פרק "+toHN(48)+" — תהילים",ref:"Psalms.48"},{he:"פרק "+toHN(49)+" — תהילים",ref:"Psalms.49"},{he:"פרק "+toHN(50)+" — תהילים",ref:"Psalms.50"},{he:"פרק "+toHN(51)+" — תהילים",ref:"Psalms.51"},{he:"פרק "+toHN(52)+" — תהילים",ref:"Psalms.52"},{he:"פרק "+toHN(53)+" — תהילים",ref:"Psalms.53"},{he:"פרק "+toHN(54)+" — תהילים",ref:"Psalms.54"},{he:"פרק "+toHN(55)+" — תהילים",ref:"Psalms.55"},{he:"פרק "+toHN(56)+" — תהילים",ref:"Psalms.56"},{he:"פרק "+toHN(57)+" — תהילים",ref:"Psalms.57"},{he:"פרק "+toHN(58)+" — תהילים",ref:"Psalms.58"},{he:"פרק "+toHN(59)+" — תהילים",ref:"Psalms.59"},{he:"פרק "+toHN(60)+" — תהילים",ref:"Psalms.60"},{he:"פרק "+toHN(61)+" — תהילים",ref:"Psalms.61"},{he:"פרק "+toHN(62)+" — תהילים",ref:"Psalms.62"},{he:"פרק "+toHN(63)+" — תהילים",ref:"Psalms.63"},{he:"פרק "+toHN(64)+" — תהילים",ref:"Psalms.64"},{he:"פרק "+toHN(65)+" — תהילים",ref:"Psalms.65"},{he:"פרק "+toHN(66)+" — תהילים",ref:"Psalms.66"},{he:"פרק "+toHN(67)+" — תהילים",ref:"Psalms.67"},{he:"פרק "+toHN(68)+" — תהילים",ref:"Psalms.68"},{he:"פרק "+toHN(69)+" — תהילים",ref:"Psalms.69"},{he:"פרק "+toHN(70)+" — תהילים",ref:"Psalms.70"},{he:"פרק "+toHN(71)+" — תהילים",ref:"Psalms.71"},{he:"פרק "+toHN(72)+" — תהילים",ref:"Psalms.72"},{he:"פרק "+toHN(73)+" — תהילים",ref:"Psalms.73"},{he:"פרק "+toHN(74)+" — תהילים",ref:"Psalms.74"},{he:"פרק "+toHN(75)+" — תהילים",ref:"Psalms.75"},{he:"פרק "+toHN(76)+" — תהילים",ref:"Psalms.76"},{he:"פרק "+toHN(77)+" — תהילים",ref:"Psalms.77"},{he:"פרק "+toHN(78)+" — תהילים",ref:"Psalms.78"},{he:"פרק "+toHN(79)+" — תהילים",ref:"Psalms.79"},{he:"פרק "+toHN(80)+" — תהילים",ref:"Psalms.80"},{he:"פרק "+toHN(81)+" — תהילים",ref:"Psalms.81"},{he:"פרק "+toHN(82)+" — תהילים",ref:"Psalms.82"},{he:"פרק "+toHN(83)+" — תהילים",ref:"Psalms.83"},{he:"פרק "+toHN(84)+" — תהילים",ref:"Psalms.84"},{he:"פרק "+toHN(85)+" — תהילים",ref:"Psalms.85"},{he:"פרק "+toHN(86)+" — תהילים",ref:"Psalms.86"},{he:"פרק "+toHN(87)+" — תהילים",ref:"Psalms.87"},{he:"פרק "+toHN(88)+" — תהילים",ref:"Psalms.88"},{he:"פרק "+toHN(89)+" — תהילים",ref:"Psalms.89"},{he:"פרק "+toHN(90)+" — תהילים",ref:"Psalms.90"},{he:"פרק "+toHN(91)+" — תהילים",ref:"Psalms.91"},{he:"פרק "+toHN(92)+" — תהילים",ref:"Psalms.92"},{he:"פרק "+toHN(93)+" — תהילים",ref:"Psalms.93"},{he:"פרק "+toHN(94)+" — תהילים",ref:"Psalms.94"},{he:"פרק "+toHN(95)+" — תהילים",ref:"Psalms.95"},{he:"פרק "+toHN(96)+" — תהילים",ref:"Psalms.96"},{he:"פרק "+toHN(97)+" — תהילים",ref:"Psalms.97"},{he:"פרק "+toHN(98)+" — תהילים",ref:"Psalms.98"},{he:"פרק "+toHN(99)+" — תהילים",ref:"Psalms.99"},{he:"פרק "+toHN(100)+" — תהילים",ref:"Psalms.100"},{he:"פרק "+toHN(101)+" — תהילים",ref:"Psalms.101"},{he:"פרק "+toHN(102)+" — תהילים",ref:"Psalms.102"},{he:"פרק "+toHN(103)+" — תהילים",ref:"Psalms.103"},{he:"פרק "+toHN(104)+" — תהילים",ref:"Psalms.104"},{he:"פרק "+toHN(105)+" — תהילים",ref:"Psalms.105"},{he:"פרק "+toHN(106)+" — תהילים",ref:"Psalms.106"},{he:"פרק "+toHN(107)+" — תהילים",ref:"Psalms.107"},{he:"פרק "+toHN(108)+" — תהילים",ref:"Psalms.108"},{he:"פרק "+toHN(109)+" — תהילים",ref:"Psalms.109"},{he:"פרק "+toHN(110)+" — תהילים",ref:"Psalms.110"},{he:"פרק "+toHN(111)+" — תהילים",ref:"Psalms.111"},{he:"פרק "+toHN(112)+" — תהילים",ref:"Psalms.112"},{he:"פרק "+toHN(113)+" — תהילים",ref:"Psalms.113"},{he:"פרק "+toHN(114)+" — תהילים",ref:"Psalms.114"},{he:"פרק "+toHN(115)+" — תהילים",ref:"Psalms.115"},{he:"פרק "+toHN(116)+" — תהילים",ref:"Psalms.116"},{he:"פרק "+toHN(117)+" — תהילים",ref:"Psalms.117"},{he:"פרק "+toHN(118)+" — תהילים",ref:"Psalms.118"},{he:"פרק "+toHN(119)+" — תהילים",ref:"Psalms.119"},{he:"פרק "+toHN(120)+" — תהילים",ref:"Psalms.120"},{he:"פרק "+toHN(121)+" — תהילים",ref:"Psalms.121"},{he:"פרק "+toHN(122)+" — תהילים",ref:"Psalms.122"},{he:"פרק "+toHN(123)+" — תהילים",ref:"Psalms.123"},{he:"פרק "+toHN(124)+" — תהילים",ref:"Psalms.124"},{he:"פרק "+toHN(125)+" — תהילים",ref:"Psalms.125"},{he:"פרק "+toHN(126)+" — תהילים",ref:"Psalms.126"},{he:"פרק "+toHN(127)+" — תהילים",ref:"Psalms.127"},{he:"פרק "+toHN(128)+" — תהילים",ref:"Psalms.128"},{he:"פרק "+toHN(129)+" — תהילים",ref:"Psalms.129"},{he:"פרק "+toHN(130)+" — תהילים",ref:"Psalms.130"},{he:"פרק "+toHN(131)+" — תהילים",ref:"Psalms.131"},{he:"פרק "+toHN(132)+" — תהילים",ref:"Psalms.132"},{he:"פרק "+toHN(133)+" — תהילים",ref:"Psalms.133"},{he:"פרק "+toHN(134)+" — תהילים",ref:"Psalms.134"},{he:"פרק "+toHN(135)+" — תהילים",ref:"Psalms.135"},{he:"פרק "+toHN(136)+" — תהילים",ref:"Psalms.136"},{he:"פרק "+toHN(137)+" — תהילים",ref:"Psalms.137"},{he:"פרק "+toHN(138)+" — תהילים",ref:"Psalms.138"},{he:"פרק "+toHN(139)+" — תהילים",ref:"Psalms.139"},{he:"פרק "+toHN(140)+" — תהילים",ref:"Psalms.140"},{he:"פרק "+toHN(141)+" — תהילים",ref:"Psalms.141"},{he:"פרק "+toHN(142)+" — תהילים",ref:"Psalms.142"},{he:"פרק "+toHN(143)+" — תהילים",ref:"Psalms.143"},{he:"פרק "+toHN(144)+" — תהילים",ref:"Psalms.144"},{he:"פרק "+toHN(145)+" — תהילים",ref:"Psalms.145"},{he:"פרק "+toHN(146)+" — תהילים",ref:"Psalms.146"},{he:"פרק "+toHN(147)+" — תהילים",ref:"Psalms.147"},{he:"פרק "+toHN(148)+" — תהילים",ref:"Psalms.148"},{he:"פרק "+toHN(149)+" — תהילים",ref:"Psalms.149"},{he:"פרק "+toHN(150)+" — תהילים",ref:"Psalms.150"}]},
         {id:"proverbs",he:"משלי",color:"#9333ea",commentaries:SN_TANAKH_CM,sections:[{he:"פרק "+toHN(1)+" — משלי",ref:"Proverbs.1"},{he:"פרק "+toHN(2)+" — משלי",ref:"Proverbs.2"},{he:"פרק "+toHN(3)+" — משלי",ref:"Proverbs.3"},{he:"פרק "+toHN(4)+" — משלי",ref:"Proverbs.4"},{he:"פרק "+toHN(5)+" — משלי",ref:"Proverbs.5"},{he:"פרק "+toHN(6)+" — משלי",ref:"Proverbs.6"},{he:"פרק "+toHN(7)+" — משלי",ref:"Proverbs.7"},{he:"פרק "+toHN(8)+" — משלי",ref:"Proverbs.8"},{he:"פרק "+toHN(9)+" — משלי",ref:"Proverbs.9"},{he:"פרק "+toHN(10)+" — משלי",ref:"Proverbs.10"},{he:"פרק "+toHN(11)+" — משלי",ref:"Proverbs.11"},{he:"פרק "+toHN(12)+" — משלי",ref:"Proverbs.12"},{he:"פרק "+toHN(13)+" — משלי",ref:"Proverbs.13"},{he:"פרק "+toHN(14)+" — משלי",ref:"Proverbs.14"},{he:"פרק "+toHN(15)+" — משלי",ref:"Proverbs.15"},{he:"פרק "+toHN(16)+" — משלי",ref:"Proverbs.16"},{he:"פרק "+toHN(17)+" — משלי",ref:"Proverbs.17"},{he:"פרק "+toHN(18)+" — משלי",ref:"Proverbs.18"},{he:"פרק "+toHN(19)+" — משלי",ref:"Proverbs.19"},{he:"פרק "+toHN(20)+" — משלי",ref:"Proverbs.20"},{he:"פרק "+toHN(21)+" — משלי",ref:"Proverbs.21"},{he:"פרק "+toHN(22)+" — משלי",ref:"Proverbs.22"},{he:"פרק "+toHN(23)+" — משלי",ref:"Proverbs.23"},{he:"פרק "+toHN(24)+" — משלי",ref:"Proverbs.24"},{he:"פרק "+toHN(25)+" — משלי",ref:"Proverbs.25"},{he:"פרק "+toHN(26)+" — משלי",ref:"Proverbs.26"},{he:"פרק "+toHN(27)+" — משלי",ref:"Proverbs.27"},{he:"פרק "+toHN(28)+" — משלי",ref:"Proverbs.28"},{he:"פרק "+toHN(29)+" — משלי",ref:"Proverbs.29"},{he:"פרק "+toHN(30)+" — משלי",ref:"Proverbs.30"},{he:"פרק "+toHN(31)+" — משלי",ref:"Proverbs.31"}]},
         {id:"job",he:"איוב",color:"#a21caf",commentaries:SN_TANAKH_CM,sections:[{he:"פרק "+toHN(1)+" — איוב",ref:"Job.1"},{he:"פרק "+toHN(2)+" — איוב",ref:"Job.2"},{he:"פרק "+toHN(3)+" — איוב",ref:"Job.3"},{he:"פרק "+toHN(4)+" — איוב",ref:"Job.4"},{he:"פרק "+toHN(5)+" — איוב",ref:"Job.5"},{he:"פרק "+toHN(6)+" — איוב",ref:"Job.6"},{he:"פרק "+toHN(7)+" — איוב",ref:"Job.7"},{he:"פרק "+toHN(8)+" — איוב",ref:"Job.8"},{he:"פרק "+toHN(9)+" — איוב",ref:"Job.9"},{he:"פרק "+toHN(10)+" — איוב",ref:"Job.10"},{he:"פרק "+toHN(11)+" — איוב",ref:"Job.11"},{he:"פרק "+toHN(12)+" — איוב",ref:"Job.12"},{he:"פרק "+toHN(13)+" — איוב",ref:"Job.13"},{he:"פרק "+toHN(14)+" — איוב",ref:"Job.14"},{he:"פרק "+toHN(15)+" — איוב",ref:"Job.15"},{he:"פרק "+toHN(16)+" — איוב",ref:"Job.16"},{he:"פרק "+toHN(17)+" — איוב",ref:"Job.17"},{he:"פרק "+toHN(18)+" — איוב",ref:"Job.18"},{he:"פרק "+toHN(19)+" — איוב",ref:"Job.19"},{he:"פרק "+toHN(20)+" — איוב",ref:"Job.20"},{he:"פרק "+toHN(21)+" — איוב",ref:"Job.21"},{he:"פרק "+toHN(22)+" — איוב",ref:"Job.22"},{he:"פרק "+toHN(23)+" — איוב",ref:"Job.23"},{he:"פרק "+toHN(24)+" — איוב",ref:"Job.24"},{he:"פרק "+toHN(25)+" — איוב",ref:"Job.25"},{he:"פרק "+toHN(26)+" — איוב",ref:"Job.26"},{he:"פרק "+toHN(27)+" — איוב",ref:"Job.27"},{he:"פרק "+toHN(28)+" — איוב",ref:"Job.28"},{he:"פרק "+toHN(29)+" — איוב",ref:"Job.29"},{he:"פרק "+toHN(30)+" — איוב",ref:"Job.30"},{he:"פרק "+toHN(31)+" — איוב",ref:"Job.31"},{he:"פרק "+toHN(32)+" — איוב",ref:"Job.32"},{he:"פרק "+toHN(33)+" — איוב",ref:"Job.33"},{he:"פרק "+toHN(34)+" — איוב",ref:"Job.34"},{he:"פרק "+toHN(35)+" — איוב",ref:"Job.35"},{he:"פרק "+toHN(36)+" — איוב",ref:"Job.36"},{he:"פרק "+toHN(37)+" — איוב",ref:"Job.37"},{he:"פרק "+toHN(38)+" — איוב",ref:"Job.38"},{he:"פרק "+toHN(39)+" — איוב",ref:"Job.39"},{he:"פרק "+toHN(40)+" — איוב",ref:"Job.40"},{he:"פרק "+toHN(41)+" — איוב",ref:"Job.41"},{he:"פרק "+toHN(42)+" — איוב",ref:"Job.42"}]},
@@ -31163,9 +31700,13 @@ function openSefarimNosafimPage(_pageMode) {
           {he:"וילך",ref:"Zohar, Vayeilech"},
           {he:"האזינו",ref:"Zohar, Ha'Azinu"},
           {he:"האדרא זוטא",ref:"Zohar, Idra Zuta"},
-          {he:"תוספות",ref:"Zohar, Addenda"}
+          {he:"תוספות — כרך א",ref:"Zohar, Addenda, Volume I"},
+          {he:"תוספות — כרך ב",ref:"Zohar, Addenda, Volume II"},
+          {he:"תוספות — כרך ג",ref:"Zohar, Addenda, Volume III"}
         ]},
-        {id:"tikkunei-zohar",he:"תיקוני הזוהר",sections:secs(295,function(i){return "דף "+toHN(i);},function(i){return "Tikkunei Zohar."+i;})}
+        // 295 עמודים (א ע"א … קמח ע"א) — עד 09/2026 נבנה כ-295 "דפים" שהם רק עמוד א' של כל דף
+        // (חצי מהספר חסר) ו-147 הפניות לא קיימות מעבר לדף קמ"ח
+        {id:"tikkunei-zohar",he:"תיקוני הזוהר",sections:secs(295,function(i){return "דף "+toHN(Math.floor((i-1)/2)+1)+((i-1)%2?" ע\"ב":" ע\"א");},function(i){return "Tikkunei Zohar."+(Math.floor((i-1)/2)+1)+((i-1)%2?"b":"a");})}
       ]},
     { id:"tomer-devorah", he:"תומר דבורה", subtitle:"רבי משה קורדובירו — הרמ\"ק",
       cat:"musar", color:"#15803d", icon:"🌳",
@@ -31174,15 +31715,15 @@ function openSefarimNosafimPage(_pageMode) {
       type:"flat",
       sections:[
         {he:"פרק א — י\"ג מידות הרחמים",ref:"Tomer Devorah.1"},
-        {he:"פרק ב — מי אל כמוך",ref:"Tomer Devorah.2"},
-        {he:"פרק ג — דרכי הענוה",ref:"Tomer Devorah.3"},
-        {he:"פרק ד — מידות הראויות לאדם",ref:"Tomer Devorah.4"},
-        {he:"פרק ה — דרכי הכתר",ref:"Tomer Devorah.5"},
-        {he:"פרק ו — דרכי החכמה",ref:"Tomer Devorah.6"},
-        {he:"פרק ז — דרכי הבינה",ref:"Tomer Devorah.7"},
-        {he:"פרק ח — דרכי החסד והגבורה",ref:"Tomer Devorah.8"},
-        {he:"פרק ט — דרכי התפארת",ref:"Tomer Devorah.9"},
-        {he:"פרק י — דרכי הנצח, ההוד, היסוד והמלכות",ref:"Tomer Devorah.10"}
+        {he:"פרק ב — מידת הכתר",ref:"Tomer Devorah.2"},
+        {he:"פרק ג — מידת החכמה",ref:"Tomer Devorah.3"},
+        {he:"פרק ד — מידת הבינה והתשובה",ref:"Tomer Devorah.4"},
+        {he:"פרק ה — מידת החסד",ref:"Tomer Devorah.5"},
+        {he:"פרק ו — מידת הגבורה",ref:"Tomer Devorah.6"},
+        {he:"פרק ז — מידת התפארת",ref:"Tomer Devorah.7"},
+        {he:"פרק ח — מידות נצח, הוד ויסוד",ref:"Tomer Devorah.8"},
+        {he:"פרק ט — מידת המלכות",ref:"Tomer Devorah.9"},
+        {he:"פרק י — חיבור לספירות לפי הזמן",ref:"Tomer Devorah.10"}
       ]},
     { id:"birkot-board", he:"לוח ברכות הנהנין", subtitle:"כל המאכלים והברכות — לפי הבן איש חי והרב מרדכי אליהו",
       cat:"tefilot", color:"#b45309", icon:"🍎", hiddenInGrid:true, // נפתח מהדף הראשי בלבד (openBirkotBoardPage)
@@ -31273,13 +31814,13 @@ function openSefarimNosafimPage(_pageMode) {
       cat:"tefilot", color:"#b45309", icon:"🕯️", autoToc:true,
       credit:"ממקורות קדומים — נחלת הכלל", creditUrl:"",
       type:"hardcoded",
-      intro:"תפילות כלליות לכל ציון + תפילות ייחודיות לצדיקי ארץ ישראל. קפיצה מהירה — בתוכן העניינים (📑), איתור תפילה — בחיפוש (🔍).",
+      intro:"תפילות כלליות לכל ציון + תפילות ייחודיות לצדיקי ארץ ישראל. קפיצה מהירה — בתוכן העניינים (☰ בראש המסך), איתור תפילה — בחיפוש (🔍).",
       content:"<div style=\"text-align:right;direction:rtl;line-height:1.95;color:#1e293b;\"><div class=\"sn-head-card\" style=\"background:linear-gradient(135deg,#fef3c7,#fde68a);border-radius:0.85rem;padding:0.7rem 0.9rem;margin-bottom:1rem;border:1px solid #fbbf24;direction:rtl;text-align:right;\"><h2 style=\"text-align:center;color:#78350f;font-size:0.9em;font-weight:900;margin:0 0 0.35rem;\">🕯️ תפילות בציוני צדיקים — ארץ ישראל</h2><p style=\"margin:0;color:#92400e;font-size:0.66em;line-height:1.6;text-align:center;\">אוסף תפילות מלאות לאמירה בעת ביקור בציוני הצדיקים בארץ ישראל. הסעיף הראשון — תפילות כלליות הראויות לכל ציון; הסעיף השני — תפילות ייחודיות לציוני הצדיקים. התפילות לקוחות מן המקורות — \"מענה לשון\", כתבי האריז\"ל, ומסורות ישראל.</p></div><h2 style=\"text-align:center;color:#b45309;font-size:1.35em;font-weight:900;margin:2rem 0 1rem;border-bottom:3px solid currentColor;padding-bottom:0.5rem;direction:rtl;\">🕯️ תפילות כלליות לכל ציון</h2><div style=\"background:linear-gradient(135deg,#fffbeb,#fef3c7);border-right:5px solid #b45309;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(180,83,9,0.12);direction:rtl;text-align:right;\"><h3 style=\"color:#b45309;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">תפילה לפני הכניסה לציון</h3><p style=\"font-size:0.85em;color:#78350f;margin:0 0 0.7rem;font-style:italic;\">📜 נוסח קדום — בעל \"מענה לשון\"</p><div style=\"background:rgba(180,83,9,0.08);padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> אומרים בשקט לפני שעוברים אל הקבר.</div><div style=\"line-height:2;font-size:1em;color:#1c1917;\">יְהִי רָצוֹן מִלְּפָנֶיךָ ה' אֱלֹהֵינוּ וֵאלֹהֵי אֲבוֹתֵינוּ, שֶׁתְּקַבֵּל בְּרַחֲמִים וּבְרָצוֹן אֶת תְּפִלָּתִי, בִּזְכוּת הַצַּדִּיק הַטָּמוּן פֹּה. וִיהֵא תְפִלָּתִי לְךָ בְּרָצוֹן וְלֹא תָשׁוּב רֵיקָם, שֶׁכֵּן הַצַּדִּיקִים בְּמִיתָתָם נִקְרָאִים חַיִּים, וְעַצְמוֹתֵיהֶם רוֹמְזוֹת לְהַמְלִיץ טוֹב עָלֵינוּ לִפְנֵי כִּסֵּא כְבוֹדֶךָ. אָמֵן.</div></div><div style=\"background:linear-gradient(135deg,#fffbeb,#fef3c7);border-right:5px solid #b45309;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(180,83,9,0.12);direction:rtl;text-align:right;\"><h3 style=\"color:#b45309;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">פסוקי כניסה לבית הקברות</h3><p style=\"font-size:0.85em;color:#78350f;margin:0 0 0.7rem;font-style:italic;\">📜 נוסח מהסידור — אורח חיים סימן רכ\"ד</p><div style=\"background:rgba(180,83,9,0.08);padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נאמרים כשנכנסים לבית הקברות, לפני שמגיעים לציון (מי שלא ראה קברי ישראל שלושים יום).</div><div style=\"line-height:2;font-size:1em;color:#1c1917;\">בָּרוּךְ אַתָּה ה' אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם אֲשֶׁר יָצַר אֶתְכֶם בַּדִּין, וְזָן וְכִלְכֵּל אֶתְכֶם בַּדִּין, וְהֵמִית אֶתְכֶם בַּדִּין, וְיוֹדֵעַ מִסְפַּר כֻּלְּכֶם בַּדִּין, וְעָתִיד לְהַחֲיוֹתְכֶם וּלְקַיֵּם אֶתְכֶם בַּדִּין. בָּרוּךְ אַתָּה ה' מְחַיֵּה הַמֵּתִים. (כן נוטלים ידיים בצאת מבית הקברות, ולא פונים בגב לציון).</div></div><div style=\"background:linear-gradient(135deg,#fffbeb,#fef3c7);border-right:5px solid #b45309;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(180,83,9,0.12);direction:rtl;text-align:right;\"><h3 style=\"color:#b45309;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">תפילה אצל הציון — כללי</h3><p style=\"font-size:0.85em;color:#78350f;margin:0 0 0.7rem;font-style:italic;\">📜 מסורת מבעלי החסידות — נחלת הכלל</p><div style=\"background:rgba(180,83,9,0.08);padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נאמרת בעמידה אצל הציון, בפנים אל המצבה.</div><div style=\"line-height:2;font-size:1em;color:#1c1917;\">אֲדוֹנֵנוּ צַדִּיק הָאֱמֶת, פֹּה טָמוּן בְּעַפְרֵךְ. אֲנִי בָּא אֶל קִבְרְךָ הַקָּדוֹשׁ לְשַׁפֵּךְ אֶת לִבִּי. אֲבַקֵּשׁ מִמְּךָ שֶׁתַּעֲלֶה תְפִלָּתִי לִפְנֵי כִּסֵּא הַכָּבוֹד, וְשֶׁתָּמְלִיץ טוֹב בַּעֲדִי וּבְעַד כָּל מִשְׁפַּחְתִּי. רַבּוֹתֵינוּ אָמְרוּ: \"צַדִּיקִים בְּמִיתָתָם נִקְרָאִים חַיִּים\". זְכוּתְךָ תַּעֲמֹד לִי וּלְכָל זַרְעִי, לְהוֹשִׁיעֵנוּ בְּכָל אֲשֶׁר אֲנַחְנוּ צְרִיכִים. אָמֵן.</div></div><div style=\"background:linear-gradient(135deg,#fffbeb,#fef3c7);border-right:5px solid #b45309;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(180,83,9,0.12);direction:rtl;text-align:right;\"><h3 style=\"color:#b45309;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">פרקי תהילים הנהוגים בציוני צדיקים</h3><p style=\"font-size:0.85em;color:#78350f;margin:0 0 0.7rem;font-style:italic;\">📜 מסורת קדומה — \"מענה לשון\"</p><div style=\"background:rgba(180,83,9,0.08);padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נהוג לומר אצל הציון פרקי תהילים: ל\"ג, ט\"ז, י\"ז, ע\"ב, צ\"א, ק\"ד, ק\"ל — ולסיים בפרק קי\"ט באותיות שמו של הצדיק. כאן מובא פרק ק\"ל במלואו:</div><div style=\"line-height:2;font-size:1em;color:#1c1917;\">שִׁיר הַמַּעֲלוֹת, מִמַּעֲמַקִּים קְרָאתִיךָ ה': אֲדֹנָי שִׁמְעָה בְקוֹלִי, תִּהְיֶינָה אָזְנֶיךָ קַשֻּׁבוֹת לְקוֹל תַּחֲנוּנָי: אִם עֲוֺנוֹת תִּשְׁמָר יָהּ, אֲדֹנָי מִי יַעֲמֹד: כִּי עִמְּךָ הַסְּלִיחָה לְמַעַן תִּוָּרֵא: קִוִּיתִי ה' קִוְּתָה נַפְשִׁי, וְלִדְבָרוֹ הוֹחָלְתִּי: נַפְשִׁי לַאדֹנָי, מִשֹּׁמְרִים לַבֹּקֶר שֹׁמְרִים לַבֹּקֶר: יַחֵל יִשְׂרָאֵל אֶל ה', כִּי עִם ה' הַחֶסֶד וְהַרְבֵּה עִמּוֹ פְדוּת: וְהוּא יִפְדֶּה אֶת יִשְׂרָאֵל מִכֹּל עֲוֺנוֹתָיו:</div></div><div style=\"background:linear-gradient(135deg,#fffbeb,#fef3c7);border-right:5px solid #b45309;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(180,83,9,0.12);direction:rtl;text-align:right;\"><h3 style=\"color:#b45309;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">תיקון הכללי — 10 מזמורים</h3><p style=\"font-size:0.85em;color:#78350f;margin:0 0 0.7rem;font-style:italic;\">📜 רבי נחמן מברסלב — \"ליקוטי מוהר\"ן\"</p><div style=\"background:rgba(180,83,9,0.08);padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נאמר בשלמותו ליד הציון. עיקר התיקון הוא אצל קברו של רבי נחמן באומן, אך גם ניתן לאמרו בכל מקום.</div><div style=\"line-height:2;font-size:1em;color:#1c1917;\">עשרת המזמורים הם: ט\"ז, ל\"ב, מ\"א, מ\"ב, נ\"ט, ע\"ז, צ', ק\"ה, קל\"ז, ק\"נ. כתב רבי נחמן: \"התיקון הכללי הוא תיקון לכל החטאים והפגמים שבעולם\". מסוגל לכל ישועה — לרפואה, פרנסה, זיווג, ותשובה שלמה.<div style=\"text-align:center;margin-top:0.9rem;\"><a href=\"index.html?prayer=tikkun-haklali\" style=\"display:inline-block;padding:0.85rem 1.4rem;border:none;border-radius:0.7rem;background:linear-gradient(135deg,#b45309,#7c2d12);color:#fffbeb;text-decoration:none;font-size:0.95rem;font-weight:800;box-shadow:0 4px 12px rgba(180,83,9,0.35);\">📖 פתח את התיקון הכללי המלא ←</a></div></div></div><div style=\"background:linear-gradient(135deg,#fffbeb,#fef3c7);border-right:5px solid #b45309;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(180,83,9,0.12);direction:rtl;text-align:right;\"><h3 style=\"color:#b45309;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">תפילה ביציאה מהציון</h3><p style=\"font-size:0.85em;color:#78350f;margin:0 0 0.7rem;font-style:italic;\">📜 מסורת קדומה</p><div style=\"background:rgba(180,83,9,0.08);padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> אומרים בעת היציאה ויוצאים פנים אל הקבר (לא פונים גב).</div><div style=\"line-height:2;font-size:1em;color:#1c1917;\">יְהִי רָצוֹן מִלְּפָנֶיךָ ה' אֱלֹהֵינוּ וֵאלֹהֵי אֲבוֹתֵינוּ, שֶׁתְּקַבֵּל אֶת תְּפִלָּתִי שֶׁהִתְפַּלַּלְתִּי לְפָנֶיךָ בִּזְכוּת הַצַּדִּיק הַטָּמוּן פֹּה. וְתִשְׁמְרֵנִי בְּצֵאתִי וּבְבוֹאִי, וְתִשְׁלַח רְפוּאָה לְחוֹלֵי עַמְּךָ יִשְׂרָאֵל, וּפַרְנָסָה לְמְבַקְּשֶׁיהָ, וְזִוּוּגִים הֲגוּנִים לִמְחֻסְּרֵי בְּנֵי זוּג, וִישׁוּעָה לִכְלַל יִשְׂרָאֵל. אָמֵן.</div></div><h2 style=\"text-align:center;color:#7c3aed;font-size:1.35em;font-weight:900;margin:2rem 0 1rem;border-bottom:3px solid currentColor;padding-bottom:0.5rem;direction:rtl;\">✨ תפילות בציוני הצדיקים בארץ ישראל</h2><div style=\"background:linear-gradient(135deg,#fffbeb,#fef3c7);border-right:5px solid #7c3aed;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(180,83,9,0.12);direction:rtl;text-align:right;\"><h3 style=\"color:#7c3aed;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">רבי שמעון בר יוחאי — מירון</h3><p style=\"font-size:0.85em;color:#78350f;margin:0 0 0.7rem;font-style:italic;\">📜 מסורת קבלית מהאריז\"ל וצדיקי צפת</p><div style=\"background:rgba(180,83,9,0.08);padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נאמרת אצל ציונו של רשב\"י בהר מירון, במיוחד בל\"ג בעומר.</div><div style=\"line-height:2;font-size:1em;color:#1c1917;\">רַבִּי שִׁמְעוֹן בַּר יוֹחַאי, אֲדוֹנֵנוּ! זְכוּתְךָ הָעֲצוּמָה תַּגֵּן עָלֵינוּ. מָסַרְתָּ נַפְשְׁךָ עַל הַתּוֹרָה י\"ג שָׁנָה בַּמְּעָרָה, וְהוֹצֵאתָ לָנוּ אֶת אוֹר הַזֹּהַר הַקָּדוֹשׁ. בִּזְכוּת הַזֹּהַר וְכָל אֲשֶׁר חִדַּשְׁתָּ, פְּתַח לָנוּ שַׁעֲרֵי תְּשׁוּבָה, רְפוּאָה, פַּרְנָסָה, זִוּוּגִים וְיֵשַׁע. אַתָּה הַצַּדִּיק שֶׁכָּל הָעוֹלָם נִזּוֹן בִּזְכוּתוֹ — תְּזַכֵּנוּ לְהִתְקַשֵּׁר לְאוֹרְךָ. בַּר יוֹחַאי נִמְשַׁחְתָּ אַשְׁרֶיךָ, שֶׁמֶן שָׂשׂוֹן מֵחֲבֵרֶיךָ. אָמֵן.<br><br>יְהִי רָצוֹן מִלְּפָנֶיךָ ה' אֱלֹהֵינוּ וֵאלֹהֵי אֲבוֹתֵינוּ, שֶׁכְּשֵׁם שֶׁאָמַר רַבִּי שִׁמְעוֹן \"יָכוֹל אֲנִי לִפְטֹר אֶת כָּל הָעוֹלָם כֻּלּוֹ מִן הַדִּין\" — כָּךְ תְּלַמֵּד עָלֵינוּ זְכוּת, וְתַצִּילֵנוּ מִכָּל גְּזֵרוֹת קָשׁוֹת, וְתִפְתַּח לִבֵּנוּ בְּתוֹרָתֶךָ, וְנִזְכֶּה לְאוֹר הַגָּנוּז בִּמְהֵרָה. אָמֵן.</div></div><div style=\"background:linear-gradient(135deg,#fffbeb,#fef3c7);border-right:5px solid #7c3aed;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(180,83,9,0.12);direction:rtl;text-align:right;\"><h3 style=\"color:#7c3aed;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">קבר הרמב\"ם — טבריה</h3><p style=\"font-size:0.85em;color:#78350f;margin:0 0 0.7rem;font-style:italic;\">📜 ע\"פ מסורת טבריה — \"ממשה עד משה לא קם כמשה\"</p><div style=\"background:rgba(180,83,9,0.08);padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נאמרת אצל ציון רבנו משה בן מיימון בטבריה. נהוג לבקש חכמה, רפואה ויראת שמים טהורה.</div><div style=\"line-height:2;font-size:1em;color:#1c1917;\">רַבֵּנוּ הַגָּדוֹל, רַבִּי מֹשֶׁה בֶּן מַיְמוֹן, הַנֶּשֶׁר הַגָּדוֹל! עָלֶיךָ אָמְרוּ: \"מִמֹּשֶׁה עַד מֹשֶׁה לֹא קָם כְּמֹשֶׁה\". הֶאַרְתָּ אֶת עֵינֵי יִשְׂרָאֵל בְּמִשְׁנֵה הַתּוֹרָה, בְּמוֹרֵה הַנְּבוּכִים וּבְפֵרוּשׁ הַמִּשְׁנָיוֹת, וְרִפֵּאתָ גּוּפוֹת וּנְפָשׁוֹת בְּחָכְמָתְךָ.<br><br>יְהִי רָצוֹן מִלְּפָנֶיךָ ה' אֱלֹהֵינוּ וֵאלֹהֵי אֲבוֹתֵינוּ, בִּזְכוּת רַבֵּנוּ מֹשֶׁה בֶּן מַיְמוֹן הַטָּמוּן פֹּה, שֶׁתָּאִיר עֵינֵינוּ בְּתוֹרָתֶךָ, וְתִתֵּן לָנוּ לֵב מֵבִין וְדַעַת יְשָׁרָה, וְתִשְׁלַח רְפוּאָה שְׁלֵמָה לְכָל חוֹלֵי עַמְּךָ יִשְׂרָאֵל — רְפוּאַת הַנֶּפֶשׁ וּרְפוּאַת הַגּוּף. וּכְשֵׁם שֶׁזָּכָה רַבֵּנוּ לְיַשֵּׁר לִבּוֹת יִשְׂרָאֵל לַאֲבִיהֶם שֶׁבַּשָּׁמַיִם — כָּךְ נִזְכֶּה כֻּלָּנוּ לֶאֱמוּנָה זַכָּה, לְיִרְאָה טְהוֹרָה וּלְמַעֲשִׂים טוֹבִים. אָמֵן.</div></div><div style=\"background:linear-gradient(135deg,#fffbeb,#fef3c7);border-right:5px solid #7c3aed;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(180,83,9,0.12);direction:rtl;text-align:right;\"><h3 style=\"color:#7c3aed;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">רבי מאיר בעל הנס — טבריה</h3><p style=\"font-size:0.85em;color:#78350f;margin:0 0 0.7rem;font-style:italic;\">📜 מסורת קדומה — סגולה לכל ישועה</p><div style=\"background:rgba(180,83,9,0.08);padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נאמרת אצל ציונו בטבריה. נהוג להדליק נר ולתת צדקה לקופת רבי מאיר בעל הנס.</div><div style=\"line-height:2;font-size:1em;color:#1c1917;\">אֱלָהָא דְמֵאִיר עֲנֵנִי, אֱלָהָא דְמֵאִיר עֲנֵנִי, אֱלָהָא דְמֵאִיר עֲנֵנִי. רַבִּי מֵאִיר בַּעַל הַנֵּס, פְּעֹל יְשׁוּעוֹת בְּקֶרֶב הָאָרֶץ! בִּזְכוּתְךָ וּבְכֹחַ הַמְּסִירוּת שֶׁמָּסַרְתָּ נַפְשְׁךָ עַל קִדּוּשׁ הַשֵּׁם — תְּזַכֵּנוּ לְכָל הַיְשׁוּעוֹת שֶׁבָּעוֹלָם. וְכַשֵּׁם שֶׁשָּׁמַעְתָּ תְּפִלָּתוֹ שֶׁל רַבִּי מֵאִיר וְעָשִׂיתָ לוֹ נֵס — כָּךְ תַּעֲשֶׂה עִמָּנוּ נִסִּים וְתוֹשִׁיעֵנוּ בִּזְכוּתוֹ. אָמֵן.</div></div><div style=\"background:linear-gradient(135deg,#fffbeb,#fef3c7);border-right:5px solid #7c3aed;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(180,83,9,0.12);direction:rtl;text-align:right;\"><h3 style=\"color:#7c3aed;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">רבי עקיבא — טבריה</h3><p style=\"font-size:0.85em;color:#78350f;margin:0 0 0.7rem;font-style:italic;\">📜 מסורת קדומה</p><div style=\"background:rgba(180,83,9,0.08);padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נאמרת אצל ציון התנא רבי עקיבא בטבריה. נהוג לבקש התמדה בתורה, אהבת ישראל ופרנסה.</div><div style=\"line-height:2;font-size:1em;color:#1c1917;\">רַבִּי עֲקִיבָא, רוֹעֶה נֶאֱמָן שֶׁל יִשְׂרָאֵל! מִבֶּן אַרְבָּעִים שָׁנָה הִתְחַלְתָּ לִלְמֹד תּוֹרָה, וְנַעֲשֵׂיתָ לְעַמּוּד הַתּוֹרָה שֶׁבְּעַל פֶּה, וְלִמַּדְתָּנוּ: \"וְאָהַבְתָּ לְרֵעֲךָ כָּמוֹךָ — זֶה כְּלָל גָּדוֹל בַּתּוֹרָה\".<br><br>יְהִי רָצוֹן מִלְּפָנֶיךָ ה' אֱלֹהֵינוּ וֵאלֹהֵי אֲבוֹתֵינוּ, בִּזְכוּת הַתַּנָּא הַקָּדוֹשׁ רַבִּי עֲקִיבָא בֶּן יוֹסֵף, שֶׁתִּתֵּן בָּנוּ כֹּחַ לְהַתְחִיל תָּמִיד מֵחָדָשׁ כְּמוֹתוֹ, וְלִבֵּנוּ יִפָּתַח בְּתוֹרָתֶךָ כְּמַיִם שֶׁשָּׁחֲקוּ אֶת הָאֶבֶן. וּכְשֵׁם שֶׁאָמַר \"כָּל מַה דְּעָבֵיד רַחֲמָנָא לְטָב עָבֵיד\" — כָּךְ תִּתֵּן בָּנוּ אֱמוּנָה שְׁלֵמָה בְּכָל מִדּוֹתֶיךָ, וְאַהֲבַת יִשְׂרָאֵל אֲמִתִּית. אָמֵן.</div></div><div style=\"background:linear-gradient(135deg,#fffbeb,#fef3c7);border-right:5px solid #7c3aed;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(180,83,9,0.12);direction:rtl;text-align:right;\"><h3 style=\"color:#7c3aed;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">האר\"י הקדוש — צפת</h3><p style=\"font-size:0.85em;color:#78350f;margin:0 0 0.7rem;font-style:italic;\">📜 ע\"פ מסורת מקובלי צפת</p><div style=\"background:rgba(180,83,9,0.08);padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נאמרת אצל ציון רבי יצחק לוריא אשכנזי בבית העלמין העתיק בצפת.</div><div style=\"line-height:2;font-size:1em;color:#1c1917;\">רַבֵּנוּ הָאֲרִ\"י הַקָּדוֹשׁ, רַבִּי יִצְחָק לוּרְיָא אַשְׁכְּנַזִּי! פָּתַחְתָּ לָנוּ שַׁעֲרֵי הַקַּבָּלָה וְגִלִּיתָ אֶת סִתְרֵי הַתּוֹרָה, וְלִמַּדְתָּנוּ לְקַבֵּל קֹדֶם כָּל תְּפִלָּה אֶת מִצְוַת \"וְאָהַבְתָּ לְרֵעֲךָ כָּמוֹךָ\".<br><br>יְהִי רָצוֹן מִלְּפָנֶיךָ ה' אֱלֹהֵינוּ וֵאלֹהֵי אֲבוֹתֵינוּ, בִּזְכוּת רַבֵּנוּ הָאֲרִ\"י הַקָּדוֹשׁ, שֶׁתְּטַהֵר לִבֵּנוּ לְעָבְדְּךָ בֶּאֱמֶת, וּתְתַקֵּן נַפְשֵׁנוּ רוּחֵנוּ וְנִשְׁמָתֵנוּ, וְתַעֲלֶה תְּפִלּוֹתֵינוּ כְּלוּלוֹת מִכָּל תְּפִלּוֹת יִשְׂרָאֵל, וְנִזְכֶּה לְאַהֲבַת כָּל אֶחָד מִיִּשְׂרָאֵל כְּנַפְשֵׁנוּ. אָמֵן.</div></div><div style=\"background:linear-gradient(135deg,#fffbeb,#fef3c7);border-right:5px solid #7c3aed;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(180,83,9,0.12);direction:rtl;text-align:right;\"><h3 style=\"color:#7c3aed;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">רבי יוסף קארו — צפת</h3><p style=\"font-size:0.85em;color:#78350f;margin:0 0 0.7rem;font-style:italic;\">📜 מסורת צפת</p><div style=\"background:rgba(180,83,9,0.08);padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נאמרת אצל ציון מרן בעל ה\"שולחן ערוך\" בבית העלמין העתיק בצפת.</div><div style=\"line-height:2;font-size:1em;color:#1c1917;\">מָרָן רַבֵּנוּ יוֹסֵף קָארוֹ, בַּעַל הַ\"שֻּׁלְחָן עָרוּךְ\" וְהַ\"בֵּית יוֹסֵף\"! עָרַכְתָּ שֻׁלְחָן לִפְנֵי כָּל יִשְׂרָאֵל, וְדָבָר גָּדוֹל וְדָבָר קָטָן אֵין יוֹצֵא מִבֵּיתְךָ.<br><br>יְהִי רָצוֹן מִלְּפָנֶיךָ ה' אֱלֹהֵינוּ וֵאלֹהֵי אֲבוֹתֵינוּ, בִּזְכוּת מָרָן הַטָּמוּן פֹּה, שֶׁתַּדְרִיכֵנוּ בִּדְרָכֶיךָ עַל פִּי הַהֲלָכָה הַבְּרוּרָה, וְתִתֵּן חֵשֶׁק בְּלִבֵּנוּ לִקְבֹּעַ עִתִּים לַתּוֹרָה וְלִשְׁמֹר וְלַעֲשׂוֹת אֶת כָּל דִּבְרֵי תַלְמוּד תּוֹרָתֶךָ בְּאַהֲבָה. אָמֵן.</div></div><div style=\"background:linear-gradient(135deg,#fffbeb,#fef3c7);border-right:5px solid #7c3aed;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(180,83,9,0.12);direction:rtl;text-align:right;\"><h3 style=\"color:#7c3aed;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">רבי יונתן בן עוזיאל — עמוקה</h3><p style=\"font-size:0.85em;color:#78350f;margin:0 0 0.7rem;font-style:italic;\">📜 מסורת קבלית — סגולה ידועה לזיווג</p><div style=\"background:rgba(180,83,9,0.08);padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נאמרת אצל ציונו בעמוקה (גליל). מי שמבקש זיווג — מקובל ללכת לציון, להדליק נר ולהתפלל.</div><div style=\"line-height:2;font-size:1em;color:#1c1917;\">רַבֵּינוּ יוֹנָתָן בֶּן עֻזִּיאֵל, תַּלְמִידוֹ הַגָּדוֹל שֶׁל הִלֵּל הַזָּקֵן! כְּשֶׁהָיִיתָ יוֹשֵׁב וְלוֹמֵד תּוֹרָה — כָּל עוֹף שֶׁפָּרַח עָלֶיךָ נִשְׂרַף מֵאֵשׁ הַתּוֹרָה. אַתָּה אָמַרְתָּ שֶׁכָּל מִי שֶׁבָּא עַל קִבְרְךָ וּמְבַקֵּשׁ זִוּוּגוֹ — אַתָּה תָּמְלִיץ עָלָיו טוֹב לִפְנֵי כִּסֵּא הַכָּבוֹד. אֲנִי בָּא אֵלֶיךָ הַיּוֹם בְּלֵב נִשְׁבָּר וּמְבַקֵּשׁ: זַמֵּן לִי אֶת זִוּוּגִי הָאֲמִתִּי וְהָרָאוּי לִי, בִּמְהֵרָה וּבְקַלּוּת. אָמֵן.</div></div><div style=\"background:linear-gradient(135deg,#fffbeb,#fef3c7);border-right:5px solid #7c3aed;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(180,83,9,0.12);direction:rtl;text-align:right;\"><h3 style=\"color:#7c3aed;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">חבקוק הנביא — כדיתא</h3><p style=\"font-size:0.85em;color:#78350f;margin:0 0 0.7rem;font-style:italic;\">📜 תפילת חבקוק הנביא — חבקוק פרק ג' במלואו</p><div style=\"background:rgba(180,83,9,0.08);padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נאמרת אצל ציון חבקוק הנביא (כדיתא, בין צפת למירון). נהוג לומר את תפילת חבקוק שבפרק ג' בספרו — במלואה:</div><div style=\"line-height:2;font-size:1em;color:#1c1917;\">תְּפִלָּה לַחֲבַקּוּק הַנָּבִיא עַל שִׁגְיֹנוֹת: ה' שָׁמַעְתִּי שִׁמְעֲךָ יָרֵאתִי, ה' פָּעָלְךָ בְּקֶרֶב שָׁנִים חַיֵּיהוּ, בְּקֶרֶב שָׁנִים תּוֹדִיעַ, בְּרֹגֶז רַחֵם תִּזְכּוֹר: אֱלוֹהַּ מִתֵּימָן יָבוֹא וְקָדוֹשׁ מֵהַר פָּארָן סֶלָה, כִּסָּה שָׁמַיִם הוֹדוֹ וּתְהִלָּתוֹ מָלְאָה הָאָרֶץ: וְנֹגַהּ כָּאוֹר תִּהְיֶה, קַרְנַיִם מִיָּדוֹ לוֹ, וְשָׁם חֶבְיוֹן עֻזֹּה: לְפָנָיו יֵלֶךְ דָּבֶר, וְיֵצֵא רֶשֶׁף לְרַגְלָיו: עָמַד וַיְמֹדֶד אֶרֶץ, רָאָה וַיַּתֵּר גּוֹיִם, וַיִּתְפֹּצְצוּ הַרְרֵי עַד, שַׁחוּ גִּבְעוֹת עוֹלָם, הֲלִיכוֹת עוֹלָם לוֹ: תַּחַת אָוֶן רָאִיתִי אָהֳלֵי כוּשָׁן, יִרְגְּזוּן יְרִיעוֹת אֶרֶץ מִדְיָן: הֲבִנְהָרִים חָרָה ה', אִם בַּנְּהָרִים אַפֶּךָ, אִם בַּיָּם עֶבְרָתֶךָ, כִּי תִרְכַּב עַל סוּסֶיךָ, מַרְכְּבֹתֶיךָ יְשׁוּעָה: עֶרְיָה תֵעוֹר קַשְׁתֶּךָ, שְׁבֻעוֹת מַטּוֹת אֹמֶר סֶלָה, נְהָרוֹת תְּבַקַּע אָרֶץ: רָאוּךָ יָחִילוּ הָרִים, זֶרֶם מַיִם עָבָר, נָתַן תְּהוֹם קוֹלוֹ, רוֹם יָדֵיהוּ נָשָׂא: שֶׁמֶשׁ יָרֵחַ עָמַד זְבֻלָה, לְאוֹר חִצֶּיךָ יְהַלֵּכוּ, לְנֹגַהּ בְּרַק חֲנִיתֶךָ: בְּזַעַם תִּצְעַד אָרֶץ, בְּאַף תָּדוּשׁ גּוֹיִם: יָצָאתָ לְיֵשַׁע עַמֶּךָ, לְיֵשַׁע אֶת מְשִׁיחֶךָ, מָחַצְתָּ רֹּאשׁ מִבֵּית רָשָׁע, עָרוֹת יְסוֹד עַד צַוָּאר סֶלָה: נָקַבְתָּ בְמַטָּיו רֹאשׁ פְּרָזָיו, יִסְעֲרוּ לַהֲפִיצֵנִי, עֲלִיצֻתָם כְּמוֹ לֶאֱכֹל עָנִי בַּמִּסְתָּר: דָּרַכְתָּ בַיָּם סוּסֶיךָ, חֹמֶר מַיִם רַבִּים: שָׁמַעְתִּי וַתִּרְגַּז בִּטְנִי, לְקוֹל צָלֲלוּ שְׂפָתַי, יָבוֹא רָקָב בַּעֲצָמַי וְתַחְתַּי אֶרְגָּז, אֲשֶׁר אָנוּחַ לְיוֹם צָרָה, לַעֲלוֹת לְעַם יְגוּדֶנּוּ: כִּי תְאֵנָה לֹא תִפְרָח, וְאֵין יְבוּל בַּגְּפָנִים, כִּחֵשׁ מַעֲשֵׂה זַיִת, וּשְׁדֵמוֹת לֹא עָשָׂה אֹכֶל, גָּזַר מִמִּכְלָה צֹאן, וְאֵין בָּקָר בָּרְפָתִים: וַאֲנִי בַּה' אֶעְלוֹזָה, אָגִילָה בֵּאלֹהֵי יִשְׁעִי: ה' אֲדֹנָי חֵילִי, וַיָּשֶׂם רַגְלַי כָּאַיָּלוֹת, וְעַל בָּמוֹתַי יַדְרִכֵנִי, לַמְנַצֵּחַ בִּנְגִינוֹתָי:<br><br>יְהִי רָצוֹן מִלְּפָנֶיךָ ה' אֱלֹהֵינוּ וֵאלֹהֵי אֲבוֹתֵינוּ, בִּזְכוּת חֲבַקּוּק הַנָּבִיא, שֶׁלִּמְּדָנוּ \"וְצַדִּיק בֶּאֱמוּנָתוֹ יִחְיֶה\" — שֶׁתִּתֵּן בָּנוּ אֱמוּנָה שְׁלֵמָה וּבִטָּחוֹן גָּמוּר בְּךָ, וְנִשְׂמַח בְּךָ בְּכָל מַצָּב, כְּמוֹ שֶׁנֶּאֱמַר \"וַאֲנִי בַּה' אֶעְלוֹזָה\". אָמֵן.</div></div><div style=\"background:linear-gradient(135deg,#fffbeb,#fef3c7);border-right:5px solid #7c3aed;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(180,83,9,0.12);direction:rtl;text-align:right;\"><h3 style=\"color:#7c3aed;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">רחל אמנו — בית לחם</h3><p style=\"font-size:0.85em;color:#78350f;margin:0 0 0.7rem;font-style:italic;\">📜 מסורת קדומה — סגולה לאמהות ולישועה</p><div style=\"background:rgba(180,83,9,0.08);padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נאמרת אצל קבר רחל בבית לחם. נשים נוהגות להגיע ולהתפלל לזרע של קיימא.</div><div style=\"line-height:2;font-size:1em;color:#1c1917;\">אִמֵּנוּ הַקְּדוֹשָׁה רָחֵל! \"וַתֵּמָת רָחֵל וַתִּקָּבֵר בְּדֶרֶךְ אֶפְרָתָה הִיא בֵּית לָחֶם\". בָּכִית עַל בָּנֶיךָ — וְה' אָמַר: \"מִנְעִי קוֹלֵךְ מִבֶּכִי וְעֵינַיִךְ מִדִּמְעָה כִּי יֵשׁ שָׂכָר לִפְעֻלָּתֵךְ נְאֻם ה' וְשָׁבוּ בָנִים לִגְבוּלָם\". אִמֵּנוּ, רָחֵל! עוֹמְדִים אָנוּ הַיּוֹם לִפְנֵי קִבְרֵךְ. בְּכִי עָלֵינוּ לִפְנֵי הַקָּדוֹשׁ בָּרוּךְ הוּא, וְזַכֵּנוּ לְכָל הַיְשׁוּעוֹת, וְלִישׁוּעַת כְּלַל יִשְׂרָאֵל בִּמְהֵרָה. אָמֵן.</div></div><div style=\"background:linear-gradient(135deg,#fffbeb,#fef3c7);border-right:5px solid #7c3aed;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(180,83,9,0.12);direction:rtl;text-align:right;\"><h3 style=\"color:#7c3aed;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">מערת המכפלה — אבות הקדושים</h3><p style=\"font-size:0.85em;color:#78350f;margin:0 0 0.7rem;font-style:italic;\">📜 מסורת מקבלי הספרדים — תפילה אצל קברי האבות</p><div style=\"background:rgba(180,83,9,0.08);padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נאמרת אצל מערת המכפלה בחברון, מקום קבורת אברהם, יצחק ויעקב, שרה, רבקה ולאה.</div><div style=\"line-height:2;font-size:1em;color:#1c1917;\">אֲבוֹתֵינוּ הַקְּדוֹשִׁים, אַבְרָהָם יִצְחָק וְיַעֲקֹב, שָׂרָה רִבְקָה רָחֵל וְלֵאָה! אַתֶּם הַמַּלְאָכִים הָעוֹמְדִים לִפְנֵי כִּסֵּא הַכָּבוֹד. אֲבוֹתַי הָאֲהוּבִים, גִּשׁוּ נָא לִפְנֵי הַקָּדוֹשׁ בָּרוּךְ הוּא וְהַמְלִיצוּ טוֹב בַּעֲדִי. אַתֶּם אֲשֶׁר נִשְׁבַּעְתֶּם אֱמוּנָה אֵלָיו וַעֲשִׂיתֶם אֶת רְצוֹנוֹ — בִּזְכוּתְכֶם תִּפָּתַחְנָה לִי שַׁעֲרֵי שָׁמַיִם. אָמֵן.</div></div><div style=\"background:linear-gradient(135deg,#fffbeb,#fef3c7);border-right:5px solid #7c3aed;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(180,83,9,0.12);direction:rtl;text-align:right;\"><h3 style=\"color:#7c3aed;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">דוד המלך — הר ציון</h3><p style=\"font-size:0.85em;color:#78350f;margin:0 0 0.7rem;font-style:italic;\">📜 מסורת ירושלים</p><div style=\"background:rgba(180,83,9,0.08);padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נאמרת אצל ציון דוד המלך בהר ציון בירושלים. נהוג לומר פרקי תהילים ולבקש בנועם ה'.</div><div style=\"line-height:2;font-size:1em;color:#1c1917;\">דָּוִד מֶלֶךְ יִשְׂרָאֵל חַי וְקַיָּם! נְעִים זְמִירוֹת יִשְׂרָאֵל, שֶׁכָּל תְּהִלּוֹתֶיךָ מְלַוּוֹת אֶת עַם יִשְׂרָאֵל בְּכָל דּוֹר וָדוֹר.<br><br>מִזְמוֹר לְדָוִד, ה' רֹעִי לֹא אֶחְסָר: בִּנְאוֹת דֶּשֶׁא יַרְבִּיצֵנִי, עַל מֵי מְנֻחוֹת יְנַהֲלֵנִי: נַפְשִׁי יְשׁוֹבֵב, יַנְחֵנִי בְמַעְגְּלֵי צֶדֶק לְמַעַן שְׁמוֹ: גַּם כִּי אֵלֵךְ בְּגֵיא צַלְמָוֶת לֹא אִירָא רָע כִּי אַתָּה עִמָּדִי, שִׁבְטְךָ וּמִשְׁעַנְתֶּךָ הֵמָּה יְנַחֲמֻנִי: תַּעֲרֹךְ לְפָנַי שֻׁלְחָן נֶגֶד צֹרְרָי, דִּשַּׁנְתָּ בַשֶּׁמֶן רֹאשִׁי, כּוֹסִי רְוָיָה: אַךְ טוֹב וָחֶסֶד יִרְדְּפוּנִי כָּל יְמֵי חַיָּי, וְשַׁבְתִּי בְּבֵית ה' לְאֹרֶךְ יָמִים:<br><br>יְהִי רָצוֹן מִלְּפָנֶיךָ ה' אֱלֹהֵינוּ וֵאלֹהֵי אֲבוֹתֵינוּ, בִּזְכוּת דָּוִד עַבְדְּךָ מְשִׁיחֶךָ, שֶׁתִּפְתַּח לִבֵּנוּ בְּשִׁירָה וְהוֹדָיָה לְפָנֶיךָ, וְתַצְמִיחַ קֶרֶן יְשׁוּעָה לְעַמְּךָ בִּמְהֵרָה, וְתִבְנֶה יְרוּשָׁלַיִם עִיר הַקֹּדֶשׁ בְּיָמֵינוּ. אָמֵן.</div></div><div style=\"background:linear-gradient(135deg,#fffbeb,#fef3c7);border-right:5px solid #7c3aed;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(180,83,9,0.12);direction:rtl;text-align:right;\"><h3 style=\"color:#7c3aed;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">שמואל הנביא — רמה</h3><p style=\"font-size:0.85em;color:#78350f;margin:0 0 0.7rem;font-style:italic;\">📜 מסורת ירושלים</p><div style=\"background:rgba(180,83,9,0.08);padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נאמרת אצל ציון שמואל הנביא (\"נבי סמואל\") צפונית לירושלים. נהוג לעלות ביום ההילולה כ\"ח באייר.</div><div style=\"line-height:2;font-size:1em;color:#1c1917;\">שְׁמוּאֵל הַנָּבִיא, הַשָּׁקוּל כְּמֹשֶׁה וְאַהֲרֹן! \"מֹשֶׁה וְאַהֲרֹן בְּכֹהֲנָיו וּשְׁמוּאֵל בְּקֹרְאֵי שְׁמוֹ, קֹרִאים אֶל ה' וְהוּא יַעֲנֵם\". אִמְּךָ חַנָּה הִתְפַּלְּלָה עָלֶיךָ מֵעֹמֶק לִבָּהּ וְנַעֲנֵית.<br><br>יְהִי רָצוֹן מִלְּפָנֶיךָ ה' אֱלֹהֵינוּ וֵאלֹהֵי אֲבוֹתֵינוּ, בִּזְכוּת שְׁמוּאֵל הַנָּבִיא, שֶׁכְּשֵׁם שֶׁנַּעֲנְתָה חַנָּה בִּתְפִלָּתָהּ — כָּךְ תֵּעָנֶה תְּפִלָּתֵנוּ, וְתִפְקֹד בְּיֶשַׁע וּבְרַחֲמִים אֶת כָּל חֲשׂוּכֵי הַבָּנִים, וְתִשְׁמַע שַׁוְעַת כָּל הַמִּתְפַּלְּלִים אֵלֶיךָ בֶּאֱמֶת. אָמֵן.</div></div><div style=\"background:linear-gradient(135deg,#fffbeb,#fef3c7);border-right:5px solid #7c3aed;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(180,83,9,0.12);direction:rtl;text-align:right;\"><h3 style=\"color:#7c3aed;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">חוני המעגל — חצור הגלילית</h3><p style=\"font-size:0.85em;color:#78350f;margin:0 0 0.7rem;font-style:italic;\">📜 ע\"פ מסכת תענית</p><div style=\"background:rgba(180,83,9,0.08);padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נאמרת אצל ציון חוני המעגל בחצור הגלילית. נהוג לבקש גשמים בעתם, פרנסה וביטול גזרות.</div><div style=\"line-height:2;font-size:1em;color:#1c1917;\">חוֹנִי הַמְעַגֵּל, הַצַּדִּיק שֶׁעָג עוּגָה וְעָמַד בְּתוֹכָהּ וְאָמַר: \"רִבּוֹנוֹ שֶׁל עוֹלָם... אֵינִי זָז מִכָּאן עַד שֶׁתְּרַחֵם עַל בָּנֶיךָ\" — וְיָרְדוּ גְּשָׁמִים!<br><br>יְהִי רָצוֹן מִלְּפָנֶיךָ ה' אֱלֹהֵינוּ וֵאלֹהֵי אֲבוֹתֵינוּ, בִּזְכוּת חוֹנִי הַמְעַגֵּל שֶׁנַּעֲנֵיתָ לוֹ כְּבֵן הַמִּתְחַטֵּא לִפְנֵי אָבִיו, שֶׁתִּתֵּן טַל וּמָטָר לִבְרָכָה בְּעִתָּם, וּפַרְנָסָה טוֹבָה בְּרֶוַח וְלֹא בְצִמְצוּם, וּתְבַטֵּל מֵעָלֵינוּ כָּל גְּזֵרוֹת קָשׁוֹת וְרָעוֹת. אָמֵן.</div></div><div style=\"background:linear-gradient(135deg,#fffbeb,#fef3c7);border-right:5px solid #7c3aed;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(180,83,9,0.12);direction:rtl;text-align:right;\"><h3 style=\"color:#7c3aed;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">הבבא סאלי — נתיבות</h3><p style=\"font-size:0.85em;color:#78350f;margin:0 0 0.7rem;font-style:italic;\">📜 מסורת מרוקאית-ספרדית</p><div style=\"background:rgba(180,83,9,0.08);padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נאמרת אצל ציונו בנתיבות. מקובל בעדות המזרח לעלות לציון לפני שמחות וצרות.</div><div style=\"line-height:2;font-size:1em;color:#1c1917;\">הָרַב הַקָּדוֹשׁ, בָּבָא סָאלִי, רַבִּי יִשְׂרָאֵל אֲבוּחֲצֵירָא! קְדוּשַׁת בֵּית אֲבוּחֲצֵירָא הִכִּינָה אֶת הָעוֹלָם לְקַבֵּל אוֹרְךָ. בִּזְכוּתְךָ הָעֲצוּמָה וּבִזְכוּת תְּפִלָּתֶךָ הַטְּהוֹרָה — תָּמְלִיץ עָלַי טוֹב לִפְנֵי כִּסֵּא הַכָּבוֹד. וְכַשֵּׁם שֶׁפָּעַלְתָּ יְשׁוּעוֹת רַבּוֹת לְכָל הַפּוֹנִים אֵלֶיךָ — כָּךְ תִּפְעַל גַּם בַּעֲדִי וּבְעַד כָּל בְּנֵי בֵיתִי לְטוֹב, לִישׁוּעָה וְלִבְרָכָה. אָמֵן.</div></div><div style=\"background:linear-gradient(135deg,#fffbeb,#fef3c7);border-right:5px solid #7c3aed;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(180,83,9,0.12);direction:rtl;text-align:right;\"><h3 style=\"color:#7c3aed;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">הרמח\"ל — טבריה</h3><p style=\"font-size:0.85em;color:#78350f;margin:0 0 0.7rem;font-style:italic;\">📜 ע\"פ מסילת ישרים</p><div style=\"background:rgba(180,83,9,0.08);padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נאמרת אצל ציון רבי משה חיים לוצאטו בטבריה (סמוך לציון רבי עקיבא).</div><div style=\"line-height:2;font-size:1em;color:#1c1917;\">רַבֵּנוּ מֹשֶׁה חַיִּים לוּצַאטוֹ, הָרַמְחַ\"ל הַקָּדוֹשׁ! בְּסִפְרְךָ \"מְסִלַּת יְשָׁרִים\" סָלַלְתָּ לָנוּ אֶת הַדֶּרֶךְ הָעוֹלָה בֵּית אֵ-ל: מִזְּהִירוּת לִזְרִיזוּת, מִנְּקִיּוּת לִפְרִישׁוּת, עַד קְדֻשָּׁה.<br><br>יְהִי רָצוֹן מִלְּפָנֶיךָ ה' אֱלֹהֵינוּ וֵאלֹהֵי אֲבוֹתֵינוּ, בִּזְכוּת הָרַמְחַ\"ל הַטָּמוּן פֹּה, שֶׁתְּזַכֵּנוּ לַעֲלוֹת בְּמַעֲלוֹת הַמְּסִלָּה — שֶׁיִּהְיֶה לִבֵּנוּ זָהִיר בְּמִצְווֹתֶיךָ, זָרִיז בַּעֲבוֹדָתֶךָ, וְנָקִי מִכָּל מִדָּה רָעָה, וְנִזְכֶּה לַחֲסִידוּת אֲמִתִּית וּלְיִרְאַת חֵטְא. אָמֵן.</div></div><div style=\"background:linear-gradient(135deg,#fffbeb,#fef3c7);border-right:5px solid #7c3aed;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(180,83,9,0.12);direction:rtl;text-align:right;\"><h3 style=\"color:#7c3aed;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">רבי יוחנן בן זכאי — טבריה</h3><p style=\"font-size:0.85em;color:#78350f;margin:0 0 0.7rem;font-style:italic;\">📜 ע\"פ ברכות כ\"ח ע\"ב</p><div style=\"background:rgba(180,83,9,0.08);padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נאמרת אצל ציון רבן יוחנן בן זכאי בטבריה (במתחם ציון הרמב\"ם).</div><div style=\"line-height:2;font-size:1em;color:#1c1917;\">רַבָּן יוֹחָנָן בֶּן זַכַּאי, שֶׁהִצִּיל אֶת הַתּוֹרָה בְּ\"תֵּן לִי יַבְנֶה וַחֲכָמֶיהָ\"! כְּשֶׁחָלָה, נִכְנְסוּ תַלְמִידָיו לְבַקְּרוֹ, וּבֵרְכָם: \"יְהִי רָצוֹן שֶׁתְּהֵא מוֹרָא שָׁמַיִם עֲלֵיכֶם כְּמוֹרָא בָּשָׂר וָדָם\".<br><br>יְהִי רָצוֹן מִלְּפָנֶיךָ ה' אֱלֹהֵינוּ וֵאלֹהֵי אֲבוֹתֵינוּ, בִּזְכוּת רַבָּן יוֹחָנָן בֶּן זַכַּאי, שֶׁתִּתֵּן בְּלִבֵּנוּ יִרְאַת שָׁמַיִם טְהוֹרָה בַּסֵּתֶר וּבַגָּלוּי, וְתַצִּיל אֶת מוֹסְדוֹת הַתּוֹרָה בְּכָל מָקוֹם, וְתַעֲמִיד מִמֶּנּוּ וּמִזַּרְעֵנוּ תַּלְמִידֵי חֲכָמִים מְאִירֵי עֵינֵי יִשְׂרָאֵל. אָמֵן.</div></div><div style=\"background:linear-gradient(135deg,#fffbeb,#fef3c7);border-right:5px solid #7c3aed;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(180,83,9,0.12);direction:rtl;text-align:right;\"><h3 style=\"color:#7c3aed;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">הרמ\"ק — צפת</h3><p style=\"font-size:0.85em;color:#78350f;margin:0 0 0.7rem;font-style:italic;\">📜 ע\"פ תומר דבורה</p><div style=\"background:rgba(180,83,9,0.08);padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נאמרת אצל ציון רבי משה קורדובירו בבית העלמין העתיק בצפת.</div><div style=\"line-height:2;font-size:1em;color:#1c1917;\">רַבֵּנוּ מֹשֶׁה קוֹרְדוֹבֵירוֹ, הָרַמַ\"ק הַקָּדוֹשׁ, בַּעַל \"תֹּמֶר דְּבוֹרָה\" וְ\"פַרְדֵּס רִמּוֹנִים\"! לִמַּדְתָּנוּ לְהִדַּמּוֹת לְקוֹנֵנוּ בְּכָל שְׁלוֹשׁ-עֶשְׂרֵה מִדּוֹת הָרַחֲמִים — מָה הוּא רַחוּם, אַף אַתָּה הֱיֵה רַחוּם.<br><br>יְהִי רָצוֹן מִלְּפָנֶיךָ ה' אֱלֹהֵינוּ וֵאלֹהֵי אֲבוֹתֵינוּ, בִּזְכוּת הָרַמַ\"ק הַטָּמוּן פֹּה, שֶׁתְּזַכֵּנוּ לֶאֱחֹז בְּמִדּוֹתֶיךָ — לִסְלֹחַ לְמִי שֶׁפָּגַע בָּנוּ, לְרַחֵם עַל הַבְּרִיּוֹת, וְלִהְיוֹת מַעֲבִירִים עַל מִדּוֹתֵינוּ — וְנִזְכֶּה שֶׁתַּעֲבֹר עַל פְּשָׁעֵינוּ כְּמוֹ כֵן. אָמֵן.</div></div><div style=\"background:linear-gradient(135deg,#fffbeb,#fef3c7);border-right:5px solid #7c3aed;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(180,83,9,0.12);direction:rtl;text-align:right;\"><h3 style=\"color:#7c3aed;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">האלשיך הקדוש — צפת</h3><p style=\"font-size:0.85em;color:#78350f;margin:0 0 0.7rem;font-style:italic;\">📜 מסורת צפת</p><div style=\"background:rgba(180,83,9,0.08);padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נאמרת אצל ציון רבי משה אלשיך בבית העלמין העתיק בצפת.</div><div style=\"line-height:2;font-size:1em;color:#1c1917;\">רַבֵּנוּ מֹשֶׁה אַלְשִׁיךְ הַקָּדוֹשׁ, מִגְּדוֹלֵי דַּרְשָׁנֵי צְפַת, שֶׁמָּרָן רַבִּי יוֹסֵף קָארוֹ הָיָה רַבּוֹ וְהָאֲרִ\"י הַקָּדוֹשׁ שִׁבַּח אֶת דְּרָשׁוֹתָיו!<br><br>יְהִי רָצוֹן מִלְּפָנֶיךָ ה' אֱלֹהֵינוּ וֵאלֹהֵי אֲבוֹתֵינוּ, בִּזְכוּת הָאַלְשִׁיךְ הַקָּדוֹשׁ, שֶׁתִּפְתַּח לִבֵּנוּ לְהָבִין וּלְהַשְׂכִּיל בְּתוֹרָתֶךָ, וְשֶׁיִּהְיוּ דִּבְרֵי הַתּוֹרָה שֶׁבְּפִינוּ מְתוּקִים וּמוֹשְׁכִים אֶת הַלֵּב — לָנוּ וּלְכָל שׁוֹמְעֵינוּ, וְנִזְכֶּה לְקָרֵב לִבּוֹת יִשְׂרָאֵל לַאֲבִיהֶם שֶׁבַּשָּׁמַיִם. אָמֵן.</div></div><div style=\"background:linear-gradient(135deg,#fffbeb,#fef3c7);border-right:5px solid #7c3aed;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(180,83,9,0.12);direction:rtl;text-align:right;\"><h3 style=\"color:#7c3aed;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">רבי פנחס בן יאיר — צפת</h3><p style=\"font-size:0.85em;color:#78350f;margin:0 0 0.7rem;font-style:italic;\">📜 ע\"פ עבודה זרה כ' ע\"ב</p><div style=\"background:rgba(180,83,9,0.08);padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נאמרת אצל ציון התנא רבי פנחס בן יאיר בצפת. נהוג לבקש סייעתא דשמיא וזהירות במידות.</div><div style=\"line-height:2;font-size:1em;color:#1c1917;\">הַתַּנָּא הַקָּדוֹשׁ רַבִּי פִּנְחָס בֶּן יָאִיר, שֶׁלִּמְּדָנוּ אֶת סֻלַּם הָעֲלִיָּה: \"תּוֹרָה מְבִיאָה לִידֵי זְהִירוּת, זְהִירוּת מְבִיאָה לִידֵי זְרִיזוּת, זְרִיזוּת מְבִיאָה לִידֵי נְקִיּוּת... עַד רוּחַ הַקֹּדֶשׁ\".<br><br>יְהִי רָצוֹן מִלְּפָנֶיךָ ה' אֱלֹהֵינוּ וֵאלֹהֵי אֲבוֹתֵינוּ, בִּזְכוּת רַבִּי פִּנְחָס בֶּן יָאִיר — שֶׁאֲפִלּוּ בְּהֶמְתּוֹ לֹא אָכְלָה מִדָּבָר שֶׁאֵינוֹ מְעֻשָּׂר — שֶׁתִּשְׁמֹר רַגְלֵינוּ מִכָּל מִכְשׁוֹל, וְתַצְלִיחַ דְּרָכֵינוּ כְּשֵׁם שֶׁנִּבְקַע לוֹ הַנָּהָר בְּלֶכְתּוֹ לִפְדוֹת שְׁבוּיִים, וְנִזְכֶּה לַעֲלוֹת מַעְלָה מַעְלָה בְּסֻלַּם הַקְּדֻשָּׁה. אָמֵן.</div></div><div style=\"background:linear-gradient(135deg,#fffbeb,#fef3c7);border-right:5px solid #7c3aed;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(180,83,9,0.12);direction:rtl;text-align:right;\"><h3 style=\"color:#7c3aed;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">בניהו בן יהוידע — הגליל</h3><p style=\"font-size:0.85em;color:#78350f;margin:0 0 0.7rem;font-style:italic;\">📜 ע\"פ מסורת הגליל; שמואל ב' כ\"ג</p><div style=\"background:rgba(180,83,9,0.08);padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נאמרת אצל הציון המיוחס לבניהו בן יהוידע בגליל (סמוך לביריה). מקובל כסגולה לפרנסה. הבן איש חי קרא לספריו על שמו — \"בן יהוידע\" ו\"בניהו\".</div><div style=\"line-height:2;font-size:1em;color:#1c1917;\">בְּנָיָהוּ בֶן יְהוֹיָדָע, \"בֶּן אִישׁ חַי רַב פְּעָלִים מִקַּבְצְאֵל\" — גִּבּוֹר הַתּוֹרָה שֶׁל דָּוִד הַמֶּלֶךְ, שֶׁעָלָיו דָּרְשׁוּ חֲזַ\"ל שֶׁלֹּא הִנִּיחַ כְּמוֹתוֹ לֹא בְּבַיִת רִאשׁוֹן וְלֹא בְּבַיִת שֵׁנִי.<br><br>יְהִי רָצוֹן מִלְּפָנֶיךָ ה' אֱלֹהֵינוּ וֵאלֹהֵי אֲבוֹתֵינוּ, בִּזְכוּת בְּנָיָהוּ בֶן יְהוֹיָדָע, אִישׁ חַי רַב פְּעָלִים, שֶׁתִּפְתַּח לָנוּ שַׁעֲרֵי פַּרְנָסָה טוֹבָה בְּרֶוַח וְלֹא בְצִמְצוּם, בְּהֶתֵּר וְלֹא בְאִסּוּר, וְתִתֵּן בָּנוּ כֹּחַ לִהְיוֹת רַבֵּי פְעָלִים לְתוֹרָה וּלְמַעֲשִׂים טוֹבִים. אָמֵן.</div></div><div style=\"background:linear-gradient(135deg,#fffbeb,#fef3c7);border-right:5px solid #7c3aed;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(180,83,9,0.12);direction:rtl;text-align:right;\"><h3 style=\"color:#7c3aed;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">רבי יהודה בר אילעאי — עין זיתים</h3><p style=\"font-size:0.85em;color:#78350f;margin:0 0 0.7rem;font-style:italic;\">📜 ע\"פ ברכות ס\"ג ע\"ב</p><div style=\"background:rgba(180,83,9,0.08);padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נאמרת אצל ציון התנא רבי יהודה בר אילעאי בדרך צפת–מירון. נהוג לעצור בציונו בדרך למירון.</div><div style=\"line-height:2;font-size:1em;color:#1c1917;\">הַתַּנָּא רַבִּי יְהוּדָה בַּר אִילְעַאי, \"רֹאשׁ הַמְדַבְּרִים בְּכָל מָקוֹם\", שֶׁשִּׁבְּחוּהוּ חֲכָמִים בְּכָבוֹד הַתּוֹרָה וּבְכָבוֹד הַבְּרִיּוֹת!<br><br>יְהִי רָצוֹן מִלְּפָנֶיךָ ה' אֱלֹהֵינוּ וֵאלֹהֵי אֲבוֹתֵינוּ, בִּזְכוּת רַבִּי יְהוּדָה בַּר אִילְעַאי, שֶׁתִּתֵּן לָנוּ פֶּה מֵשִׁיב וְלָשׁוֹן לִמּוּדִים לוֹמַר דְּבַר תּוֹרָה בְּטַעַם, וְתַשְׁרֶה בְּבֵיתֵנוּ שִׂמְחָה שֶׁל מִצְוָה — כְּשֵׁם שֶׁהָיָה נוֹטֵל הֲדַס וּמְרַקֵּד לִפְנֵי הַכַּלָּה. אָמֵן.</div></div><div style=\"background:linear-gradient(135deg,#fffbeb,#fef3c7);border-right:5px solid #7c3aed;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(180,83,9,0.12);direction:rtl;text-align:right;\"><h3 style=\"color:#7c3aed;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">שמעון הצדיק — ירושלים</h3><p style=\"font-size:0.85em;color:#78350f;margin:0 0 0.7rem;font-style:italic;\">📜 משנה אבות א', ב</p><div style=\"background:rgba(180,83,9,0.08);padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נאמרת אצל מערת שמעון הצדיק בירושלים. נהוג לעלות לציון ולערוך בו שמחות של מצוה.</div><div style=\"line-height:2;font-size:1em;color:#1c1917;\">שִׁמְעוֹן הַצַּדִּיק, מִשְּׁיָרֵי כְּנֶסֶת הַגְּדוֹלָה, שֶׁלִּמְּדָנוּ: \"עַל שְׁלֹשָׁה דְבָרִים הָעוֹלָם עוֹמֵד — עַל הַתּוֹרָה, וְעַל הָעֲבוֹדָה, וְעַל גְּמִילוּת חֲסָדִים\".<br><br>יְהִי רָצוֹן מִלְּפָנֶיךָ ה' אֱלֹהֵינוּ וֵאלֹהֵי אֲבוֹתֵינוּ, בִּזְכוּת שִׁמְעוֹן הַצַּדִּיק, שֶׁנִּזְכֶּה לְהַעֲמִיד אֶת חַיֵּינוּ עַל שְׁלוֹשֶׁת הָעַמּוּדִים — תּוֹרָה, תְּפִלָּה וְחֶסֶד; וּתְמַלֵּא מִשְׁאֲלוֹת לִבֵּנוּ לְטוֹבָה, וְתִבְנֶה יְרוּשָׁלַיִם עִיר הַקֹּדֶשׁ בִּמְהֵרָה בְיָמֵינוּ. אָמֵן.</div></div><div style=\"text-align:center;margin-top:2rem;padding:1rem;background:#fef3c7;border-radius:0.7rem;color:#78350f;font-size:0.9em;direction:rtl;\"><strong>הערות חשובות:</strong> בכניסה לבית הקברות יש לטול ידיים ביציאה. אין לפנות גב לציון בעת היציאה. מקובל לתת צדקה בשם הצדיק. תפילה אצל הצדיק היא בקשת המלצה — לא תפילה אליו, אלא בקשת זכות שיעלה את תפילתנו לבורא עולם.</div></div>" },
     { id:"tzadikim-chul", he:"תפילות בציוני צדיקים — חוץ לארץ", subtitle:"אומן, מז'יבוז', ליז'נסק, ברדיטשב, פראג ועוד",
       cat:"tefilot", color:"#7c3aed", icon:"🌍", autoToc:true,
       credit:"ממקורות קדומים — נחלת הכלל", creditUrl:"",
       type:"hardcoded",
-      intro:"תפילות כלליות לכל ציון + תפילות ייחודיות לצדיקים בחוץ לארץ — אומן, מז'יבוז', ליז'נסק, פראג ועוד. קפיצה מהירה — בתוכן העניינים (📑), איתור — בחיפוש (🔍).",
+      intro:"תפילות כלליות לכל ציון + תפילות ייחודיות לצדיקים בחוץ לארץ — אומן, מז'יבוז', ליז'נסק, פראג ועוד. קפיצה מהירה — בתוכן העניינים (☰ בראש המסך), איתור — בחיפוש (🔍).",
       content:"<div style=\"text-align:right;direction:rtl;line-height:1.95;color:#1e293b;\"><div class=\"sn-head-card\" style=\"background:linear-gradient(135deg,#fef3c7,#fde68a);border-radius:0.85rem;padding:0.7rem 0.9rem;margin-bottom:1rem;border:1px solid #fbbf24;direction:rtl;text-align:right;\"><h2 style=\"text-align:center;color:#78350f;font-size:0.9em;font-weight:900;margin:0 0 0.35rem;\">🌍 תפילות בציוני צדיקים — חוץ לארץ</h2><p style=\"margin:0;color:#92400e;font-size:0.66em;line-height:1.6;text-align:center;\">אוסף תפילות מלאות לאמירה בעת ביקור בציוני הצדיקים בחוץ לארץ — אומן, מז'יבוז', ליז'נסק, ברדיטשב, קרקוב, פראג, ראדין ועוד. הסעיף הראשון — תפילות כלליות הראויות לכל ציון; הסעיף השני — תפילות ייחודיות לכל צדיק.</p></div><h2 style=\"text-align:center;color:#b45309;font-size:1.35em;font-weight:900;margin:2rem 0 1rem;border-bottom:3px solid currentColor;padding-bottom:0.5rem;direction:rtl;\">🕯️ תפילות כלליות לכל ציון</h2><div style=\"background:linear-gradient(135deg,#fffbeb,#fef3c7);border-right:5px solid #b45309;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(180,83,9,0.12);direction:rtl;text-align:right;\"><h3 style=\"color:#b45309;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">תפילה לפני הכניסה לציון</h3><p style=\"font-size:0.85em;color:#78350f;margin:0 0 0.7rem;font-style:italic;\">📜 נוסח קדום — בעל \"מענה לשון\"</p><div style=\"background:rgba(180,83,9,0.08);padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> אומרים בשקט לפני שעוברים אל הקבר.</div><div style=\"line-height:2;font-size:1em;color:#1c1917;\">יְהִי רָצוֹן מִלְּפָנֶיךָ ה' אֱלֹהֵינוּ וֵאלֹהֵי אֲבוֹתֵינוּ, שֶׁתְּקַבֵּל בְּרַחֲמִים וּבְרָצוֹן אֶת תְּפִלָּתִי, בִּזְכוּת הַצַּדִּיק הַטָּמוּן פֹּה. וִיהֵא תְפִלָּתִי לְךָ בְּרָצוֹן וְלֹא תָשׁוּב רֵיקָם, שֶׁכֵּן הַצַּדִּיקִים בְּמִיתָתָם נִקְרָאִים חַיִּים, וְעַצְמוֹתֵיהֶם רוֹמְזוֹת לְהַמְלִיץ טוֹב עָלֵינוּ לִפְנֵי כִּסֵּא כְבוֹדֶךָ. אָמֵן.</div></div><div style=\"background:linear-gradient(135deg,#fffbeb,#fef3c7);border-right:5px solid #b45309;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(180,83,9,0.12);direction:rtl;text-align:right;\"><h3 style=\"color:#b45309;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">פסוקי כניסה לבית הקברות</h3><p style=\"font-size:0.85em;color:#78350f;margin:0 0 0.7rem;font-style:italic;\">📜 נוסח מהסידור — אורח חיים סימן רכ\"ד</p><div style=\"background:rgba(180,83,9,0.08);padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נאמרים כשנכנסים לבית הקברות, לפני שמגיעים לציון (מי שלא ראה קברי ישראל שלושים יום).</div><div style=\"line-height:2;font-size:1em;color:#1c1917;\">בָּרוּךְ אַתָּה ה' אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם אֲשֶׁר יָצַר אֶתְכֶם בַּדִּין, וְזָן וְכִלְכֵּל אֶתְכֶם בַּדִּין, וְהֵמִית אֶתְכֶם בַּדִּין, וְיוֹדֵעַ מִסְפַּר כֻּלְּכֶם בַּדִּין, וְעָתִיד לְהַחֲיוֹתְכֶם וּלְקַיֵּם אֶתְכֶם בַּדִּין. בָּרוּךְ אַתָּה ה' מְחַיֵּה הַמֵּתִים. (כן נוטלים ידיים בצאת מבית הקברות, ולא פונים בגב לציון).</div></div><div style=\"background:linear-gradient(135deg,#fffbeb,#fef3c7);border-right:5px solid #b45309;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(180,83,9,0.12);direction:rtl;text-align:right;\"><h3 style=\"color:#b45309;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">תפילה אצל הציון — כללי</h3><p style=\"font-size:0.85em;color:#78350f;margin:0 0 0.7rem;font-style:italic;\">📜 מסורת מבעלי החסידות — נחלת הכלל</p><div style=\"background:rgba(180,83,9,0.08);padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נאמרת בעמידה אצל הציון, בפנים אל המצבה.</div><div style=\"line-height:2;font-size:1em;color:#1c1917;\">אֲדוֹנֵנוּ צַדִּיק הָאֱמֶת, פֹּה טָמוּן בְּעַפְרֵךְ. אֲנִי בָּא אֶל קִבְרְךָ הַקָּדוֹשׁ לְשַׁפֵּךְ אֶת לִבִּי. אֲבַקֵּשׁ מִמְּךָ שֶׁתַּעֲלֶה תְפִלָּתִי לִפְנֵי כִּסֵּא הַכָּבוֹד, וְשֶׁתָּמְלִיץ טוֹב בַּעֲדִי וּבְעַד כָּל מִשְׁפַּחְתִּי. רַבּוֹתֵינוּ אָמְרוּ: \"צַדִּיקִים בְּמִיתָתָם נִקְרָאִים חַיִּים\". זְכוּתְךָ תַּעֲמֹד לִי וּלְכָל זַרְעִי, לְהוֹשִׁיעֵנוּ בְּכָל אֲשֶׁר אֲנַחְנוּ צְרִיכִים. אָמֵן.</div></div><div style=\"background:linear-gradient(135deg,#fffbeb,#fef3c7);border-right:5px solid #b45309;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(180,83,9,0.12);direction:rtl;text-align:right;\"><h3 style=\"color:#b45309;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">פרקי תהילים הנהוגים בציוני צדיקים</h3><p style=\"font-size:0.85em;color:#78350f;margin:0 0 0.7rem;font-style:italic;\">📜 מסורת קדומה — \"מענה לשון\"</p><div style=\"background:rgba(180,83,9,0.08);padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נהוג לומר אצל הציון פרקי תהילים: ל\"ג, ט\"ז, י\"ז, ע\"ב, צ\"א, ק\"ד, ק\"ל — ולסיים בפרק קי\"ט באותיות שמו של הצדיק. כאן מובא פרק ק\"ל במלואו:</div><div style=\"line-height:2;font-size:1em;color:#1c1917;\">שִׁיר הַמַּעֲלוֹת, מִמַּעֲמַקִּים קְרָאתִיךָ ה': אֲדֹנָי שִׁמְעָה בְקוֹלִי, תִּהְיֶינָה אָזְנֶיךָ קַשֻּׁבוֹת לְקוֹל תַּחֲנוּנָי: אִם עֲוֺנוֹת תִּשְׁמָר יָהּ, אֲדֹנָי מִי יַעֲמֹד: כִּי עִמְּךָ הַסְּלִיחָה לְמַעַן תִּוָּרֵא: קִוִּיתִי ה' קִוְּתָה נַפְשִׁי, וְלִדְבָרוֹ הוֹחָלְתִּי: נַפְשִׁי לַאדֹנָי, מִשֹּׁמְרִים לַבֹּקֶר שֹׁמְרִים לַבֹּקֶר: יַחֵל יִשְׂרָאֵל אֶל ה', כִּי עִם ה' הַחֶסֶד וְהַרְבֵּה עִמּוֹ פְדוּת: וְהוּא יִפְדֶּה אֶת יִשְׂרָאֵל מִכֹּל עֲוֺנוֹתָיו:</div></div><div style=\"background:linear-gradient(135deg,#fffbeb,#fef3c7);border-right:5px solid #b45309;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(180,83,9,0.12);direction:rtl;text-align:right;\"><h3 style=\"color:#b45309;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">תיקון הכללי — 10 מזמורים</h3><p style=\"font-size:0.85em;color:#78350f;margin:0 0 0.7rem;font-style:italic;\">📜 רבי נחמן מברסלב — \"ליקוטי מוהר\"ן\"</p><div style=\"background:rgba(180,83,9,0.08);padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נאמר בשלמותו ליד הציון. עיקר התיקון הוא אצל קברו של רבי נחמן באומן, אך גם ניתן לאמרו בכל מקום.</div><div style=\"line-height:2;font-size:1em;color:#1c1917;\">עשרת המזמורים הם: ט\"ז, ל\"ב, מ\"א, מ\"ב, נ\"ט, ע\"ז, צ', ק\"ה, קל\"ז, ק\"נ. כתב רבי נחמן: \"התיקון הכללי הוא תיקון לכל החטאים והפגמים שבעולם\". מסוגל לכל ישועה — לרפואה, פרנסה, זיווג, ותשובה שלמה.<div style=\"text-align:center;margin-top:0.9rem;\"><a href=\"index.html?prayer=tikkun-haklali\" style=\"display:inline-block;padding:0.85rem 1.4rem;border:none;border-radius:0.7rem;background:linear-gradient(135deg,#b45309,#7c2d12);color:#fffbeb;text-decoration:none;font-size:0.95rem;font-weight:800;box-shadow:0 4px 12px rgba(180,83,9,0.35);\">📖 פתח את התיקון הכללי המלא ←</a></div></div></div><div style=\"background:linear-gradient(135deg,#fffbeb,#fef3c7);border-right:5px solid #b45309;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(180,83,9,0.12);direction:rtl;text-align:right;\"><h3 style=\"color:#b45309;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">תפילה ביציאה מהציון</h3><p style=\"font-size:0.85em;color:#78350f;margin:0 0 0.7rem;font-style:italic;\">📜 מסורת קדומה</p><div style=\"background:rgba(180,83,9,0.08);padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> אומרים בעת היציאה ויוצאים פנים אל הקבר (לא פונים גב).</div><div style=\"line-height:2;font-size:1em;color:#1c1917;\">יְהִי רָצוֹן מִלְּפָנֶיךָ ה' אֱלֹהֵינוּ וֵאלֹהֵי אֲבוֹתֵינוּ, שֶׁתְּקַבֵּל אֶת תְּפִלָּתִי שֶׁהִתְפַּלַּלְתִּי לְפָנֶיךָ בִּזְכוּת הַצַּדִּיק הַטָּמוּן פֹּה. וְתִשְׁמְרֵנִי בְּצֵאתִי וּבְבוֹאִי, וְתִשְׁלַח רְפוּאָה לְחוֹלֵי עַמְּךָ יִשְׂרָאֵל, וּפַרְנָסָה לְמְבַקְּשֶׁיהָ, וְזִוּוּגִים הֲגוּנִים לִמְחֻסְּרֵי בְּנֵי זוּג, וִישׁוּעָה לִכְלַל יִשְׂרָאֵל. אָמֵן.</div></div><h2 style=\"text-align:center;color:#7c3aed;font-size:1.35em;font-weight:900;margin:2rem 0 1rem;border-bottom:3px solid currentColor;padding-bottom:0.5rem;direction:rtl;\">✨ תפילות בציוני הצדיקים בחוץ לארץ</h2><div style=\"background:linear-gradient(135deg,#fffbeb,#fef3c7);border-right:5px solid #7c3aed;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(180,83,9,0.12);direction:rtl;text-align:right;\"><h3 style=\"color:#7c3aed;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">רבי נחמן מברסלב — אומן</h3><p style=\"font-size:0.85em;color:#78350f;margin:0 0 0.7rem;font-style:italic;\">📜 מסורת ברסלב — הבטחת רבי נחמן</p><div style=\"background:rgba(180,83,9,0.08);padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נאמרת אצל ציונו באומן (אוקראינה), או בכל מקום בכוונה אליו. נהוג לומר את התיקון הכללי במלואו ולתת פרוטה לצדקה.</div><div style=\"line-height:2;font-size:1em;color:#1c1917;\">רַבֵּינוּ נַחְמַן, נַחְמַן מֵאוּמַן! אַתָּה אָמַרְתָּ \"אֵשׁ שֶׁלִּי תּוּקַד עַד בִּיאַת הַמָּשִׁיחַ\", וְהִבְטַחְתָּ שֶׁכָּל הַבָּא עַל קִבְרְךָ וְיֹאמַר תִּקּוּן הַכְּלָלִי וְיִתֵּן פְּרוּטָה לִצְדָקָה — אַתָּה תָּמְלִיץ עָלָיו טוֹב לִפְנֵי הַשֵּׁם יִתְבָּרַךְ. אֲנִי בָּא אֵלֶיךָ עַכְשָׁו עִם כָּל צָרוֹתַי, כָּל בְּקָשׁוֹתַי. מָשְׁכֵנִי אַחֲרֶיךָ נָרוּצָה, וְזַכֵּנִי לִתְשׁוּבָה שְׁלֵמָה וּלְכָל הַיְשׁוּעוֹת. אָמֵן.<br><br><strong>נוסח ההתקשרות הנהוג:</strong> הֲרֵינִי מְקַשֵּׁר עַצְמִי בַּאֲמִירַת הָעֲשָׂרָה מִזְמוֹרִים אֵלּוּ לְכָל הַצַּדִּיקִים הָאֲמִתִּיִּים שֶׁבְּדוֹרֵנוּ, וּלְכָל הַצַּדִּיקִים הָאֲמִתִּיִּים שׁוֹכְנֵי עָפָר, קְדוֹשִׁים אֲשֶׁר בָּאָרֶץ הֵמָּה, וּבִפְרָט לְרַבֵּנוּ הַקָּדוֹשׁ, צַדִּיק יְסוֹד עוֹלָם, נַחַל נוֹבֵעַ מְקוֹר חָכְמָה, רַבֵּנוּ נַחְמָן בֶּן פֵיגֶא, זְכוּתוֹ יָגֵן עָלֵינוּ, אָמֵן.</div></div><div style=\"background:linear-gradient(135deg,#fffbeb,#fef3c7);border-right:5px solid #7c3aed;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(180,83,9,0.12);direction:rtl;text-align:right;\"><h3 style=\"color:#7c3aed;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">הבעל שם טוב — מז'יבוז'</h3><p style=\"font-size:0.85em;color:#78350f;margin:0 0 0.7rem;font-style:italic;\">📜 מסורת חסידית — תפילה לכל הצרכים</p><div style=\"background:rgba(180,83,9,0.08);padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נאמרת אצל ציונו של הבעש\"ט במז'יבוז' (אוקראינה), או בכל מקום שמכוונים אליו.</div><div style=\"line-height:2;font-size:1em;color:#1c1917;\">אֲדוֹנֵנוּ הַבַּעַל שֵׁם טוֹב הַקָּדוֹשׁ, מַיְסֵד דֶּרֶךְ הַחֲסִידוּת! גִּלִּיתָ לָנוּ אֶת אַחְדוּת ה' בְּכָל דָּבָר, וְאֶת הַשִּׂמְחָה בַּעֲבוֹדַת ה'. בִּזְכוּתְךָ הָעֲצוּמָה — תְּזַכֵּנוּ לְהַשִּׂיג קְצָת מֵאוֹרֵךְ. שֶׁנַּעֲבֹד אֶת ה' בְּשִׂמְחָה תָּמִיד, בְּלֵב שָׁלֵם וּבְנֶפֶשׁ חֲפֵצָה. וְשֶׁתִּשְׁלַח לָנוּ פַּרְנָסָה בְּהַרְחָבָה, רְפוּאָה לְכָל חוֹלֵי יִשְׂרָאֵל, וְכָל הַיְשׁוּעוֹת. אָמֵן.</div></div><div style=\"background:linear-gradient(135deg,#fffbeb,#fef3c7);border-right:5px solid #7c3aed;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(180,83,9,0.12);direction:rtl;text-align:right;\"><h3 style=\"color:#7c3aed;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">רבי אלימלך מליז'נסק</h3><p style=\"font-size:0.85em;color:#78350f;margin:0 0 0.7rem;font-style:italic;\">📜 מסורת חסידית מתלמידיו</p><div style=\"background:rgba(180,83,9,0.08);padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נאמרת אצל ציונו בליז'נסק (פולין), או בכל מקום שמכוונים אליו. מקובלת כסגולה גדולה.</div><div style=\"line-height:2;font-size:1em;color:#1c1917;\">אֲדוֹנֵנוּ הַצַּדִּיק רַבִּי אֱלִימֶלֶךְ! \"נֹעַם אֱלִימֶלֶךְ\" אֲשֶׁר חִבַּרְתָּ — אַתָּה הוֹרֵיתָ לָנוּ דֶּרֶךְ צַדִּיקִים שֶׁל אַהֲבָה וְעֲנָוָה. בִּזְכוּת הַתְּפִלָּה שֶׁהִתְפַּלַּלְתָּ עֲבוּר כָּל הַבָּא עַל קִבְרְךָ — תַּעֲמֹד לִי וְתַעֲמֹד לְכָל מִשְׁפַּחְתִּי. תָּמְלִיץ עָלַי טוֹב לִפְנֵי כִּסֵּא הַכָּבוֹד, וְתִפְעַל לִי יְשׁוּעָה. אָמֵן.<br><br><strong>מתוך \"תפילה קודם התפילה\" לרבי אלימלך:</strong> אַדְּרַבָּה, תֵּן בְּלִבֵּנוּ שֶׁנִּרְאֶה כָּל אֶחָד מַעֲלַת חֲבֵרֵינוּ וְלֹא חֶסְרוֹנָם, וְשֶׁנְּדַבֵּר כָּל אֶחָד אֶת חֲבֵרוֹ בַּדֶּרֶךְ הַיָּשָׁר וְהָרָצוּי לְפָנֶיךָ, וְאַל יַעֲלֶה בְּלִבֵּנוּ שׁוּם שִׂנְאָה מֵאֶחָד עַל חֲבֵרוֹ חָלִילָה. אָמֵן.</div></div><div style=\"background:linear-gradient(135deg,#fffbeb,#fef3c7);border-right:5px solid #7c3aed;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(180,83,9,0.12);direction:rtl;text-align:right;\"><h3 style=\"color:#7c3aed;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">רבי לוי יצחק מברדיטשב</h3><p style=\"font-size:0.85em;color:#78350f;margin:0 0 0.7rem;font-style:italic;\">📜 מסורת חסידית — סנגורן של ישראל</p><div style=\"background:rgba(180,83,9,0.08);padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נאמרת אצל ציונו בברדיטשב (אוקראינה). נהוג לבקש שילמד זכות עלינו כדרכו בחייו.</div><div style=\"line-height:2;font-size:1em;color:#1c1917;\">הַצַּדִּיק הַקָּדוֹשׁ רַבִּי לֵוִי יִצְחָק מִבַּרְדִיטְשֹׁב, סָנֵגוֹרָן שֶׁל יִשְׂרָאֵל! כָּל יָמֶיךָ לִמַּדְתָּ זְכוּת עַל כָּל אֶחָד וְאֶחָד מִיִּשְׂרָאֵל, וְאָמַרְתָּ לִפְנֵי רִבּוֹנוֹ שֶׁל עוֹלָם: \"אֲפִלּוּ פּוֹשְׁעֵי יִשְׂרָאֵל מְלֵאִים מִצְווֹת כְּרִמּוֹן\".<br><br>יְהִי רָצוֹן מִלְּפָנֶיךָ ה' אֱלֹהֵינוּ וֵאלֹהֵי אֲבוֹתֵינוּ, בִּזְכוּת רַבִּי לֵוִי יִצְחָק בֶּן שָׂרָה סָאשֶׁא, שֶׁיְּלֻמַּד עָלֵינוּ זְכוּת תָּמִיד לִפְנֵי כִּסֵּא כְבוֹדֶךָ, וְתָדוּן אוֹתָנוּ לְכַף זְכוּת, וְתִרְאֶה תָּמִיד אֶת הַטּוֹב שֶׁבָּנוּ, וְתוֹשִׁיעֵנוּ בְּכָל מִשְׁאֲלוֹת לִבֵּנוּ לְטוֹבָה. אָמֵן.</div></div><div style=\"background:linear-gradient(135deg,#fffbeb,#fef3c7);border-right:5px solid #7c3aed;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(180,83,9,0.12);direction:rtl;text-align:right;\"><h3 style=\"color:#7c3aed;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">הרמ\"א — קרקוב</h3><p style=\"font-size:0.85em;color:#78350f;margin:0 0 0.7rem;font-style:italic;\">📜 מסורת אשכנז</p><div style=\"background:rgba(180,83,9,0.08);padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נאמרת אצל ציון רבי משה איסרליש בקרקוב (פולין). נהוג לעלות לציונו ביום ההילולה ל\"ג בעומר.</div><div style=\"line-height:2;font-size:1em;color:#1c1917;\">רַבֵּנוּ מֹשֶׁה אִיסֶרְלִישׂ, הָרָמָ\"א, מָאוֹר הַגּוֹלָה! פָּרַשְׂתָּ אֶת הַ\"מַּפָּה\" עַל הַ\"שֻּׁלְחָן עָרוּךְ\", וְהֶעֱמַדְתָּ אֶת מִנְהֲגֵי אַשְׁכְּנַז לְדוֹרוֹת.<br><br>יְהִי רָצוֹן מִלְּפָנֶיךָ ה' אֱלֹהֵינוּ וֵאלֹהֵי אֲבוֹתֵינוּ, בִּזְכוּת הָרָמָ\"א הַטָּמוּן פֹּה, שֶׁתְּלַמְּדֵנוּ לִשְׁמֹר אֶת מִנְהֲגֵי אֲבוֹתֵינוּ בְּיָדֵינוּ, וְתַדְרִיכֵנוּ בְּדֶרֶךְ הַהֲלָכָה, וְתִתֵּן לָנוּ חַיִּים שֶׁל תּוֹרָה וְיִרְאַת שָׁמַיִם. אָמֵן.</div></div><div style=\"background:linear-gradient(135deg,#fffbeb,#fef3c7);border-right:5px solid #7c3aed;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(180,83,9,0.12);direction:rtl;text-align:right;\"><h3 style=\"color:#7c3aed;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">המהר\"ל מפראג</h3><p style=\"font-size:0.85em;color:#78350f;margin:0 0 0.7rem;font-style:italic;\">📜 מסורת פראג</p><div style=\"background:rgba(180,83,9,0.08);padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נאמרת אצל ציון המהר\"ל בבית העלמין היהודי העתיק בפראג (צ'כיה).</div><div style=\"line-height:2;font-size:1em;color:#1c1917;\">רַבֵּנוּ יְהוּדָה לֵיוָא, הַמַּהֲרָ\"ל מִפְּרָאג! גָּאוֹן הַמַּחֲשָׁבָה וְהַנִּסְתָּר, מָגֵן עַל יִשְׂרָאֵל בְּדוֹרוֹת קָשִׁים.<br><br>יְהִי רָצוֹן מִלְּפָנֶיךָ ה' אֱלֹהֵינוּ וֵאלֹהֵי אֲבוֹתֵינוּ, בִּזְכוּת הַמַּהֲרָ\"ל הַטָּמוּן פֹּה, שֶׁתָּגֵן עַל עַמְּךָ יִשְׂרָאֵל מִכָּל אוֹיֵב וְאוֹרֵב וּמִכָּל עֲלִילוֹת רְשָׁעִים, וְתִתֵּן בָּנוּ דַּעַת לַהֲבִין עֹמֶק תּוֹרָתֶךָ, וְנִצָּחוֹן שֶׁל קְדֻשָּׁה עַל כָּל הַמְּבַקְּשִׁים רָעָתֵנוּ. אָמֵן.</div></div><div style=\"background:linear-gradient(135deg,#fffbeb,#fef3c7);border-right:5px solid #7c3aed;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(180,83,9,0.12);direction:rtl;text-align:right;\"><h3 style=\"color:#7c3aed;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">ה\"חפץ חיים\" — ראדין</h3><p style=\"font-size:0.85em;color:#78350f;margin:0 0 0.7rem;font-style:italic;\">📜 מסורת ליטא</p><div style=\"background:rgba(180,83,9,0.08);padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נאמרת אצל ציון רבי ישראל מאיר הכהן מראדין (בלארוס). נהוג לקבל קבלה בשמירת הלשון.</div><div style=\"line-height:2;font-size:1em;color:#1c1917;\">רַבֵּנוּ יִשְׂרָאֵל מֵאִיר הַכֹּהֵן, הֶ\"חָפֵץ חַיִּים\"! כָּל חַיֶּיךָ לִמַּדְתָּ אֶת יִשְׂרָאֵל לִשְׁמֹר אֶת הַלָּשׁוֹן, עַל פִּי הַפָּסוּק: \"מִי הָאִישׁ הֶחָפֵץ חַיִּים... נְצֹר לְשׁוֹנְךָ מֵרָע וּשְׂפָתֶיךָ מִדַּבֵּר מִרְמָה\".<br><br>יְהִי רָצוֹן מִלְּפָנֶיךָ ה' אֱלֹהֵינוּ וֵאלֹהֵי אֲבוֹתֵינוּ, בִּזְכוּת הֶחָפֵץ חַיִּים, שֶׁתִּשְׁמֹר פִּינוּ וּלְשׁוֹנֵנוּ מִלָּשׁוֹן הָרָע וּרְכִילוּת, וְנִזְכֶּה לוֹמַר רַק דִּבְרֵי תּוֹרָה וּדְבָרִים טוֹבִים עַל כָּל אָדָם, וּבִזְכוּת שְׁמִירַת הַלָּשׁוֹן נִזְכֶּה לְחַיִּים טוֹבִים וַאֲרוּכִים וּלְכָל הַבְּרָכוֹת. אָמֵן.</div></div><div style=\"background:linear-gradient(135deg,#fffbeb,#fef3c7);border-right:5px solid #7c3aed;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(180,83,9,0.12);direction:rtl;text-align:right;\"><h3 style=\"color:#7c3aed;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">אדמו\"ר הזקן — האדיטש</h3><p style=\"font-size:0.85em;color:#78350f;margin:0 0 0.7rem;font-style:italic;\">📜 מסורת חב\"ד</p><div style=\"background:rgba(180,83,9,0.08);padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> נאמרת אצל ציון רבי שניאור זלמן מליאדי, בעל התניא, בהאדיטש (אוקראינה).</div><div style=\"line-height:2;font-size:1em;color:#1c1917;\">רַבֵּנוּ שְׁנֵיאוֹר זַלְמָן מִלִּיאָדִי, בַּעַל הַתַּנְיָא וְהַשֻּׁלְחָן עָרוּךְ! לִמַּדְתָּנוּ שֶׁ\"מֹחַ שַׁלִּיט עַל הַלֵּב\", וְשֶׁכָּל אֶחָד יָכוֹל לַעֲבֹד אֶת ה' בְּאַהֲבָה וְיִרְאָה.<br><br>יְהִי רָצוֹן מִלְּפָנֶיךָ ה' אֱלֹהֵינוּ וֵאלֹהֵי אֲבוֹתֵינוּ, בִּזְכוּת בַּעַל הַתַּנְיָא, שֶׁתָּאִיר נַפְשֵׁנוּ בְּאוֹר פְּנִימִיּוּת הַתּוֹרָה, וְתִתֵּן לָנוּ כֹּחַ לִמְשֹׁל בְּיִצְרֵנוּ וּלְהַנְהִיג אֶת לִבֵּנוּ בְּחָכְמָה, וְנַעֲבָדְךָ בְּשִׂמְחָה וּבְטוּב לֵבָב. אָמֵן.</div></div><div style=\"background:linear-gradient(135deg,#fffbeb,#fef3c7);border-right:5px solid #7c3aed;border-radius:0.85rem;padding:1.1rem 1.2rem;margin-bottom:1.1rem;box-shadow:0 2px 8px rgba(180,83,9,0.12);direction:rtl;text-align:right;\"><h3 style=\"color:#7c3aed;font-size:1.12em;font-weight:900;margin:0 0 0.35rem;\">עזרא הסופר ויחזקאל הנביא — בבל</h3><p style=\"font-size:0.85em;color:#78350f;margin:0 0 0.7rem;font-style:italic;\">📜 מסורת יהדות בבל</p><div style=\"background:rgba(180,83,9,0.08);padding:0.6rem 0.85rem;border-radius:0.55rem;font-size:0.92em;color:#78350f;margin-bottom:0.7rem;line-height:1.7;\"><strong>הוראות:</strong> ציוני עזרא הסופר (אל-עוזיר) ויחזקאל הנביא (אל-כפל) בעירק — מסורת עתיקה של יהדות בבל, שנהגה לעלות אליהם ברגלים.</div><div style=\"line-height:2;font-size:1em;color:#1c1917;\">יְהִי רָצוֹן מִלְּפָנֶיךָ ה' אֱלֹהֵינוּ וֵאלֹהֵי אֲבוֹתֵינוּ, בִּזְכוּת עֶזְרָא הַסּוֹפֵר שֶׁהֶעֱלָה אֶת יִשְׂרָאֵל מִבָּבֶל וְהֵכִין לְבָבָם לִדְרֹשׁ אֶת תּוֹרָתֶךָ, וּבִזְכוּת יְחֶזְקֵאל הַנָּבִיא שֶׁנִּבָּא עַל תְּחִיַּת הָעֲצָמוֹת וְעַל קִבּוּץ גָּלֻיּוֹת — שֶׁתְּקַבֵּץ נִדָּחֵינוּ מֵאַרְבַּע כַּנְפוֹת הָאָרֶץ, וּתְחַדֵּשׁ יָמֵינוּ כְּקֶדֶם, וְנִזְכֶּה לִרְאוֹת בְּבִנְיַן בֵּית מִקְדָּשֶׁךָ בִּמְהֵרָה בְיָמֵינוּ. אָמֵן.</div></div><div style=\"text-align:center;margin-top:2rem;padding:1rem;background:#fef3c7;border-radius:0.7rem;color:#78350f;font-size:0.9em;direction:rtl;\"><strong>הערות חשובות:</strong> בכניסה לבית הקברות יש לטול ידיים ביציאה. אין לפנות גב לציון בעת היציאה. מקובל לתת צדקה בשם הצדיק. תפילה אצל הצדיק היא בקשת המלצה — לא תפילה אליו, אלא בקשת זכות שיעלה את תפילתנו לבורא עולם.</div></div>" },
   ];
 
@@ -31292,11 +31833,68 @@ function openSefarimNosafimPage(_pageMode) {
     });
   })();
 
+  // שולחן ערוך יו"ד סימן קסט — במהדורת ספריא נכלל בסימן קסח ("קסח-קסט"); בלי זה הסימן הוצג ריק.
+  // האינדקס נשמר (סימניות לסימנים שאחריו לא זזות) — הסעיף מפנה לטקסט המשותף.
+  (function() {
+    var sa = BOOKS.find(function(b){ return b.id === "shulchan-aruch"; });
+    var yd = sa && sa.subBooks && sa.subBooks.find(function(s){ return s.id === "yd"; });
+    if (yd && yd.sections[168]) yd.sections[168] = { he: "סימן קסט (עם סימן קסח)", ref: "Shulchan_Arukh,_Yoreh_Deah.168" };
+  })();
+
+  // ── מיגרציית סימניות חד-פעמית (09/2026): ספרים שהושלמו מול האינדקס של ספריא ──
+  // מפתח סימנייה = "תת-ספר|סעיף[|פסקה][|__LP__]", ומספר הסעיף הוא מקום ברשימה. כשנוספו סעיפים
+  // באמצע (הקדמות שהיו חסרות, ליקוטי הלכות וקדושת לוי המלאים, תיקוני הזוהר לפי עמודים) —
+  // סימנייה ישנה ממופה למקום החדש של אותו תוכן; סימנייה לסעיף שלא היה קיים בספריא נמחקת.
+  (function _snMigrateSectionIndexes() {
+    var FLAG = "sn-bm2-books0926";
+    try {
+      if (localStorage.getItem(FLAG)) return;
+      var plus1 = function(i) { return i + 1; };
+      var PLAN = {
+        "likutei-halachot": { intro:[0], oc:[0, 1, 4, 2, 3, 7, 8, 9, 12, 13, 18, 25, 27, 28, 30, 34, 35, 36, 39, 41], yd:[0, 14, 22, 29, 35, 36, 37, -1], eh:[0, 2, 3, 4], cm:[2, 18, 35, 36, 25] },
+        "kedushat-levi": { "": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 23, 26, 27, 28, 29, 30, 33, 34, 35, 36, 37, 38, 39, 40, 41, 44, 45, 46, 47, 48, 49, 50, 51, 52, 54, 56, 57, 58, 59, 60, 61, 64, 65, 66] },
+        "perek-shirah": { "": plus1 },
+        "orchot-tzadikim": { "": plus1 },
+        "mesillat-yesharim": { "": plus1 },
+        "pele-yoetz": { "": plus1 },
+        "hilchot-shmirat-halashon": { intro: [0, 2, 3, 4] },
+        // עמוד א' של דף i+1 → אינדקס 2i ברשימת העמודים; מעבר לדף קמ"ח לא היה טקסט
+        "zohar": { "tikkunei-zohar": function(i) { return i <= 147 ? i * 2 : -1; } }
+      };
+      var all = _bmAll(), changed = false;
+      Object.keys(PLAN).forEach(function(bid) {
+        var arr = all[bid], subs = PLAN[bid];
+        if (!Array.isArray(arr)) return;
+        all[bid] = arr.filter(function(b) {
+          if (!b || typeof b.key !== "string") return true;
+          var parts = b.key.split("|");
+          if (!Object.prototype.hasOwnProperty.call(subs, parts[0])) return true;
+          var old = parseInt(parts[1], 10);
+          if (isNaN(old)) return true;
+          var m = subs[parts[0]];
+          var nu = typeof m === "function" ? m(old) : (m[old] !== undefined ? m[old] : -1);
+          changed = true;
+          if (nu < 0) return false;
+          parts[1] = String(nu);
+          b.key = parts.join("|");
+          return true;
+        });
+      });
+      if (changed) _bmSave(all);
+      localStorage.setItem(FLAG, "1");
+    } catch (e) {}
+  })();
+
   // ── לוח ברכות הנהנין — נבנה מנתונים מובנים (חיפוש פנימי + כרטיסים) ──
   (function buildBirkotBoard() {
     var C = { hamotzi: "#b45309", mezonot: "#d97706", gefen: "#7c3aed", etz: "#16a34a", adama: "#0d9488", shehakol: "#2563eb" };
     function chip(txt, color) {
       return "<span style=\"display:inline-block;background:" + color + "18;color:" + color + ";border:1.5px solid " + color + "55;border-radius:999px;padding:0.18rem 0.7rem;font-size:0.82em;font-weight:900;white-space:nowrap;\">" + txt + "</span>";
+    }
+    // סמל מקרא לחיץ — קפיצה לפרק הברכה
+    function jump(k, txt) {
+      var color = C[k];
+      return "<button type=\"button\" class=\"bb-jump\" onclick=\"window._bbJump('" + k + "')\" title=\"מעבר לברכת " + txt + "\" style=\"display:inline-block;background:" + color + "18;color:" + color + ";border:1.5px solid " + color + "55;border-radius:999px;padding:0.28rem 0.85rem;font-size:0.85em;font-weight:900;white-space:nowrap;cursor:pointer;font-family:inherit;\">" + txt + "</button>";
     }
     var R = {
       hamotzi: ["הַמּוֹצִיא", C.hamotzi], mezonot: ["בּוֹרֵא מִינֵי מְזוֹנוֹת", C.mezonot],
@@ -31307,11 +31905,19 @@ function openSefarimNosafimPage(_pageMode) {
       bhm: ["בִּרְכַּת הַמָּזוֹן", C.hamotzi], michya: ["עַל הַמִּחְיָה", C.mezonot],
       gefen: ["עַל הַגֶּפֶן", C.gefen], etz: ["עַל הָעֵץ", C.etz], nefashot: ["בּוֹרֵא נְפָשׁוֹת", C.shehakol]
     };
-    // [שם, ברכה ראשונה, ברכה אחרונה, הערה?]
+    // [שם, ברכה ראשונה, ברכה אחרונה, הערה?] — מקובץ לפי הברכה הראשונה (k = עוגן לסמלי המקרא)
     var CATS = [
-      { he: "🍞 לחם ומיני דגן", items: [
+      { k: "hamotzi", he: "🍞 המוציא — לחם", items: [
         ["לחם, פיתה, חלה, לחמנייה, בגט", "hamotzi", "bhm"],
+        ["לאפה, פיתה עיראקית", "hamotzi", "bhm"],
+        ["בייגל (טבעת לחם)", "hamotzi", "bhm"],
+        ["טוסט ולחם קלוי", "hamotzi", "bhm"],
+        ["כריך (סנדוויץ')", "hamotzi", "bhm", "ברכת הפת פוטרת את כל מה שבתוך הכריך"],
+        ["לחם כוסמין, שיפון, שעורה או שיבולת שועל", "hamotzi", "bhm", "כל חמשת מיני דגן — חיטה, שעורה, כוסמין, שיבולת שועל ושיפון"],
         ["מצה", "hamotzi", "bhm", "למנהג הספרדים האוכל מצה שלא בפסח — מאחרי י\"ד באייר ועד ערב פסח — מברך מזונות; בפסח עצמו — המוציא"],
+        ["פיצה", "hamotzi", "bhm", "בצק פיצה רגיל נילוש במים ודינו כפת גמורה; נילוש ברובו במי פירות או חלב וטעמם ניכר — מזונות (אלא אם קבע סעודה)"]
+      ]},
+      { k: "mezonot", he: "🥐 מזונות — מאפים, מיני דגן ואורז", items: [
         ["עוגות ועוגיות (פת הבאה בכיסנין)", "mezonot", "michya"],
         ["בורקס, סמבוסק, מלאווח, ג'חנון", "mezonot", "michya"],
         ["קרקרים, ביסקוויטים, צנימים", "mezonot", "michya"],
@@ -31331,9 +31937,6 @@ function openSefarimNosafimPage(_pageMode) {
         ["אורז מבושל", "mezonot", "nefashot", "כך פסקו הבן איש חי (פנחס, שנה ראשונה) והרב מרדכי אליהו: ברכה ראשונה מזונות — וברכה אחרונה בורא נפשות"],
         ["פריכיות אורז", "mezonot", "nefashot", "כדין אורז; ויש שנהגו שהכל — והמברך שהכל יש לו על מה לסמוך"],
         ["קובה (בשר בציפוי בורגול/סולת)", "mezonot", "michya"],
-        ["שניצל בציפוי פירורי לחם", "shehakol", "nefashot", "אם הציפוי דק וטפל לעוף — שהכל על הכל; אם הציפוי עבה וניכר ובא לטעם — מברכים גם מזונות"],
-        ["דגני בוקר מקמח תירס/אורז (קורנפלקס)", "shehakol", "nefashot", "העשויים מקמח תירס — שהכל; מאורז שלם — מזונות"],
-        ["פיצה", "hamotzi", "bhm", "בצק פיצה רגיל נילוש במים ודינו כפת גמורה; נילוש ברובו במי פירות או חלב וטעמם ניכר — מזונות (אלא אם קבע סעודה)"],
         ["סופגנייה", "mezonot", "michya", "בצק מטוגן בשמן עמוק — לעולם מזונות ואינו בא לידי המוציא, אף בקביעות סעודה"],
         ["פנקייק, לביבות קמח", "mezonot", "michya", "בלילה רכה מטוגנת"],
         ["קרואסון, רוגלך, דניש, שטרודל", "mezonot", "michya"],
@@ -31344,19 +31947,18 @@ function openSefarimNosafimPage(_pageMode) {
         ["ביסלי, אפרופו וחטיפי בצק", "mezonot", "michya", "עשויים מקמח חיטה"],
         ["חטיף גרנולה (הדגן עיקר)", "mezonot", "michya"],
         ["מרק עם אטריות / שקדי מרק", "mezonot", "michya", "מין דגן חשוב ואינו בטל — ברכת המזונות פוטרת גם את המרק; על המחיה כשאכל כזית"],
-        ["חמין (טשולנט) עם חיטה או גריסים", "mezonot", "michya", "כשהגרעינים נתמעכו או נדבקו בבישול — מזונות; בלא דגן — מברך על העיקר"]
+        ["חמין (טשולנט) עם חיטה או גריסים", "mezonot", "michya", "כשהגרעינים נתמעכו או נדבקו בבישול — מזונות; בלא דגן — מברך על העיקר"],
+        ["מאפינס, דונאטס", "mezonot", "michya", "דונאטס מטוגנים — כדין סופגנייה"],
+        ["בקלאווה, כנאפה, קדאיף", "mezonot", "michya", "הבצק עיקר, והאגוזים או הגבינה טפלים לו"],
+        ["עוגיות שיבולת שועל", "mezonot", "michya", "שיבולת שועל — ממיני הדגן"],
+        ["כעכים מתוקים", "mezonot", "michya"],
+        ["אטריות אורז, לחם אורז", "mezonot", "nefashot", "מוצרי קמח אורז — כדין אורז: מזונות, ולאחריהם בורא נפשות"]
       ]},
-      { he: "🍷 יין ומשקאות", items: [
+      { k: "gefen", he: "🍷 הגפן — יין ומיץ ענבים", items: [
         ["יין ומיץ ענבים", "gefen", "gefen", "גם יין מהול במים — כשהרוב יין וטעם היין ניכר"],
-        ["מים", "shehakol", "nefashot", "מברכים רק כששותה לצמאו"],
-        ["מיץ תפוזים ושאר מיצי פירות", "shehakol", "nefashot"],
-        ["קפה, תה, שוקו", "shehakol", "nefashot"],
-        ["בירה, ויסקי, ערק, יין תפוחים (סיידר) ושאר המשקאות החריפים", "shehakol", "nefashot"],
-        ["משקאות קלים ומוגזים", "shehakol", "nefashot"],
-        ["שייק פירות (סמוזי)", "shehakol", "nefashot", "פירות שרוסקו לגמרי ונעשו משקה — ברכתם שהכל"],
-        ["מיץ גזר וירקות סחוטים", "shehakol", "nefashot"]
+        ["יין מבושל (מפוסטר)", "gefen", "gefen", "הבישול אינו משנה את ברכת היין"]
       ]},
-      { he: "🍇 שבעת המינים", items: [
+      { k: "etz", he: "🍇 העץ — שבעת המינים", items: [
         ["ענבים", "etz", "etz", "משבעת המינים — ברכה אחרונה \"על העץ\""],
         ["תאנים", "etz", "etz"],
         ["רימונים", "etz", "etz"],
@@ -31364,7 +31966,7 @@ function openSefarimNosafimPage(_pageMode) {
         ["תמרים", "etz", "etz"],
         ["צימוקים", "etz", "etz", "כדין ענבים"]
       ]},
-      { he: "🍎 פירות העץ", items: [
+      { k: null, he: "🍎 העץ — פירות האילן", items: [
         ["תפוח, אגס, חבוש", "etz", "nefashot"],
         ["תפוז, קלמנטינה, מנדרינה, אשכולית, פומלה", "etz", "nefashot", "לימון חמוץ הנאכל כמות שהוא — יש אומרים שברכתו שהכל"],
         ["אפרסק, משמש, שזיף, נקטרינה, אפרשזיף", "etz", "nefashot"],
@@ -31385,11 +31987,14 @@ function openSefarimNosafimPage(_pageMode) {
         ["ערמונים", "etz", "nefashot"],
         ["צנובר", "etz", "nefashot"],
         ["צלף (קפריסין)", "etz", "nefashot"],
+        ["קומקוואט, פומלית", "etz", "nefashot"],
+        ["אגוזי ברזיל, מקדמיה", "etz", "nefashot"],
+        ["לונגן, רמבוטן", "etz", "nefashot"],
         ["קליפת אתרוג מסוכרת בדבש", "etz", "nefashot", "מאתרוג שאינו מורכב; ויש המברכים שהכל על קליפות הדר ממותקות"],
         ["פירות מסוכרים / מיובשים", "etz", "nefashot", "כברכת הפרי הטרי"],
         ["סלט פירות", "etz", "nefashot", "כשרובו פירות העץ; ואם יש בו גם פרי אדמה חשוב (בננה, מלון) — מברך שתי ברכות"]
       ]},
-      { he: "🍌 פירות האדמה וירקות", items: [
+      { k: "adama", he: "🥕 האדמה — פירות האדמה וירקות", items: [
         ["בננה", "adama", "nefashot"],
         ["אננס", "adama", "nefashot"],
         ["פפאיה", "adama", "nefashot", "כך פסקו פוסקי הספרדים, שהעץ מתחלף כל שנה"],
@@ -31420,12 +32025,29 @@ function openSefarimNosafimPage(_pageMode) {
         ["חמוצים (מלפפון חמוץ וכד')", "adama", "nefashot"],
         ["סלט ירקות", "adama", "nefashot"],
         ["מרק ירקות (הירקות ניכרים)", "adama", "nefashot", "מי שלקות כשלקות — אף מי המרק ברכתם האדמה, וכן פסקו הבן איש חי והרב מרדכי אליהו"],
-        ["קינואה מבושלת", "adama", "nefashot", "אינה מחמשת מיני דגן ואין לה דין אורז"]
+        ["קינואה מבושלת", "adama", "nefashot", "אינה מחמשת מיני דגן ואין לה דין אורז"],
+        ["קייל, ארוגולה, מנגולד (סלק עלים), כרישה", "adama", "nefashot", "ירקות עלים — אחרי בדיקה מחרקים"],
+        ["כוסמת (קאשה)", "adama", "nefashot", "כוסמת אינה ממיני הדגן (שלא כמו כוסמין)"],
+        ["אדממה (פולי סויה)", "adama", "nefashot"],
+        ["מטבוחה, סלט חצילים", "adama", "nefashot", "כשחתיכות הירקות ניכרות; נטחנו לגמרי — שהכל"],
+        ["ירקות מוקפצים או אפויים בתנור", "adama", "nefashot"]
       ]},
-      { he: "🍫 שהכל — בשר, חלב, ממתקים ועוד", items: [
+      { k: "shehakol", he: "🍫 שהכל — משקאות, בשר, חלב, ממתקים ועוד", items: [
+        ["מים", "shehakol", "nefashot", "מברכים רק כששותה לצמאו"],
+        ["מיץ תפוזים ושאר מיצי פירות", "shehakol", "nefashot"],
+        ["קפה, תה, שוקו", "shehakol", "nefashot"],
+        ["בירה, ויסקי, ערק, יין תפוחים (סיידר) ושאר המשקאות החריפים", "shehakol", "nefashot"],
+        ["משקאות קלים ומוגזים", "shehakol", "nefashot"],
+        ["שייק פירות (סמוזי)", "shehakol", "nefashot", "פירות שרוסקו לגמרי ונעשו משקה — ברכתם שהכל"],
+        ["מיץ גזר וירקות סחוטים", "shehakol", "nefashot"],
+        ["ברנדי וקוניאק (מזוקקים מיין)", "shehakol", "nefashot", "משקה מזוקק אינו בכלל יין — שהכל"],
         ["בשר, עוף", "shehakol", "nefashot"],
         ["דגים", "shehakol", "nefashot"],
         ["ביצים", "shehakol", "nefashot"],
+        ["נקניק, נקניקיות, פסטרמה", "shehakol", "nefashot"],
+        ["טונה, סרדינים ודגים מעושנים", "shehakol", "nefashot"],
+        ["שניצל בציפוי פירורי לחם", "shehakol", "nefashot", "אם הציפוי דק וטפל לעוף — שהכל על הכל; אם הציפוי עבה וניכר ובא לטעם — מברכים גם מזונות"],
+        ["דגני בוקר מקמח תירס/אורז (קורנפלקס)", "shehakol", "nefashot", "העשויים מקמח תירס — שהכל; מאורז שלם — מזונות"],
         ["חלב, גבינות, יוגורט, מעדני חלב", "shehakol", "nefashot"],
         ["שוקולד", "shehakol", "nefashot", "כך המנהג פשוט אצל הספרדים"],
         ["גלידה, ארטיק", "shehakol", "nefashot"],
@@ -31446,7 +32068,14 @@ function openSefarimNosafimPage(_pageMode) {
         ["ריבה וממרחים חלקים", "shehakol", "nefashot", "בריבה שנימוחה לגמרי; חתיכות פרי ניכרות — כברכת הפרי; על פת — נפטרת בברכת הפת"],
         ["שוקולד לבן", "shehakol", "nefashot"],
         ["קרמבו", "shehakol", "nefashot", "הקצף עיקר והביסקוויט טפל"],
-        ["פודינג, ג'לי, קצפת, מעדנים", "shehakol", "nefashot"]
+        ["פודינג, ג'לי, קצפת, מעדנים", "shehakol", "nefashot"],
+        ["מרנג (נשיקות)", "shehakol", "nefashot"],
+        ["ממרח שוקולד", "shehakol", "nefashot"],
+        ["חמאת בוטנים", "shehakol", "nefashot", "בוטנים שנטחנו לגמרי — כדין טחינה"],
+        ["ממרח חומוס", "shehakol", "nefashot", "גרגירים שנטחנו לגמרי — לשיטת הבן איש חי שהכל, כמו פירה; ויש המברכים האדמה"],
+        ["סילאן (דבש תמרים)", "shehakol", "nefashot", "דבש הזב מן התמרים — שהכל (שולחן ערוך או\"ח רב, ח)"],
+        ["סורבה וגלידת פירות", "shehakol", "nefashot"],
+        ["משקאות חלבון ותחליפי ארוחה", "shehakol", "nefashot"]
       ]}
     ];
     var html =
@@ -31456,13 +32085,13 @@ function openSefarimNosafimPage(_pageMode) {
         "<input type=\"search\" id=\"bb-search\" oninput=\"window._bbFilter(this.value)\" placeholder=\"🔍 חפשו כל מאכל — למשל: אורז, בננה, שוקולד...\" style=\"width:100%;box-sizing:border-box;padding:0.65rem 1.1rem;border-radius:1rem;border:1.5px solid rgba(180,83,9,0.4);background:#fff;font-size:0.95rem;font-weight:600;direction:rtl;outline:none;box-shadow:0 3px 10px rgba(180,83,9,0.12);\">" +
         "<p id=\"bb-count\" style=\"margin:0.3rem 0 0;font-size:0.72rem;color:#b45309;font-weight:700;text-align:center;\"></p>" +
       "</div>" +
-      // מקרא
+      // מקרא — כל סמל לחיץ וגולל אל פרק הברכה שלו
       "<div style=\"display:flex;flex-wrap:wrap;gap:0.35rem;justify-content:center;margin-bottom:1.2rem;\">" +
-        chip("המוציא", C.hamotzi) + chip("מזונות", C.mezonot) + chip("הגפן", C.gefen) +
-        chip("העץ", C.etz) + chip("האדמה", C.adama) + chip("שהכל", C.shehakol) +
+        jump("hamotzi", "המוציא") + jump("mezonot", "מזונות") + jump("gefen", "הגפן") +
+        jump("etz", "העץ") + jump("adama", "האדמה") + jump("shehakol", "שהכל") +
       "</div>";
     CATS.forEach(function(cat) {
-      html += "<h2 class=\"bb-cat\" style=\"text-align:center;color:#b45309;font-size:1.25em;font-weight:900;margin:1.6rem 0 0.8rem;border-bottom:2px solid rgba(180,83,9,0.4);padding-bottom:0.4rem;\">" + cat.he + "</h2>";
+      html += "<h2 class=\"bb-cat\"" + (cat.k ? " data-bb-sec=\"" + cat.k + "\"" : "") + " style=\"text-align:center;color:#b45309;font-size:1.25em;font-weight:900;margin:1.6rem 0 0.8rem;border-bottom:2px solid rgba(180,83,9,0.4);padding-bottom:0.4rem;\">" + cat.he + "</h2>";
       cat.items.forEach(function(it) {
         var r = R[it[1]], a = A[it[2]];
         var searchStr = (it[0] + " " + r[0] + " " + a[0] + " " + (it[3] || "")).replace(/[֑-ֽֿ-ׇ]/g, "").toLowerCase();
@@ -31517,6 +32146,55 @@ function openSefarimNosafimPage(_pageMode) {
       });
       var cnt = document.getElementById("bb-count");
       if (cnt) cnt.textContent = words.length ? "נמצאו " + shown + " מאכלים" : "";
+    };
+    // קפיצה מסמל המקרא אל פרק הברכה — מתחת לשורת החיפוש הדביקה
+    window._bbJump = function(k) {
+      // עוגן בתכונת data (לא id — בונה תוכן העניינים של הקורא מחליף את ה-id של כל כותרת)
+      var h = document.querySelector('.bb-cat[data-bb-sec="' + k + '"]');
+      if (!h) return;
+      var inp = document.getElementById("bb-search");
+      if (inp && inp.value) { inp.value = ""; window._bbFilter(""); }   // פרק מוסתר בסינון — מבטלים סינון
+      var sc = document.getElementById("sn-reader-content");
+      if (!sc) return;
+      var sticky = inp ? inp.parentNode : null;
+      var off = (sticky ? sticky.getBoundingClientRect().height : 0) + 10;
+      var top = sc.scrollTop + h.getBoundingClientRect().top - sc.getBoundingClientRect().top - off;
+      var from = sc.scrollTop;
+      var to = Math.max(0, Math.min(top, sc.scrollHeight - sc.clientHeight));
+      var dist = to - from;
+      var flash = function() {
+        h.classList.remove("bb-cat-flash"); void h.offsetWidth; h.classList.add("bb-cat-flash");
+        setTimeout(function() { h.classList.remove("bb-cat-flash"); }, 1600);
+      };
+      if (sc.__bbAnimStop) sc.__bbAnimStop();
+      if (Math.abs(dist) < 4) { flash(); return; }
+      // גלילה מונפשת של מיכל הקריאה בלבד (rAF). לא scrollTo/scrollIntoView "smooth" של הדפדפן —
+      // הם מגלגלים גם את האבות (ה-body הנעול) וקפאו בנייד; כאן רק sc.scrollTop משתנה.
+      // נגיעה/גלגלת של המשתמש באמצע — עוצרת את ההנפשה ומשאירה לו את השליטה.
+      var dur = Math.min(1100, Math.max(500, Math.abs(dist) * 0.15));
+      var t0 = null, done = false, raf = 0;
+      var ease = function(t) { return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; };
+      var stop = function() {
+        done = true;
+        cancelAnimationFrame(raf);
+        sc.removeEventListener("touchstart", stop);
+        sc.removeEventListener("wheel", stop);
+        if (sc.__bbAnimStop === stop) sc.__bbAnimStop = null;
+      };
+      var finish = function() { if (done) return; stop(); sc.scrollTop = to; flash(); };
+      var step = function(ts) {
+        if (done) return;
+        if (t0 === null) t0 = ts;
+        var p = Math.min(1, (ts - t0) / dur);
+        sc.scrollTop = from + dist * ease(p);
+        if (p < 1) raf = requestAnimationFrame(step); else finish();
+      };
+      sc.addEventListener("touchstart", stop, { passive: true });
+      sc.addEventListener("wheel", stop, { passive: true });
+      sc.__bbAnimStop = stop;
+      raf = requestAnimationFrame(step);
+      // רשת ביטחון: rAF שלא רץ כלל (לשונית ברקע) — מגיעים ליעד בכל זאת
+      setTimeout(function() { if (!done && t0 === null) finish(); }, dur + 400);
     };
   })();
 
@@ -31892,9 +32570,9 @@ function openSefarimNosafimPage(_pageMode) {
       if (!he) {
         // pad=0 — בלעדיו ספריא מחזירה רק את הסעיף הראשון בספרים בעומק 3 (ביאור הלכה, כף החיים, ש"ך…)
         var url = "https://www.sefaria.org/api/texts/" + encodeURIComponent(fullRef) + "?pad=0&lang=he&context=0";
-        // 15 שניות — שיטה מקובצת/תוספות על עמוד יכולים להגיע ל-150KB; 8 שניות נכשלו ברשת סלולרית
-        var res = await fetch(url, { signal: AbortSignal.timeout(15000) });
-        var data = await res.json();
+        // 15 שניות לניסיון — שיטה מקובצת/תוספות על עמוד יכולים להגיע ל-150KB; 8 שניות נכשלו ברשת סלולרית.
+        // שליפה עמידה (ניסיון חוזר + נתיבים חלופיים) — כמו הטקסט הראשי
+        var data = await _sefariaJson(url, { timeout: 15000 });
         if (data && data.error) { _snCMCache[key] = null; return null; }
         he = data && data.he;
         if (he && (Array.isArray(he) ? he.length : true)) _snCacheSet(fullRef, he);
@@ -31968,8 +32646,7 @@ function openSefarimNosafimPage(_pageMode) {
       var text = _snCacheGet("cm:" + fullRef);
       if (!text) {
         var url = "https://www.sefaria.org/api/v3/texts/" + encodeURIComponent(fullRef) + "?version=hebrew&return_format=strip_only_footnotes";
-        var res = await fetch(url, { signal: AbortSignal.timeout(15000) });
-        var data = await res.json();
+        var data = await _sefariaJson(url, { timeout: 15000 });
         if (!data || data.error || !data.versions || !data.versions.length) {
           // "We have no text for X" = אין טקסט בנקודה הזו בלבד (פירושים דלילים על
           // הירושלמי: רידב"ז, חתם סופר…) — לא חוסמים את כל הספר, רק את הסעיף הזה.
@@ -32516,26 +33193,68 @@ function openSefarimNosafimPage(_pageMode) {
     }
   };
 
-  async function _snLoadChapter(idx, area, prepend) {
+  // כרטיס "הטקסט לא נטען" — כפתור ניסיון חוזר + ניסיון אוטומטי שקט (רק כל עוד הפרק מוצג)
+  function _snRenderFailedChapter(chapterDiv, heading, idx, area) {
+    var tries = chapterDiv.__snRetries || 0;
+    chapterDiv.innerHTML = heading +
+      "<div class=\"sn-load-fail\" style=\"text-align:center;padding:1.4rem 1rem;margin:0.5rem auto;max-width:420px;border:1.5px dashed rgba(201,153,58,0.55);border-radius:1rem;background:rgba(224,183,79,0.07);\">" +
+        "<p style=\"color:#7c5a1e;font-weight:800;margin:0 0 0.35rem;\">הטקסט לא נטען כרגע</p>" +
+        "<p style=\"color:#94a3b8;font-size:0.8rem;margin:0 0 0.9rem;\">שרת הספרים לא הגיב. מנסה שוב אוטומטית…</p>" +
+        "<button type=\"button\" class=\"sn-retry-btn\" style=\"background:linear-gradient(135deg,#e0b74f,#c9993a);color:#1e1b4b;border:none;border-radius:999px;padding:0.5rem 1.4rem;font-weight:900;font-size:0.9rem;cursor:pointer;\">🔄 נסה שוב</button>" +
+      "</div>";
+    var retry = function() {
+      if (!chapterDiv.isConnected || chapterDiv.__snRetrying) return;
+      chapterDiv.__snRetrying = true;
+      clearTimeout(chapterDiv.__snAutoT);
+      window.removeEventListener("online", chapterDiv.__snOnline);
+      chapterDiv.__snRetries = tries + 1;
+      _snLoadChapter(idx, area, false, chapterDiv).then(function() { chapterDiv.__snRetrying = false; }, function() { chapterDiv.__snRetrying = false; });
+    };
+    var btn = chapterDiv.querySelector(".sn-retry-btn");
+    if (btn) btn.onclick = retry;
+    chapterDiv.__snOnline = retry;
+    window.addEventListener("online", retry, { once: true });
+    if (tries < 10) chapterDiv.__snAutoT = setTimeout(retry, tries < 2 ? 6000 : 12000);
+  }
+
+  async function _snLoadChapter(idx, area, prepend, reuseDiv) {
     if (!_bk) return;
     var sections = _sbk ? _sbk.sections : _bk.sections;
     if (idx < 0 || idx >= sections.length) return;
     if (!_snLoadedIdx) _snLoadedIdx = new Set();
-    if (_snLoadedIdx.has(idx)) return;
+    if (!reuseDiv && _snLoadedIdx.has(idx)) return;
     _snLoadedIdx.add(idx);
     var sec = sections[idx];
-    var chapterDiv = document.createElement("div");
-    chapterDiv.id = "sn-chapter-" + idx;
-    chapterDiv.setAttribute("data-sn-idx", String(idx));
-    chapterDiv.style.cssText = "max-width:680px;margin:0 auto;padding:1.25rem 1rem 1rem;font-family:'Frank Ruhl Libre','David Libre',serif;direction:rtl;color:#1e293b;border-bottom:1px solid rgba(0,0,0,0.08);";
     var heading = "<h4 style=\"color:" + _bk.color + ";font-size:1.05rem;font-weight:900;margin:0 0 0.85rem;text-align:center;\">" + (_sbk ? _sbk.he + " — " : "") + sec.he + "</h4>";
+    var chapterDiv = reuseDiv;
+    if (!chapterDiv) {
+      chapterDiv = document.createElement("div");
+      chapterDiv.id = "sn-chapter-" + idx;
+      chapterDiv.setAttribute("data-sn-idx", String(idx));
+      chapterDiv.style.cssText = "max-width:680px;margin:0 auto;padding:1.25rem 1rem 1rem;font-family:'Frank Ruhl Libre','David Libre',serif;direction:rtl;color:#1e293b;border-bottom:1px solid rgba(0,0,0,0.08);";
+    }
     chapterDiv.innerHTML = heading + "<p style=\"color:#94a3b8;text-align:center;\">טוען...</p>";
-    if (prepend && area.firstChild) area.insertBefore(chapterDiv, area.firstChild);
-    else area.appendChild(chapterDiv);
+    if (!reuseDiv) {
+      if (prepend && area.firstChild) area.insertBefore(chapterDiv, area.firstChild);
+      else area.appendChild(chapterDiv);
+    }
+    // טעינה איטית — הודעה מרגיעה במקום "טוען..." קפוא (הניסיונות החוזרים נמשכים ברקע)
+    var _slowT = setTimeout(function() {
+      if (!chapterDiv.isConnected) return;
+      var p = chapterDiv.querySelector("p");
+      if (p && p.textContent === "טוען...") p.textContent = "הטעינה איטית מהרגיל — ממשיך לנסות…";
+    }, 5000);
     var he = await fetchSec(sec.ref);
+    clearTimeout(_slowT);
     // הפרק הוסר בזמן הטעינה (מעבר ספר / רינדור-מחדש אחרי שינוי מפרשים) — לא ממשיכים
     // לשלוף פירושים של ספר אחר עבור div יתום
     if (!chapterDiv.isConnected) return;
+    if (he && he._snFailed) {
+      // תקלת רשת/ספריא — לא "לא נמצא טקסט": כרטיס "נסה שוב" + ניסיון אוטומטי
+      // (כל 12 שניות עד 10 פעמים, ומיד כשהחיבור חוזר). הצלחה מחליפה את הכרטיס בטקסט.
+      _snRenderFailedChapter(chapterDiv, heading, idx, area);
+      return;
+    }
     var isMBBook = _bk && _bk.id === "mishna-berura";
     var activeCms = _snActiveCommentaries().filter(function(c) { return _snCMGet(c.id); });
     // שכבות לפי דיבור-המתחיל (נושאי כלים של השו"ע) לעומת פירושים צמודי-פסוק (רש"י וכו')
@@ -32749,7 +33468,7 @@ function openSefarimNosafimPage(_pageMode) {
     _snBuildCMToolbar();
     // ספר solo (סעיף יחיד) — אין מה לנווט אליו, כפתור הפרקים מוסתר
     var chBtn = document.getElementById("sn-chapters-btn");
-    if (chBtn) chBtn.style.display = _bk.solo ? "none" : "";
+    if (chBtn) chBtn.style.display = _bk.solo ? "none" : "flex";
     content.onscroll = null;
     content.innerHTML = "<div style=\"text-align:center;padding:3rem 1rem;\"><div style=\"width:36px;height:36px;border:3px solid " + _bk.color + ";border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 1rem;\"></div><p style=\"color:#94a3b8;\">טוען...</p></div>";
     showView("sn-reader-view");
@@ -32966,10 +33685,10 @@ function openSefarimNosafimPage(_pageMode) {
         };
         tocBtn.addEventListener("click", openHcToc);
         window._snHcOpenToc = openHcToc;
-        // כפתור 📑 בכותרת הדביקה פועל גם לספר כזה — אפשר לפתוח את תוכן העניינים מכל מקום
-        if (chBtn) chBtn.style.display = "";
-        var inner = content.firstChild;
-        if (inner) inner.insertBefore(tocBtn, inner.firstChild);
+        // כפתור ☰ בכותרת הדביקה פותח את תוכן העניינים מכל מקום — הכפתור האחיד בכל האתר
+        // (09/2026: כפתור הגלולה "📑 תוכן העניינים" בראש הטקסט הוסר לטובת האחידות;
+        // tocBtn נשאר מנותק מה-DOM רק כמפעיל לפתיחה האוטומטית של autoToc)
+        if (chBtn) chBtn.style.display = "flex";
       }
     } catch (eToc) {}
     content.scrollTop = 0;
@@ -33337,9 +34056,8 @@ function openSefarimNosafimPage(_pageMode) {
     "<div id=\"sn-reader-view\" style=\"display:none;position:absolute;inset:0;background:#faf9f6;flex-direction:column;overflow:hidden;\">",
       "<div style=\"display:flex;align-items:center;justify-content:space-between;padding:0.7rem 1rem;border-bottom:1px solid rgba(0,0,0,0.09);background:#faf9f6;flex-shrink:0;gap:0.5rem;\">",
         "<div id=\"sn-reader-tools\" style=\"display:flex;gap:0.35rem;flex-shrink:0;\">",
-          // עמוד התפילות הנוספות: מצפן כיוון התפילה ליד המרקר (🖍️ מוזרק לפניו מ-lux.js)
-          (_pageMode === "tefilot" ? "<button type=\"button\" class=\"prayer-cmp-btn\" onclick=\"openCompass()\" aria-label=\"מצפן כיוון התפילה\" title=\"מצפן — כיוון התפילה לירושלים\">🧭</button>" : ""),
-          "<button id=\"sn-chapters-btn\" onclick=\"window._snGoToChapters();\" style=\"background:rgba(0,0,0,0.06);border:none;color:#1e293b;padding:0.4rem 0.55rem;border-radius:999px;cursor:pointer;font-size:0.82rem;\" title=\"כל הפרקים\">📑</button>",
+          // תוכן עניינים — כפתור ☰ אחיד בכל האתר (כמו בשחרית/מנחה/ערבית)
+          "<button id=\"sn-chapters-btn\" class=\"toc-nav-btn\" onclick=\"window._snGoToChapters();\" style=\"background:rgba(0,0,0,0.06);border:none;color:#64748b;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.15rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;\" title=\"תוכן העניינים\" aria-label=\"תוכן העניינים\">☰</button>",
           // בעמוד התפילות אין סימניות (לבקשת המשתמש 09/2026) — רק בספרים
           (_pageMode === "tefilot" ? "" : "<button id=\"sn-reader-bm-btn\" onclick=\"window._snToggleBookmark();\" style=\"background:rgba(0,0,0,0.06);border:none;color:#1e293b;padding:0.4rem 0.55rem;border-radius:999px;cursor:pointer;font-size:0.82rem;\" title=\"סימנייה\">🔖</button>"),
           (_pageMode === "tefilot" ? "" : "<button onclick=\"window._snToggleBookBMPanel();\" style=\"background:rgba(0,0,0,0.06);border:none;color:#1e293b;padding:0.4rem 0.55rem;border-radius:999px;cursor:pointer;font-size:0.82rem;\" title=\"סימניות הספר\">📌</button>"),
@@ -33398,9 +34116,14 @@ function openTefilotNosafotPage() {
   openSefarimNosafimPage("tefilot");
 }
 
-// פותח את לוח ברכות הנהנין ישירות מהדף הראשי (דרך ספריית התפילות הנוספות)
+// פותח את לוח ברכות הנהנין ישירות מהדף הראשי — במצב פתיחה ישירה (כמו אושפיזין/חנוכה):
+// "חזור"/X סוגרים את כל החלון וחוזרים לדף הראשי, ולא לספריית התפילות הנוספות (09/2026)
 function openBirkotBoardPage() {
-  if (!document.getElementById("sn-modal")) openTefilotNosafotPage();
+  if (!document.getElementById("sn-modal")) {
+    _snOpenBookDirect("birkot-board");
+    return;
+  }
+  // חלון הספרים כבר פתוח (למשל חיפוש מתוכו) — פותחים את הלוח בתוכו כרגיל
   setTimeout(function () {
     if (typeof window._snOpenBook === "function") window._snOpenBook("birkot-board");
   }, 50);

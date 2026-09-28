@@ -61,6 +61,16 @@
   status = 404
   force = true
 
+# ── פרוקסי ל-API של ספריא (09/2026) ──
+# נתיב גיבוי בלבד (script.js → _sefariaJson): כשהבקשה הישירה לספריא נכשלת
+# (חסימה/עומס זמני של כתובת ה-IP של המשתמש, תקלת CORS), הטקסט נשלף דרך השרת
+# של Netlify — מכתובת אחרת. פרמטרי ה-query עוברים אוטומטית.
+[[redirects]]
+  from = "/sefaria-api/*"
+  to = "https://www.sefaria.org/api/:splat"
+  status = 200
+  force = true
+
 # ── כותרות אבטחה לכל האתר ──
 # CSP מצומצם במכוון: frame-ancestors (מונע clickjacking), base-uri, object-src,
 # form-action — הגנות אמיתיות בלי סיכון שבירה. CSP מלא עם script-src אינו מעשי

@@ -8829,3 +8829,53 @@ html.dark .lux-mk-btn:not(.lux-mk-on):not(.lux-mk-dark) {
   border-color: rgba(255, 255, 255, 0.14);
   color: #e2e8f0;
 }
+/* ── תיקון חצות — כרטיס "מה אומרים הלילה" בראש התפילה (09/2026) ── */
+.tc-status-card {
+  margin: 0 auto 1.25rem; max-width: 640px; padding: 0.85rem 1rem 0.8rem;
+  border-radius: 1rem; direction: rtl; text-align: center; line-height: 1.7;
+  background: linear-gradient(180deg, rgba(30, 41, 90, 0.07), rgba(201, 153, 58, 0.08));
+  border: 1.5px solid rgba(201, 153, 58, 0.45); color: #1e293b;
+  font-family: "Assistant", system-ui, sans-serif;
+}
+.tc-status-title { font-weight: 900; font-size: 0.95rem; color: #7c5a1e; margin-bottom: 0.25rem; }
+.tc-status-what { font-size: 0.9rem; font-weight: 600; }
+.tc-status-what b { color: #1e3a8a; }
+.tc-status-time { font-size: 0.78rem; color: #475569; margin-top: 0.3rem; }
+.tc-status-note { font-size: 0.72rem; color: #64748b; margin-top: 0.15rem; }
+.tc-show-full {
+  margin-top: 0.6rem; padding: 0.4rem 1.1rem; border-radius: 999px; cursor: pointer;
+  border: 1.5px solid rgba(201, 153, 58, 0.55); background: rgba(224, 183, 79, 0.12);
+  color: #7c5a1e; font-weight: 800; font-size: 0.8rem; font-family: inherit;
+}
+html.dark .tc-status-card { background: rgba(15, 23, 42, 0.6); border-color: rgba(224, 183, 79, 0.4); color: #e2e8f0; }
+html.dark .tc-status-title { color: #fcd34d; }
+html.dark .tc-status-what b { color: #93c5fd; }
+html.dark .tc-status-time, html.dark .tc-status-note { color: #94a3b8; }
+html.dark .tc-show-full { color: #fcd34d; background: rgba(224, 183, 79, 0.1); }
+
+/* ── כפתור "המשך לקריאת שמע" בסוף ברכות השחר (09/2026) ── */
+.prayer-next-cta-wrap { text-align: center; margin: 1.6rem 0 0.4rem; }
+.prayer-next-cta {
+  display: inline-flex; align-items: center; gap: 0.55rem; cursor: pointer;
+  padding: 0.75rem 1.6rem; border-radius: 999px; border: none;
+  background: linear-gradient(135deg, #f2d98a, #e0b74f 55%, #c9993a);
+  color: #1e1b4b; font-weight: 900; font-size: 1rem; font-family: "Assistant", system-ui, sans-serif;
+  box-shadow: 0 6px 18px rgba(201, 153, 58, 0.35);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.prayer-next-cta:hover { transform: translateY(-1px); box-shadow: 0 8px 22px rgba(201, 153, 58, 0.45); }
+.prayer-next-cta:active { transform: scale(0.97); }
+.prayer-next-cta-arrow { font-size: 1.1rem; }
+html.dark .prayer-next-cta { box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45); }
+
+/* ── לוח ברכות הנהנין — קפיצה מסמל המקרא לפרק הברכה (09/2026) ── */
+.bb-jump { transition: transform 0.12s ease, filter 0.12s ease; }
+.bb-jump:hover { filter: brightness(0.95); }
+.bb-jump:active { transform: scale(0.95); }
+@keyframes bb-cat-flash { 0% { background: rgba(242, 217, 138, 0.6); } 100% { background: transparent; } }
+.bb-cat-flash { animation: bb-cat-flash 1.5s ease-out; border-radius: 0.5rem; }
+
+/* ── כפתור תוכן העניינים ☰ — אחיד בכל הקוראים (כמו בשחרית/מנחה/ערבית) ── */
+.toc-nav-btn { display: inline-flex; align-items: center; justify-content: center; line-height: 1; padding: 0; }
+/* כותרות משנה בתוך דבר התורה של ההילולה (דברי תורה / סיפורים / ציטוטים) */
+.hil-torah .hil-torah-h { font-weight: 900; font-size: 0.9rem; color: #f2d98a; margin: 0.1rem 0 0.45rem; letter-spacing: 0.01em; }

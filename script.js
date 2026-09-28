@@ -1381,45 +1381,56 @@ function _levanaTimerTick(el, now) {
   return true;
 }
 
-// ── כרטיס הדשבורד "ברכת הלבנה" — שלושה מצבים ברורים:
-//  לפני: "אפשר להתחיל לברך בעוד" + ספירה לתחילת הזמן + תחילה וסוף מדויקים
-//  בזמן: "✓ עכשיו זמן ברכת הלבנה" + "סוף זמן ברכת הלבנה בעוד" + ספירה לסוף + השעה האחרונה
-//  (עדות המזרח, אחרי חצי החודש): "לדעת מרן השו״ע עדיין אפשר לברך" + ספירה לט"ו יום
-//  ובסוף החלון — מתגלגל מיד לחודש הבא ──
+// ── כרטיס הדשבורד "ברכת הלבנה" — קומפקטי, באותו גובה כמו שאר כרטיסי השורה (בקשת בעל האתר):
+//  שורת החודש + שורת מצב אחת ברורה (אותו מבנה ומחלקות כמו הכרטיס המקורי):
+//   לפני: "מתחילים לברך בעוד 20 ימים" · בזמן: "✓ סוף הזמן בעוד 3 ימים" (+ הילה ירוקה לכרטיס)
+//   עדות המזרח אחרי חצי החודש: "לפי מרן: סוף בעוד 05:12:44"
+//  פחות מ-48 שעות — בשעות; פחות מ-24 שעות — שעון חי. השעות המדויקות מוצגות רק בראש דף נוסח
+//  הברכה (_levanaFillPrayerTimes). בסוף החלון — מתגלגל מיד לחודש הבא ──
+// ימים: לתחילת הזמן מעוגל (כמו ספירת ימים בלוח), לסוף הזמן כלפי מטה (לחומרה)
+function _levanaCompactLeft(diff, roundDays) {
+  const H = 3600000;
+  if (diff >= 48 * H) return (roundDays ? Math.round(diff / (24 * H)) : Math.floor(diff / (24 * H))) + " ימים";
+  if (diff >= 24 * H) return Math.floor(diff / H) + " שעות";
+  const p = _levanaSplit(diff);
+  return { clock: `${_lvPad(p.h)}:${_lvPad(p.m)}:${_lvPad(p.s)}` };
+}
 function _levanaCardHtml(st) {
   const w = st.w;
   const isHe = typeof CURRENT_LANG === "undefined" || CURRENT_LANG === "he";
-  const month = `<span class="lv-month">${escapeHtml(w.heMonth || "")}</span>`;
-  const special =
-    w.special && w.start === w.fastEnd
-      ? `<span class="lv-when lv-dim">${w.special === "tishrei" ? "במוצאי יום הכיפורים" : "במוצאי תשעה באב"}</span>`
-      : "";
-  if (st.state === "before") {
-    return (
-      month +
-      `<span class="lv-state lv-before">${isHe ? "אפשר להתחיל לברך בעוד" : "🌙 Opens in"}</span>` +
-      _levanaTimerHtml(w.start) +
-      `<span class="lv-when"><b>${isHe ? "מתחיל:" : "From:"}</b> ${_levanaWhenHtml(w.start, true)}</span>` +
-      special +
-      `<span class="lv-when"><b>${isHe ? "סוף הזמן:" : "Until:"}</b> ${_levanaWhenHtml(w.end, false)}</span>`
-    );
-  }
-  if (st.state === "open") {
-    return (
-      month +
-      `<span class="lv-state lv-open">${isHe ? "✓ עכשיו זמן ברכת הלבנה" : "✓ Now is the time"}</span>` +
-      `<span class="lv-sub">${isHe ? "סוף זמן ברכת הלבנה בעוד" : "Ends in"}</span>` +
-      _levanaTimerHtml(w.end) +
-      `<span class="lv-when"><b>${isHe ? "עד:" : "Until:"}</b> ${_levanaWhenHtml(w.end, false)}</span>`
-    );
-  }
+  const label =
+    st.state === "before"
+      ? isHe ? "מתחילים לברך בעוד" : "Opens in"
+      : st.state === "open"
+        ? isHe ? "✓ סוף הזמן בעוד" : "✓ Ends in"
+        : isHe ? "לפי מרן: סוף בעוד" : "Ends in";
+  const color = st.state === "before" ? "#6ee7b7" : st.state === "open" ? "#fbbf24" : "#fcd34d";
   return (
-    month +
-    `<span class="lv-state lv-grace">${isHe ? "לדעת מרן השו״ע עדיין אפשר לברך" : "Still possible (Shulchan Aruch)"}</span>` +
-    `<span class="lv-sub">${isHe ? "סוף הזמן לדעת מרן בעוד" : "Ends in"}</span>` +
-    _levanaTimerHtml(w.final) +
-    `<span class="lv-when"><b>${isHe ? "עד:" : "Until:"}</b> ${_levanaWhenHtml(w.final, false)}</span>`
+    `${escapeHtml(w.heMonth || "")} <br><span class="text-sm font-normal opacity-80" style="color:${color}">` +
+    `${label} <span class="lv-cd" data-target="${st.target}"></span></span>`
   );
+}
+// עדכון שורת הזמן במקום (בלי לבנות את הכרטיס מחדש). false = הגיע הרגע
+function _levanaCardTick(el) {
+  const cd = el.querySelector(".lv-cd");
+  if (!cd) return false;
+  const diff = Number(cd.dataset.target || 0) - Date.now();
+  if (!(diff > 0)) return false;
+  const v = _levanaCompactLeft(diff, el.dataset.lvState === "before");
+  if (typeof v === "string") {
+    if (cd.firstElementChild || cd.textContent !== v) cd.textContent = v;
+  } else {
+    let c = cd.querySelector(".lv-clock");
+    if (!c) {
+      cd.textContent = "";
+      c = document.createElement("span");
+      c.className = "lv-clock";
+      c.dir = "ltr";
+      cd.appendChild(c);
+    }
+    if (c.textContent !== v.clock) c.textContent = v.clock;
+  }
+  return true;
 }
 
 // גלובלים לתאימות (התראות/הבהוב קוראים דרך _levanaStatus; נשמרים לקוד חיצוני)
@@ -1443,11 +1454,11 @@ function _renderMoonCard() {
   } catch (e) {
     return;
   }
-  if (st.key !== el.__lvKey || !el.querySelector(".lv-timer")) {
+  if (st.key !== el.__lvKey || !el.querySelector(".lv-cd")) {
     el.innerHTML = _levanaCardHtml(st);
     el.__lvKey = st.key;
-    el.classList.add("lv-card");
     el.dataset.lvState = st.state;
+    _levanaCardTick(el);
     _levanaSyncGlobals(st);
     if (typeof updateLevanaBlink === "function") {
       try {
@@ -1475,9 +1486,8 @@ function _startLevanaCountdown() {
     } catch (e) {
       return;
     }
-    const timer = el.querySelector(".lv-timer");
     // מעבר מצב (לפני → פתוח → סוף → החודש הבא) או דריסה חיצונית — בנייה מחדש
-    if (st.key !== el.__lvKey || !timer || !_levanaTimerTick(timer, Date.now())) _renderMoonCard();
+    if (st.key !== el.__lvKey || !_levanaCardTick(el)) _renderMoonCard();
   }, 1000);
 }
 
@@ -1550,18 +1560,46 @@ function _levanaDetailsHtml(w, opts) {
   );
 }
 
-// באנר הזמנים בראש תפילת ברכת הלבנה — ממולא בכל פתיחה (התפילה עצמה נשמרת במטמון)
+// באנר הזמנים בראש תפילת ברכת הלבנה — ממולא בכל פתיחה (התפילה עצמה נשמרת במטמון),
+// וכל עוד הדף פתוח: הספירה ("20 ימים, 4 שעות, 26 דקות") מתעדכנת, ובמעבר מצב/חודש הבאנר נבנה מחדש
+let _levanaPrayerTicker = null;
 function _levanaFillPrayerTimes(root) {
   const box = root && root.querySelector("[data-levana-live]");
   if (!box) return;
   try {
     const st = _levanaStatus();
+    const wasOpen = !!box.querySelector("details.lv-notes[open]");
     box.innerHTML =
       `<div class="lv-prayer-title">🌙 זמן ברכת הלבנה — חודש ${escapeHtml(st.w.heMonth || "")}</div>` +
       _levanaDetailsHtml(st.w, { status: true, foldNotes: true });
+    if (wasOpen) {
+      const d = box.querySelector("details.lv-notes");
+      if (d) d.open = true;
+    }
+    box.__lvKey = st.key;
   } catch (e) {
     box.innerHTML = "";
+    return;
   }
+  if (_levanaPrayerTicker) clearInterval(_levanaPrayerTicker);
+  _levanaPrayerTicker = setInterval(() => {
+    if (!box.isConnected) {
+      clearInterval(_levanaPrayerTicker);
+      _levanaPrayerTicker = null;
+      return;
+    }
+    if (document.hidden) return;
+    try {
+      const st = _levanaStatus();
+      const txt = box.querySelector(".lv-live-txt");
+      if (st.key !== box.__lvKey || !txt) {
+        _levanaFillPrayerTimes(root);
+        return;
+      }
+      const v = _levanaSpoken(_levanaSplit(st.target - Date.now()));
+      if (txt.textContent !== v) txt.textContent = v;
+    } catch (e) {}
+  }, 15000);
 }
 
 // טקסט קצר (ווידג'ט / פופאפ הירח) — בלי HTML

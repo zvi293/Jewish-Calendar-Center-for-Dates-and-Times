@@ -919,7 +919,7 @@
           const obj = JSON.parse(raw);
           if (!obj || typeof obj.lat !== "number" || typeof obj.lon !== "number") return null;
           // מיקום שמור משמש תמיד — גם ישן — כדי לא לבקש אישור מחדש.
-          // רענון אמיתי מתבצע ברקע (startFlow) רק כשההרשאה כבר קיימת.
+          // רענון אמיתי מתבצע ברקע (silentLocationRefresh) למי שאישר מיקום.
           return obj;
         } catch(e) { return null; }
       }
@@ -930,6 +930,20 @@
           localStorage.setItem(LS_LOC_KEY, JSON.stringify(payload));
           localStorage.setItem(LS_PERMISSION_KEY, "1");
         } catch(e) {}
+      }
+
+      // ── זכירת אישור מיקום — דגל משותף לכל האתר (כמו בעמוד הראשי, script.js) ──
+      // "1" אושר · "0" סורב/נחסם (רק "רענן מיקום" מחזיר) · חסר = לא ידוע
+      const GEO_AUTO_KEY = "moadim_geo_auto";
+      const GEO_AUTO_TRY_KEY = "moadim_geo_auto_try"; // ניסיון אחרון — להגבלת חלונות אישור
+      const GEO_AUTO_GAP_MS = 30 * 60 * 1000;
+      let lastAutoLocRun = 0;
+      function rememberLocationApproval() {
+        lastAutoLocRun = Date.now();
+        try { localStorage.setItem(GEO_AUTO_KEY, "1"); } catch (e) {}
+      }
+      function forgetLocationApproval() {
+        try { localStorage.setItem(GEO_AUTO_KEY, "0"); } catch (e) {}
       }
 
       // ── Reverse geocoding (Nominatim) ────────────────
@@ -976,10 +990,14 @@
               resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude });
             },
             (err) => {
-              if (err.code === 1) reject(new Error("הגישה למיקום נחסמה.\nכדי להציג מקומות באזורך, אפשר גישה למיקום בדפדפן."));
-              else if (err.code === 2) reject(new Error("לא ניתן לאתר את המיקום שלך כרגע. נסה שוב."));
-              else if (err.code === 3) reject(new Error("פג זמן בקשת המיקום. נסה שוב."));
-              else reject(new Error("שגיאה באיתור המיקום."));
+              let e;
+              if (err.code === 1) e = new Error("הגישה למיקום נחסמה.\nכדי להציג מקומות באזורך, אפשר גישה למיקום בדפדפן.");
+              else if (err.code === 2) e = new Error("לא ניתן לאתר את המיקום שלך כרגע. נסה שוב.");
+              else if (err.code === 3) e = new Error("פג זמן בקשת המיקום. נסה שוב.");
+              else e = new Error("שגיאה באיתור המיקום.");
+              e.code = err.code; // סירוב (1) מכבה את הרענון האוטומטי
+              if (err.code === 1) forgetLocationApproval();
+              reject(e);
             },
             { enableHighAccuracy: true, timeout: 12000, maximumAge: 1000 * 60 * 10 }
           );
@@ -990,6 +1008,7 @@
         try {
           setStatus("מאתר מיקום…");
           const { lat, lon } = await requestGeolocation();
+          rememberLocationApproval();
           userLat = lat; userLon = lon;
           // Save coords immediately so app works even if reverse geocoding fails
           saveLocationCache(lat, lon, null);
@@ -1612,23 +1631,49 @@
       }
 
       // ── Startup flow ──────────────────────────────────
-      // רענון מיקום שקט ברקע — רק כשהרשאת המיקום כבר מאושרת (בלי חלון קופץ).
-      // אם המשתמש זז יותר מק"מ — מעדכנים את התוצאות אוטומטית.
+      // רענון מיקום שקט ברקע — בכל כניסה ובחזרה לעמוד אחרי 30+ דק'.
+      // הרשאה 'granted' ⇒ תמיד (בלי חלון). מי שאישר מיקום (הדגל המשותף) ⇒ גם כשהדפדפן
+      // לא זוכר את ההרשאה ('prompt' באייפון / בלי Permissions API), אבל לכל היותר פעם
+      // ב-30 דק' כדי שחלון האישור לא יקפוץ בכל כניסה. חסום / סירוב ⇒ הדגל "0" והמיקום
+      // האחרון נשאר. אם המשתמש זז יותר מק"מ — מעדכנים את התוצאות אוטומטית.
       function silentLocationRefresh(prevLat, prevLon) {
         try {
-          if (!navigator.permissions || !navigator.permissions.query) return;
-          navigator.permissions.query({ name: "geolocation" }).then((st) => {
-            if (st.state !== "granted") return;
+          if (!("geolocation" in navigator)) return;
+          let flag = null, legacy = false;
+          try {
+            flag = localStorage.getItem(GEO_AUTO_KEY);
+            legacy = localStorage.getItem(LS_PERMISSION_KEY) === "1";
+          } catch (e) {}
+          if (flag === "0") return;
+          lastAutoLocRun = Date.now();
+          const stateP = navigator.permissions && navigator.permissions.query
+            ? navigator.permissions.query({ name: "geolocation" }).then((st) => st.state, () => "unknown")
+            : Promise.resolve("unknown");
+          stateP.then((state) => {
+            if (state === "denied") { forgetLocationApproval(); return; }
+            if (state !== "granted") {
+              if (flag !== "1" && !legacy) return;
+              let lastTry = 0;
+              try { lastTry = +(localStorage.getItem(GEO_AUTO_TRY_KEY) || 0); } catch (e) {}
+              if (lastTry > Date.now()) lastTry = 0;
+              if (Date.now() - lastTry < GEO_AUTO_GAP_MS) return;
+            }
+            try { localStorage.setItem(GEO_AUTO_TRY_KEY, String(Date.now())); } catch (e) {}
             requestGeolocation().then(({ lat, lon }) => {
-              saveLocationCache(lat, lon, null);
+              rememberLocationApproval();
               const movedKm = haversineKm(lat, lon, prevLat, prevLon);
               if (movedKm > 1) {
                 userLat = lat; userLon = lon;
+                saveLocationCache(lat, lon, null);
                 updateLocationLabel(lat, lon, null);
                 reverseGeocode(lat, lon).then(addr => {
                   if (addr) { updateLocationLabel(lat, lon, addr); saveLocationCache(lat, lon, addr); }
                 }).catch(() => {});
                 fetchAndRender();
+              } else {
+                // אותו מקום — רק חותמת זמן; הכתובת השמורה נשארת (לפני כן נמחקה)
+                const c = loadCachedLocation();
+                saveLocationCache(prevLat, prevLon, c && c.address ? c.address : null);
               }
             }).catch(() => {});
           }).catch(() => {});
@@ -1754,6 +1799,13 @@
       }
       window.addEventListener("load", () => {
         startFlow(false);
+      });
+      // חזרה לעמוד (מסך כבוי / אפליקציה אחרת) אחרי 30+ דק' — רענון מיקום שקט
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible" && userLat != null &&
+            Date.now() - lastAutoLocRun > GEO_AUTO_GAP_MS) {
+          silentLocationRefresh(userLat, userLon);
+        }
       });
     </script>
   </body>

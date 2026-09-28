@@ -250,7 +250,12 @@ function updateCurrentCityLabel() {
   const cityNameEl = document.getElementById("current-city-name");
   if (!cityNameEl || !cityNameEl.parentElement) return;
   const ui = getDynamicUiText();
-  if (GEO_LOCATION === "GPS") cityNameEl.textContent = ui.gpsCity;
+  // במצב GPS — שם העיר שנשמר מה-reverse geocoding (לפני כן נדרס תמיד ל"מיקום נוכחי (GPS)")
+  if (GEO_LOCATION === "GPS") {
+    let _savedName = "";
+    try { _savedName = localStorage.getItem("moadim_city_name") || ""; } catch (e) {}
+    cityNameEl.textContent = _savedName || ui.gpsCity;
+  }
   cityNameEl.parentElement.childNodes[0].nodeValue = `${ui.currentCityLabel} `;
 }
 
@@ -3495,7 +3500,9 @@ async function fetchLiveCalendarData() {
 
     renderZmanimGrid(zData);
 
-    const sData = await _pShabbat;
+    // כשל ברשת כאן לא עוצר את שאר העדכון: אחרי מעבר מיקום (GPS) ה-URL חדש ואין לו
+    // מטמון — בלי רשת זמני השבת ממילא מחושבים מקומית (KosherZmanim) למטה
+    const sData = await _pShabbat.catch(() => null);
     let p = CURRENT_LANG === "he" ? "שבת" : "Shabbat",
       c = "--:--",
       h = "--:--",
@@ -4733,12 +4740,17 @@ async function renderNextMoedTimes(e) {
 }
 
 
-/* שם עיר משוער מקואורדינטות GPS (Nominatim) — משמש את useGPS להצגת שם המיקום */
+/* שם עיר משוער מקואורדינטות GPS (Nominatim) — משמש את useGPS ואת רענון המיקום האוטומטי.
+   מוגבל ל-8 שניות: ברשת חלשה לא ממתינים לשם (הזמנים מתעדכנים גם בלעדיו) */
 async function _gpsReverseGeocode(lat, lon) {
   try {
+    const opts = { headers: { "Accept": "application/json" } };
+    if (typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout === "function") {
+      opts.signal = AbortSignal.timeout(8000);
+    }
     const res = await fetch(
       `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&accept-language=he&zoom=14`,
-      { headers: { "Accept": "application/json" } },
+      opts,
     );
     if (!res.ok) return null;
     const data = await res.json();
@@ -4758,6 +4770,272 @@ async function _gpsReverseGeocode(lat, lon) {
   }
 }
 
+/* ══ מיקום אוטומטי (בקשת בעל האתר 09/2026) ═════════════════════════════════
+   משתמש שאישר פעם אחת מיקום (תיקון GPS מוצלח) — נשמר הדגל moadim_geo_auto,
+   ובכל כניסה (ובחזרה לאפליקציה אחרי 30+ דק') המיקום מתרענן בשקט ברקע:
+   הדף מצויר מיד מהמיקום השמור, ורק אם זזנו מעל ק"מ (או חצינו את גבול ירושלים /
+   הארץ — הדלקת נרות 40/20/18 דק') מתעדכן במקום כל מה שתלוי במיקום — באותו מסלול
+   של כפתור ה-GPS (fetchLiveCalendarData: זמני היום, שבת/חג, טיימרים, _lastZData,
+   כרטיס הלבנה, רשימת המועדים; המצפן קורא את GPS_COORDS בכל פעימה) — בלי רענון
+   דף, ואז טוסט קטן.
+   - הרשאה 'denied' / סירוב בחלון הדפדפן ⇒ הדגל = "0", המיקום האחרון נשאר.
+     רק לחיצה על כפתור ה-GPS מחזירה את הרענון האוטומטי.
+   - הרשאה 'prompt' (אייפון ששוכח אישורים, "רק הפעם") או דפדפן בלי Permissions API ⇒
+     מנסים (המשתמש כבר אישר), אבל לכל היותר פעם ב-30 דק' — שחלון הדפדפן לא יקפוץ בכל כניסה.
+   - עיר שנבחרה ידנית בגרסה ישנה (geonameid שאינו ברירת המחדל) לא נדרסת בשקט.
+   - הבקשות כאן עוקפות את geoMemory (lux.js), שמחזיר מיקום שמור בלי לשאול —
+     כאן צריך מיקום אמיתי ושגיאות אמיתיות. */
+const GEO_AUTO_KEY = "moadim_geo_auto"; // "1" אושר · "0" סורב · חסר = לא ידוע
+const GEO_AUTO_TRY_KEY = "moadim_geo_auto_try"; // ניסיון אחרון (להגבלת חלונות אישור)
+const GEO_DEFAULT_CITY = "293918"; // פתח תקווה — ברירת המחדל כשלא נבחר מיקום
+const GEO_AUTO_GAP_MS = 30 * 60 * 1000;
+const GEO_AUTO_MOVE_KM = 1;
+// הפונקציה המקורית של הדפדפן — נלכדת כאן, לפני ש-lux.js (geoMemory) עוטף אותה
+const _geoNativeGetPos =
+  navigator.geolocation &&
+  typeof navigator.geolocation.getCurrentPosition === "function"
+    ? navigator.geolocation.getCurrentPosition.bind(navigator.geolocation)
+    : null;
+let _geoAutoBusySince = 0;
+let _geoAutoLastRun = 0;
+let _geoPermWatched = false;
+
+// מעקב אחרי ריצות נתונים פעילות — הרענון האוטומטי ממתין לסיומן, כדי שריצה
+// מהמיקום הקודם שמסתיימת מאוחר לא תדרוס את הזמנים החדשים
+let _liveDataRuns = 0;
+fetchLiveCalendarData = (function (orig) {
+  return function () {
+    _liveDataRuns++;
+    const done = () => { _liveDataRuns = Math.max(0, _liveDataRuns - 1); };
+    let p;
+    try {
+      p = orig.apply(this, arguments);
+    } catch (e) {
+      done();
+      throw e;
+    }
+    Promise.resolve(p).then(done, done);
+    return p;
+  };
+})(fetchLiveCalendarData);
+
+function _geoAutoSetFlag(v) {
+  try { localStorage.setItem(GEO_AUTO_KEY, v); } catch (e) {}
+}
+
+// בקשת מיקום אמיתית מהדפדפן (לא מהמטמון של geoMemory)
+function _geoRealPosition(opts) {
+  return new Promise((resolve, reject) => {
+    const fn = _geoNativeGetPos || window.__luxGeoNativeGetPos;
+    if (!fn) { reject({ code: 2 }); return; }
+    try { fn(resolve, (err) => reject(err || { code: 2 }), opts); }
+    catch (e) { reject({ code: 2 }); }
+  });
+}
+
+function _geoPermissionState() {
+  try {
+    if (!navigator.permissions || !navigator.permissions.query) return Promise.resolve("unknown");
+    return navigator.permissions.query({ name: "geolocation" }).then((st) => {
+      // חסימה בהגדרות תוך כדי שהדף פתוח — מפסיקים את הרענון האוטומטי
+      if (!_geoPermWatched) {
+        _geoPermWatched = true;
+        try {
+          st.addEventListener("change", () => { if (st.state === "denied") _geoAutoSetFlag("0"); });
+        } catch (e) {}
+      }
+      return st.state || "unknown";
+    }, () => "unknown");
+  } catch (e) {
+    return Promise.resolve("unknown");
+  }
+}
+
+// האם לרענן אוטומטית: "on" · "granted-only" (רק אם הדפדפן זוכר את ההרשאה) · null
+function _geoAutoMode() {
+  let v = null;
+  try { v = localStorage.getItem(GEO_AUTO_KEY); } catch (e) {}
+  if (v === "0") return null;
+  if (GEO_LOCATION !== "GPS" && GEO_LOCATION !== GEO_DEFAULT_CITY) return null;
+  if (v === "1") return "on";
+  // משתמשים ותיקים שכבר בחרו GPS לפני העדכון — אישרו מיקום
+  if (GEO_LOCATION === "GPS" && GPS_COORDS) return "on";
+  // אישור בעמוד בתי הכנסת (אותו אתר) — רק כשאין חלון אישור בדרך
+  try {
+    if (localStorage.getItem("shulMikve_locPermissionGranted") === "1") return "granted-only";
+  } catch (e) {}
+  return null;
+}
+
+// מטמון geoMemory (lux.js) נשאר מסונכרן עם המיקום האחרון שנמדד
+function _geoRememberFix(lat, lon) {
+  try { localStorage.setItem("lux_last_geo", JSON.stringify({ lat, lon, ts: Date.now() })); } catch (e) {}
+}
+
+function _geoSetCityName(name) {
+  try { localStorage.setItem("moadim_city_name", name); } catch (e) {}
+  const el = document.getElementById("current-city-name");
+  if (el) el.textContent = name;
+}
+
+// ממתין שאין ריצת נתונים באוויר, ובמצב אוטומטי גם שהטאב גלוי ואין פופאפ פתוח
+// (שינוי הדף מאחורי פופאפ מכריח re-blur של השכבה)
+function _geoWhenIdle(ignoreOverlay) {
+  return new Promise((resolve) => {
+    const t0 = Date.now();
+    const check = () => {
+      const blocked =
+        !ignoreOverlay &&
+        (document.hidden || document.documentElement.classList.contains("lux-modal-open"));
+      if (!blocked && (_liveDataRuns === 0 || Date.now() - t0 > 30000)) resolve();
+      else setTimeout(check, 800);
+    };
+    check();
+  });
+}
+
+// רינדור מחדש של כל מה שתלוי במיקום — המסלול של כפתור ה-GPS
+async function _geoRerenderLocationData() {
+  // fetchLiveCalendarData מרנדר את רשימת המועדים ב"הכל" — שומרים סינון/חיפוש פעילים
+  const chip = document.querySelector(".chip.active");
+  const filter = chip && chip.id ? chip.id.replace(/^btn-/, "") : "all";
+  const searchEl = document.getElementById("mainSearch");
+  const search = searchEl ? searchEl.value : "";
+  try { await fetchLiveCalendarData(); } catch (e) {}
+  if (filter !== "all" || search) {
+    try { render(filter, search); } catch (e) {}
+  }
+  // נתוני הווידג'טים (lux.js) נבנים מה-DOM — אחרי שהזמנים החדשים הוצבו
+  setTimeout(() => {
+    try { if (window.LuxWidgetData) window.LuxWidgetData.refresh(); } catch (e) {}
+  }, 400);
+}
+
+// מעבר למיקום GPS חדש: שמירה, שם עיר ורינדור — משותף לכפתור ולרענון האוטומטי
+async function _applyGpsLocation(lat, lon, opts) {
+  const auto = !!(opts && opts.auto);
+  const ui = getDynamicUiText();
+  GPS_COORDS = { lat, lon, ts: Date.now() };
+  GEO_LOCATION = "GPS";
+  try {
+    localStorage.setItem("moadim_gps", JSON.stringify(GPS_COORDS));
+    localStorage.setItem("moadim_city", "GPS");
+  } catch (e) {}
+  _geoRememberFix(lat, lon);
+  // שם זמני עד שה-reverse geocoding חוזר (השם הקודם כבר לא נכון)
+  _geoSetCityName(ui.gpsCity);
+  const namePromise = _gpsReverseGeocode(lat, lon).then((cityName) => {
+    if (cityName && GPS_COORDS && GPS_COORDS.lat === lat && GPS_COORDS.lon === lon) {
+      _geoSetCityName(cityName + " (GPS)");
+    }
+    return cityName;
+  });
+  await _geoWhenIdle(!auto);
+  await _geoRerenderLocationData();
+  try {
+    window.dispatchEvent(new CustomEvent("lux-location-changed", { detail: { lat, lon } }));
+  } catch (e) {}
+  if (auto) {
+    const cityName = await namePromise;
+    await _geoWhenIdle(false);
+    if (typeof showToast === "function") {
+      // מניעת שבירת שורה אחרי מקף ("תל־\nאביב–יפו") — word joiner אחרי מקפים
+      const shown = cityName ? cityName.replace(/([\u05BE\u2010-\u2014-])/g, "$1\u2060") : "";
+      showToast(
+        shown ? `📍 המיקום עודכן: ${shown}` : "📍 המיקום עודכן לפי המיקום הנוכחי",
+        "info",
+        3200,
+      );
+    }
+  }
+}
+
+// תיקון GPS שהגיע ברקע: זזנו? — עדכון מלא. אותו מקום — רק חותמת זמן (הקואורדינטות
+// נשארות, כך שכתובות המטמון של Hebcal יציבות ולא יוצאת בקשת רשת מיותרת)
+function _geoAutoHandleFix(lat, lon) {
+  const prev = GEO_LOCATION === "GPS" && GPS_COORDS ? GPS_COORDS : null;
+  const moved =
+    !prev ||
+    getDistanceKm(prev.lat, prev.lon, lat, lon) > GEO_AUTO_MOVE_KM ||
+    isInJerusalem(prev.lat, prev.lon) !== isInJerusalem(lat, lon) ||
+    isInIsrael(prev.lat, prev.lon) !== isInIsrael(lat, lon);
+  if (moved) {
+    _applyGpsLocation(lat, lon, { auto: true });
+    return;
+  }
+  _geoRememberFix(lat, lon);
+  GPS_COORDS = Object.assign({}, GPS_COORDS, { ts: Date.now() });
+  try { localStorage.setItem("moadim_gps", JSON.stringify(GPS_COORDS)); } catch (e) {}
+  // שם העיר חסר (ה-reverse geocoding נכשל בפעם הקודמת) — משלימים בשקט
+  let nm = "";
+  try { nm = localStorage.getItem("moadim_city_name") || ""; } catch (e) {}
+  if (!nm || nm === getDynamicUiText().gpsCity) {
+    _gpsReverseGeocode(prev.lat, prev.lon).then((cityName) => {
+      if (cityName && GEO_LOCATION === "GPS") _geoSetCityName(cityName + " (GPS)");
+    });
+  }
+}
+
+async function _geoAutoRefresh(reason) {
+  if (!_geoNativeGetPos && !window.__luxGeoNativeGetPos) return;
+  // בקשה קודמת עדיין באוויר (דפדפן שלא עונה נחשב תקוע אחרי דקה)
+  if (_geoAutoBusySince && Date.now() - _geoAutoBusySince < 60000) return;
+  const mode = _geoAutoMode();
+  if (!mode) return;
+  _geoAutoBusySince = Date.now();
+  _geoAutoLastRun = Date.now();
+  try {
+    const state = await _geoPermissionState();
+    if (state === "denied") {
+      _geoAutoSetFlag("0");
+      return;
+    }
+    if (state !== "granted") {
+      if (mode !== "on") return;
+      // ייתכן חלון אישור של הדפדפן — לכל היותר פעם ב-30 דק'
+      let lastTry = 0;
+      try { lastTry = +(localStorage.getItem(GEO_AUTO_TRY_KEY) || 0); } catch (e) {}
+      let lastFix = (GPS_COORDS && GPS_COORDS.ts) || 0;
+      // שעון המכשיר חזר אחורה — חותמת "מהעתיד" לא תחסום לתמיד
+      if (lastTry > Date.now()) lastTry = 0;
+      if (lastFix > Date.now()) lastFix = 0;
+      if (Date.now() - Math.max(lastTry, lastFix) < GEO_AUTO_GAP_MS) return;
+    }
+    try { localStorage.setItem(GEO_AUTO_TRY_KEY, String(Date.now())); } catch (e) {}
+    let pos;
+    try {
+      pos = await _geoRealPosition({
+        enableHighAccuracy: false,
+        timeout: 12000,
+        maximumAge: 5 * 60000,
+      });
+    } catch (err) {
+      // סירוב (בחלון או בהגדרות) — מפסיקים לנסות אוטומטית; המיקום האחרון נשאר
+      if (err && err.code === 1) _geoAutoSetFlag("0");
+      return;
+    }
+    // ייתכן שבינתיים המשתמש סירב / עבר לעיר ידנית — לא דורסים
+    if (_geoAutoMode() === null) return;
+    _geoAutoSetFlag("1");
+    _geoAutoHandleFix(pos.coords.latitude, pos.coords.longitude);
+  } catch (e) {
+  } finally {
+    _geoAutoBusySince = 0;
+  }
+}
+
+// כניסה: הדף כבר צויר מהמיקום השמור; בקשת המיקום עצמה לא חוסמת דבר
+setTimeout(() => _geoAutoRefresh("boot"), 1200);
+// חזרה לאפליקציה (מסך כבוי / אפליקציה אחרת) אחרי 30+ דק'
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && Date.now() - _geoAutoLastRun > GEO_AUTO_GAP_MS) {
+    _geoAutoRefresh("resume");
+  }
+});
+window.addEventListener("pageshow", (e) => {
+  if (e.persisted && Date.now() - _geoAutoLastRun > GEO_AUTO_GAP_MS) _geoAutoRefresh("resume");
+});
+
 function useGPS() {
   if (!("geolocation" in navigator)) {
     alert("הדפדפן שלך לא תומך באיתור מיקום.");
@@ -4766,37 +5044,22 @@ function useGPS() {
   const cityNameEl = document.getElementById("current-city-name");
   const prevName = cityNameEl ? cityNameEl.textContent : "";
   if (cityNameEl) cityNameEl.textContent = "מאתר מיקום...";
-  navigator.geolocation.getCurrentPosition(
-    async (pos) => {
-      GPS_COORDS = {
-        lat: pos.coords.latitude,
-        lon: pos.coords.longitude,
-      };
-      localStorage.setItem("moadim_gps", JSON.stringify(GPS_COORDS));
-      GEO_LOCATION = "GPS";
-      localStorage.setItem("moadim_city", "GPS");
-      // הצג שם זמני בזמן שמתבצע reverse geocoding
-      if (cityNameEl) cityNameEl.textContent = "מיקום נוכחי (GPS)";
-      localStorage.setItem("moadim_city_name", "מיקום נוכחי (GPS)");
-      // נסה למצוא שם עיר אמיתי
-      const cityName = await _gpsReverseGeocode(GPS_COORDS.lat, GPS_COORDS.lon);
-      if (cityName) {
-        const displayName = cityName + " (GPS)";
-        if (cityNameEl) cityNameEl.textContent = displayName;
-        localStorage.setItem("moadim_city_name", displayName);
-      }
-      // רענן את הנתונים לפי המיקום החדש
-      try { fetchLiveCalendarData(); } catch (e) {}
+  // לחיצה מפורשת — תמיד מיקום אמיתי (לא המטמון של geoMemory)
+  _geoRealPosition({ enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }).then(
+    (pos) => {
+      // אישור מפורש — מכאן והלאה המיקום מתרענן אוטומטית בכל כניסה
+      _geoAutoSetFlag("1");
+      _applyGpsLocation(pos.coords.latitude, pos.coords.longitude, { auto: false });
     },
     (err) => {
       if (cityNameEl) cityNameEl.textContent = prevName || "פתח תקווה";
       let msg = "לא הצלחנו לאתר מיקום, נחזור להגדרה הקודמת.";
       if (err && err.code === 1) {
         msg = "הגישה למיקום נדחתה. ניתן לאפשר גישה בהגדרות הדפדפן.";
+        _geoAutoSetFlag("0");
       }
       alert(msg);
     },
-    { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 },
   );
 }
 

@@ -4729,6 +4729,10 @@ html.dark .lux-se-txt small { color: #94a3b8; }
 .ush-note { display: block; font-size: 0.62em; color: #64748b; line-height: 1.9; margin: 0.6rem 0 0.25rem; text-align: center; }
 .ush-gem { margin-top: 0.2rem; }
 .ush-p { display: block; text-align: justify; margin: 0 0 0.8rem; line-height: 2.05; }
+/* הפונט הקבוע של התפילות והספרים באתר (כמו .holy-text-style): פרנק ריל מודגש בשחור.
+   בוחר הפונטים (data-reader-font) גובר על המשפחה ב-!important — בחירת המשתמש נשמרת */
+.ush-p, .ush-hero-name { font-family: 'Frank Ruhl Libre', serif; font-weight: 700; }
+.ush-p { color: #000000; }
 .ush-opt { font-size: 0.85em; }
 .ush-day {
   display: block;
@@ -4748,6 +4752,7 @@ html.dark .ush-tl-cap, html.dark .ch-count-st, html.dark .ush-tl-n.done .ush-tl-
 html.dark .ch-cn b { background: linear-gradient(#475569, #334155); }
 html.dark .ch-cn.lit b { background: linear-gradient(#fffbeb, #f2d98a); }
 html.dark .ush-day { background: rgba(232, 193, 90, 0.1); }
+html.dark .ush-p { color: #f8fafc; }
 
 /* ── ממיר תאריכים ── */
 .lux-dt-sec { margin-bottom: 1rem; text-align: right; }

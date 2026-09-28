@@ -6567,6 +6567,10 @@
 
   /* ── 45. הזמנה לסיור מודרך — קופצת פעם אחת בלבד, בכניסה הראשונה ── */
   safe("tourInvite", function () {
+    // כבוי לבקשת המשתמש (28/09/2026) — הסיור זמין רק דרך ⚙️ ההגדרות ("סיור מודרך באתר").
+    // להחזרת ההזמנה בכניסה הראשונה: TOUR_INVITE_ON = true
+    var TOUR_INVITE_ON = false;
+    if (!TOUR_INVITE_ON) return;
     var KEY = "lux_tour_invite_shown";
     try { if (localStorage.getItem(KEY)) return; } catch (e) { return; }
     var tries = 0;

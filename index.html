@@ -404,7 +404,7 @@
          ראו הטוען בסוף ה-body. ה-?v= כאן חייב להיות זהה לזה שבטוען וב-sw.js.
          fetchpriority=low: שלא יתחרו ברוחב-הפס עם ה-CSS החוסם (FCP) — כמו defer. -->
     <link rel="preload" href="script.js?v=60" as="script" fetchpriority="low" />
-    <link rel="preload" href="lux.js?v=59" as="script" fetchpriority="low" />
+    <link rel="preload" href="lux.js?v=60" as="script" fetchpriority="low" />
 
     <!-- OneSignal Web Push SDK -->
     <script>
@@ -2724,7 +2724,7 @@
             },
           });
           addScript("script.js?v=60");
-          addScript("lux.js?v=59");
+          addScript("lux.js?v=60");
         }
         function afterFirstPaint() {
           // rAF אחד (רץ ממש לפני ציור הפריים הראשון) ואז setTimeout(0) — משימה

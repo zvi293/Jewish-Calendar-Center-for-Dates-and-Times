@@ -371,44 +371,6 @@
           radial-gradient(ellipse 90% 60% at 85% 100%, rgba(49, 46, 129, 0.35) 0%, transparent 60%),
           linear-gradient(160deg, #050b1a 0%, #0c1530 45%, #16233f 100%);
       }
-      .compass-ring {
-        background: radial-gradient(
-          circle,
-          transparent 50%,
-          rgba(255, 255, 255, 0.05) 50%
-        );
-      }
-      .compass-direction-label {
-        position: absolute;
-        z-index: 20;
-        color: rgba(191, 219, 254, 0.95);
-        font-weight: 800;
-        font-size: 0.8rem;
-        line-height: 1;
-        text-shadow: 0 0 12px rgba(15, 23, 42, 0.75);
-        pointer-events: none;
-        user-select: none;
-      }
-      .compass-direction-n {
-        top: 0;
-        left: 50%;
-        transform: translateX(-50%);
-      }
-      .compass-direction-e {
-        right: 0;
-        top: 50%;
-        transform: translateY(-50%);
-      }
-      .compass-direction-s {
-        bottom: 0;
-        left: 50%;
-        transform: translateX(-50%);
-      }
-      .compass-direction-w {
-        left: 0;
-        top: 50%;
-        transform: translateY(-50%);
-      }
 
       /* ── Font size scaling ── */
       html.fs-1 { font-size: 108% !important; }
@@ -1587,12 +1549,292 @@ footer a:hover {
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35), 0 0 12px rgba(232, 193, 90, 0.10);
 }
 
-/* ── מודאל מצפן ── */
-#compass-modal > div {
-  border-color: rgba(232, 193, 90, 0.22) !important;
+/* ── מודאל מצפן — עיצוב מחדש 09/2026 (לילה מלכותי וזהב) ──
+   z-index מעל מודאל התפילה (200) וקורא הסליחות (240): נפתח גם מכפתור 🧭 בכותרת התפילה.
+   הסיבוב מתבצע ב-JS בכל פריים (rAF + מסנן) — אסור transition על transform בחוגה. */
+#compass-modal {
+  z-index: 320;
+  background: rgba(5, 11, 26, 0.9);
+  align-items: flex-start !important;   /* + margin:auto בכרטיס — ממורכז, ובמסך נמוך נגלל בלי להיחתך מלמעלה */
+}
+@media (min-width: 769px) {
+  #compass-modal { backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+}
+/* כשהמצפן פתוח מעל מודול עם X אוניברסלי (תפילות נוספות) — ה-X של המודול מתחת מוסתר; למצפן X משלו */
+body:has(#compass-modal:not(.hidden)) > .lux-ux { display: none !important; }
+.cmp-card {
+  position: relative;
+  margin: auto;
+  width: 100%;
+  max-width: 380px;
+  padding: 1.35rem 1.2rem 1.1rem;
+  border-radius: 2rem;
+  text-align: center;
+  direction: rtl;
+  color: #e2e8f0;
+  border: 1px solid rgba(232, 193, 90, 0.28);
   background:
-    radial-gradient(ellipse 130% 60% at 50% -10%, rgba(232, 193, 90, 0.07) 0%, transparent 55%),
-    linear-gradient(160deg, #16224a 0%, #0c1530 100%) !important;
+    radial-gradient(ellipse 120% 50% at 50% -6%, rgba(232, 193, 90, 0.13) 0%, transparent 60%),
+    linear-gradient(165deg, #17244d 0%, #0c1530 55%, #070e24 100%);
+  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+.cmp-x {
+  position: absolute;
+  top: 0.95rem;
+  left: 0.95rem;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #cbd5e1;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(232, 193, 90, 0.22);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.cmp-x:hover { background: rgba(255, 255, 255, 0.12); color: #fff; }
+.cmp-title {
+  margin: 0.15rem 2.8rem 0;
+  font-size: 1.5rem;
+  font-weight: 900;
+  line-height: 1.25;
+  color: #fdf3d0;
+}
+.cmp-sub {
+  margin: 0.2rem 0 0;
+  font-size: 0.82rem;
+  color: rgba(203, 213, 225, 0.72);
+}
+/* החוגה: גודל אחד (--s) שממנו נגזר הכול; המספרים/השנתות ב-SVG מתכווננים לבד */
+.cmp-dial {
+  --s: min(72vw, 288px, 40vh);
+  position: relative;
+  width: var(--s);
+  height: var(--s);
+  margin: calc(var(--s) * 0.06 + 1.1rem) auto 0.95rem;
+}
+.cmp-dial > svg.cmp-bezel,
+.cmp-rose,
+.cmp-arrow {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.cmp-bezel { overflow: visible; filter: drop-shadow(0 0 14px rgba(232, 193, 90, 0.22)); }
+.cmp-bezel-halo { fill: none; stroke: rgba(232, 193, 90, 0.18); stroke-width: 1; }
+.cmp-rose,
+.cmp-arrow {
+  transform-origin: 50% 50%;
+  will-change: transform;
+  transition: none;
+}
+.cmp-rose > svg { display: block; width: 100%; height: 100%; }
+.cmp-inner-ring { fill: none; stroke: rgba(232, 193, 90, 0.2); stroke-width: 1; }
+.cmp-cross { stroke: rgba(148, 163, 184, 0.12); stroke-width: 1; fill: none; }
+.cmp-t-s { stroke: rgba(203, 213, 225, 0.32); stroke-width: 1.2; }
+.cmp-t-m { stroke: rgba(203, 213, 225, 0.55); stroke-width: 1.5; }
+.cmp-t-M { stroke: rgba(242, 217, 138, 0.8); stroke-width: 2.2; }
+.cmp-t-c { stroke: #f2d98a; stroke-width: 3; }
+.cmp-num {
+  position: absolute;
+  font: 700 calc(var(--s) * 0.039) / 1 "Assistant", system-ui, sans-serif;
+  color: rgba(203, 213, 225, 0.7);
+  direction: ltr;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+.cmp-north-tri { fill: #ef4444; stroke: #7f1d1d; stroke-width: 0.8; }
+.cmp-lbl {
+  position: absolute;
+  font-family: var(--lux-serif);
+  font-weight: 900;
+  font-size: calc(var(--s) * 0.054);
+  line-height: 1;
+  color: #f2d98a;
+  white-space: nowrap;
+  text-shadow: 0 1px 6px rgba(5, 11, 26, 0.9);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+.cmp-lbl-n { color: #fca5a5; }
+/* סמן ירושלים — רוכב על טבעת הזהב בכיוון הקודש; כשהטלפון מכוון הוא יושב בדיוק מתחת לסמן העליון */
+.cmp-jeru {
+  position: absolute;
+  width: calc(var(--s) * 0.105);
+  height: calc(var(--s) * 0.105);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(var(--s) * 0.056);
+  line-height: 1;
+  background: radial-gradient(circle at 35% 30%, #fdf3d0 0%, #e0b74f 55%, #a1762a 100%);
+  border: 2px solid #0c1530;
+  box-shadow: 0 0 0 2px rgba(232, 193, 90, 0.55), 0 4px 12px rgba(0, 0, 0, 0.5);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+/* "הכיוון שלכם" — סמן זהב קבוע מעל החוגה */
+.cmp-lubber {
+  position: absolute;
+  left: 50%;
+  top: calc(var(--s) * -0.055 - 12px);
+  width: 0;
+  height: 0;
+  margin-left: -9px;
+  border-left: 9px solid transparent;
+  border-right: 9px solid transparent;
+  border-top: 13px solid #f2d98a;
+  filter: drop-shadow(0 0 5px rgba(232, 193, 90, 0.6));
+}
+.cmp-ray { stroke: rgba(242, 217, 138, 0.55); stroke-width: 2; stroke-dasharray: 3 5; stroke-linecap: round; fill: none; }
+.cmp-needle { fill: url(#cmpNeedleGold); stroke: rgba(12, 21, 48, 0.85); stroke-width: 1; }
+.cmp-needle-tail { fill: #475569; stroke: rgba(12, 21, 48, 0.85); stroke-width: 1; }
+.cmp-hub { fill: #e0b74f; stroke: #0c1530; stroke-width: 2.5; }
+.cmp-hub-dot { fill: #0c1530; }
+.cmp-arrow svg { display: block; width: 100%; height: 100%; filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.45)); }
+/* מכוון (±5°) — ירוק-אזמרגד עדין: מחט, טבעת, סמן ירושלים ותיבת ההודעה */
+.cmp-aligned .cmp-needle { fill: url(#cmpNeedleOk); }
+.cmp-aligned .cmp-ray { stroke: rgba(110, 231, 183, 0.8); }
+.cmp-aligned .cmp-bezel { filter: drop-shadow(0 0 16px rgba(52, 211, 153, 0.55)); }
+.cmp-aligned .cmp-lubber { border-top-color: #6ee7b7; filter: drop-shadow(0 0 7px rgba(52, 211, 153, 0.9)); }
+.cmp-aligned .cmp-jeru { box-shadow: 0 0 0 2px rgba(52, 211, 153, 0.9), 0 0 18px rgba(52, 211, 153, 0.75); }
+/* בלי חיישן — החוגה סטטית (צפון למעלה): סמן "הכיוון שלכם" חסר משמעות */
+.cmp-static .cmp-lubber { display: none; }
+.cmp-status-box {
+  padding: 0.75rem 0.9rem;
+  border-radius: 1.1rem;
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(232, 193, 90, 0.2);
+  transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+.cmp-status {
+  margin: 0;
+  font-size: 1.12rem;
+  font-weight: 800;
+  line-height: 1.4;
+  color: #fdf3d0;
+}
+.cmp-hint {
+  margin: 0.3rem 0 0;
+  min-height: 1.3em;
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.45;
+  color: #cbd5e1;
+}
+.cmp-aligned .cmp-status-box {
+  background: rgba(16, 185, 129, 0.13);
+  border-color: rgba(52, 211, 153, 0.55);
+  box-shadow: 0 0 22px rgba(52, 211, 153, 0.22);
+}
+.cmp-aligned .cmp-status { color: #6ee7b7; text-shadow: 0 0 14px rgba(52, 211, 153, 0.45); }
+.cmp-calib {
+  display: none;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.6rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 0.9rem;
+  text-align: right;
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.45;
+  color: #fde68a;
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.35);
+}
+.cmp-calib.cmp-show { display: flex; }
+.cmp-calib-ico { flex-shrink: 0; width: 44px; height: 22px; }
+.cmp-calib-ico path { fill: none; stroke-width: 3; stroke-linecap: round; }
+.cmp-calib-track { stroke: rgba(251, 191, 36, 0.3); }
+.cmp-calib-dot {
+  stroke: #fbbf24;
+  stroke-dasharray: 22 118;
+  animation: cmpFig8 1.6s linear infinite;
+}
+@keyframes cmpFig8 { to { stroke-dashoffset: -140; } }
+.cmp-perm-btn {
+  margin-top: 0.75rem;
+  width: 100%;
+  padding: 0.8rem 1rem;
+  border: none;
+  border-radius: 1rem;
+  font-size: 1rem;
+  font-weight: 900;
+  color: #1a1204;
+  background: linear-gradient(135deg, #f2d98a 0%, #c9993a 100%);
+  box-shadow: 0 8px 22px rgba(201, 153, 58, 0.35);
+  cursor: pointer;
+}
+.cmp-perm-btn.hidden { display: none; }
+.cmp-chips {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+.cmp-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  padding: 0.5rem 0.4rem;
+  border-radius: 0.9rem;
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.cmp-chip-k { font-size: 0.7rem; font-weight: 700; color: rgba(203, 213, 225, 0.7); }
+.cmp-chip-v { font-size: 1.15rem; font-weight: 900; color: #f2d98a; }
+.cmp-chip-sub { font-size: 0.76rem; font-weight: 700; color: #cbd5e1; }
+.cmp-loc {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem 0.5rem;
+  margin-top: 0.6rem;
+  font-size: 0.8rem;
+  color: #cbd5e1;
+}
+.cmp-loc-btn {
+  padding: 0.28rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid rgba(232, 193, 90, 0.38);
+  background: rgba(232, 193, 90, 0.08);
+  color: #f2d98a;
+  font-size: 0.76rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+.cmp-loc-btn[hidden] { display: none; }
+.cmp-loc-btn:disabled { opacity: 0.6; cursor: default; }
+.cmp-note {
+  margin: 0.7rem 0.2rem 0;
+  font-size: 0.72rem;
+  line-height: 1.55;
+  color: rgba(148, 163, 184, 0.9);
+}
+
+/* ── כפתור 🧭 בכותרת התפילות — אותה משפחה כמו כפתור המרקר 🖍️ (.lux-mk-btn) ── */
+.prayer-cmp-btn {
+  width: 38px; height: 38px; border-radius: 50%; padding: 0; line-height: 1; flex-shrink: 0;
+  border: 1.5px solid rgba(0, 0, 0, 0.08); background: rgba(0, 0, 0, 0.06); color: #1e293b;
+  font-size: 1.05rem; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: background .15s ease, border-color .15s ease, transform .15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.prayer-cmp-btn:hover { border-color: rgba(201, 153, 58, 0.45); }
+.prayer-cmp-btn:active { transform: scale(0.94); }
+.prayer-cmp-dark { background: rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.2); color: #e2e8f0; width: 2.2rem; height: 2.2rem; }   /* .lux-sel-head */
+@media (max-width: 420px) { .prayer-cmp-btn { width: 34px; height: 34px; font-size: 0.95rem; } }
+/* מסכים צרים מאוד (≤350px): שלושה כפתורים בכותרת התפילה — מצמצמים מרווח וכותרת כדי שהשם יישאר בשורה אחת */
+@media (max-width: 350px) {
+  #prayer-header-actions { gap: 0.3rem !important; }
+  #prayer-modal > div:first-child h2 { font-size: 1.12rem !important; }
 }
 
 /* ── כפתור חזרה למעלה (דסקטופ) ── */
@@ -8482,4 +8724,11 @@ html.dark #prayer-modal [style*="background:rgba(59,130,246,0.06)"]:has(.lv-pray
   background: rgba(59, 130, 246, 0.12) !important;
   border-color: rgba(96, 165, 250, 0.35) !important;
   color: #bfdbfe !important;
+}
+/* כפתורי הכותרת 🧭 (מצפן) ו-🖍️ (מרקר, כבוי) בקוראים הכהים — עיגול בהיר-שקוף כמו ☰ שלצידם */
+html.dark .prayer-cmp-btn:not(.prayer-cmp-dark),
+html.dark .lux-mk-btn:not(.lux-mk-on):not(.lux-mk-dark) {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.14);
+  color: #e2e8f0;
 }

@@ -2091,20 +2091,21 @@
       </div>
     </div>
 
+    <!-- מצפן כיוון התפילה (עיצוב מחדש 09/2026): החוגה נבנית ב-JS (_compassBuildDial),
+         z-index מעל מודאל התפילה (200) ומעל קורא הסליחות (240) — נפתח גם מכותרת התפילה -->
     <div
       id="compass-modal"
-      class="fixed inset-0 z-[100] bg-slate-900/95 backdrop-blur-md hidden flex items-center justify-center p-4 opacity-0 transition-opacity duration-300"
+      class="fixed inset-0 hidden flex items-center justify-center p-4 opacity-0 transition-opacity duration-300"
       style="overflow-y:auto;overscroll-behavior:contain;"
       role="dialog"
       aria-modal="true"
       aria-labelledby="compass-modal-title"
     >
-      <div
-        class="bg-slate-800 w-full max-w-sm rounded-[3rem] shadow-[0_0_50px_rgba(0,0,0,0.5)] p-8 border border-white/10 text-center relative flex flex-col items-center"
-      >
+      <div class="cmp-card">
         <button
+          type="button"
           onclick="window._closePopupViaBack('compass-modal')"
-          class="absolute top-6 left-6 text-slate-400 hover:text-white bg-white/5 p-3 rounded-full transition-colors"
+          class="cmp-x"
           aria-label="סגור"
         >
           <svg
@@ -2122,73 +2123,47 @@
             ></path>
           </svg>
         </button>
-        <h2
-          id="compass-modal-title"
-          class="text-2xl font-black text-white mb-1"
-          data-i18n-key="compass"
-        >
+        <h2 id="compass-modal-title" class="cmp-title" data-i18n-key="compass">
           מצפן לירושלים
         </h2>
-        <p class="text-slate-400 text-sm mb-10">
-          כוון את המכשיר למציאת כיוון התפילה
-        </p>
-        <div
-          class="relative w-64 h-64 mb-8 flex items-center justify-center"
-          aria-hidden="true"
-        >
-          <!-- compass-ring rotates by -alpha, direction labels inside rotate with it (real compass) -->
-          <div
-            id="compass-ring"
-            class="absolute inset-0 rounded-full border-4 border-blue-500/20 compass-ring transition-transform duration-100 ease-out"
-            style="position:absolute;"
-          >
-            <!-- Direction labels INSIDE ring — rotate with the compass rose -->
-            <span id="compass-dir-n" class="compass-direction-label compass-direction-n">צ</span>
-            <span id="compass-dir-e" class="compass-direction-label compass-direction-e">מ</span>
-            <span id="compass-dir-s" class="compass-direction-label compass-direction-s">ד</span>
-            <span id="compass-dir-w" class="compass-direction-label compass-direction-w">ע</span>
-            <!-- North dot marker (always at true north when compass rotates) -->
-            <div class="absolute top-2 w-3 h-3 bg-red-500 rounded-full shadow-[0_0_12px_rgba(239,68,68,0.9)]" style="left:50%;transform:translateX(-50%);"></div>
-            <!-- Cardinal tick marks -->
-            <div style="position:absolute;top:10px;left:50%;width:2px;height:12px;background:rgba(239,68,68,0.6);transform:translateX(-50%);border-radius:2px;"></div>
-            <div style="position:absolute;bottom:10px;left:50%;width:2px;height:12px;background:rgba(148,163,184,0.4);transform:translateX(-50%);border-radius:2px;"></div>
-            <div style="position:absolute;top:50%;right:10px;width:12px;height:2px;background:rgba(148,163,184,0.4);transform:translateY(-50%);border-radius:2px;"></div>
-            <div style="position:absolute;top:50%;left:10px;width:12px;height:2px;background:rgba(148,163,184,0.4);transform:translateY(-50%);border-radius:2px;"></div>
-          </div>
-          <div
-            id="compass-arrow"
-            class="absolute w-12 h-40 origin-bottom pb-20 transition-transform duration-100 ease-out"
-            style="transform: rotate(0deg)"
-          >
-            <svg
-              class="w-full h-full text-rose-500 drop-shadow-[0_0_15px_rgba(244,63,94,0.4)]"
-              fill="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path d="M12 2L4 22L12 17L20 22L12 2Z"></path>
-            </svg>
-          </div>
-          <div
-            class="absolute w-4 h-4 bg-white rounded-full z-10 shadow-[0_0_10px_rgba(255,255,255,0.5)]"
-          ></div>
+        <p class="cmp-sub">כיוון התפילה אל מקום המקדש</p>
+        <div id="compass-dial" class="cmp-dial" aria-hidden="true"></div>
+        <div class="cmp-status-box">
+          <p id="compass-status" class="cmp-status" aria-live="polite">מאתר את חיישן המצפן…</p>
+          <p id="compass-hint" class="cmp-hint"></p>
         </div>
-        <p
-          id="compass-status"
-          class="text-blue-300 font-bold bg-blue-900/30 px-6 py-3 rounded-2xl w-full"
-          aria-live="polite"
-        >
-          ממתין לחיישנים...<br /><span
-            class="text-[10px] font-normal opacity-70"
-            >(דורש אישור במכשיר נייד)</span
-          >
-        </p>
+        <div id="compass-calib" class="cmp-calib" role="note">
+          <svg class="cmp-calib-ico" viewBox="0 0 64 32" aria-hidden="true" focusable="false">
+            <path class="cmp-calib-track" d="M32 16 C24 4 8 4 8 16 C8 28 24 28 32 16 C40 4 56 4 56 16 C56 28 40 28 32 16 Z"></path>
+            <path class="cmp-calib-dot" pathLength="140" d="M32 16 C24 4 8 4 8 16 C8 28 24 28 32 16 C40 4 56 4 56 16 C56 28 40 28 32 16 Z"></path>
+          </svg>
+          <span>המצפן לא יציב — הזיזו את הטלפון באוויר בתנועת ∞ (שמונה שוכבת) כמה פעמים, הרחק ממתכות ומגנטים</span>
+        </div>
         <button
           id="btn-compass-permission"
-          class="hidden mt-4 bg-blue-600 text-white px-6 py-3 rounded-xl font-bold w-full"
+          type="button"
+          class="hidden cmp-perm-btn"
           onclick="requestCompassPermission()"
         >
           אשר גישה לחיישני כיוון
         </button>
+        <div class="cmp-chips">
+          <div class="cmp-chip">
+            <span class="cmp-chip-k">כיוון התפילה</span>
+            <b id="compass-bearing" class="cmp-chip-v">—</b>
+            <span id="compass-bearing-dir" class="cmp-chip-sub"></span>
+          </div>
+          <div class="cmp-chip">
+            <span class="cmp-chip-k">מרחק</span>
+            <b id="compass-distance" class="cmp-chip-v">—</b>
+            <span id="compass-distance-to" class="cmp-chip-sub">לירושלים</span>
+          </div>
+        </div>
+        <div class="cmp-loc">
+          <span id="compass-loc"></span>
+          <button id="compass-loc-btn" type="button" class="cmp-loc-btn" onclick="window._compassUseMyLocation()" hidden>דיוק לפי המיקום שלי</button>
+        </div>
+        <p class="cmp-note">הניחו את הטלפון שטוח, הרחק ממתכות ומגנטים. הכיוון מחושב אל קודש הקדשים בקו הקצר ביותר על פני כדור הארץ, כולל תיקון הסטייה המגנטית.</p>
       </div>
     </div>
 

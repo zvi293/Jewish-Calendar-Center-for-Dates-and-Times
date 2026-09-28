@@ -3357,6 +3357,8 @@
       }
       ov.innerHTML =
         '<div class="lux-sel-head">' +
+          // מצפן כיוון התפילה ליד המרקר (🖍️ מוזרק לפניו מ-universalMarker); onclick ישיר — מחוות משתמש ל-iOS
+          '<button type="button" class="prayer-cmp-btn prayer-cmp-dark" onclick="if(window.openCompass)window.openCompass()" aria-label="מצפן כיוון התפילה" title="מצפן — כיוון התפילה לירושלים">🧭</button>' +
           '<div class="lux-sel-titles">' +
             '<h2>🕊️ סליחות</h2>' +
             '<p>נוסח ' + esc(nus.label) + "</p>" +

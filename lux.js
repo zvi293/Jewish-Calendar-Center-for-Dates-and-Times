@@ -4735,8 +4735,86 @@
       else if (tracks && tracks.parentElement === main) tracks.insertAdjacentElement("beforebegin", b);
       else if (nav) nav.insertAdjacentElement("beforebegin", b);
     }
+    // כרטיסים עונתיים בעיצוב כרטיס הסליחות ובמיקומו (ראש התוכן, מעל כרטיס הברכה לחג):
+    // "סדר האושפיזין" בחול המועד סוכות (יום 2–7) ו"נרות חנוכה" מערב חנוכה עד זאת חנוכה.
+    // היום/הלילה — window._ushpizinDay / window._chanukahNight (script.js); התוכן נבנה בפתיחה
+    // לפי היום והנוסח (openUshpizinPage / openChanukahPage — פתיחה ישירה, סגירה חוזרת לדף הראשי).
+    var USH_NAMES = ["אברהם אבינו", "יצחק אבינו", "יעקב אבינו", "משה רבנו", "אהרן הכהן", "יוסף הצדיק", "דוד המלך"];
+    var USH_ORD = ["הראשון", "השני", "השלישי", "הרביעי", "החמישי", "השישי", "השביעי"];
+    var CH_ORD = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שביעי", "שמיני"];
+    function seasNusLabel() {
+      var nus = "";
+      try { nus = (typeof CURRENT_NUSACH !== "undefined" && CURRENT_NUSACH) || localStorage.getItem("moadim_nusach") || ""; } catch (e) {}
+      return { sfard: "ספרד", ashkenaz: "אשכנז" }[nus] || "עדות המזרח";
+    }
+    function placeSeasCard(id, cfg) {
+      var el = document.getElementById(id);
+      if (!cfg) { if (el) el.remove(); return; }
+      if (!el) {
+        el = document.createElement("section");
+        el.id = id;
+        el.className = "lux-seas-card " + cfg.cls;
+        // לחיצה על כל הכרטיס (כולל הכפתור שבתוכו) פותחת — כמו כרטיס הסליחות
+        el.addEventListener("click", function () {
+          var f = window[cfg.open];
+          if (typeof f === "function") f();
+        });
+      }
+      if (el.__seasKey !== cfg.key) {
+        el.__seasKey = cfg.key;
+        el.innerHTML =
+          '<div class="lux-selc-glow" aria-hidden="true"></div>' +
+          '<div class="lux-selc-icon" aria-hidden="true">' + cfg.icon + "</div>" +
+          '<div class="lux-selc-txt"><h3>' + esc(cfg.title) + "</h3><p>" + esc(cfg.sub) + '</p><p class="lux-selc-day">' + esc(cfg.day) + "</p></div>" +
+          '<button type="button" class="lux-seas-open">' + esc(cfg.btn) + "</button>";
+      }
+      // המיקום של כרטיס הסליחות: ראשון בתוכן — מיד מעל כרטיס הברכה לחג, אחרת מעל שורות הלימוד
+      var sel = document.getElementById("lux-selichot-card");
+      var shana = document.getElementById("lux-shana-entry");
+      if (sel && sel.parentElement) {
+        if (sel.nextElementSibling !== el) sel.insertAdjacentElement("afterend", el);
+        return;
+      }
+      if (shana) {
+        if (el.nextElementSibling !== shana) shana.insertAdjacentElement("beforebegin", el);
+        return;
+      }
+      if (el.isConnected) return;
+      var main = document.getElementById("main-content");
+      var nav = main ? main.querySelector("nav") : null;
+      var tracks = document.getElementById("lux-tracks-row");
+      if (tracks && tracks.parentElement === main) tracks.insertAdjacentElement("beforebegin", el);
+      else if (nav) nav.insertAdjacentElement("beforebegin", el);
+    }
+    function placeSeasonal() {
+      var lbl = seasNusLabel();
+      var d = 0, n = 0;
+      try { d = typeof window._ushpizinDay === "function" ? window._ushpizinDay() : 0; } catch (e) {}
+      try { n = typeof window._chanukahNight === "function" ? window._chanukahNight() : 0; } catch (e) {}
+      placeSeasCard("lux-ushpizin-card", d >= 2 && d <= 7 ? {
+        cls: "lux-seas-sukkot", icon: "🌿", open: "openUshpizinPage", key: d + "|" + lbl,
+        title: "סדר האושפיזין בסוכה",
+        sub: "נוסח " + lbl + " · הזמנת האושפיזין לכל יום מימי החג",
+        day: "היום: " + USH_NAMES[d - 1] + " · היום " + USH_ORD[d - 1] + " של סוכות" + (d === 7 ? " (הושענא רבה)" : ""),
+        btn: "לסדר האושפיזין ←",
+      } : null);
+      var dow = new Date().getDay();
+      placeSeasCard("lux-chanukah-card", n >= 1 && n <= 9 ? {
+        cls: "lux-seas-chanukah", icon: "🕎", open: "openChanukahPage", key: n + "|" + lbl + "|" + dow,
+        title: "נרות חנוכה",
+        sub: "נוסח " + lbl + " · ברכות, מעוז צור, יושב בסתר, סגולות ותפילות",
+        day: n === 9 ? "היום: זאת חנוכה — היום השמיני"
+          : "הערב: נר " + CH_ORD[n - 1] + (dow === 5 ? " · ערב שבת — לפני נרות שבת" : dow === 6 ? " · אחרי צאת השבת" : ""),
+        btn: "לסדר ההדלקה ←",
+      } : null);
+    }
+    window.__luxPlaceSeasonal = placeSeasonal;
     injectEntry();
-    setTimeout(injectEntry, 2600);
+    placeSeasonal();
+    setTimeout(function () { injectEntry(); placeSeasonal(); }, 2600);
+    // מעבר יום / החלפת נוסח / סוף החג — בדיקה זולה פעם בדקה ובחזרה ללשונית
+    setInterval(placeSeasonal, 60000);
+    document.addEventListener("visibilitychange", function () { if (!document.hidden) placeSeasonal(); });
   });
 
   /* ── 42. המרת תאריכים ומחשבון אירועים ──────────────────────────── */

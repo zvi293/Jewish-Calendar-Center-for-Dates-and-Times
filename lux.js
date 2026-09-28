@@ -561,6 +561,37 @@
     // פריסה השתנתה (סיבוב מסך / גודל כתב) — השורה מחושבת מחדש
     var _relayoutT = null;
     window.addEventListener("resize", function () { clearTimeout(_relayoutT); _relayoutT = setTimeout(function () { Object.keys(_lineState).forEach(function (k) { var st = _lineState[k]; if (st && st.block && st.block.isConnected) paintLine(k, st.block, st.off); }); }, 150); });
+    // לעוגן הגלילה של שינוי גודל/פונט הכתב (script.js _fontScrollAnchor*): התו המסומן בתוך
+    // מיכל הגלילה — כדי שהשורה המודגשת תחזור לאמצע המסך — וציור-מחדש מיידי של השורה אחרי
+    // השינוי (בלי להמתין לטיק של 1.2 שניות, שבו ההדגשה הישנה נמרחת על חצי שורה)
+    window._luxMarkCaret = function (sc) {
+      if (!enabled() || !sc) return null;
+      var ks = Object.keys(_lineState);
+      for (var i = 0; i < ks.length; i++) {
+        var st = _lineState[ks[i]];
+        if (!st || !st.block || !st.block.isConnected || !sc.contains(st.block)) continue;
+        var p = posAt(textNodes(st.block), st.off || 0);
+        if (p) return { node: p.node, offset: p.offset };
+      }
+      return null;
+    };
+    window._luxMarkRelayout = function () {
+      if (!enabled()) return;
+      Object.keys(_lineState).forEach(function (k) { var st = _lineState[k]; if (st && st.block && st.block.isConnected) paintLine(k, st.block, st.off); });
+    };
+    // גבולות השורה הצהובה כפי שצוירה (אחרי _luxMarkRelayout) — המרכוז מדויק לשורה המודגשת עצמה
+    window._luxMarkLineRect = function (sc) {
+      if (!enabled() || !sc) return null;
+      var ks = Object.keys(_lineState);
+      for (var i = 0; i < ks.length; i++) {
+        var st = _lineState[ks[i]];
+        if (!st || !st.range || !st.block || !st.block.isConnected || !sc.contains(st.block)) continue;
+        var rs = st.range.getClientRects(), top = Infinity, bot = -Infinity;
+        for (var j = 0; j < rs.length; j++) { if (rs[j].height > 0) { top = Math.min(top, rs[j].top); bot = Math.max(bot, rs[j].bottom); } }
+        return bot > top ? { top: top, bottom: bot } : null;
+      }
+      return null;
+    };
     // שחזור הסימון — גם אחרי שהמודאל נבנה מחדש (innerHTML)
     // iOS/ספארי: הקשה על טקסט "לא-אינטראקטיבי" לא מייצרת אירוע click למאזין
     // שעל document, אלא אם לאלמנט או לאב שלו יש מאזין click ישיר — לכן כל

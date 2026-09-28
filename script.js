@@ -136,7 +136,7 @@ const i18nDict = {
     sync_all: "סנכרן את הלוח ליומן שלך",
     sync_mobile: "סנכרן ליומן",
     settings_title: "הגדרות אישיות",
-    compass: "מצפן כיוון תפילה",
+    compass: "מצפן לירושלים",
     settings_language: "שפה",
     language_switch: "החלף שפה",
     notif_settings_title: "התראות דפדפן (פוש)",
@@ -255,33 +255,8 @@ function updateCurrentCityLabel() {
 }
 
 function updateCompassStatusText() {
-  const modal = document.getElementById("compass-modal");
-  const status = document.getElementById("compass-status");
-  const button = document.getElementById("btn-compass-permission");
-  if (!modal || modal.classList.contains("hidden") || !status || !button)
-    return;
-
-  const ui = getDynamicUiText();
-  button.textContent = ui.compassButton;
-  if (!button.classList.contains("hidden")) {
-    status.textContent = ui.compassPermission;
-    return;
-  }
-
-  if (status.classList.contains("text-emerald-400")) {
-    let targetLabel = ui.compassTargetJerusalem;
-    if (GPS_COORDS) {
-      if (isInJerusalem(GPS_COORDS.lat, GPS_COORDS.lon)) {
-        targetLabel = ui.compassTargetWall;
-      } else if (!isInIsrael(GPS_COORDS.lat, GPS_COORDS.lon)) {
-        targetLabel = ui.compassTargetIsrael;
-      }
-    }
-    status.textContent = ui.compassAligned(targetLabel);
-    return;
-  }
-
-  status.textContent = compassListener ? ui.compassRotate : ui.compassLocating;
+  // טקסטי המצפן נגזרים ממצב הריצה שלו (_cmp) — רענון בלבד כשהמודאל פתוח
+  if (typeof _compassRender === "function") _compassRender();
 }
 
 function refreshLiveLanguageUI() {
@@ -336,7 +311,12 @@ function setupModalBackdropClose() {
   });
   bindModalBackdropClose("omer-modal", closeOmerModal);
   bindModalBackdropClose("sefaria-modal", closeSefariaModal);
-  bindModalBackdropClose("compass-modal", function(){ window._closePopupViaBack("compass-modal"); });
+  bindModalBackdropClose("compass-modal", function(){
+    // ghost-tap: הלחיצה שפתחה את המצפן (כפתור בכותרת התפילה) נוחתת על הרקע — לא לסגור מיד
+    var cm = document.getElementById("compass-modal");
+    if (cm && Date.now() - (cm.__openedAt || 0) < 600) return;
+    window._closePopupViaBack("compass-modal");
+  });
   bindModalBackdropClose("calendar-modal", closeCalendar);
   bindModalBackdropClose("chok-israel-modal", closeChokLeIsraelModal);
 }
@@ -4913,9 +4893,6 @@ function getBearing(lat1, lon1, lat2, lon2) {
   return (toDeg(Math.atan2(y, x)) + 360) % 360;
 }
 
-const COMPASS_JERUSALEM_TARGET = { lat: 31.771959, lon: 35.217018 };
-const COMPASS_WESTERN_WALL_TARGET = { lat: 31.776221, lon: 35.234464 };
-
 function getDistanceKm(lat1, lon1, lat2, lon2) {
   const toRad = (deg) => (deg * Math.PI) / 180;
   const r = 6371;
@@ -4938,43 +4915,482 @@ function isInIsrael(lat, lon) {
   return lat >= 29.4 && lat <= 33.5 && lon >= 34.2 && lon <= 35.9;
 }
 
+// ═══ מצפן כיוון התפילה — עיצוב ודיוק מחדש (09/2026) ═══
+// יעד יחיד: קודש הקדשים (אבן השתייה שבהר הבית). בחו"ל מכוונים כנגד ארץ ישראל, בארץ
+// כנגד ירושלים ובירושלים כנגד המקדש (שו"ע או"ח צד, א) — כל הכיוונים מתכנסים לנקודה הזו.
+// הכיוון עצמו: אזימוט התחלתי של קו גדול (great-circle, getBearing) מהמיקום הנוכחי.
+const COMPASS_TARGET = { lat: 31.7781, lon: 35.2354 };
+
+// ── סטייה מגנטית — מודל WMM2025 הרשמי (NOAA/BGS, תקף 2025–2030) ──
+// שני מקורות החיישן מחזירים כיוון ביחס לצפון *המגנטי*: iOS webkitCompassHeading
+// (בקוד WebKit: CLHeading.magneticHeading) ואנדרואיד deviceorientationabsolute (בכרום:
+// TYPE_ROTATION_VECTOR, שציר ה-Y שלו פונה לצפון המגנטי). הכיוון לירושלים מחושב מהצפון
+// *האמיתי* — לכן מוסיפים את הסטייה פעם אחת בדיוק (אף מקור אינו מתוקן מראש, אין תיקון כפול).
+// בישראל כ-5 מעלות מזרחה, בניו יורק כ-12.5 מעלות מערבה. אומת מול קובץ ערכי-הבדיקה הרשמי (סטייה ≤0.005°).
+// מקדמי גאוס g, h ושינוייהם השנתיים לפי הסדר n=1..12, m=0..n (הקובץ WMM2025.COF).
+const _WMM2025 = [
+    -29351.8,0,12,0, -1410.8,4545.4,9.7,-21.5,
+    -2556.6,0,-11.6,0, 2951.1,-3133.6,-5.2,-27.7, 1649.3,-815.1,-8,-12.1,
+    1361,0,-1.3,0, -2404.1,-56.6,-4.2,4, 1243.8,237.5,0.4,-0.3, 453.6,-549.5,-15.6,-4.1,
+    895,0,-1.6,0, 799.5,278.6,-2.4,-1.1, 55.7,-133.9,-6,4.1, -281.1,212,5.6,1.6, 12.1,-375.6,-7,-4.4,
+    -233.2,0,0.6,0, 368.9,45.4,1.4,-0.5, 187.2,220.2,0,2.2, -138.7,-122.9,0.6,0.4, -142,43,2.2,1.7, 20.9,106.1,0.9,1.9,
+    64.4,0,-0.2,0, 63.8,-18.4,-0.4,0.3, 76.9,16.8,0.9,-1.6, -115.7,48.8,1.2,-0.4, -40.9,-59.8,-0.9,0.9, 14.9,10.9,0.3,0.7, -60.7,72.7,0.9,0.9,
+    79.5,0,0,0, -77,-48.9,-0.1,0.6, -8.8,-14.4,-0.1,0.5, 59.3,-1,0.5,-0.8, 15.8,23.4,-0.1,0, 2.5,-7.4,-0.8,-1, -11.1,-25.1,-0.8,0.6, 14.2,-2.3,0.8,-0.2,
+    23.2,0,-0.1,0, 10.8,7.1,0.2,-0.2, -17.5,-12.6,0,0.5, 2,11.4,0.5,-0.4, -21.7,-9.7,-0.1,0.4, 16.9,12.7,0.3,-0.5, 15,0.7,0.2,-0.6, -16.8,-5.2,0,0.3, 0.9,3.9,0.2,0.2,
+    4.6,0,0,0, 7.8,-24.8,-0.1,-0.3, 3,12.2,0.1,0.3, -0.2,8.3,0.3,-0.3, -2.5,-3.3,-0.3,0.3, -13.1,-5.2,0,0.2, 2.4,7.2,0.3,-0.1, 8.6,-0.6,-0.1,-0.2, -8.7,0.8,0.1,0.4, -12.9,10,-0.1,0.1,
+    -1.3,0,0.1,0, -6.4,3.3,0,0, 0.2,0,0.1,0, 2,2.4,0.1,-0.2, -1,5.3,0,0.1, -0.6,-9.1,-0.3,-0.1, -0.9,0.4,0,0.1, 1.5,-4.2,-0.1,0, 0.9,-3.8,-0.1,-0.1, -2.7,0.9,0,0.2, -3.9,-9.1,0,0,
+    2.9,0,0,0, -1.5,0,0,0, -2.5,2.9,0,0.1, 2.4,-0.6,0,0, -0.6,0.2,0,0.1, -0.1,0.5,-0.1,0, -0.6,-0.3,0,0, -0.1,-1.2,0,0.1, 1.1,-1.7,-0.1,0, -1,-2.9,-0.1,0, -0.2,-1.8,-0.1,0, 2.6,-2.3,-0.1,0,
+    -2,0,0,0, -0.2,-1.3,0,0, 0.3,0.7,0,0, 1.2,1,0,-0.1, -1.3,-1.4,0,0.1, 0.6,0,0,0, 0.6,0.6,0.1,0, 0.5,-0.1,0,0, -0.1,0.8,0,0, -0.4,0.1,0,0, -0.2,-1,-0.1,0, -1.3,0.1,0,0, -0.7,0.2,-0.1,-0.1,
+];
+function magneticDeclination(latDeg, lonDeg, date, altKm) {
+  const R = Math.PI / 180;
+  const d = date || new Date();
+  const y = d.getFullYear();
+  const t = y + (d - new Date(y, 0, 1)) / (new Date(y + 1, 0, 1) - new Date(y, 0, 1));
+  // מחוץ לתקופת המודל ממשיכים מהקצה הקרוב — הסטייה משתנה רק כעשירית מעלה בשנה
+  const dt = Math.max(0, Math.min(7, t - 2025));
+  const h = altKm || 0;
+  // קואורדינטות גאודטיות (WGS84) → גאוצנטריות כדוריות
+  const a = 6378.137, f = 1 / 298.257223563, e2 = f * (2 - f);
+  const sl = Math.sin(latDeg * R), cl = Math.cos(latDeg * R);
+  const Rc = a / Math.sqrt(1 - e2 * sl * sl);
+  const p = (Rc + h) * cl, z = (Rc * (1 - e2) + h) * sl;
+  const r = Math.sqrt(p * p + z * z);
+  const latc = Math.asin(z / r);
+  const ct = Math.sin(latc), st = Math.cos(latc);
+  const lon = lonDeg * R;
+  // פונקציות לז'נדר בנרמול שמידט-למחצה ונגזרותיהן לפי קו-הרוחב המשלים
+  const P = [[1]], dP = [[0]];
+  let X = 0, Y = 0, Z = 0, i = 0;
+  for (let n = 1; n <= 12; n++) {
+    P[n] = []; dP[n] = [];
+    const ar = Math.pow(6371.2 / r, n + 2);
+    for (let m = 0; m <= n; m++, i += 4) {
+      if (m === n) {
+        const k = n === 1 ? 1 : Math.sqrt((2 * n - 1) / (2 * n));
+        P[n][m] = k * st * P[n - 1][m - 1];
+        dP[n][m] = k * (st * dP[n - 1][m - 1] + ct * P[n - 1][m - 1]);
+      } else {
+        const k2 = Math.sqrt((n - 1) * (n - 1) - m * m), k3 = Math.sqrt(n * n - m * m);
+        const p2 = n - 2 >= m ? P[n - 2][m] : 0, dp2 = n - 2 >= m ? dP[n - 2][m] : 0;
+        P[n][m] = ((2 * n - 1) * ct * P[n - 1][m] - k2 * p2) / k3;
+        dP[n][m] = ((2 * n - 1) * (ct * dP[n - 1][m] - st * P[n - 1][m]) - k2 * dp2) / k3;
+      }
+      const g = _WMM2025[i] + dt * _WMM2025[i + 2], hh = _WMM2025[i + 1] + dt * _WMM2025[i + 3];
+      const cm = Math.cos(m * lon), sm = Math.sin(m * lon);
+      X += ar * (g * cm + hh * sm) * dP[n][m];
+      Y += ar * m * (g * sm - hh * cm) * P[n][m];
+      Z -= (n + 1) * ar * (g * cm + hh * sm) * P[n][m];
+    }
+  }
+  Y = st > 1e-8 ? Y / st : 0;
+  // חזרה למערכת הגאודטית (Y — רכיב מזרח — אינו משתנה)
+  const psi = latc - latDeg * R;
+  const Xg = X * Math.cos(psi) - Z * Math.sin(psi);
+  return Math.atan2(Y, Xg) / R;
+}
+
+function _compassNorm180(d) {
+  d = ((d % 360) + 360) % 360;
+  return d > 180 ? d - 360 : d;
+}
+
+// כיוון "למעלה במסך" (מעלות מהצפון המגנטי) מזוויות אוילר של deviceorientationabsolute (סדר Z-X'-Y'').
+// ציר "למעלה במסך" = ציר Y של המכשיר מסובב בזווית המסך (דיוקן: Y; נוף 90°: X; 270°: −X).
+// שטוח או מוטה — ההיטל האופקי שלו (שטוח: 360−alpha+זווית המסך). סמוך לזקוף — גב המכשיר (−Z),
+// שאינו תלוי בסיבוב המסך: שם ההיטל מתנוון (נעילת גימבל) אבל הכיוון שאליו מביטים יציב. מעבר רך בין 55° ל-85°.
+function _compassEulerHeading(alpha, beta, gamma, scr) {
+  const R = Math.PI / 180;
+  const a = alpha * R, b = (beta || 0) * R, g = (gamma || 0) * R, s = (scr || 0) * R;
+  const sa = Math.sin(a), ca = Math.cos(a), sb = Math.sin(b), cb = Math.cos(b);
+  const sg = Math.sin(g), cg = Math.cos(g), ss = Math.sin(s), cs = Math.cos(s);
+  // צירי המכשיר במערכת כדור הארץ (מזרח, צפון, מעלה): R = Rz(α)·Rx(β)·Ry(γ)
+  const yE = -sa * cb, yN = ca * cb, yU = sb;
+  const xE = ca * cg - sa * sb * sg, xN = sa * cg + ca * sb * sg, xU = -cb * sg;
+  const uE = cs * yE + ss * xE, uN = cs * yN + ss * xN, uU = cs * yU + ss * xU;
+  const zE = -ca * sg - sa * sb * cg, zN = -sa * sg + ca * sb * cg;
+  const tilt = Math.asin(Math.min(1, Math.abs(uU))) / R;
+  let k = Math.max(0, Math.min(1, (tilt - 55) / 30));
+  k = k * k * (3 - 2 * k);
+  const lu = Math.hypot(uE, uN) || 1, lz = Math.hypot(zE, zN) || 1;
+  const E = ((1 - k) * uE) / lu + (k * zE) / lz;
+  const N = ((1 - k) * uN) / lu + (k * zN) / lz;
+  if (Math.abs(E) < 1e-9 && Math.abs(N) < 1e-9) return (((360 - alpha + (scr || 0)) % 360) + 360) % 360;
+  return (Math.atan2(E, N) / R + 360) % 360;
+}
+
+// סיבוב המסך (נוף/דיוקן): החיישנים מדווחים ביחס לקצה העליון של המכשיר במצב דיוקן.
+// בשתי המוסכמות סיבוב המכשיר נגד כיוון השעון חיובי → הכיוון "למעלה במסך" = כיוון המכשיר + הזווית.
+function _compassScreenAngle(ios) {
+  let a = null;
+  if (ios && typeof window.orientation === "number") a = window.orientation;
+  else if (screen.orientation && typeof screen.orientation.angle === "number") a = screen.orientation.angle;
+  else if (typeof window.orientation === "number") a = window.orientation;
+  return a || 0;
+}
+
+// קריאת אירוע חיישן → {h: כיוון מגנטי של "למעלה במסך", acc} או null אם אין מצפן אמיתי
+function _compassReadEvent(e) {
+  if (!e) return null;
+  const wh = e.webkitCompassHeading;
+  if (typeof wh === "number" && isFinite(wh) && wh >= 0) {
+    return {
+      h: wh + _compassScreenAngle(true),
+      acc: typeof e.webkitCompassAccuracy === "number" ? e.webkitCompassAccuracy : null,
+    };
+  }
+  // alpha יחסי (deviceorientation רגיל באנדרואיד, או iOS בלי webkitCompassHeading) אינו
+  // מצפן — הכיוון שלו שרירותי. מקבלים רק נתון מוחלט ביחס לכדור הארץ.
+  const abs = e.absolute === true || e.type === "deviceorientationabsolute";
+  if (!abs || typeof e.alpha !== "number" || !isFinite(e.alpha)) return null;
+  return { h: _compassEulerHeading(e.alpha, e.beta, e.gamma, _compassScreenAngle(false)), acc: null };
+}
+
+// \u2060 (word joiner) אחרי המקף — שם הכיוון לא יישבר בין שתי שורות
+const _COMPASS_DIRS = ["צפון", "צפון־\u2060מזרח", "מזרח", "דרום־\u2060מזרח", "דרום", "דרום־\u2060מערב", "מערב", "צפון־\u2060מערב"];
+function _compassDirName(deg) {
+  return _COMPASS_DIRS[Math.round((((deg % 360) + 360) % 360) / 45) % 8];
+}
+function _compassFmtKm(km) {
+  if (km < 1) return Math.round(km * 1000) + " מ׳";
+  if (km < 10) return km.toFixed(1) + " ק״מ";
+  return Math.round(km).toLocaleString("he-IL") + " ק״מ";
+}
+
+// מצב ריצה של המצפן. mode: "" (סגור) | waiting | live | nosensor | needperm | denied
+const _cmp = {
+  mode: "", raf: 0, timer: 0, target: null, disp: null, sx: 0, cx: 1, lastT: 0,
+  bearing: 0, dist: 0, decl: 0, origin: null, live: null, locBusy: false, locDenied: false,
+  gotEvent: false, aligned: false, vibed: false, acc: null, hist: [], unstable: false,
+  badSince: 0, goodSince: 0, upright: [],
+};
+
+// יעד התפילה לפי המיקום (נשמר לתאימות — היעד תמיד מקום המקדש, רק הכינוי משתנה)
 function getCompassTarget(lat, lon) {
-  const ui = getDynamicUiText();
-  if (typeof lat !== "number" || typeof lon !== "number") {
-    return {
-      ...COMPASS_JERUSALEM_TARGET,
-      label: "ירושלים",
-    };
-  }
+  let label = "ירושלים";
+  if (typeof lat === "number" && typeof lon === "number" && isInJerusalem(lat, lon)) label = "מקום המקדש";
+  return { lat: COMPASS_TARGET.lat, lon: COMPASS_TARGET.lon, label: label };
+}
 
-  if (isInJerusalem(lat, lon)) {
-    return {
-      ...COMPASS_WESTERN_WALL_TARGET,
-      label: "הכותל",
-    };
-  }
+// נקודת המוצא: מיקום חי מהמכשיר (כשכבר אושר) — אחרת מיקום האתר (GPS שמור / עיר נבחרת)
+function _compassOrigin() {
+  if (_cmp.live) return { lat: _cmp.live.lat, lon: _cmp.live.lon, label: "", live: true };
+  const c = getLocationCoords();
+  let name = "";
+  try { name = localStorage.getItem("moadim_city_name") || ""; } catch (e) {}
+  return { lat: c.lat, lon: c.lon, label: name || "פתח תקווה", live: false };
+}
 
-  if (isInIsrael(lat, lon)) {
-    return {
-      ...COMPASS_JERUSALEM_TARGET,
-      label: "ירושלים",
-    };
-  }
+function _compassPlace(el, deg, rPct) {
+  const R = Math.PI / 180;
+  el.style.left = (50 + rPct * Math.sin(deg * R)).toFixed(3) + "%";
+  el.style.top = (50 - rPct * Math.cos(deg * R)).toFixed(3) + "%";
+}
 
-  return {
-    ...COMPASS_JERUSALEM_TARGET,
-    label: "ארץ ישראל",
+// בניית החוגה (פעם אחת): טבעת זהב קבועה, ורד מסתובב עם שנתות ומספרים, סמן ירושלים
+// על הטבעת, סמן "הכיוון שלכם" קבוע למעלה, ומחט שמצביעה תמיד לירושלים
+function _compassBuildDial() {
+  const host = document.getElementById("compass-dial");
+  if (!host || host.__built) return;
+  host.__built = true;
+  let ticks = "";
+  for (let i = 0; i < 72; i++) {
+    const deg = i * 5;
+    const cls = deg % 90 === 0 ? "cmp-t-c" : deg % 30 === 0 ? "cmp-t-M" : deg % 10 === 0 ? "cmp-t-m" : "cmp-t-s";
+    const len = deg % 90 === 0 ? 12 : deg % 30 === 0 ? 10 : deg % 10 === 0 ? 7 : 4;
+    ticks += `<line x1="150" y1="24" x2="150" y2="${24 + len}" transform="rotate(${deg} 150 150)" class="${cls}"/>`;
+  }
+  // מספרי המעלות — HTML (לא SVG) כדי שיישארו זקופים בכל סיבוב, בלי לצייר מחדש את ה-SVG בכל פריים
+  let nums = "";
+  for (let d = 30; d < 360; d += 30) {
+    if (d % 90) nums += `<span class="cmp-num" data-deg="${d}">${d}</span>`;
+  }
+  host.innerHTML =
+    `<svg class="cmp-bezel" viewBox="0 0 300 300" aria-hidden="true" focusable="false">
+      <defs><linearGradient id="cmpBezelGold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fdf3d0"/><stop offset=".45" stop-color="#e0b74f"/><stop offset="1" stop-color="#8a6420"/></linearGradient></defs>
+      <circle cx="150" cy="150" r="147" class="cmp-bezel-halo"/>
+      <circle cx="150" cy="150" r="140" fill="none" stroke="url(#cmpBezelGold)" stroke-width="5"/>
+    </svg>
+    <div id="compass-ring" class="cmp-rose">
+      <svg viewBox="0 0 300 300" aria-hidden="true" focusable="false">
+        <defs><radialGradient id="cmpFace" cx="50%" cy="42%" r="62%"><stop offset="0" stop-color="#1d2c5c"/><stop offset=".7" stop-color="#101b3f"/><stop offset="1" stop-color="#0a1230"/></radialGradient></defs>
+        <circle cx="150" cy="150" r="136" fill="url(#cmpFace)"/>
+        <circle cx="150" cy="150" r="58" class="cmp-inner-ring"/>
+        <path d="M150 92 V208 M92 150 H208" class="cmp-cross"/>
+        ${ticks}
+        <path d="M150 8 L158.5 21 L141.5 21 Z" class="cmp-north-tri"/>
+      </svg>
+      <span id="compass-dir-n" class="cmp-lbl cmp-lbl-n">צפון</span>
+      <span id="compass-dir-e" class="cmp-lbl">מזרח</span>
+      <span id="compass-dir-s" class="cmp-lbl">דרום</span>
+      <span id="compass-dir-w" class="cmp-lbl">מערב</span>
+      ${nums}
+      <span id="compass-jeru" class="cmp-jeru" title="ירושלים — מקום המקדש"><span>🕍</span></span>
+    </div>
+    <div class="cmp-lubber" aria-hidden="true"></div>
+    <div id="compass-arrow" class="cmp-arrow">
+      <svg viewBox="0 0 300 300" aria-hidden="true" focusable="false">
+        <defs>
+          <linearGradient id="cmpNeedleGold" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#a1762a"/><stop offset=".5" stop-color="#f7e6ab"/><stop offset=".5" stop-color="#e0b74f"/><stop offset="1" stop-color="#8a6420"/></linearGradient>
+          <linearGradient id="cmpNeedleOk" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#047857"/><stop offset=".5" stop-color="#a7f3d0"/><stop offset=".5" stop-color="#34d399"/><stop offset="1" stop-color="#065f46"/></linearGradient>
+        </defs>
+        <path d="M150 28 V76" class="cmp-ray"/>
+        <path d="M150 76 L162 150 L138 150 Z" class="cmp-needle"/>
+        <path d="M138 150 L162 150 L150 198 Z" class="cmp-needle-tail"/>
+        <circle cx="150" cy="150" r="12" class="cmp-hub"/>
+        <circle cx="150" cy="150" r="4" class="cmp-hub-dot"/>
+      </svg>
+    </div>`;
+  const lbl = ["n", "e", "s", "w"].map((k) => document.getElementById("compass-dir-" + k));
+  lbl.forEach((el, i) => { if (el) _compassPlace(el, i * 90, 29.5); });
+  const numEls = Array.prototype.slice.call(host.querySelectorAll(".cmp-num"));
+  numEls.forEach((el) => _compassPlace(el, +el.getAttribute("data-deg"), 33.4));
+  _cmp.upright = lbl.concat(numEls, [document.getElementById("compass-jeru")]).filter(Boolean);
+  updateCompassDirectionLabels();
+}
+
+// עדכון נקודת המוצא → כיוון, מרחק וסטייה מגנטית; מיקום סמן ירושלים על הוורד
+function _compassUpdateTarget() {
+  const o = _compassOrigin();
+  _cmp.origin = o;
+  _cmp.bearing = getBearing(o.lat, o.lon, COMPASS_TARGET.lat, COMPASS_TARGET.lon);
+  _cmp.dist = getDistanceKm(o.lat, o.lon, COMPASS_TARGET.lat, COMPASS_TARGET.lon);
+  let decl = 0;
+  try { decl = magneticDeclination(o.lat, o.lon, new Date()); } catch (e) {}
+  _cmp.decl = isFinite(decl) ? decl : 0;
+  const j = document.getElementById("compass-jeru");
+  if (j) _compassPlace(j, _cmp.bearing, 48.6);
+  _compassSetText("compass-bearing", (Math.round(_cmp.bearing) % 360) + "°");
+  _compassSetText("compass-bearing-dir", _compassDirName(_cmp.bearing));
+  _compassSetText("compass-distance", _compassFmtKm(_cmp.dist));
+  _compassSetText("compass-distance-to", isInJerusalem(o.lat, o.lon) ? "להר הבית" : "לירושלים");
+  _compassRenderLoc();
+  _compassRender();
+}
+
+function _compassRenderLoc() {
+  const el = document.getElementById("compass-loc");
+  const btn = document.getElementById("compass-loc-btn");
+  const o = _cmp.origin;
+  if (el && o) el.textContent = o.live ? "📍 לפי המיקום הנוכחי שלכם" : "📍 לפי המיקום: " + o.label;
+  if (btn) {
+    btn.hidden = !navigator.geolocation || !!(o && o.live);
+    btn.disabled = _cmp.locBusy;
+    btn.textContent = _cmp.locBusy ? "מאתר מיקום…" : _cmp.locDenied ? "הגישה למיקום נחסמה" : "דיוק לפי המיקום שלי";
+  }
+}
+
+// מיקום חי: בפתיחה — רק אם ההרשאה כבר ניתנה (בלי חלון); בלחיצה על הכפתור — בקשה רגילה
+function _compassRefreshLocation(userAsked) {
+  if (!navigator.geolocation || !navigator.geolocation.getCurrentPosition) return;
+  const run = function () {
+    _cmp.locBusy = true;
+    _compassRenderLoc();
+    navigator.geolocation.getCurrentPosition(
+      function (pos) {
+        _cmp.locBusy = false;
+        if (!pos || !pos.coords || !isFinite(pos.coords.latitude)) { _compassRenderLoc(); return; }
+        _cmp.live = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+        _compassUpdateTarget();
+      },
+      function (err) {
+        _cmp.locBusy = false;
+        if (userAsked && err && err.code === 1) _cmp.locDenied = true;
+        _compassRenderLoc();
+      },
+      { enableHighAccuracy: false, timeout: 12000, maximumAge: 10 * 60000 },
+    );
   };
+  if (userAsked) { run(); return; }
+  try {
+    if (navigator.permissions && navigator.permissions.query) {
+      navigator.permissions.query({ name: "geolocation" }).then(function (st) {
+        if (st && st.state === "granted") run();
+      }).catch(function () {});
+    }
+  } catch (e) {}
+}
+window._compassUseMyLocation = function () { _compassRefreshLocation(true); };
+
+function _compassSetText(id, txt) {
+  const el = document.getElementById(id);
+  if (el && el.textContent !== txt) el.textContent = txt;
+}
+
+// טקסטי המצב והמחלקות של הכרטיס (הסיבוב עצמו — ב-_compassApply)
+function _compassRender() {
+  const m = document.getElementById("compass-modal");
+  if (!m || m.classList.contains("hidden") || !_cmp.mode) return;
+  const card = m.querySelector(".cmp-card");
+  const btn = document.getElementById("btn-compass-permission");
+  const mode = _cmp.mode;
+  const isStatic = mode === "nosensor" || mode === "denied" || mode === "needperm";
+  if (card) {
+    card.classList.toggle("cmp-static", isStatic);
+    card.classList.toggle("cmp-live", mode === "live");
+    if (mode !== "live") card.classList.remove("cmp-aligned");
+  }
+  if (btn) btn.classList.toggle("hidden", mode !== "needperm");
+  if (mode === "live") {
+    if (_cmp.disp != null) _compassApply(_cmp.disp);
+    else _compassLiveText();
+    return;
+  }
+  _cmp.aligned = false;
+  const dir = (Math.round(_cmp.bearing) % 360) + "° (" + _compassDirName(_cmp.bearing) + ")";
+  if (mode === "nosensor") {
+    _compassSetText("compass-status", "לא זוהה חיישן מצפן במכשיר הזה");
+    _compassSetText("compass-hint", "כיוון התפילה מכאן: " + dir + ". בחוגה הצפון למעלה — עמדו כשפניכם לכיוון החץ.");
+  } else if (mode === "needperm") {
+    _compassSetText("compass-status", "נדרש אישור לחיישני הכיוון");
+    _compassSetText("compass-hint", "לחצו על הכפתור ואשרו את הגישה בחלון שייפתח");
+  } else if (mode === "denied") {
+    _compassSetText("compass-status", "הגישה לחיישני הכיוון נחסמה");
+    _compassSetText("compass-hint", "אפשר לאשר מחדש בהגדרות הדפדפן. כיוון התפילה מכאן: " + dir);
+  } else {
+    _compassSetText("compass-status", "מאתר את חיישן המצפן…");
+    _compassSetText("compass-hint", "החזיקו את הטלפון שטוח, מקביל לרצפה");
+  }
+  _compassApply(0);
+  _compassShowCalib(false);
+}
+
+function _compassLiveText() {
+  const card = document.querySelector("#compass-modal .cmp-card");
+  if (_cmp.aligned) {
+    const inJ = _cmp.origin && isInJerusalem(_cmp.origin.lat, _cmp.origin.lon);
+    _compassSetText("compass-status", inJ ? "✓ אתם פונים למקום המקדש" : "✓ אתם פונים לירושלים");
+    _compassSetText("compass-hint", "הכיוון מדויק — אפשר להתפלל");
+  } else {
+    const rel = _compassNorm180(_cmp.bearing - (_cmp.disp == null ? 0 : _cmp.disp));
+    const n = Math.round(Math.abs(rel));
+    _compassSetText("compass-status", "סובבו את הטלפון עד שהחץ מצביע למעלה");
+    _compassSetText("compass-hint", rel > 0 ? "↻ פנו ימינה עוד " + n + "°" : "↺ פנו שמאלה עוד " + n + "°");
+  }
+  if (card) card.classList.toggle("cmp-aligned", _cmp.aligned);
+}
+
+// h = הכיוון האמיתי (מעלות מהצפון האמיתי) שאליו פונה "למעלה במסך"
+function _compassApply(h) {
+  const rose = document.getElementById("compass-ring");
+  const arrow = document.getElementById("compass-arrow");
+  if (rose) rose.style.transform = "rotate(" + (-h).toFixed(2) + "deg)";
+  const up = "translate(-50%,-50%) rotate(" + h.toFixed(2) + "deg)";
+  for (let i = 0; i < _cmp.upright.length; i++) _cmp.upright[i].style.transform = up;
+  const rel = _compassNorm180(_cmp.bearing - h);
+  if (arrow) arrow.style.transform = "rotate(" + rel.toFixed(2) + "deg)";
+  if (_cmp.mode !== "live") return;
+  // חלון היישור ±5° עם היסטרזיס (יציאה רק מעבר ל-7°) — בלי ריצוד של ההודעה בגבול
+  const ar = Math.abs(rel);
+  const was = _cmp.aligned;
+  _cmp.aligned = was ? ar <= 7 : ar <= 5;
+  if (_cmp.aligned && !was && !_cmp.vibed) {
+    _cmp.vibed = true;
+    try { if (navigator.vibrate) navigator.vibrate(35); } catch (e) {}
+  }
+  if (ar > 15) _cmp.vibed = false;
+  _compassLiveText();
+}
+
+// לולאת אנימציה: מסנן מעביר-נמוכים על מעגל היחידה (sin/cos) — חלק, בלי קפיצה במעבר 359°→0°,
+// ובלי מעברי CSS שנלחמים בעדכונים
+function _compassLoop(ts) {
+  _cmp.raf = 0;
+  const m = document.getElementById("compass-modal");
+  if (!m || m.classList.contains("hidden") || !_cmp.mode) return;
+  _cmp.raf = requestAnimationFrame(_compassLoop);
+  if (_cmp.mode !== "live" || _cmp.target == null) { _cmp.lastT = ts; return; }
+  const dt = _cmp.lastT ? Math.min(0.25, Math.max(0, (ts - _cmp.lastT) / 1000)) : 0.016;
+  _cmp.lastT = ts;
+  const tr = (_cmp.target * Math.PI) / 180;
+  if (_cmp.disp == null) {
+    _cmp.sx = Math.sin(tr);
+    _cmp.cx = Math.cos(tr);
+  } else {
+    const k = 1 - Math.exp(-dt / 0.14);
+    _cmp.sx += (Math.sin(tr) - _cmp.sx) * k;
+    _cmp.cx += (Math.cos(tr) - _cmp.cx) * k;
+  }
+  const h = ((Math.atan2(_cmp.sx, _cmp.cx) * 180) / Math.PI + 360) % 360;
+  if (_cmp.disp != null && Math.abs(_compassNorm180(h - _cmp.disp)) < 0.02) return;
+  _cmp.disp = h;
+  _compassApply(h);
+}
+
+function _compassShowCalib(on) {
+  const el = document.getElementById("compass-calib");
+  if (el) el.classList.toggle("cmp-show", !!on);
+}
+
+// רמז כיול (תנועת ∞): iOS — דיוק המצפן שהמערכת מדווחת; אנדרואיד (אין דיווח דיוק) —
+// ריצוד: הפרש-שני של רצף הקריאות. סיבוב חלק של היד כמעט אפס, רעש מגנטי קופץ.
+function _compassTrackStability(h, acc, now) {
+  let bad;
+  if (acc != null) {
+    bad = acc < 0 || acc > 25;
+  } else {
+    const H = _cmp.hist;
+    H.push(h);
+    if (H.length > 24) H.shift();
+    if (H.length < 12) return;
+    const s = [];
+    for (let i = 2; i < H.length; i++) {
+      s.push(Math.abs(_compassNorm180(H[i] - H[i - 1]) - _compassNorm180(H[i - 1] - H[i - 2])));
+    }
+    s.sort(function (x, y) { return x - y; });
+    const med = s[s.length >> 1];
+    bad = _cmp.unstable ? med > 1.5 : med > 3.5;
+  }
+  if (bad) {
+    _cmp.goodSince = 0;
+    if (!_cmp.badSince) _cmp.badSince = now;
+    if (!_cmp.unstable && now - _cmp.badSince > 1500) { _cmp.unstable = true; _compassShowCalib(true); }
+  } else {
+    _cmp.badSince = 0;
+    if (!_cmp.goodSince) _cmp.goodSince = now;
+    if (_cmp.unstable && now - _cmp.goodSince > 2500) { _cmp.unstable = false; _compassShowCalib(false); }
+  }
+}
+
+function _compassOnOrientation(e) {
+  if (!_cmp.mode) return;
+  const r = _compassReadEvent(e);
+  if (!r) return;
+  _cmp.gotEvent = true;
+  if (_cmp.timer) { clearTimeout(_cmp.timer); _cmp.timer = 0; }
+  // מגנטי → אמיתי: תיקון הסטייה פעם אחת בדיוק
+  const h = (((r.h + _cmp.decl) % 360) + 360) % 360;
+  _cmp.target = h;
+  _cmp.acc = r.acc;
+  _compassTrackStability(h, r.acc, Date.now());
+  if (_cmp.mode !== "live") {
+    _cmp.mode = "live";
+    _cmp.disp = null;
+    _compassRender();
+  }
 }
 
 function openCompass() {
   const m = document.getElementById("compass-modal");
   // כבר פתוח (ghost-tap בנייד) — פתיחה שנייה הייתה מוסיפה נעילה ורשומה כפולות
-  if (!m.classList.contains("hidden")) return;
+  if (!m || !m.classList.contains("hidden")) return;
+  m.__closing = false;
+  m.__openedAt = Date.now();
   _revealModalNoFreeze(m);
+  // startCompass מבקש את הרשאת החיישנים סינכרונית — עדיין בתוך מחוות הלחיצה (חובה ב-iOS)
   startCompass();
   lockBodyScroll();
   pushModalState("compass-modal");
+}
+
+function _compassUnbind() {
+  if (compassListener) {
+    // נוספו עם capture=true — ההסרה חייבת את אותו דגל (בלעדיו המאזינים דלפו בכל פתיחה)
+    window.removeEventListener("deviceorientationabsolute", compassListener, true);
+    window.removeEventListener("deviceorientation", compassListener, true);
+    compassListener = null;
+  }
+  if (_cmp.timer) { clearTimeout(_cmp.timer); _cmp.timer = 0; }
 }
 
 function closeCompass() {
@@ -4985,104 +5401,95 @@ function closeCompass() {
   if (m.classList.contains("hidden")) return;
   m.classList.add("opacity-0");
   setTimeout(() => m.classList.add("hidden"), 300);
-  if (compassListener) {
-    window.removeEventListener("deviceorientationabsolute", compassListener);
-    window.removeEventListener("deviceorientation", compassListener);
-  }
+  _compassUnbind();
+  if (_cmp.raf) { cancelAnimationFrame(_cmp.raf); _cmp.raf = 0; }
+  _cmp.mode = "";
   unlockBodyScroll();
 }
 
 function startCompass() {
-  if (
-    typeof DeviceOrientationEvent !== "undefined" &&
-    typeof DeviceOrientationEvent.requestPermission === "function"
-  ) {
-    document
-      .getElementById("btn-compass-permission")
-      .classList.remove("hidden");
-    document.getElementById("compass-status").textContent =
-      "נדרש אישור חיישנים";
-  } else {
+  _compassBuildDial();
+  _compassUnbind();
+  Object.assign(_cmp, {
+    target: null, disp: null, lastT: 0, gotEvent: false, aligned: false, vibed: false,
+    acc: null, hist: [], unstable: false, badSince: 0, goodSince: 0, mode: "waiting",
+  });
+  _compassShowCalib(false);
+  _compassUpdateTarget();
+  _compassRefreshLocation(false);
+  if (!_cmp.raf) _cmp.raf = requestAnimationFrame(_compassLoop);
+  const DOE = typeof DeviceOrientationEvent !== "undefined" ? DeviceOrientationEvent : null;
+  if (DOE && typeof DOE.requestPermission === "function") {
+    // iOS 13+ (וכרום חדש): הבקשה חייבת לצאת בתוך מחוות משתמש — openCompass נקרא ישירות
+    // מ-onclick, ולכן היא כאן ולא מאחורי כפתור נוסף. בלי מחווה (פתיחה מקיצור) — כפתור אישור.
+    let p = null;
+    try { p = DOE.requestPermission(); } catch (e) { p = null; }
+    if (p && typeof p.then === "function") {
+      p.then(
+        function (res) {
+          if (res === "granted") {
+            try { localStorage.setItem("lux_compass_perm", "1"); } catch (e) {}
+            bindCompass();
+          } else if (!compassListener && _cmp.mode) {
+            _cmp.mode = "denied";
+            _compassRender();
+          }
+        },
+        function () {
+          if (!compassListener && _cmp.mode) { _cmp.mode = "needperm"; _compassRender(); }
+        },
+      );
+    } else {
+      _cmp.mode = "needperm";
+      _compassRender();
+    }
+  } else if (DOE || "ondeviceorientationabsolute" in window) {
     bindCompass();
+  } else {
+    _cmp.mode = "nosensor";
+    _compassRender();
   }
 }
 
 function requestCompassPermission() {
-  DeviceOrientationEvent.requestPermission()
-    .then((res) => {
-      if (res === "granted") {
-        document
-          .getElementById("btn-compass-permission")
-          .classList.add("hidden");
-        bindCompass();
-      }
-    })
-    .catch(console.error);
+  const DOE = typeof DeviceOrientationEvent !== "undefined" ? DeviceOrientationEvent : null;
+  if (!DOE || typeof DOE.requestPermission !== "function") { bindCompass(); return; }
+  let p = null;
+  try { p = DOE.requestPermission(); } catch (e) { p = null; }
+  if (!p || typeof p.then !== "function") return;
+  p.then(function (res) {
+    if (res === "granted") {
+      try { localStorage.setItem("lux_compass_perm", "1"); } catch (e) {}
+      bindCompass();
+    } else if (_cmp.mode) {
+      _cmp.mode = "denied";
+      _compassRender();
+    }
+  }).catch(console.error);
 }
 
 function bindCompass() {
-  const setCompassStatus = (text) => {
-    document.getElementById("compass-status").textContent = text;
-  };
-  setCompassStatus("מאתר כיוון התפילה...");
-  const handler = (e) => {
-    let alpha =
-      e.webkitCompassHeading != null
-        ? e.webkitCompassHeading
-        : e.absolute && e.alpha != null
-          ? (360 - e.alpha) % 360
-          : null;
-    if (alpha == null) alpha = Math.abs((e.alpha || 0) - 360);
-    if (alpha != null) {
-      const lat1 = GPS_COORDS ? GPS_COORDS.lat : 32.084;
-      const lon1 = GPS_COORDS ? GPS_COORDS.lon : 34.8878;
-      const target = getCompassTarget(lat1, lon1);
-      const bearing = getBearing(lat1, lon1, target.lat, target.lon);
-      const rotation = bearing - alpha;
-
-      // Rotate compass rose (N/E/S/W labels) with device heading
-      document.getElementById("compass-ring").style.transform =
-        `rotate(${-alpha}deg)`;
-      // Counter-rotate each label to keep text upright
-      const counterRot = `rotate(${alpha}deg)`;
-      document.getElementById("compass-dir-n").style.transform =
-        `translateX(-50%) ${counterRot}`;
-      document.getElementById("compass-dir-s").style.transform =
-        `translateX(-50%) ${counterRot}`;
-      document.getElementById("compass-dir-e").style.transform =
-        `translateY(-50%) ${counterRot}`;
-      document.getElementById("compass-dir-w").style.transform =
-        `translateY(-50%) ${counterRot}`;
-      // Prayer direction arrow
-      document.getElementById("compass-arrow").style.transform =
-        `rotate(${rotation}deg)`;
-
-      const normalizedRot = Math.abs(rotation % 360);
-      if (normalizedRot < 15 || normalizedRot > 345) {
-        document.getElementById("compass-status").textContent =
-          `מכוון ל${target.label}! ✨`;
-        document
-          .getElementById("compass-status")
-          .classList.replace("text-blue-300", "text-emerald-400");
-        document
-          .getElementById("compass-arrow")
-          .children[0].classList.replace("text-rose-500", "text-emerald-500");
-      } else {
-        document.getElementById("compass-status").textContent =
-          "סובב את המכשיר...";
-        document
-          .getElementById("compass-status")
-          .classList.replace("text-emerald-400", "text-blue-300");
-        document
-          .getElementById("compass-arrow")
-          .children[0].classList.replace("text-emerald-500", "text-rose-500");
-      }
-    }
-  };
+  const m = document.getElementById("compass-modal");
+  // המודאל נסגר לפני שההרשאה חזרה — לא מאזינים לחיישנים ברקע
+  if (!m || m.classList.contains("hidden") || !_cmp.mode) return;
+  const btn = document.getElementById("btn-compass-permission");
+  if (btn) btn.classList.add("hidden");
+  // כבר מאזינים — קריאה כפולה (lux.js / כפתור האישור) לא מכפילה מאזינים ולא מאפסת מצב
+  if (compassListener) return;
+  compassListener = _compassOnOrientation;
   if ("ondeviceorientationabsolute" in window)
-    window.addEventListener("deviceorientationabsolute", handler, true);
-  else window.addEventListener("deviceorientation", handler, true);
-  compassListener = handler;
+    window.addEventListener("deviceorientationabsolute", compassListener, true);
+  window.addEventListener("deviceorientation", compassListener, true);
+  if (!_cmp.gotEvent) {
+    _cmp.mode = "waiting";
+    _compassRender();
+  }
+  // אין קריאת מצפן תוך 3 שניות (מחשב שולחני / מכשיר בלי מגנטומטר) — חוגה סטטית, צפון למעלה
+  if (_cmp.timer) clearTimeout(_cmp.timer);
+  _cmp.timer = setTimeout(function () {
+    _cmp.timer = 0;
+    if (!_cmp.gotEvent && compassListener) { _cmp.mode = "nosensor"; _compassRender(); }
+  }, 3000);
 }
 
 function getDaysDiff(d) {
@@ -17169,9 +17576,9 @@ window._luxModalStepBack = function(modalId) {
     "ben-ish-hai-modal": ["bih-reading-pane"],
     "tehillim-modal": ["tehillim-psalm-pane"]
   };
-  // פופאפ קל (תוכן עניינים / בוחר חודש / תרומה) פתוח מעל המודול — ה-X סוגר אותו בלבד
+  // פופאפ קל (תוכן עניינים / בוחר חודש / תרומה / מצפן מכותרת התפילה) פתוח מעל המודול — ה-X סוגר אותו בלבד
   var topNow = _activeModals[_activeModals.length - 1];
-  if (["chapter-nav-popup", "cal-month-year-picker", "donation-modal", "contact-modal"].indexOf(topNow) !== -1 && document.getElementById(topNow)) {
+  if (["chapter-nav-popup", "cal-month-year-picker", "donation-modal", "contact-modal", "compass-modal"].indexOf(topNow) !== -1 && document.getElementById(topNow)) {
     window._closePopupViaBack(topNow);
     return true;
   }
@@ -19018,6 +19425,10 @@ function renderPrayerModalShell(title, isPopup, prayerKey) {
   const _prayerNavBtnHtml = _showPrayerNavBtn
     ? `<button onclick="openPrayerNavPopup()" title="תפריט תפילה" aria-label="תפריט תפילה" style="background:rgba(0,0,0,0.06);border:none;color:#64748b;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.15rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;">☰</button>`
     : "";
+  // מצפן כיוון התפילה — ליד כפתור המרקר (lux.js מזריק את 🖍️ כילד ראשון, כלומר מימין לו).
+  // נפתח מעל התפילה בלי לסגור אותה; onclick ישיר — אישור החיישנים ב-iOS דורש מחוות משתמש.
+  // בלי "סגור"/"חזרה" ב-aria-label ובלי close במחלקה/onclick — שה-X האוניברסלי לא יחשוב שזה כפתור סגירה.
+  const _prayerCompassBtnHtml = `<button type="button" class="prayer-cmp-btn" onclick="openCompass()" aria-label="מצפן כיוון התפילה" title="מצפן — כיוון התפילה לירושלים">🧭</button>`;
   if (isPopup) {
     modal.style.cssText =
       "position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);display:flex;align-items:flex-start;justify-content:center;padding:1rem;overflow-y:auto;";
@@ -19025,7 +19436,7 @@ function renderPrayerModalShell(title, isPopup, prayerKey) {
             <div class="modal-inner" style="background:#faf9f6;border:1px solid rgba(0,0,0,0.1);border-radius:2rem;padding:1.5rem;width:100%;max-width:760px;max-height:min(88vh,980px);margin:auto;box-shadow:0 25px 60px rgba(0,0,0,0.2);text-align:center;direction:rtl;display:flex;flex-direction:column;overflow:hidden;">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;gap:0.5rem;">
                 <div id="prayer-header-actions" style="display:flex;align-items:center;gap:0.5rem;flex-shrink:0;">
-                  ${_prayerNavBtnHtml}
+                  ${_prayerCompassBtnHtml}${_prayerNavBtnHtml}
                 </div>
                 <h3 class="modal-title" style="color:#000000;font-size:1.4rem;font-weight:900;margin:0;min-width:0;">${title}</h3>
                 <button class="modal-close" onclick="closePrayerModal()" style="background:rgba(0,0,0,0.06);border:none;color:#64748b;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.2rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✕</button>
@@ -19044,7 +19455,7 @@ function renderPrayerModalShell(title, isPopup, prayerKey) {
     modal.innerHTML = `
             <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem 0.75rem;border-bottom:1px solid rgba(0,0,0,0.08);flex-shrink:0;background:#faf9f6;gap:0.5rem;">
               <div id="prayer-header-actions" style="display:flex;align-items:center;gap:0.5rem;flex-shrink:0;">
-                ${_prayerNavBtnHtml}
+                ${_prayerCompassBtnHtml}${_prayerNavBtnHtml}
               </div>
               <div style="min-width:0;">
                 <h2 style="color:#1a1a1a;font-size:1.3rem;font-weight:900;margin:0;">${title}</h2>
@@ -28320,6 +28731,8 @@ function openSefarimNosafimPage(_pageMode) {
     "<div id=\"sn-reader-view\" style=\"display:none;position:absolute;inset:0;background:#faf9f6;flex-direction:column;overflow:hidden;\">",
       "<div style=\"display:flex;align-items:center;justify-content:space-between;padding:0.7rem 1rem;border-bottom:1px solid rgba(0,0,0,0.09);background:#faf9f6;flex-shrink:0;gap:0.5rem;\">",
         "<div id=\"sn-reader-tools\" style=\"display:flex;gap:0.35rem;flex-shrink:0;\">",
+          // עמוד התפילות הנוספות: מצפן כיוון התפילה ליד המרקר (🖍️ מוזרק לפניו מ-lux.js)
+          (_pageMode === "tefilot" ? "<button type=\"button\" class=\"prayer-cmp-btn\" onclick=\"openCompass()\" aria-label=\"מצפן כיוון התפילה\" title=\"מצפן — כיוון התפילה לירושלים\">🧭</button>" : ""),
           "<button id=\"sn-chapters-btn\" onclick=\"window._snGoToChapters();\" style=\"background:rgba(0,0,0,0.06);border:none;color:#1e293b;padding:0.4rem 0.55rem;border-radius:999px;cursor:pointer;font-size:0.82rem;\" title=\"כל הפרקים\">📑</button>",
           // בעמוד התפילות אין סימניות (לבקשת המשתמש 09/2026) — רק בספרים
           (_pageMode === "tefilot" ? "" : "<button id=\"sn-reader-bm-btn\" onclick=\"window._snToggleBookmark();\" style=\"background:rgba(0,0,0,0.06);border:none;color:#1e293b;padding:0.4rem 0.55rem;border-radius:999px;cursor:pointer;font-size:0.82rem;\" title=\"סימנייה\">🔖</button>"),

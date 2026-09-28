@@ -30,7 +30,18 @@ function safeCacheSetItem(cacheKey, valueStr) {
   return false; // אין מקום גם אחרי פינוי (ערך ענק) — מוותרים על המטמון בשקט
 }
 
-// ניקוי בעליית האפליקציה: רשומות שפג תוקפן (12ש') נמחקות, והנפח הכולל של
+// ── מדיניות מטמון ה-API (09/2026 — אתר שנפתח תמיד, גם בלי אינטרנט / ברשת חלשה) ──
+// כל הכתובות שעוברות כאן מפורשות-תאריך (hebcal) או טקסט קבוע (ספריא) — התוכן של
+// כתובת נתונה לא משתנה, ולכן גם עותק ישן נכון: עותק שמור מוחזר תמיד מיד (בלי
+// להמתין לרשת), ומתרענן ברקע לכל היותר פעם בשעה. לפני כן עותק מעל 12 שעות נמחק
+// בעליית האתר וחייב המתנה של עד 10 שניות לרשת — ובלי אינטרנט הזמנים לא הוצגו כלל.
+// העותקים נשמרים עכשיו 14 יום (הנפח הכולל עדיין מוגבל, ראו למטה).
+const HEBCAL_CACHE_KEEP_MS = 14 * 24 * 60 * 60 * 1000;
+// רענון ברקע — לכל היותר פעם בשעה לכתובת (התוכן קבוע; ברשת חלשה הורדה חוזרת של
+// רשימות השנה בכל פתיחה רק מתחרה ברוחב-הפס)
+const HEBCAL_REVALIDATE_MS = 60 * 60 * 1000;
+
+// ניקוי בעליית האפליקציה: רשומות ישנות מ-14 יום נמחקות, והנפח הכולל של
 // המטמון מוגבל — כדי ש-localStorage מלא לא יחנוק כתיבות הגדרות במקומות אחרים.
 (function pruneHebcalCache() {
   try {
@@ -48,7 +59,7 @@ function safeCacheSetItem(cacheKey, valueStr) {
     let total = 0;
     const alive = [];
     for (const e of entries) {
-      if (now - e.ts > 12 * 60 * 60 * 1000) localStorage.removeItem(e.k);
+      if (now - e.ts > HEBCAL_CACHE_KEEP_MS) localStorage.removeItem(e.k);
       else { alive.push(e); total += e.size; }
     }
     alive.sort((a, b) => a.ts - b.ts);
@@ -60,57 +71,48 @@ function safeCacheSetItem(cacheKey, valueStr) {
   } catch (_) {}
 })();
 
-async function fetchHebcalWithCache(url) {
-  const cacheKey = "hebcal_cache_" + url;
-  const cachedStr = localStorage.getItem(cacheKey);
-  const now = Date.now();
-
-  if (cachedStr) {
-    try {
-      const cachedData = JSON.parse(cachedStr);
-      // Valid for 12 hours
-      if (now - cachedData.timestamp < 12 * 60 * 60 * 1000) {
-        // Stale-while-revalidate background update
-        if (navigator.onLine) {
-          fetch(url, { signal: AbortSignal.timeout(8000) })
-            .then((r) => r.json())
-            .then((data) => {
-              safeCacheSetItem(
-                cacheKey,
-                JSON.stringify({ timestamp: Date.now(), data }),
-              );
-            })
-            .catch(() => {});
+// בקשת רשת אחת לכתובת (בקשות מקבילות לאותה כתובת חולקות אותה) — נכתבת למטמון
+function _hebcalNetRequest(url, cacheKey, timeoutMs) {
+  if (API_INFLIGHT_CACHE.has(url)) return API_INFLIGHT_CACHE.get(url);
+  const request = fetch(url, { signal: AbortSignal.timeout(timeoutMs) })
+    .then((res) =>
+      res.json().then((data) => {
+        // תשובת שגיאה (4xx/5xx עם גוף JSON) מוחזרת למבקש כמו קודם (הקוראים בודקים
+        // data.error), אבל לא נשמרת — שלא תידרס/תוחזק שגיאה במקום נתון תקין
+        if (res.ok) {
+          safeCacheSetItem(
+            cacheKey,
+            JSON.stringify({ timestamp: Date.now(), data }),
+          );
         }
-        return cachedData.data;
-      }
-    } catch (e) {}
+        return data;
+      }),
+    )
+    .finally(() => {
+      API_INFLIGHT_CACHE.delete(url);
+    });
+  API_INFLIGHT_CACHE.set(url, request);
+  return request;
+}
+
+async function fetchHebcalWithCache(url, opts) {
+  const cacheKey = "hebcal_cache_" + url;
+  const timeoutMs = (opts && opts.timeoutMs) || 10000;
+  let cached = null;
+  try {
+    const cachedStr = localStorage.getItem(cacheKey);
+    if (cachedStr) cached = JSON.parse(cachedStr);
+  } catch (e) {}
+
+  if (cached && typeof cached === "object" && "data" in cached) {
+    // Stale-while-revalidate: השמור מיד, רענון ברקע (עם זמן המתנה נדיב — אין מי שמחכה)
+    if (navigator.onLine !== false && Date.now() - (cached.timestamp || 0) > HEBCAL_REVALIDATE_MS) {
+      _hebcalNetRequest(url, cacheKey, 20000).catch(() => {});
+    }
+    return cached.data;
   }
 
-  try {
-    if (API_INFLIGHT_CACHE.has(url)) {
-      return API_INFLIGHT_CACHE.get(url);
-    }
-    const request = fetch(url, { signal: AbortSignal.timeout(10000) })
-      .then((res) => res.json())
-      .then((data) => {
-        safeCacheSetItem(
-          cacheKey,
-          JSON.stringify({ timestamp: now, data }),
-        );
-        return data;
-      })
-      .finally(() => {
-        API_INFLIGHT_CACHE.delete(url);
-      });
-    API_INFLIGHT_CACHE.set(url, request);
-    return await request;
-  } catch (err) {
-    if (cachedStr) {
-      try { return JSON.parse(cachedStr).data; } catch (_) {}
-    }
-    throw err;
-  }
+  return _hebcalNetRequest(url, cacheKey, timeoutMs);
 }
 
 // --- Translations (i18n) ---
@@ -3267,6 +3269,14 @@ async function ensureCityCoords() {
     window._cityCoords = JSON.parse(cached);
     return;
   }
+  // עיר ברירת המחדל (פתח תקווה, 293918): הקואורדינטות ידועות מראש וזהות בדיוק
+  // לתשובת hebcal (שם אין גובה → 0) — ביקור ראשון לא ממתין לרשת כדי לחשב זמנים
+  if (String(GEO_LOCATION) === "293918") {
+    const cityCoords = { lat: 32.08707, lon: 34.88747, tzid: "Asia/Jerusalem", elevation: 0 };
+    try { localStorage.setItem("moadim_city_coords", JSON.stringify(cityCoords)); } catch (e) {}
+    window._cityCoords = cityCoords;
+    return;
+  }
 
   // Fetch from HebCal to get coordinates for the geonameid
   try {
@@ -3292,7 +3302,272 @@ async function ensureCityCoords() {
   }
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// ✦  אתר שנפתח תמיד — גם בלי אינטרנט וגם ברשת חלשה (09/2026)
+// ═══════════════════════════════════════════════════════════════════════════
+// fetchLiveCalendarData לא ממתינה לרשת יותר מחלון קצר: מה שלא הגיע בזמן (או
+// נכשל) מוחלף בנתון מקומי — תאריך עברי מהמטמון המוקדם או מחושב במכשיר, דף יומי
+// מהמטמון המוקדם, אירועים שמורים — והדשבורד נפתח מיד. כשהנתונים האמיתיים מגיעים
+// (ונשמרים למטמון) הפונקציה רצה שוב ומחליפה אותם ("ממלא פרטים לאט לאט").
+const LIVE_DATA_NET_WINDOW_MS = 1500;
+let _liveDataRunSeq = 0; // מזהה הריצה האחרונה — ריצה ישנה לא מתזמנת ריענון
+let _liveDataReruns = 0; // מונה ריענונים רצופים — עד 6 (חמישה מקורות שעשויים לאחר + מרווח; הגנה מלולאה)
+let _liveDataStale = false; // הריצה האחרונה הציגה נתונים שמורים/מקומיים במקום רשת
+
+// ── מטמון מוקדם: תאריכים עבריים + דף יומי + הדלקת נרות/הבדלה של חגים ל-35 הימים
+// הבאים (סבב בקשות אחד בשבוע) — כך גם ביום חדש בלי אינטרנט התאריך, אירועי היום
+// (לתפילות), הדף היומי וזמני כניסת/יציאת החג מדויקים.
+const _OFFLINE_AHEAD_KEY = "moadim_offline_ahead_v1";
+const _OFFLINE_AHEAD_DAYS = 35;
+let _offlineAheadBusy = false;
+function _isoLocalDate(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+function _offlineAheadRead() {
+  try {
+    const a = JSON.parse(localStorage.getItem(_OFFLINE_AHEAD_KEY) || "null");
+    return a && typeof a === "object" ? a : null;
+  } catch (e) {
+    return null;
+  }
+}
+function _offlineAheadGet(kind, iso) {
+  const a = _offlineAheadRead();
+  return (a && a[kind] && a[kind][iso]) || null;
+}
+function _offlineAheadRefresh() {
+  if (_offlineAheadBusy || navigator.onLine === false) return;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const soon = new Date(today);
+  soon.setDate(soon.getDate() + 10);
+  const a = _offlineAheadRead();
+  const geo = getGeoParams(); // זמני החג תלויי מיקום — מיקום חדש = רענון
+  if (a && a.until >= _isoLocalDate(soon) && Date.now() - (a.ts || 0) < 7 * 864e5 && a.geo === geo) return;
+  const end = new Date(today);
+  end.setDate(end.getDate() + _OFFLINE_AHEAD_DAYS);
+  const s = _isoLocalDate(today);
+  const e = _isoLocalDate(end);
+  const getJson = (u) =>
+    fetch(u, { signal: AbortSignal.timeout(20000) }).then((r) => {
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    });
+  _offlineAheadBusy = true;
+  Promise.all([
+    getJson(`https://www.hebcal.com/converter?cfg=json&start=${s}&end=${e}&g2h=1&i=on`),
+    getJson(`https://www.hebcal.com/hebcal?v=1&cfg=json&F=on&start=${s}&end=${e}`),
+    // אותה שאילתה כמו זיהוי כניסת החג בדשבורד (c=on&maj=on&i=on), לטווח ארוך יותר
+    getJson(`https://www.hebcal.com/hebcal?v=1&cfg=json&c=on&${geo}&start=${s}&end=${e}&maj=on&i=on`).catch(() => null),
+  ])
+    .then(([conv, daf, hc]) => {
+      const out = { ts: Date.now(), from: s, until: e, geo, hdates: {}, daf: {}, hc: null };
+      const hdates = (conv && conv.hdates) || {};
+      Object.keys(hdates).forEach((k) => {
+        const v = hdates[k];
+        if (v && v.hm && v.hd) {
+          out.hdates[k] = { hy: v.hy, hm: v.hm, hd: v.hd, hebrew: v.hebrew, heDateParts: v.heDateParts, events: v.events || [], il: v.il };
+        }
+      });
+      ((daf && daf.items) || []).forEach((it) => {
+        if (it.category === "dafyomi" && it.date) {
+          out.daf[String(it.date).substring(0, 10)] = { title: it.title, hebrew: it.hebrew };
+        }
+      });
+      if (hc && Array.isArray(hc.items)) {
+        out.hc = hc.items
+          .filter((it) => it && it.date && /^(candles|havdalah|holiday)$/.test(it.category))
+          .map((it) => ({
+            category: it.category,
+            date: it.date,
+            title: it.title,
+            hebrew: it.hebrew,
+            // ה-memo של חג הוא תיאור ארוך שאיננו בשימוש — נשמר רק להדלקה/הבדלה
+            memo: it.category === "holiday" ? undefined : it.memo,
+          }));
+      }
+      if (Object.keys(out.hdates).length) {
+        try { localStorage.setItem(_OFFLINE_AHEAD_KEY, JSON.stringify(out)); } catch (e2) {}
+      }
+    })
+    .catch(() => {})
+    .finally(() => {
+      _offlineAheadBusy = false;
+    });
+}
+
+// ── תאריך עברי בלי רשת (במבנה של ממיר hebcal: hy/hm/hd/hebrew/events) ──
+// קודם מהמטמון המוקדם; אחרת חישוב במכשיר (Intl) + אירועי היום מרשימות השנה
+// השמורות (ALL_EVENTS_FULL — אותן כותרות hebcal בדיוק) + יום העומר.
+function _offlineDateData(iso) {
+  const ahead = _offlineAheadGet("hdates", iso);
+  if (ahead && ahead.hm && ahead.hd) return Object.assign({}, ahead, { _offline: "ahead" });
+  const d = parseLocalDate(iso);
+  let hy = 0,
+    hm = "",
+    hd = 0;
+  try {
+    new Intl.DateTimeFormat("en-u-ca-hebrew", { day: "numeric", month: "long", year: "numeric" })
+      .formatToParts(d)
+      .forEach((p) => {
+        if (p.type === "day") hd = parseInt(p.value, 10) || 0;
+        else if (p.type === "year") hy = parseInt(p.value, 10) || 0;
+        else if (p.type === "month") hm = p.value;
+      });
+    // שמות החודשים של Intl → האיות של hebcal (שבו משתמשות התפילות)
+    hm = { Tishri: "Tishrei", Heshvan: "Cheshvan", Shevat: "Sh'vat", Iyar: "Iyyar" }[hm] || hm;
+  } catch (e) {}
+  const events = [];
+  try {
+    const evs = window.ALL_EVENTS_FULL || (typeof ALL_EVENTS !== "undefined" ? ALL_EVENTS : []) || [];
+    evs.forEach((ev) => {
+      if (!ev || ev.date !== iso || ev.type === "moon" || ev.type === "parashat") return;
+      if (ev.titleStr === "Selichot Edot HaMizrach") return; // אירוע פנימי, לא של hebcal
+      const t = ev.titleStr || ev.heb || ev.name;
+      if (t && events.indexOf(t) < 0) events.push(t);
+    });
+  } catch (e) {}
+  let omer = 0;
+  if (hm === "Nisan" && hd >= 16) omer = hd - 15;
+  else if (hm === "Iyyar") omer = 15 + hd;
+  else if (hm === "Sivan" && hd <= 5) omer = 44 + hd;
+  if (omer > 0 && omer <= 49) events.push(omer + " day of the Omer");
+  let hebrew = "";
+  try {
+    hebrew = (getHebrewDateString(d) + (hy ? " " + hebYearToLetters(hy) : "")).trim();
+  } catch (e) {}
+  return { hy, hm, hd, hebrew, events, il: true, _offline: "local" };
+}
+// זיהוי כניסת החג בלי רשת: פריטי ההדלקה/ההבדלה/החג של הטווח מהמטמון המוקדם
+// (רק אם נשמר לאותו מיקום); אחרת null — כמו תשובה שלא הגיעה
+function _offlineHcData(fromIso, toIso) {
+  const a = _offlineAheadRead();
+  if (!a || !Array.isArray(a.hc) || a.geo !== getGeoParams()) return null;
+  return {
+    items: a.hc.filter((it) => {
+      const d = String(it.date).substring(0, 10);
+      return d >= fromIso && d <= toIso;
+    }),
+  };
+}
+function _offlineDafData(iso) {
+  const a = _offlineAheadGet("daf", iso);
+  return { items: a && a.title ? [{ category: "dafyomi", title: a.title, hebrew: a.hebrew || a.title }] : [] };
+}
+
+// ── חיווי עדין למצב הרשת (לא חוסם, נעלם לבד) ──
+function _showNetPill(kind) {
+  const texts = {
+    offline: "📴 אין חיבור — מוצגים הנתונים השמורים",
+    weak: (typeof ALL_EVENTS !== "undefined" && ALL_EVENTS.length)
+      ? "📶 חיבור איטי — מוצגים נתונים שמורים"
+      : "📶 חיבור איטי — הנתונים בדרך",
+    back: "✓ החיבור חזר — מעדכן נתונים",
+  };
+  let el = document.getElementById("net-status-pill");
+  if (!kind || !texts[kind]) {
+    if (el && el.__kind) {
+      el.__kind = "";
+      clearTimeout(el.__hideT);
+      el.style.opacity = "0";
+      // הסתרה ודאית גם אם מעבר ה-opacity קפא (טאב ברקע / PWA מושהה)
+      el.__hideT = setTimeout(() => { el.style.display = "none"; }, 400);
+    }
+    return;
+  }
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "net-status-pill";
+    el.setAttribute("role", "status");
+    el.setAttribute("aria-live", "polite");
+    el.style.cssText =
+      "position:fixed;left:50%;top:calc(env(safe-area-inset-top, 0px) + 4.6rem);transform:translateX(-50%);" +
+      // בין כפתורי הירח והמנורה בנייד (לא מכסה אותם); טקסט ארוך יורד שורה
+      "z-index:60;width:max-content;max-width:calc(100vw - 120px);box-sizing:border-box;padding:0.4rem 0.9rem;border-radius:999px;" +
+      "background:rgba(15,23,42,0.93);color:#f8fafc;border:1px solid rgba(251,191,36,0.5);" +
+      "box-shadow:0 6px 18px rgba(0,0,0,0.28);font-size:0.78rem;font-weight:700;line-height:1.35;" +
+      "text-align:center;direction:rtl;" +
+      "pointer-events:none;display:none;opacity:0;transition:opacity 0.35s ease;";
+    document.body.appendChild(el);
+  }
+  el.__kind = kind;
+  el.textContent = texts[kind];
+  // מסך רחב: מרכז שורת הכפתורים העליונה פנוי — שם החיווי לא מסתיר את שורת הברכה
+  el.style.top = window.innerWidth >= 800
+    ? "calc(env(safe-area-inset-top, 0px) + 1.2rem)"
+    : "calc(env(safe-area-inset-top, 0px) + 4.6rem)";
+  clearTimeout(el.__hideT);
+  el.style.display = "block";
+  requestAnimationFrame(() => { if (el.__kind === kind) el.style.opacity = "1"; });
+  el.__hideT = setTimeout(() => {
+    if (el.__kind === kind) _showNetPill(null);
+  }, kind === "back" ? 2800 : 6500);
+}
+
+// ── ריענון אחרי נתונים מקומיים: ברגע שנתון שאחר לחלון מגיע (ונשמר למטמון) —
+// ריצה נוספת שמציגה אותו; נכשלו כולם ברשת חלשה — ניסיון נוסף בעוד 45 שניות ──
+function _scheduleLiveDataRerun(runSeq, late) {
+  if (runSeq !== _liveDataRunSeq) return;
+  _liveDataStale = late.length > 0;
+  if (navigator.onLine === false) {
+    // האירוע "online" יריץ ריענון כשהחיבור יחזור
+    if (_liveDataReruns === 0) _showNetPill("offline");
+    return;
+  }
+  if (!late.length) {
+    _liveDataReruns = 0;
+    const pill = document.getElementById("net-status-pill");
+    if (pill && pill.__kind === "weak") _showNetPill(null);
+    // הכול הגיע מהרשת — מרעננים ברקע את המטמון המוקדם לימים הבאים (פעם בשבוע)
+    setTimeout(_offlineAheadRefresh, 5000);
+    return;
+  }
+  let pending = late.length;
+  let fired = false;
+  const rerun = (delay) => {
+    if (fired || _liveDataReruns >= 6) return;
+    fired = true;
+    setTimeout(() => {
+      if (runSeq !== _liveDataRunSeq) return; // ריצה חדשה כבר התחילה (החלפת עיר וכו')
+      _liveDataReruns++;
+      fetchLiveCalendarData();
+    }, delay);
+  };
+  late.forEach((p) =>
+    p.then(
+      () => { pending--; rerun(400); },
+      () => { pending--; },
+    ),
+  );
+  // חיווי "חיבור איטי" — רק אם הנתונים עדיין בדרך כעבור כמה שניות
+  setTimeout(() => {
+    if (runSeq === _liveDataRunSeq && _liveDataStale && pending > 0 && navigator.onLine !== false) {
+      _showNetPill("weak");
+    }
+  }, 3500);
+  // כל הבקשות נכשלו (אין אינטרנט בפועל, גם אם הדפדפן "מחובר") — חיווי אופליין,
+  // וניסיון נוסף בעוד 45 שניות
+  Promise.allSettled(late).then((rs) => {
+    if (rs.some((r) => r.status === "fulfilled") || runSeq !== _liveDataRunSeq) return;
+    if (_liveDataReruns === 0) _showNetPill("offline");
+    rerun(45000);
+  });
+}
+window.addEventListener("offline", () => _showNetPill("offline"));
+window.addEventListener("online", () => {
+  if (!_liveDataStale) {
+    _showNetPill(null);
+    // הכול הוצג מהמטמון — רק משלימים ברקע את המטמון המוקדם אם התיישן
+    setTimeout(_offlineAheadRefresh, 5000);
+    return;
+  }
+  _showNetPill("back");
+  _liveDataReruns = 0;
+  setTimeout(() => fetchLiveCalendarData(), 1200);
+});
+
 async function fetchLiveCalendarData() {
+  const _runSeq = ++_liveDataRunSeq;
   try {
     const now = new Date();
     const ui = getDynamicUiText();
@@ -3355,6 +3630,9 @@ async function fetchLiveCalendarData() {
       isAfterTzeit = true;
     }
 
+    // זמני היום מחושבים במכשיר (KosherZmanim) — מוצגים מיד, בלי לחכות לשום בקשת רשת
+    renderZmanimGrid(zData);
+
     let hebrewDateFetchIso = todayLocalIso;
     let dateForHebcal = new Date();
     dateForHebcal.setHours(0, 0, 0, 0);
@@ -3381,6 +3659,10 @@ async function fetchLiveCalendarData() {
       p.catch(() => {});
       return p;
     };
+    // הדשבורד לא ממתין לבקשות האלה (ראו _orLocal למטה) — לכן ברשת חלשה נותנים
+    // להן זמן נדיב (דקה) להשלים ברקע, במקום לוותר אחרי 10 שניות — רשימות השנה
+    // (עשרות KB) ברשת של כמה KB לשנייה יכולות לקחת חצי דקה ויותר
+    const _BOOT_NET = { timeoutMs: 60000 };
     const _pDate = _quiet(
       fetchHebcalWithCache(
         // i=on — לוח ארץ-ישראל: בלעדיו הממיר החזיר את סכמת חו"ל, שבה ט"ז ניסן/תשרי
@@ -3388,38 +3670,73 @@ async function fetchLiveCalendarData() {
         // מסומן "Pesach VIII"/"Shavuot II"/"Simchat Torah" — והתפילות קיבלו
         // הלל ויעלה-ויבוא ביום חול רגיל. (מפתח הקאש נגזר מה-URL — מתרענן מעצמו.)
         `https://www.hebcal.com/converter?cfg=json&date=${hebrewDateFetchIso}&g2h=1&strict=1&i=on`,
+        _BOOT_NET,
       ),
     );
     const _pDaf = _quiet(
       fetchHebcalWithCache(
         `https://www.hebcal.com/hebcal?v=1&cfg=json&F=on&start=${hebrewDateFetchIso}&end=${hebrewDateFetchIso}`,
+        _BOOT_NET,
       ),
     );
     const _pShabbat = _quiet(
       fetchHebcalWithCache(
         `https://www.hebcal.com/shabbat?cfg=json&${getGeoParams()}&m=50&date=${todayLocalIso}`,
+        _BOOT_NET,
       ),
     );
     const _pHc = _quiet(
       fetchHebcalWithCache(
         `https://www.hebcal.com/hebcal?v=1&cfg=json&c=on&${getGeoParams()}&start=${_isoPre(_hcBasePre)}&end=${_isoPre(_hcEndPre)}&maj=on&i=on`,
+        _BOOT_NET,
       ),
     );
     const _pYears = _quiet(
       Promise.all([
         fetchHebcalWithCache(
           `https://www.hebcal.com/hebcal?v=1&cfg=json&year=${_cyPre - 1}&i=on&maj=on&min=on&nx=on&mf=on&ss=on&mod=on&s=on`,
+          _BOOT_NET,
         ),
         fetchHebcalWithCache(
           `https://www.hebcal.com/hebcal?v=1&cfg=json&year=${_cyPre}&i=on&maj=on&min=on&nx=on&mf=on&ss=on&mod=on&s=on`,
+          _BOOT_NET,
         ),
         fetchHebcalWithCache(
           `https://www.hebcal.com/hebcal?v=1&cfg=json&year=${_cyPre + 1}&i=on&maj=on&min=on&nx=on&mf=on&ss=on&mod=on&s=on`,
+          _BOOT_NET,
         ),
       ]),
     );
 
-    const dateData = await _pDate;
+    // ── רשת חלשה / אין רשת: כל ההמתנות למטה חולקות מועד אחרון אחד (1.5 שניות
+    //    מעכשיו). מה שלא הגיע עד אז (או נכשל) — נתון מקומי במקומו, וההבטחה נרשמת
+    //    ב-_lateNet: כשהיא תתממש (הנתון כבר במטמון) הפונקציה תרוץ שוב ותציג אותו ──
+    const _netDeadline = Date.now() + LIVE_DATA_NET_WINDOW_MS;
+    const _lateNet = [];
+    const _orLocal = (promise, fallback) =>
+      new Promise((resolve) => {
+        let done = false;
+        const useFallback = () => {
+          if (done) return;
+          done = true;
+          clearTimeout(timer);
+          _lateNet.push(promise);
+          let v = null;
+          try { v = fallback(); } catch (e) {}
+          resolve(v);
+        };
+        const timer = setTimeout(useFallback, Math.max(0, _netDeadline - Date.now()));
+        promise.then((v) => {
+          if (done) return;
+          done = true;
+          clearTimeout(timer);
+          resolve(v);
+        }, useFallback);
+      });
+
+    let dateData = await _orLocal(_pDate, () => _offlineDateData(hebrewDateFetchIso));
+    // תשובת שגיאה מהממיר (בלי חודש/יום) — התאריך המקומי במקומה, לא "undefined"
+    if (!dateData || !dateData.hm) dateData = _offlineDateData(hebrewDateFetchIso);
     window._livePrayerContextData = {
       dateData,
       hebrewDateFetchIso,
@@ -3473,7 +3790,7 @@ async function fetchLiveCalendarData() {
       omerContainer.classList.remove("flex");
     }
 
-    const dafData = await _pDaf;
+    const dafData = await _orLocal(_pDaf, () => _offlineDafData(hebrewDateFetchIso));
     const dafEvent = (dafData.items || []).find(
       (i) => i.category === "dafyomi",
     );
@@ -3493,9 +3810,7 @@ async function fetchLiveCalendarData() {
     // טעינת חוק לישראל (fire-and-forget)
     fetchChokLeIsraelData();
 
-    renderZmanimGrid(zData);
-
-    const sData = await _pShabbat;
+    const sData = await _orLocal(_pShabbat, () => null);
     let p = CURRENT_LANG === "he" ? "שבת" : "Shabbat",
       c = "--:--",
       h = "--:--",
@@ -3624,7 +3939,8 @@ async function fetchLiveCalendarData() {
         `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
       const _hcEnd = new Date(_hcBase);
       _hcEnd.setDate(_hcEnd.getDate() + 3);
-      const hcData = await _pHc; // אותו URL בדיוק (_hcBase/_hcEnd) — הבקשה יצאה במקביל למעלה
+      // אותו URL בדיוק (_hcBase/_hcEnd) — הבקשה יצאה במקביל למעלה; לא הגיעה — מהמטמון המוקדם
+      const hcData = await _orLocal(_pHc, () => _offlineHcData(_hcIso(_hcBase), _hcIso(_hcEnd)));
       window.HOLIDAY_CANDLES_TIME = null;
       window.HOLIDAY_CANDLES_STR = "";
       window.HOLIDAY_HAVDALAH_STR = "";
@@ -3674,7 +3990,19 @@ async function fetchLiveCalendarData() {
     }
 
     const cy = dateForHebcal.getFullYear();
-    const [y0, y1, y2] = await _pYears;
+    const _yearsData = await _orLocal(_pYears, () => null);
+    if (!_yearsData && !ALL_EVENTS.length) {
+      // ביקור ראשון ברשת איטית: עוד אין אירועים — הדשבורד נפתח כבר עכשיו עם הזמנים,
+      // התאריך והשבת, ורשימת המועדים תושלם בריצה החוזרת כשרשימות השנה יגיעו
+      showDashboard();
+      _scheduleLiveDataRerun(_runSeq, _lateNet);
+      return;
+    }
+    // רשימות השנה לא הגיעו בזמן אך יש אירועים שמורים — מדלגים על הבנייה מחדש
+    // וממשיכים (כרטיסי המועד/הלבנה ורשימת המועדים) עם השמורים.
+    // (הבלוק בלי הזחה נוספת במכוון — כדי לא לגעת בכל שורות הבנייה)
+    if (_yearsData) {
+    const [y0, y1, y2] = _yearsData;
 
     let newEvents = [];
     const rcCounts = {};
@@ -3934,6 +4262,15 @@ async function fetchLiveCalendarData() {
         }
       } catch (eLP) {}
     }
+    } else {
+      // האירועים השמורים נבנו ביום קודם — מסננים את מה שכבר עבר (כמו בבנייה
+      // הרגילה), כדי ש"המועד הבא" לא יהיה אירוע של אתמול
+      ALL_EVENTS = ALL_EVENTS.filter((e) => {
+        const compareDate = e && (e.type === "moon" && e.endDate ? e.endDate : e.date);
+        if (!compareDate) return false;
+        return parseLocalDate(String(compareDate).substring(0, 10)).getTime() >= dateForHebcal.getTime();
+      });
+    } // סוף בלוק הבנייה מרשימות השנה (if (_yearsData))
 
     showDashboard();
 
@@ -3982,8 +4319,11 @@ async function fetchLiveCalendarData() {
       const _calM = document.getElementById("calendar-modal");
       if (_calM && !_calM.classList.contains("hidden")) buildMonthCalendar();
     }
+    _scheduleLiveDataRerun(_runSeq, _lateNet);
   } catch (err) {
     console.error(err);
+    // האירוע "online" ינסה שוב כשהחיבור יחזור
+    _liveDataStale = true;
     if (ALL_EVENTS.length === 0)
       document.getElementById("loading-state").innerHTML =
         '<p class="text-red-400 font-bold">לא ניתן למשוך נתונים כעת. בדוק חיבור אינטרנט.</p>';
@@ -4738,7 +5078,8 @@ async function _gpsReverseGeocode(lat, lon) {
   try {
     const res = await fetch(
       `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&accept-language=he&zoom=14`,
-      { headers: { "Accept": "application/json" } },
+      // זמן המתנה מוגבל — ברשת חלשה ריענון הזמנים למיקום החדש ממתין לשם העיר
+      { headers: { "Accept": "application/json" }, signal: AbortSignal.timeout(8000) },
     );
     if (!res.ok) return null;
     const data = await res.json();

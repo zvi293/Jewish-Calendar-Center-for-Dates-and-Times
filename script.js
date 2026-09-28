@@ -14866,7 +14866,8 @@ function buildShacharitMizrahiPayload(context) {
     if (context.isSukkot) {
       hl.push(typeof buildSukkotLulavHtml === "function" ? buildSukkotLulavHtml(p, "mizrahi", context) : "");
     }
-    hl.push(p("<big><b>הלל לראש חודש ולמועדים</b></big>"));
+    // כותרת לפי היום — הלל שלם / חצי הלל (בלי שם כללי לכל המועדים)
+    hl.push(p("<big><b>" + (isFullHallel ? "הלל שלם" : "חצי הלל") + "</b></big>"));
     if (isFullHallel) {
       hl.push(p("<small>החזן אומר:</small>"));
       hl.push(

@@ -120,7 +120,7 @@ const i18nDict = {
     app_title_2: "היהודי",
     loading: "מסנכרן נתונים...",
     today_date: "התאריך היום",
-    moon_close: "ברכת הלבנה הקרובה",
+    moon_close: "ברכת הלבנה",
     next_event: "המועד הבא",
     upcoming_shab: "שבת קרובה",
     zmanim: "זמני היום",
@@ -1084,111 +1084,396 @@ function _stopOmerCountdown() {
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
-// ── 🌙 Levana Countdown Timer (last day) ─────────────────────────────────────
+// ── 🌙 ברכת הלבנה — זמנים מדויקים לפי המולד ─────────────────────────────────
+// החלון נגזר מרגע המולד עצמו (ולא מר"ח+7/+14 בשעות משוערות כמו קודם). המולד מחושב
+// בחשבון הקבוע (בהר"ד + כ"ט י"ב תשצ"ג לכל חודש) — זהה ל-KosherZmanim getMoladAsDate
+// עד אלפית שנייה. שעת המולד המסורתית היא לפי שעון ירושלים הממוצע (UTC+2:20:56) —
+// כאן היא מומרת לרגע מוחלט, והתצוגה בשעון המקומי (כולל שעון קיץ/חורף).
+// מקורות ההלכה:
+//  • תחילת הזמן — שו"ע או"ח תכו,ד: אחרי ז' ימים מהמולד (ילקוט יוסף: ז' ימים שלמים;
+//    וכן מנהג החסידים/ספרד ע"פ הקבלה). משנ"ב תכו ס"ק כ: רוב האחרונים — אחרי ג' ימים
+//    מעת לעת (נוסח אשכנז).
+//  • סוף הזמן — רמ"א תכו,ג (מהרי"ל): עד חצי כ"ט י"ב תשצ"ג מהמולד = 14 יום 18 שעות
+//    22 דק' 1⅔ שנ'; וכך הכריע כף החיים (שם ס"ק נג) גם לספרדים (ספק ברכות). לדעת מרן
+//    השו"ע (תכו,ג; משנ"ב ס"ק יז — מעת לעת) עד ט"ו יום שלמים מהמולד, וכך פסק הגר"ע
+//    יוסף (יביע אומר ח"ח או"ח מב) — מוצג לעדות המזרח כ"לדעת מרן" אחרי חצי החודש.
+//  • תשרי — מברכים במוצאי יום הכיפורים (רמ"א תכו,ב; ילקוט יוסף). אב — במוצאי
+//    תשעה באב (משנ"ב תכו ס"ק יא; כף החיים ס"ק כט).
 let _levanaCountdownInterval = null;
+const _LV_DAY_MS = 86400000;
+const _LV_PARTS_DAY = 25920; // 24 שעות × 1080 חלקים
+const _LV_MONTH_PARTS = 765433; // כ"ט י"ב תשצ"ג בחלקים
+const _LV_MONTH_MS = (_LV_MONTH_PARTS * _LV_DAY_MS) / _LV_PARTS_DAY;
+const _LV_JLMT_MS = 35.2354 * 4 * 60000; // שעון ירושלים הממוצע מול UTC (≈2:20:56.5)
 
-/* רגע הזמן (במילישניות) של תחילת/סוף חלון ברכת הלבנה בתאריך נתון */
-function _levanaZmanMs(dateStr, which) {
-  const d = parseLocalDate(dateStr);
-  const zman = getApproxZmanim(d)[which === "s" ? "s" : "e"];
-  const [zh, zm] = zman.split(":").map(Number);
-  const t = new Date(d);
-  t.setHours(zh, zm, 0, 0);
-  return t.getTime();
+// רגע המולד (UTC ms) של החודש ה-n מתשרי שנת א' (n=0 — בהר"ד: ליל ב' 5 שעות ו-204
+// חלקים = 876 חלקים לפני חצות). 2092590 = ימים מא' תשרי שנת א' עד 1.1.1970.
+function _levanaMoladMs(n) {
+  const parts = -876 + n * _LV_MONTH_PARTS;
+  const days = Math.floor(parts / _LV_PARTS_DAY);
+  const rem = parts - days * _LV_PARTS_DAY;
+  return (days - 2092590) * _LV_DAY_MS + (rem * _LV_DAY_MS) / _LV_PARTS_DAY - _LV_JLMT_MS;
+}
+// מספר החודש של המולד האחרון שאינו אחרי הרגע הנתון
+function _levanaMoladIndexAt(ms) {
+  let n = Math.floor((ms - _levanaMoladMs(0)) / _LV_MONTH_MS);
+  while (_levanaMoladMs(n + 1) <= ms) n++;
+  while (_levanaMoladMs(n) > ms) n--;
+  return n;
 }
 
-// ── בחירת אירוע הלבנה הרלוונטי: מדלגים על חלונות שהסתיימו בפועל (סוף הזמן עבר),
-// כך שמיד עם סיום חלון מתחילה ספירה לאחור לברכת הלבנה של החודש הבא ──
-function _nextMoonEvent() {
-  const list = (typeof ALL_EVENTS !== "undefined" && Array.isArray(ALL_EVENTS)) ? ALL_EVENTS : [];
-  for (const mv of list) {
-    if (mv.type !== "moon") continue;
-    if (mv.endDate && _levanaZmanMs(mv.endDate, "e") < Date.now()) continue;
-    return mv;
+const _LV_EN_HEB = new Intl.DateTimeFormat("en-u-ca-hebrew", { month: "long", day: "numeric" });
+const _LV_HE_MONTH = new Intl.DateTimeFormat("he-u-ca-hebrew", { month: "long" });
+function _levanaHebParts(d) {
+  const o = {};
+  try {
+    _LV_EN_HEB.formatToParts(d).forEach((p) => { o[p.type] = p.value; });
+  } catch (e) {}
+  return { month: o.month || "", day: parseInt(o.day, 10) || 0 };
+}
+function _lvPad(v) {
+  return String(v).padStart(2, "0");
+}
+
+// צאת הכוכבים ביום עברי נתון בחודש של probeMs — מוצאי יוה"כ (י') / ט' באב
+function _levanaFastEndMs(probeMs, hebDay, satToSun) {
+  const d = new Date(probeMs);
+  d.setHours(12, 0, 0, 0);
+  const cur = _levanaHebParts(d).day;
+  if (!cur) return null;
+  d.setDate(d.getDate() + (hebDay - cur));
+  if (satToSun && d.getDay() === 6) d.setDate(d.getDate() + 1); // ט' באב שחל בשבת — נדחה
+  if (window.KosherZmanim && typeof computeKosherZmanim === "function") {
+    try {
+      const kz = computeKosherZmanim(d);
+      const tz = kz && kz.times && kz.times.tzeit7083deg;
+      if (tz) return { ms: new Date(tz).getTime(), exact: true };
+    } catch (e) {}
   }
-  return null;
+  const [h, m] = getApproxZmanim(d).s.split(":").map(Number);
+  d.setHours(h, m, 0, 0);
+  return { ms: d.getTime(), exact: false };
 }
 
-// מצב "ניתן לברך" מחושב מהזמנים עצמם — לא ממחרוזת הסטטוס שהוקפאה בזמן המשיכה
-function _isMoonWindowOpenNow(mv) {
-  if (!mv || !mv.date || !mv.endDate) return false;
-  const now = Date.now();
-  return now >= _levanaZmanMs(mv.date, "s") && now <= _levanaZmanMs(mv.endDate, "e");
+function _levanaNusach() {
+  return (typeof CURRENT_NUSACH !== "undefined" && CURRENT_NUSACH) || "mizrahi";
+}
+function _levanaLocKey() {
+  try {
+    const c = getLocationCoords();
+    return c ? (+c.lat).toFixed(2) + "," + (+c.lon).toFixed(2) : "";
+  } catch (e) {
+    return "";
+  }
 }
 
-// ── רינדור כרטיס "ברכת הלבנה הקרובה" — נשלף לפונקציה כדי שגם פקיעת ספירה
-// (סוף חלון) תגלגל את הכרטיס לחודש הבא בלי להמתין למשיכת נתונים מחדש ──
+// חלון ברכת הלבנה של החודש ה-n לפי הנוסח:
+//  start — תחילת הזמן בפועל (כולל מוצאי יוה"כ/ט"ב); end — חצי החודש (לכתחילה, לכולם);
+//  final — הרגע האחרון שבו עוד אפשר לברך לפי הנוסח (עדות המזרח: ט"ו יום לדעת מרן)
+const _lvWinMemo = new Map();
+function _levanaWindow(n, nusach) {
+  nusach = nusach || _levanaNusach();
+  const mk = n + "|" + nusach;
+  const hit = _lvWinMemo.get(mk);
+  if (hit && (!hit.special || (hit.exact && hit.locKey === _levanaLocKey()))) return hit;
+  const molad = _levanaMoladMs(n);
+  const start7 = molad + 7 * _LV_DAY_MS;
+  const hp = _levanaHebParts(new Date(start7)); // ז' ימים אחרי המולד — תמיד בתוך החודש
+  let heMonth = "";
+  try {
+    heMonth = _LV_HE_MONTH.format(new Date(start7));
+  } catch (e) {}
+  const w = {
+    n: n,
+    nusach: nusach,
+    molad: molad,
+    heMonth: heMonth,
+    enMonth: hp.month,
+    start3: molad + 3 * _LV_DAY_MS,
+    start7: start7,
+    end: molad + _LV_MONTH_MS / 2, // חצי כ"ט י"ב תשצ"ג = 14 יום 18 שעות 22 דק' 1⅔ שנ'
+    end15: molad + 15 * _LV_DAY_MS,
+    special: null,
+    fastEnd: null,
+    exact: true,
+    locKey: "",
+  };
+  w.start = nusach === "ashkenaz" ? w.start3 : w.start7;
+  w.final = nusach === "mizrahi" ? w.end15 : w.end;
+  const sp =
+    /^Tishr/i.test(hp.month) ? ["tishrei", 10, false] : /^Av$/i.test(hp.month) ? ["av", 9, true] : null;
+  if (sp) {
+    w.special = sp[0];
+    const fe = _levanaFastEndMs(start7, sp[1], sp[2]);
+    w.exact = !!(fe && fe.exact);
+    if (fe) {
+      w.fastEnd = fe.ms;
+      if (fe.ms > w.start) w.start = fe.ms;
+    }
+    w.locKey = _levanaLocKey();
+  }
+  _lvWinMemo.set(mk, w);
+  return w;
+}
+
+// המצב עכשיו: before — לפני תחילת הזמן; open — זמן הברכה; grace — עבר חצי החודש
+// אך לדעת מרן עוד אפשר (עדות המזרח בלבד). חלון שהסתיים מתגלגל לחודש הבא.
+function _levanaStatus(nowMs) {
+  const now = nowMs || Date.now();
+  const n = _levanaMoladIndexAt(now);
+  let w = _levanaWindow(n);
+  if (now >= w.final) w = _levanaWindow(n + 1);
+  const state = now < w.start ? "before" : now < w.end ? "open" : "grace";
+  const target = state === "before" ? w.start : state === "open" ? w.end : w.final;
+  // המפתח כולל את דקת היעד — חישוב מדויק שמחליף הערכה (KosherZmanim נטען) מרנדר מחדש
+  const key = w.n + ":" + state + ":" + w.nusach + ":" + Math.floor(target / 60000);
+  return { w: w, state: state, target: target, key: key };
+}
+
+// חלון של אירוע "moon" ברשימה (גם אירועים ישנים מהמטמון — לפי המולד הקרוב לר"ח)
+function _levanaEventWindow(ev) {
+  if (!ev || ev.type !== "moon") return null;
+  let n = typeof ev.moladN === "number" ? ev.moladN : null;
+  if (n === null) {
+    const base = ev.endDate
+      ? parseLocalDate(ev.endDate).getTime() - 14 * _LV_DAY_MS
+      : parseLocalDate(ev.date).getTime() - 7 * _LV_DAY_MS;
+    if (isNaN(base)) return null;
+    n = _levanaMoladIndexAt(base + _LV_MONTH_MS / 2); // המולד הקרוב ביותר לר"ח
+  }
+  return _levanaWindow(n);
+}
+
+// ── תצוגת תאריך+שעה. תחילת זמן מעוגלת לדקה כלפי מעלה, סוף זמן כלפי מטה (לחומרה) ──
+const _LV_WD = ["א׳", "ב׳", "ג׳", "ד׳", "ה׳", "ו׳", "ש׳"];
+function _levanaRound(ms, up) {
+  return up ? Math.ceil(ms / 60000) * 60000 : Math.floor(ms / 60000) * 60000;
+}
+function _levanaDayName(d) {
+  return d.getDay() === 6 ? "שבת" : "יום " + _LV_WD[d.getDay()];
+}
+function _levanaWhenHtml(ms, up) {
+  const d = new Date(_levanaRound(ms, up));
+  return (
+    `${_levanaDayName(d)} <span dir="ltr">${d.getDate()}.${d.getMonth() + 1}</span>` +
+    ` · <span dir="ltr">${_lvPad(d.getHours())}:${_lvPad(d.getMinutes())}</span>`
+  );
+}
+function _levanaWhenText(ms, up) {
+  const d = new Date(_levanaRound(ms, up));
+  return `${_levanaDayName(d)} ${d.getDate()}.${d.getMonth() + 1} בשעה ${_lvPad(d.getHours())}:${_lvPad(d.getMinutes())}`;
+}
+// שקיעה ועלות השחר של יום נתון (חישוב קל וממוזכר — לא כל לוח הזמנים)
+const _lvSunMemo = new Map();
+function _levanaSunTimes(d) {
+  const KZ = window.KosherZmanim;
+  if (!KZ) return null;
+  const ymd = `${d.getFullYear()}-${_lvPad(d.getMonth() + 1)}-${_lvPad(d.getDate())}`;
+  const key = ymd + "|" + _levanaLocKey();
+  if (_lvSunMemo.has(key)) return _lvSunMemo.get(key);
+  let r = null;
+  try {
+    const c = getLocationCoords();
+    const cal = new KZ.ComplexZmanimCalendar(
+      new KZ.GeoLocation("UserLocation", c.lat, c.lon, c.elevation || 0, c.tzid || "Asia/Jerusalem"),
+    );
+    cal.setDate(ymd);
+    const toMs = (x) => (!x ? null : typeof x.toJSDate === "function" ? x.toJSDate().getTime() : new Date(x).getTime());
+    r = { sunset: toMs(cal.getSunset()), dawn: toMs(cal.getAlos72()) };
+    if (!r.sunset || !r.dawn) r = null;
+  } catch (e) {
+    r = null;
+  }
+  if (r) _lvSunMemo.set(key, r);
+  return r;
+}
+// התאריך העברי של רגע נתון — אחרי השקיעה ועד עלות השחר: "ליל ..." של היום העברי הבא/הנוכחי
+function _levanaHebLabel(ms) {
+  const d = new Date(ms);
+  const sun = _levanaSunTimes(d);
+  let sunset = sun ? sun.sunset : null;
+  let dawn = sun ? sun.dawn : null;
+  if (!sunset || !dawn) {
+    const az = getApproxZmanim(d);
+    const s = new Date(d), a = new Date(d);
+    const [sh, sm] = az.s.split(":").map(Number);
+    const [ah, am] = az.e.split(":").map(Number);
+    s.setHours(sh, sm - 25, 0, 0);
+    a.setHours(ah, am, 0, 0);
+    sunset = sunset || s.getTime();
+    dawn = dawn || a.getTime();
+  }
+  if (ms >= sunset) {
+    const nd = new Date(d);
+    nd.setDate(nd.getDate() + 1);
+    return "ליל " + getHebrewDateString(nd);
+  }
+  return (ms < dawn ? "ליל " : "") + getHebrewDateString(d);
+}
+// שעת המולד כפי שמכריזים בבית הכנסת (שעון ירושלים הממוצע, שעות+דקות+חלקים)
+function _levanaMoladTrad(w) {
+  const t = new Date(w.molad + _LV_JLMT_MS);
+  const secMs = t.getUTCSeconds() * 1000 + t.getUTCMilliseconds();
+  const chalakim = Math.round(secMs / (10000 / 3)); // חלק = 3⅓ שניות
+  return `יום ${_LV_WD[t.getUTCDay()]} ${t.getUTCHours()}:${_lvPad(t.getUTCMinutes())}${chalakim ? ` ו-${chalakim} חלקים` : ""}`;
+}
+
+// ── מונה ספירה לאחור: מקטעים מתויגים (ימים · שעות · דקות · שניות) — כל מספר
+// בתיבה משלו, ספרות ברוחב קבוע: בלי ערבוב נקודתיים/מספרים בטקסט מימין לשמאל ──
+function _levanaSplit(diff) {
+  const t = Math.max(0, Math.floor(diff / 1000));
+  return { d: Math.floor(t / 86400), h: Math.floor((t % 86400) / 3600), m: Math.floor((t % 3600) / 60), s: t % 60 };
+}
+function _levanaSpoken(p) {
+  const out = [];
+  if (p.d) out.push(p.d === 1 ? "יום אחד" : p.d + " ימים");
+  if (p.h) out.push(p.h === 1 ? "שעה אחת" : p.h + " שעות");
+  out.push(p.m === 1 ? "דקה אחת" : p.m + " דקות");
+  return out.join(", ");
+}
+function _levanaTimerInner(p) {
+  const seg = (u, v, l) =>
+    `<span class="lv-seg" data-u="${u}"><span class="lv-n">${v}</span><span class="lv-u">${l}</span></span>`;
+  return (
+    (p.d > 0 ? seg("d", p.d, p.d === 1 ? "יום" : "ימים") : "") +
+    seg("h", _lvPad(p.h), "שעות") +
+    seg("m", _lvPad(p.m), "דקות") +
+    seg("s", _lvPad(p.s), "שניות")
+  );
+}
+function _levanaTimerHtml(target) {
+  const p = _levanaSplit(target - Date.now());
+  return (
+    `<span class="lv-timer" role="timer" data-target="${target}" data-days="${p.d > 0 ? 1 : 0}" data-min="${p.m}" aria-label="${_levanaSpoken(p)}">` +
+    _levanaTimerInner(p) +
+    "</span>"
+  );
+}
+// עדכון מונה קיים במקום — רק ספרות שהשתנו. false = הגיע הרגע
+function _levanaTimerTick(el, now) {
+  const diff = Number(el.dataset.target || 0) - now;
+  if (!(diff > 0)) return false;
+  const p = _levanaSplit(diff);
+  const hasDays = p.d > 0 ? "1" : "0";
+  if (hasDays !== el.dataset.days) {
+    el.dataset.days = hasDays;
+    el.innerHTML = _levanaTimerInner(p);
+  } else {
+    const vals = { d: String(p.d), h: _lvPad(p.h), m: _lvPad(p.m), s: _lvPad(p.s) };
+    el.querySelectorAll(".lv-seg").forEach((seg) => {
+      const n = seg.firstChild;
+      const v = vals[seg.dataset.u];
+      if (n && v !== undefined && n.textContent !== v) {
+        n.textContent = v;
+        if (seg.dataset.u === "d") seg.lastChild.textContent = p.d === 1 ? "יום" : "ימים";
+      }
+    });
+  }
+  if (String(p.m) !== el.dataset.min) {
+    el.dataset.min = String(p.m);
+    el.setAttribute("aria-label", _levanaSpoken(p));
+  }
+  return true;
+}
+
+// ── כרטיס הדשבורד "ברכת הלבנה" — שלושה מצבים ברורים:
+//  לפני: "אפשר להתחיל לברך בעוד" + ספירה לתחילת הזמן + תחילה וסוף מדויקים
+//  בזמן: "✓ עכשיו זמן ברכת הלבנה" + "סוף זמן ברכת הלבנה בעוד" + ספירה לסוף + השעה האחרונה
+//  (עדות המזרח, אחרי חצי החודש): "לדעת מרן השו״ע עדיין אפשר לברך" + ספירה לט"ו יום
+//  ובסוף החלון — מתגלגל מיד לחודש הבא ──
+function _levanaCardHtml(st) {
+  const w = st.w;
+  const isHe = typeof CURRENT_LANG === "undefined" || CURRENT_LANG === "he";
+  const month = `<span class="lv-month">${escapeHtml(w.heMonth || "")}</span>`;
+  const special =
+    w.special && w.start === w.fastEnd
+      ? `<span class="lv-when lv-dim">${w.special === "tishrei" ? "במוצאי יום הכיפורים" : "במוצאי תשעה באב"}</span>`
+      : "";
+  if (st.state === "before") {
+    return (
+      month +
+      `<span class="lv-state lv-before">${isHe ? "אפשר להתחיל לברך בעוד" : "🌙 Opens in"}</span>` +
+      _levanaTimerHtml(w.start) +
+      `<span class="lv-when"><b>${isHe ? "מתחיל:" : "From:"}</b> ${_levanaWhenHtml(w.start, true)}</span>` +
+      special +
+      `<span class="lv-when"><b>${isHe ? "סוף הזמן:" : "Until:"}</b> ${_levanaWhenHtml(w.end, false)}</span>`
+    );
+  }
+  if (st.state === "open") {
+    return (
+      month +
+      `<span class="lv-state lv-open">${isHe ? "✓ עכשיו זמן ברכת הלבנה" : "✓ Now is the time"}</span>` +
+      `<span class="lv-sub">${isHe ? "סוף זמן ברכת הלבנה בעוד" : "Ends in"}</span>` +
+      _levanaTimerHtml(w.end) +
+      `<span class="lv-when"><b>${isHe ? "עד:" : "Until:"}</b> ${_levanaWhenHtml(w.end, false)}</span>`
+    );
+  }
+  return (
+    month +
+    `<span class="lv-state lv-grace">${isHe ? "לדעת מרן השו״ע עדיין אפשר לברך" : "Still possible (Shulchan Aruch)"}</span>` +
+    `<span class="lv-sub">${isHe ? "סוף הזמן לדעת מרן בעוד" : "Ends in"}</span>` +
+    _levanaTimerHtml(w.final) +
+    `<span class="lv-when"><b>${isHe ? "עד:" : "Until:"}</b> ${_levanaWhenHtml(w.final, false)}</span>`
+  );
+}
+
+// גלובלים לתאימות (התראות/הבהוב קוראים דרך _levanaStatus; נשמרים לקוד חיצוני)
+function _levanaSyncGlobals(st) {
+  const iso = (ms) => {
+    const d = new Date(ms);
+    return `${d.getFullYear()}-${_lvPad(d.getMonth() + 1)}-${_lvPad(d.getDate())}`;
+  };
+  window.LEVANA_START_DATE = iso(st.w.start);
+  window.LEVANA_END_DATE = iso(st.w.final);
+}
+
+// ── רינדור כרטיס "ברכת הלבנה" — לא תלוי בנתוני Hebcal (חישוב מקומי מלא), ולכן
+// מוצג גם בלי אינטרנט. כתיבה מלאה רק במעבר מצב/חודש/נוסח; הספרות מתעדכנות במקום ──
 function _renderMoonCard() {
   const el = document.getElementById("stat-moon");
   if (!el) return;
-  const nextM = _nextMoonEvent();
-  if (!nextM) return;
-  const isHe = (typeof CURRENT_LANG === "undefined") || CURRENT_LANG === "he";
-  const name = nextM.name.replace("קידוש לבנה - ", "").replace("Kiddush Levana - ", "");
-  const open = _isMoonWindowOpenNow(nextM);
-  let html;
-  let countdown = null; // [תאריך, "s" לתחילת הזמן] — מופעל רק אחרי שהכרטיס במקום
-  if (open && nextM.endDate) {
-    const daysToEnd = getDaysDiff(nextM.endDate);
-    if (daysToEnd <= 1) {
-      html =
-        `${name} <br><span class="text-sm font-normal opacity-80" style="color:#fbbf24">${isHe ? "⏱ סוף זמן: " : "⏱ End of window: "}<span id="levana-countdown-display">00:00:00</span></span>`;
-      countdown = [nextM.endDate];
-    } else {
-      html =
-        `${name} <br><span class="text-sm font-normal opacity-80" style="color:#fbbf24">${isHe ? `(סוף זמן בעוד ${daysToEnd} ימים)` : `(End of window in ${daysToEnd} days)`}</span>`;
+  let st;
+  try {
+    st = _levanaStatus();
+  } catch (e) {
+    return;
+  }
+  if (st.key !== el.__lvKey || !el.querySelector(".lv-timer")) {
+    el.innerHTML = _levanaCardHtml(st);
+    el.__lvKey = st.key;
+    el.classList.add("lv-card");
+    el.dataset.lvState = st.state;
+    _levanaSyncGlobals(st);
+    if (typeof updateLevanaBlink === "function") {
+      try {
+        updateLevanaBlink();
+      } catch (e) {}
     }
-  } else if (getDaysDiff(nextM.date) <= 0) {
-    // חלון הברכה נפתח היום — ספירה לאחור עד תחילת הזמן הערב
-    html =
-      `${name} <br><span class="text-sm font-normal opacity-80" style="color:#6ee7b7">${isHe ? "⏱ ניתן לברך בעוד: " : "⏱ Opens in: "}<span id="levana-countdown-display">00:00:00</span></span>`;
-    countdown = [nextM.date, "s"];
-  } else {
-    const days = getDaysDiff(nextM.date);
-    html =
-      `${name} <br><span class="text-sm font-normal opacity-80">${isHe ? `(בעוד ${days} ימים)` : `(${formatDaysUntilText(days)})`}</span>`;
   }
-  // כתיבה רק כשהתוכן באמת השתנה: הטיק הדקתי (PWA שנשאר פתוח) בנה את הכרטיס
-  // מחדש עם אותו HTML בדיוק — וכל בנייה כזו היא הבהוב קטן של הכרטיס בנייד.
-  // ההשוואה גם מול ה-DOM עצמו, כך שדריסה חיצונית (רינדור מחדש של הדשבורד)
-  // עדיין מתוקנת בטיק הבא.
-  if (html !== el.__moonHtml || el.innerHTML !== el.__moonDom) {
-    el.innerHTML = html;
-    el.__moonHtml = html;
-    el.__moonDom = el.innerHTML;
-  }
-  if (countdown) _startLevanaCountdown(countdown[0], countdown[1]);
-  if (typeof updateLevanaBlink === "function") { try { updateLevanaBlink(); } catch (e) {} }
+  _startLevanaCountdown();
 }
+window._renderMoonCard = _renderMoonCard;
 
-function _startLevanaCountdown(endDateStr, which) {
-  // which: "e" (ברירת מחדל) — ספירה לסוף זמן הברכה; "s" — ספירה לתחילת הזמן
-  _stopLevanaCountdown();
-  const zmanKey = which === "s" ? "s" : "e";
-  function update() {
+function _startLevanaCountdown() {
+  if (_levanaCountdownInterval) return;
+  _levanaCountdownInterval = setInterval(() => {
     // מאחורי פופאפ פתוח אין לכתוב לדף — כל שינוי מכריח re-blur; הערך משעון קיר, ההשהיה חסרת-הפסד
     if (document.hidden || document.documentElement.classList.contains("lux-modal-open")) return;
-    const el = document.getElementById("levana-countdown-display");
-    if (!el) { _stopLevanaCountdown(); return; }
-    const target = _levanaZmanMs(endDateStr, zmanKey);
-    const diff = target - Date.now();
-    if (diff <= 0) {
+    const el = document.getElementById("stat-moon");
+    if (!el) {
       _stopLevanaCountdown();
-      // גלגול הכרטיס: סוף חלון → ספירה לאחור לברכת הלבנה של החודש הבא;
-      // תחילת חלון → ספירה לסוף הזמן. לא נתקעים עוד על 00:00:00.
-      setTimeout(_renderMoonCard, 0);
       return;
     }
-    const h = Math.floor(diff / 3600000);
-    const min = Math.floor((diff % 3600000) / 60000);
-    const sec = Math.floor((diff % 60000) / 1000);
-    el.textContent =
-      String(h).padStart(2, "0") + ":" +
-      String(min).padStart(2, "0") + ":" +
-      String(sec).padStart(2, "0");
-  }
-  update();
-  _levanaCountdownInterval = setInterval(update, 1000);
+    let st;
+    try {
+      st = _levanaStatus();
+    } catch (e) {
+      return;
+    }
+    const timer = el.querySelector(".lv-timer");
+    // מעבר מצב (לפני → פתוח → סוף → החודש הבא) או דריסה חיצונית — בנייה מחדש
+    if (st.key !== el.__lvKey || !timer || !_levanaTimerTick(timer, Date.now())) _renderMoonCard();
+  }, 1000);
 }
 
 function _stopLevanaCountdown() {
@@ -1197,39 +1482,128 @@ function _stopLevanaCountdown() {
     _levanaCountdownInterval = null;
   }
 }
+// הכרטיס מחושב מקומית — מציגים אותו מיד בטעינה (אחרי שכל הקוד רץ), בלי לחכות לנתוני הרשת
+setTimeout(() => {
+  try {
+    _renderMoonCard();
+  } catch (e) {}
+}, 0);
+
+// ── פירוט החלון (כרטיס הרשימה / באנר תפילת ברכת הלבנה) ──
+function _levanaDetailsHtml(w, opts) {
+  opts = opts || {};
+  const now = Date.now();
+  const nus = w.nusach;
+  const when = (ms, up) => `${_levanaWhenHtml(ms, up)} <span class="lv-heb">(${_levanaHebLabel(_levanaRound(ms, up))})</span>`;
+  const row = (dot, label, val) =>
+    `<div class="lv-row"><span class="lv-dot ${dot}" aria-hidden="true"></span><b>${label}</b> <span>${val}</span></div>`;
+  let live = "";
+  const st = now < w.start ? "before" : now < w.end ? "open" : now < w.final ? "grace" : "over";
+  if (opts.live || opts.status) {
+    const lbl =
+      st === "before"
+        ? `<span class="lv-state lv-before">אפשר להתחיל לברך בעוד</span>`
+        : st === "open"
+          ? `<span class="lv-state lv-open">✓ עכשיו זמן ברכת הלבנה</span><span class="lv-live-sub">סוף זמן ברכת הלבנה בעוד</span>`
+          : st === "grace"
+            ? `<span class="lv-state lv-grace">לדעת מרן השו״ע עדיין אפשר לברך</span><span class="lv-live-sub">סוף הזמן לדעת מרן בעוד</span>`
+            : "";
+    const target = st === "before" ? w.start : st === "open" ? w.end : w.final;
+    if (lbl) {
+      live = opts.live
+        ? `<div class="lv-live">${lbl}${_levanaTimerHtml(target)}</div>`
+        : `<div class="lv-live">${lbl}<span class="lv-live-txt">${_levanaSpoken(_levanaSplit(target - now))}</span></div>`;
+    }
+  }
+  const rows = [
+    row("lv-dot-s", "תחילת הזמן:", when(w.start, true)),
+    row("lv-dot-e", nus === "mizrahi" ? "סוף הזמן (לכתחילה):" : "סוף הזמן:", when(w.end, false)),
+  ];
+  if (nus === "mizrahi") rows.push(row("lv-dot-m", "לדעת מרן השו״ע:", "עד " + when(w.end15, false)));
+  const notes = [];
+  notes.push(`המולד: ${_levanaWhenHtml(w.molad, false)} (בהכרזה: ${_levanaMoladTrad(w)})`);
+  if (w.special && w.start === w.fastEnd) {
+    notes.push(
+      w.special === "tishrei"
+        ? "בחודש תשרי מברכים במוצאי יום הכיפורים."
+        : "בחודש אב מברכים במוצאי תשעה באב (אחרי שטועמים ונועלים נעליים).",
+    );
+  }
+  notes.push(
+    nus === "ashkenaz"
+      ? `תחילה: 3 ימים אחרי המולד (משנ״ב תכו ס״ק כ${w.start === w.start3 ? `; הנוהגים להמתין 7 ימים — מ${_levanaWhenHtml(w.start7, true)}` : ""}). סוף: חצי החודש — 14 ימים, 18 שעות ו-22 דק׳ מהמולד (רמ״א).`
+      : nus === "mizrahi"
+        ? "תחילה: 7 ימים שלמים אחרי המולד (שו״ע תכו,ד). סוף: לכתחילה עד חצי החודש — 14 ימים, 18 שעות ו-22 דק׳ מהמולד (כף החיים); לדעת מרן השו״ע עד 15 ימים מהמולד."
+        : "תחילה: 7 ימים אחרי המולד (שו״ע תכו,ד — מנהג החסידים). סוף: חצי החודש — 14 ימים, 18 שעות ו-22 דק׳ מהמולד (רמ״א).",
+  );
+  notes.push("מברכים בלילה, כשהלבנה נראית; ברוב הקהילות לא בליל שבת ויום טוב.");
+  return (
+    `<div class="lv-details" data-lv-n="${w.n}">${live}${rows.join("")}` +
+    (opts.foldNotes
+      ? `<details class="lv-notes lv-fold"><summary>המולד, המנהגים והמקורות</summary>${notes.map((t) => `<p>${t}</p>`).join("")}</details></div>`
+      : `<div class="lv-notes">${notes.map((t) => `<p>${t}</p>`).join("")}</div></div>`)
+  );
+}
+
+// באנר הזמנים בראש תפילת ברכת הלבנה — ממולא בכל פתיחה (התפילה עצמה נשמרת במטמון)
+function _levanaFillPrayerTimes(root) {
+  const box = root && root.querySelector("[data-levana-live]");
+  if (!box) return;
+  try {
+    const st = _levanaStatus();
+    box.innerHTML =
+      `<div class="lv-prayer-title">🌙 זמן ברכת הלבנה — חודש ${escapeHtml(st.w.heMonth || "")}</div>` +
+      _levanaDetailsHtml(st.w, { status: true, foldNotes: true });
+  } catch (e) {
+    box.innerHTML = "";
+  }
+}
+
+// טקסט קצר (ווידג'ט / פופאפ הירח) — בלי HTML
+window._levanaSummaryText = function () {
+  try {
+    const st = _levanaStatus();
+    const w = st.w;
+    if (st.state === "before")
+      return `${w.heMonth}: אפשר לברך מ${_levanaWhenText(w.start, true)} ועד ${_levanaWhenText(w.end, false)}`;
+    if (st.state === "open") return `✓ עכשיו זמן ברכת הלבנה — עד ${_levanaWhenText(w.end, false)}`;
+    return `לדעת מרן השו״ע עדיין אפשר לברך — עד ${_levanaWhenText(w.final, false)}`;
+  } catch (e) {
+    return "";
+  }
+};
+// יום X למולד (לפי המולד המסורתי) — לפופאפ הירח
+window._levanaMoladDay = function () {
+  try {
+    const now = Date.now();
+    return Math.floor((now - _levanaMoladMs(_levanaMoladIndexAt(now))) / _LV_DAY_MS) + 1;
+  } catch (e) {
+    return 0;
+  }
+};
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ── 🌙 הבהוב סמל ברכת הלבנה + "ברכתי" ─────────────────────────────────────────
-function _levanaBlessedKey() {
-  const mv = (typeof ALL_EVENTS !== "undefined" ? ALL_EVENTS : []).find(
-    (e) => e.type === "moon",
-  );
-  const id = window.LEVANA_START_DATE || (mv && mv.endDate) || "";
-  return "levana_blessed_" + id;
+// מפתח לכל חודש (תאריך ז' ימים אחרי המולד — לא תלוי בנוסח)
+function _levanaBlessedKey(st) {
+  st = st || _levanaStatus();
+  const d = new Date(st.w.start7);
+  return `levana_blessed_${d.getFullYear()}-${_lvPad(d.getMonth() + 1)}-${_lvPad(d.getDate())}`;
 }
 
 function updateLevanaBlink() {
   const icon = document.getElementById("levana-blink-icon");
   if (!icon) return;
   let open = false;
+  let key = "";
   try {
-    const s = window.LEVANA_START_DATE;
-    const e = window.LEVANA_END_DATE;
-    if (s && e) {
-      const now = Date.now();
-      open = now >= _levanaZmanMs(s, "s") && now <= _levanaZmanMs(e, "e");
-    } else {
-      const mv = (typeof ALL_EVENTS !== "undefined" ? ALL_EVENTS : []).find(
-        (ev) => ev.type === "moon",
-      );
-      if (mv && mv.heb === "ניתן לברך כעת" && mv.endDate) {
-        open = Date.now() <= _levanaZmanMs(mv.endDate, "e");
-      }
-    }
+    const st = _levanaStatus();
+    open = st.state !== "before";
+    key = _levanaBlessedKey(st);
   } catch (err) {}
   let blessed = null;
   try {
-    blessed = localStorage.getItem(_levanaBlessedKey());
+    blessed = key ? localStorage.getItem(key) : null;
   } catch (err) {}
   if (open && !blessed) {
     icon.classList.remove("hidden");
@@ -3693,12 +4067,13 @@ async function fetchLiveCalendarData() {
       }
     });
     // ── יצירת אירוע חלון ברכת הלבנה מתאריך ר"ח נתון (משותף לר"ח רגיל ולר"ה) ──
+    // הזמנים עצמם נגזרים מהמולד הקרוב לר"ח (_levanaWindow) — לא ר"ח+7/+14 בשעה משוערת
     const pushMoonWindowFrom = (rcDateStr, heMonthName, enMonthName) => {
-      const startL = new Date(rcDateStr);
-      startL.setDate(startL.getDate() + 7);
-      const endL = new Date(rcDateStr);
-      endL.setDate(endL.getDate() + 14);
-      if (endL < dateForHebcal) return;
+      const rcMs = parseLocalDate(String(rcDateStr).substring(0, 10)).getTime();
+      if (isNaN(rcMs)) return;
+      const moladN = _levanaMoladIndexAt(rcMs + _LV_MONTH_MS / 2); // המולד הקרוב לר"ח
+      const lw = _levanaWindow(moladN);
+      if (lw.final <= Date.now()) return;
       const name =
         CURRENT_LANG === "he"
           ? `קידוש לבנה - ${heMonthName}`
@@ -3710,27 +4085,17 @@ async function fetchLiveCalendarData() {
         const dy = String(d.getDate()).padStart(2, "0");
         return `${y}-${mo}-${dy}`;
       };
-      const dStr =
-        startL > dateForHebcal ? toLocalISO(startL) : toLocalISO(dateForHebcal);
-      if (newEvents.some((x) => x.name === name && x.type === "moon")) return;
-      const startZman = getApproxZmanim(startL).s;
-      const endZman = getApproxZmanim(endL).e;
-      window.LEVANA_START_DATE = toLocalISO(startL);
-      window.LEVANA_END_DATE = toLocalISO(endL);
-      const levanaHTML = `
-                        <div class="mt-2.5 flex flex-col gap-1.5 text-xs md:text-sm bg-slate-50 dark:bg-slate-900/50 p-2.5 rounded-xl border border-slate-100 dark:border-slate-700">
-                            <div class="flex items-center justify-between"><div class="flex items-center gap-2"><div class="w-2 h-2 rounded-full bg-emerald-400"></div><span class="font-bold text-slate-700 dark:text-slate-300">תחילת זמן:</span> ${daysOfWeek[startL.getDay()]} | ${getHebrewDateString(startL)}</div><span class="font-black text-emerald-600 dark:text-emerald-400 ml-2 text-left" dir="ltr">${startZman}</span></div>
-                            <div class="flex items-center justify-between"><div class="flex items-center gap-2"><div class="w-2 h-2 rounded-full bg-rose-400"></div><span class="font-bold text-slate-700 dark:text-slate-300">סוף זמן:</span> ${daysOfWeek[endL.getDay()]} | ${getHebrewDateString(endL)}</div><span class="font-black text-rose-600 dark:text-rose-400 ml-2 text-left" dir="ltr">${endZman}</span></div>
-                        </div>`;
+      const startL = new Date(lw.start);
+      const dStr = lw.start > Date.now() ? toLocalISO(startL) : toLocalISO(dateForHebcal);
+      if (newEvents.some((x) => x.type === "moon" && (x.name === name || x.moladN === moladN))) return;
       newEvents.push({
         name: name,
         date: dStr,
-        endDate: toLocalISO(endL),
+        endDate: toLocalISO(new Date(lw.final)),
+        moladN: moladN,
         type: "moon",
-        heb:
-          startL > dateForHebcal ? "זמן הברכה יתחיל בקרוב" : "ניתן לברך כעת",
+        heb: lw.start > Date.now() ? "זמן הברכה יתחיל בקרוב" : "ניתן לברך כעת",
         icon: "🌙",
-        levanaString: levanaHTML,
       });
     };
 
@@ -3954,21 +4319,7 @@ async function fetchLiveCalendarData() {
       }
     }
 
-    // ── תיקון הגלובלים: הלולאה למעלה דורסת אותם עבור כל חודש עתידי —
-    // מקבעים אותם לחלון הרלוונטי הבא (משמש להבהוב, מפתח "ברכתי" והתראות) ──
-    try {
-      const selM = _nextMoonEvent();
-      if (selM && selM.endDate) {
-        const trueStart = new Date(selM.endDate);
-        trueStart.setDate(trueStart.getDate() - 7);
-        window.LEVANA_START_DATE =
-          trueStart.getFullYear() + "-" +
-          String(trueStart.getMonth() + 1).padStart(2, "0") + "-" +
-          String(trueStart.getDate()).padStart(2, "0");
-        window.LEVANA_END_DATE = selM.endDate;
-      }
-    } catch (e) {}
-
+    // כרטיס ברכת הלבנה (והגלובלים LEVANA_START/END_DATE) נגזרים מהמולד — _renderMoonCard
     _renderMoonCard();
 
     if (nextH && CURRENT_LANG !== "he") {
@@ -4554,13 +4905,14 @@ function _ensureFastCountdownTicker() {
   window._fastCountdownInterval = setInterval(tick, 1000);
 }
 
-/* ── טיימר תגיות ברכת הלבנה: מעדכן כל .levana-badge-countdown לפי data-target ── */
+/* ── ספירה לאחור בכרטיס ברכת הלבנה ברשימה (.lv-details .lv-timer לפי data-target) ──
+   בהגעה לרגע (תחילת זמן / סוף זמן) — הפירוט נבנה מחדש למצב הבא */
 function _ensureLevanaBadgeTicker() {
   if (window._levanaBadgeInterval) return;
   const tick = () => {
     // מאחורי פופאפ פתוח אין לכתוב לדף — כל שינוי מכריח re-blur של שכבת הפופאפ
     if (document.hidden || document.documentElement.classList.contains("lux-modal-open")) return;
-    const els = document.querySelectorAll(".levana-badge-countdown");
+    const els = document.querySelectorAll("#resultsGrid .lv-details .lv-timer");
     if (!els.length) {
       clearInterval(window._levanaBadgeInterval);
       window._levanaBadgeInterval = null;
@@ -4568,19 +4920,20 @@ function _ensureLevanaBadgeTicker() {
     }
     const now = Date.now();
     els.forEach((el) => {
-      const target = Number(el.dataset.target || 0);
-      const diff = target - now;
-      if (diff <= 0) {
-        el.textContent = "הזמן הסתיים";
-        el.classList.remove("levana-badge-countdown");
+      if (_levanaTimerTick(el, now)) return;
+      const det = el.closest(".lv-details");
+      const n = det ? Number(det.dataset.lvN) : NaN;
+      if (isNaN(n)) return;
+      const w = _levanaWindow(n);
+      const art = det.closest("article");
+      // החלון נסגר — הכרטיס יורד מהרשימה (כמו ברינדור הבא)
+      if (now >= w.final) {
+        if (art) art.remove();
         return;
       }
-      const totalSecs = Math.floor(diff / 1000);
-      const h = Math.floor(totalSecs / 3600);
-      const m = Math.floor((totalSecs % 3600) / 60);
-      const s = totalSecs % 60;
-      const pad = (n) => String(n).padStart(2, "0");
-      el.textContent = `${pad(h)}:${pad(m)}:${pad(s)}`;
+      det.outerHTML = _levanaDetailsHtml(w, { live: true });
+      const badge = art && art.querySelector(".ev-countdown");
+      if (badge && now >= w.start) badge.textContent = "✓ עכשיו זמן הברכה";
     });
   };
   tick();
@@ -5406,15 +5759,22 @@ function render(filter = "all", search = "") {
   const _parts = [];
   const _countdownTexts = [];
   const _deferredTimes = [];
+  // חלון ברכת לבנה שהסתיים בפועל (לפי המולד) לא מוצג — גם כשתאריך הסיום הוא היום
+  const _lvNow = Date.now();
   const filtered = ALL_EVENTS.filter(
     (e) =>
       e.type !== "parashat" &&
       (filter === "all" || e.type === filter) &&
-      (e.name.includes(search) || (e.titleStr && e.titleStr.includes(search))),
+      (e.name.includes(search) || (e.titleStr && e.titleStr.includes(search))) &&
+      !(e.type === "moon" && (_levanaEventWindow(e) || { final: Infinity }).final <= _lvNow),
   );
+  let _lvLiveDone = false; // ספירה חיה רק בכרטיס הלבנה הקרוב
 
   filtered.forEach((e) => {
-    const diff = getDaysDiff(e.date),
+    const lvWin = e.type === "moon" ? _levanaEventWindow(e) : null;
+    const lvLive = !!lvWin && !_lvLiveDone;
+    if (lvLive) _lvLiveDone = true;
+    const diff = lvWin ? Math.max(0, getDaysDiff(new Date(lvWin.start))) : getDaysDiff(e.date),
       color =
         {
           major: "blue",
@@ -5425,7 +5785,9 @@ function render(filter = "all", search = "") {
         }[e.type] || "slate";
     const str = encodeURIComponent(JSON.stringify(e)).replace(/'/g, "%27");
 
-    const dateDisplay = `${ui.weekdayNames[parseLocalDate(e.date).getDay()]} | ${formatLocalizedDate(parseLocalDate(e.date), { day: "2-digit", month: "2-digit", year: "numeric" })} | <span class="text-slate-800 dark:text-slate-200 font-bold">${getHebrewDateString(new Date(e.date))}</span>`;
+    // כרטיס לבנה: התאריך הוא יום תחילת הזמן בפועל (לפי המולד)
+    const _cardDate = lvWin ? new Date(lvWin.start) : parseLocalDate(e.date);
+    const dateDisplay = `${ui.weekdayNames[_cardDate.getDay()]} | ${formatLocalizedDate(_cardDate, { day: "2-digit", month: "2-digit", year: "numeric" })} | <span class="text-slate-800 dark:text-slate-200 font-bold">${getHebrewDateString(lvWin ? _cardDate : new Date(e.date))}</span>`;
 
     let extraTimesHtml = "";
     const _isFastEv =
@@ -5467,19 +5829,12 @@ function render(filter = "all", search = "") {
     };
     const cardGradient = gradientMap[e.type] || gradientMap.minor;
     const isToday = diff <= 0;
-    // Moon window open: show end-of-window countdown
-    // מחושב מהזמנים בפועל (ולא מ-heb שהוקפא בזמן המשיכה) — אחרת התג נשאר "פתוח" אחרי הסוף
-    const isMoonOpen =
-      e.type === "moon" && e.endDate && _isMoonWindowOpenNow(e);
-    const moonDaysLeft = isMoonOpen ? getDaysDiff(e.endDate) : 0;
-    // ביום האחרון של חלון הברכה — ספירה לאחור חיה עד הרגע האחרון
-    const moonLastDay = isMoonOpen && moonDaysLeft <= 1;
+    // חלון ברכת הלבנה פתוח עכשיו — מחושב מרגעי המולד (הפירוט והספירה החיה בגוף הכרטיס)
+    const isMoonOpen = !!lvWin && _lvNow >= lvWin.start;
     const badgeText = isMoonOpen
       ? CURRENT_LANG === "he"
-        ? moonLastDay
-          ? `⏱ סוף הזמן: <span class="levana-badge-countdown" dir="ltr" data-target="${_levanaZmanMs(e.endDate, "e")}">--:--:--</span>`
-          : `סוף הזמן: ${moonDaysLeft} ימים`
-        : `Closes in ${moonDaysLeft} days`
+        ? "✓ עכשיו זמן הברכה"
+        : "✓ Open now"
       : isToday
         ? CURRENT_LANG === "he"
           ? "✨ היום"
@@ -5496,7 +5851,7 @@ function render(filter = "all", search = "") {
                                 <h3 class="font-black text-slate-900 dark:text-white text-xl md:text-2xl mb-1 hover:text-${color}-600 dark:hover:text-${color}-400 transition-colors truncate"><button type="button" class="ev-name-btn" data-ev-name="${escapeHtml(e.name)}" data-ev-title="${escapeHtml(e.titleStr || e.name)}" onclick="openSefariaModal(this.dataset.evName, this.dataset.evTitle)" aria-haspopup="dialog">${escapeHtml(e.name)}</button></h3>
                                 <div class="text-slate-500 dark:text-slate-400 font-medium text-sm">${dateDisplay}</div>
                                 ${extraTimesHtml}
-                                ${e.levanaString ? `${e.levanaString}` : ""}
+                                ${lvWin ? _levanaDetailsHtml(lvWin, { live: lvLive }) : ""}
                             </div>
                         </div>
                         <div class="flex md:flex-col items-center justify-between w-full md:w-auto md:items-end md:justify-center border-t border-slate-100/80 dark:border-slate-700/50 md:border-t-0 pt-3 md:pt-0 mt-2 md:mt-0 gap-2 md:gap-2">
@@ -5524,7 +5879,7 @@ function render(filter = "all", search = "") {
   };
   const _finish = () => {
     _runDeferredCardTimes(_deferredTimes);
-    if (c.querySelector(".levana-badge-countdown")) _ensureLevanaBadgeTicker();
+    if (c.querySelector(".lv-details .lv-timer")) _ensureLevanaBadgeTicker();
   };
   c.innerHTML = _parts.slice(0, _FIRST).join("");
   _applyCountdown(0, _FIRST);
@@ -6249,36 +6604,43 @@ setInterval(() => {
         "tefillin",
       );
 
-    // ── 🌙 Kiddush Levana — window opens (at first nightfall of window) ──
-    if (prefs.levana !== false && window.TZEIT_TIME) {
+    // ── 🌙 Kiddush Levana — בצאת הכוכבים: פתיחת הזמן / יומיים לסיום / הלילה האחרון ──
+    // לפי רגעי המולד המדויקים (_levanaStatus), לא לפי תאריכים משוערים
+    if (prefs.levana !== false && window.TZEIT_TIME && typeof _levanaStatus === "function") {
       const d = minsSince(window.TZEIT_TIME);
       if (d !== null && d >= 0 && d <= 20) {
-        if (window.LEVANA_START_DATE === todayStr)
+        const nowMs = now.getTime();
+        const st = _levanaStatus(nowMs);
+        const w = st.w;
+        const hm = (ms) => {
+          const t = new Date(_levanaRound(ms, false));
+          return `${_lvPad(t.getHours())}:${_lvPad(t.getMinutes())}`;
+        };
+        // הלילה הראשון: הזמן נפתח במהלך הלילה הקרוב, או נפתח במהלך היום שעבר
+        if (
+          (st.state === "before" && w.start - nowMs < 12 * 3600000) ||
+          (st.state === "open" && nowMs - w.start < 20 * 3600000)
+        )
           fireNotif(
             "levana_start",
             "🌙 קידוש לבנה",
-            "החל מהערב ניתן לברך ברכת הלבנה!",
+            st.state === "before"
+              ? `הלילה, מהשעה ${hm(_levanaRound(w.start, true))}, אפשר לברך ברכת הלבנה`
+              : `מהלילה אפשר לברך ברכת הלבנה — עד ${_levanaWhenText(w.end, false)}`,
             "levana_start",
           );
-        if (window.LEVANA_END_DATE === todayStr)
+        if (st.state === "open" && w.end - nowMs < 24 * 3600000)
           fireNotif(
             "levana_end",
             "🌙 קידוש לבנה",
-            "⚠️ הלילה הוא ההזדמנות האחרונה לברך!",
+            `⚠️ הלילה ההזדמנות האחרונה לברך — עד השעה ${hm(w.end)}`,
             "levana_end",
           );
-      }
-      // 2-day warning before levana ends
-      if (window.LEVANA_END_DATE) {
-        const endDate = new Date(window.LEVANA_END_DATE);
-        const daysUntilEnd = Math.ceil(
-          (endDate - new Date(todayStr)) / 86400000,
-        );
-        if (daysUntilEnd === 2 && d !== null && d >= 0 && d <= 20)
+        else if (st.state === "open" && w.end - nowMs < 48 * 3600000)
           fireNotif(
             "levana_warn",
             "🌙 קידוש לבנה",
-            "⏰ נותרו 2 ימים לברכת הלבנה!",
+            `⏰ נותרו יומיים לברכת הלבנה — עד ${_levanaWhenText(w.end, false)}`,
             "levana_warn",
           );
       }
@@ -9183,8 +9545,10 @@ function resolveSeasonalPrayerAdditions(key, context) {
     );
   }
   if (key === "kiddush-levana") {
+    // data-levana-live — זמני החודש והמצב הנוכחי ממולאים בכל פתיחה (_levanaFillPrayerTimes);
+    // ה-HTML של התפילה נשמר במטמון לכל היום ולא יכול להחזיק מצב חי
     blocks.push(
-      `<div class="seasonal-block"><strong>ברכת הלבנה:</strong><div>מברכים כשהלבנה נראית ובמנהג רוב הקהילות לא בשבת ויום טוב. יש להעדיף אמירה מתוך שמחה ובלבוש מכובד.</div></div>`,
+      `<div class="seasonal-block"><strong>ברכת הלבנה:</strong><div>מברכים כשהלבנה נראית ובמנהג רוב הקהילות לא בשבת ויום טוב. יש להעדיף אמירה מתוך שמחה ובלבוש מכובד.</div><div class="lv-prayer-times" data-levana-live="1"></div></div>`,
     );
   }
   if (
@@ -19245,6 +19609,10 @@ openPrayer = async function (key, heLabel, enLabel) {
                   מקור התוכן: <strong>${content.sourceLabel}</strong>${content.sourceUrl ? ` · <a href="${content.sourceUrl}" target="_blank" rel="noopener noreferrer" style="color:#3b82f6;">קישור למקור</a>` : ""}
                 </div>`;
         }
+      }
+      // ברכת הלבנה: זמני החודש והמצב העדכני (תחילה/סוף לפי המולד) בבאנר העליון
+      if (key === "kiddush-levana" && body) {
+        try { _levanaFillPrayerTimes(body); } catch (e) {}
       }
       // מנחה נפתחת ישירות בקורבנות (למנצח על הגיתית); אפשר לגלול מעלה לפתח אליהו
       if (key === "mincha") {

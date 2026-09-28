@@ -137,13 +137,17 @@
       var old = document.getElementById("lux-moon-pop");
       if (old) { old.remove(); return; }
       var m = moonNow();
+      // יום למולד ומצב ברכת הלבנה — לפי המולד המסורתי (script.js), כמו כרטיס הדשבורד
+      var mDay = (typeof window._levanaMoladDay === "function" && window._levanaMoladDay()) || m.day;
+      var lvTxt = typeof window._levanaSummaryText === "function" ? window._levanaSummaryText() : "";
       var pop = document.createElement("div");
       pop.id = "lux-moon-pop";
       pop.innerHTML =
         '<div class="lux-moon-pop-in">' +
           '<span class="lux-moon-pop-face">' + faces[m.idx] + "</span>" +
           "<h3>מראה הירח כעת בשמים</h3>" +
-          '<p class="lux-moon-pop-day">🌙 יום <b>' + m.day + "</b> למולד הלבנה</p>" +
+          '<p class="lux-moon-pop-day">🌙 יום <b>' + mDay + "</b> למולד הלבנה</p>" +
+          (lvTxt ? '<p class="lux-moon-pop-lv"></p>' : "") +
           '<div class="lux-moon-pop-track"><div class="lux-moon-pop-fill"></div></div>' +
           '<p class="lux-moon-pop-note">עוברים לברכת הלבנה בעוד רגע...</p>' +
           '<div class="lux-moon-pop-btns">' +
@@ -151,6 +155,7 @@
             '<button type="button" class="lux-moon-pop-x" aria-label="סגירה">✕</button>' +
           "</div>" +
         "</div>";
+      if (lvTxt) pop.querySelector(".lux-moon-pop-lv").textContent = lvTxt;
       document.body.appendChild(pop);
       var timer = setTimeout(function () { pop.remove(); goLevana(); }, 4600);
       function closeOnly() { clearTimeout(timer); pop.remove(); }
@@ -2909,7 +2914,9 @@
           nextZman: nz ? nz.textContent.replace(/^⏳\s*/, "") : "",
           tehillimDaily: { day: hebDay, range: TH_MONTHLY[Math.min(hebDay, 30)] || "" },
           omerDay: (window.CURRENT_OMER_DAY || 0),
-          moon: ((document.getElementById("stat-moon") || {}).textContent || "").trim(),
+          // טקסט נקי (הכרטיס עצמו מכיל מונה מקטעים) — "✓ עכשיו זמן ברכת הלבנה — עד ..."
+          moon: (typeof window._levanaSummaryText === "function" && window._levanaSummaryText()) ||
+            ((document.getElementById("stat-moon") || {}).textContent || "").trim(),
           pearl: (function () {
             var el = document.getElementById("lux-pearl");
             if (!el) return null;

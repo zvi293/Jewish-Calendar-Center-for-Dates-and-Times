@@ -4683,7 +4683,12 @@
       b.id = "lux-shana-entry";
       b.innerHTML = '<span class="lux-se-emo">💌</span><span class="lux-se-txt"><b>' + esc(theme.entry) + "</b><small>" + esc(theme.entrySub || "צרו ושתפו ברכה מעוצבת") + "</small></span><span class='lux-se-go'>←</span>";
       b.addEventListener("click", openMaker);
+      // מקום קבוע בראש התוכן — אחרי כרטיס הסליחות, אחרת מעל "הלימוד היומי שלי"; כך המיקום
+      // לא תלוי בסדר ההזרקה (במטמון ריק הכניסה נוספת רק בניסיון החוזר, אחרי שורות הלימוד).
+      // כשהיא ראשונה ב-main היא יורדת אל מתחת לגל של ההירו — ראו #lux-shana-entry:first-child ב-CSS
+      var tracks = document.getElementById("lux-tracks-row");
       if (anchor) anchor.insertAdjacentElement("afterend", b);
+      else if (tracks && tracks.parentElement === main) tracks.insertAdjacentElement("beforebegin", b);
       else if (nav) nav.insertAdjacentElement("beforebegin", b);
     }
     injectEntry();

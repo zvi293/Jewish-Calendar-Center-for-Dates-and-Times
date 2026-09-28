@@ -855,11 +855,11 @@
   display: inline-block;
   animation: levana-blink 1.1s ease-in-out infinite;
 }
-/* ── ברכת הלבנה: כרטיס הדשבורד (#stat-moon) — שלושה מצבים ומונה מקטעים ──
+/* ── ברכת הלבנה: מונה מקטעים (כרטיס הרשימה / באנר התפילה) + שעון חי בכרטיס הדשבורד ──
    כל מספר בתיבה משלו עם תווית (ימים · שעות · דקות · שניות), ספרות ברוחב קבוע —
    בלי ערבוב נקודתיים ומספרים בתוך טקסט מימין לשמאל ובלי "קפיצות" רוחב */
-#stat-moon.lv-card { display: flex; flex-direction: column; align-items: flex-start; }
-#stat-moon .lv-month { display: block; }
+/* כרטיס הדשבורד עצמו קומפקטי (חודש + שורת מצב, כמו הכרטיס המקורי); השעון החי בו: */
+#stat-moon .lv-clock { display: inline-block; unicode-bidi: isolate; font-variant-numeric: tabular-nums lining-nums; font-feature-settings: "tnum" 1, "lnum" 1; }
 .lv-state {
   display: inline-block;
   margin-top: 0.3rem;
@@ -875,14 +875,6 @@
 .lv-state.lv-before { padding: 0; color: #6ee7b7; background: none; border-color: transparent; }
 .lv-state.lv-open { color: #dcfce7; background: rgba(22, 163, 74, 0.34); border-color: rgba(74, 222, 128, 0.55); }
 .lv-state.lv-grace { color: #fde68a; background: rgba(217, 119, 6, 0.22); border-color: rgba(251, 191, 36, 0.5); }
-#stat-moon .lv-sub {
-  display: block;
-  margin-top: 0.35rem;
-  font-size: 0.72rem;
-  font-weight: 700;
-  line-height: 1.25;
-  color: #fcd34d;
-}
 /* רוחב מפורש: בתוך עמודת flex (align-items:flex-start) רוחב "לפי התוכן" היה מכווץ את התיבות */
 .lv-timer { display: flex; flex-wrap: nowrap; gap: 0.22rem; margin-top: 0.3rem; width: 100%; max-width: 9.6rem; direction: rtl; }
 .lv-seg {
@@ -918,28 +910,16 @@
   color: rgba(219, 234, 254, 0.72);
   white-space: nowrap;
 }
-#stat-moon .lv-when {
-  display: block;
-  margin-top: 0.3rem;
-  font-size: 0.68rem;
-  font-weight: 600;
-  line-height: 1.35;
-  color: rgba(219, 234, 254, 0.85);
-}
-#stat-moon .lv-when + .lv-when { margin-top: 0.08rem; }
-#stat-moon .lv-when b { color: #fff; font-weight: 800; }
-#stat-moon .lv-when.lv-dim { color: rgba(253, 230, 138, 0.9); font-size: 0.64rem; }
 /* בזמן הברכה — מסגרת ירוקה עדינה לכרטיס */
 #dashboard-state > .glass-card:has(> #stat-moon[data-lv-state="open"]) {
   box-shadow: 0 0 0 1px rgba(74, 222, 128, 0.35), 0 0 22px rgba(74, 222, 128, 0.12);
 }
 @media (min-width: 768px) {
-  .lv-state, #stat-moon .lv-sub { font-size: 0.78rem; }
+  .lv-state { font-size: 0.78rem; }
   .lv-timer { max-width: 11rem; }
   .lv-seg { flex-basis: 2.55rem; }
   .lv-n { font-size: 1.15rem; }
   .lv-u { font-size: 0.6rem; }
-  #stat-moon .lv-when { font-size: 0.74rem; }
 }
 
 @media (max-width: 359px) {

@@ -130,19 +130,6 @@
         "."
       ],
       "port": 8171
-    },
-    {
-      "name": "preview-batch",
-      "runtimeExecutable": "npx",
-      "runtimeArgs": [
-        "-y",
-        "http-server",
-        "C:/Users/zvi29/AppData/Local/Temp/claude/C--Users-zvi29-OneDrive-Desktop-jewish-calendar-test/58f5e293-d4f5-4c13-9901-b62c750d33ea/scratchpad/wt/preview",
-        "-p",
-        "8190",
-        "-c-1"
-      ],
-      "port": 8190
     }
   ]
 }

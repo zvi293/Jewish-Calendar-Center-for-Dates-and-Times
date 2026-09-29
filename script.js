@@ -397,7 +397,6 @@ window.addEventListener("scroll", () => {
 // --- Modal Scroll Lock & History Management ---
 let _modalScrollLockCount = 0;
 function lockBodyScroll() {
-  _uxWatch(); // אנימציית פתיחה מתחילה עכשיו — רשת הביטחון מפני הקפאה (ראו _uxFinishStalled)
   _modalScrollLockCount++;
   if (_modalScrollLockCount === 1) {
     // חובה לקרוא את מיקום הגלילה לפני position:fixed — ההצבה מאפסת את window.scrollY,
@@ -615,10 +614,15 @@ setInterval(function () {
 // History-based back button: push state when modal opens, pop to close
 let _activeModals = [];
 function pushModalState(modalId) {
-  _uxWatch(); // כל פתיחה (מודאל, תצוגת-משנה, פאנל) — רשת הביטחון של אנימציית הפתיחה
   _activeModals.push(modalId);
   history.pushState({ modal: modalId }, "");
+  // X האוניברסלי (lux.js) מתעדכן באותו פריים שבו החלון/התצוגה מופיעים — בלי X שנעלם
+  // לרגע בכניסה לספר ומופיע באיחור
+  if (window.__luxUxTickNow) window.__luxUxTickNow();
 }
+window.addEventListener("popstate", function () {
+  if (window.__luxUxTickNow) window.__luxUxTickNow();
+});
 // ── פופאפים קלים היסטוריה-בטוחים (פאנלי סימניות, בורר נושאי כלים) — 09/2026 ──
 // האלמנטים שלהם חיים בתוך מודאל-הורה: אסור להסירם (removeModalById) ואסור לשחרר
 // את נעילת הגלילה של ההורה — לכן ההסתרה נעשית דרך handler רשום לפי מזהה.
@@ -1783,7 +1787,6 @@ window._markLevanaBlessed = function (btn) {
 // showDashboard); מעבר הסגירה נשאר — הסגירה ממילא מושלמת בטיימר.
 function _revealModalNoFreeze(m, alsoUnscale) {
   if (!m) return;
-  _uxWatch();
   m.classList.remove("hidden");
   const prev = m.style.transition;
   m.style.transition = "none";
@@ -1802,51 +1805,7 @@ function _revealModalNoFreeze(m, alsoUnscale) {
   m.style.transition = prev || "";
 }
 
-// ── אנימציית הפתיחה האחידה (style.css: ux-open/ux-pop/ux-view/ux-reveal) — רשת ביטחון ──
-// האנימציה מתחילה ב-opacity:0. כשהדפדפן מקפיא את ציר האנימציות (ראו למעלה; נצפה גם
-// כשהדף "visible" אבל הרינדור מושהה — timeline.currentTime עומד, טיימרים ממשיכים)
-// היא נתקעת בהתחלה והחלון נשאר שקוף. finish() הוא הדרך היחידה שבאמת משחררת
-// אנימציה קפואה (כמו _forceRevealHeroEls). הבדיקה רצה בטיימר קצר משלה רק בחלון של
-// כמה שניות אחרי פעולת פתיחה אפשרית — אנימציה שלא התקדמה כלל בין שתי בדיקות מסוימת
-// בכוח; תקינה לא נפגעת. לא דרך ה-interval הקבוע של 300ms: שרשרת טיימרים ארוכה מואטת
-// ע"י הדפדפן בדיוק במצב הזה (נבדק — לא רץ כלל 2.5 שנ'), ושרשרת חדשה קצרה — לא.
-// אין להסתמך על animationstart: כשהציר קפוא האירוע לא נשלח בכלל.
-// var ולא let/const: _uxWatch נקראת גם מ-pushModalState/lockBodyScroll שמוגדרות למעלה
-// בקובץ — בלי TDZ גם אם מודאל נפתח עוד לפני שהשורות האלה רצו
-var _UX_ANIM_RE = /^ux-(open|content|pop|view|reveal)$/;
-var _uxWatchUntil = 0;
-var _uxSeenTime = new WeakMap();
-var _uxTimer = 0;
-function _uxWatch() {
-  _uxWatchUntil = Date.now() + 6000;
-  if (!_uxTimer) _uxTimer = setTimeout(_uxWatchTick, 280);
-}
-function _uxWatchTick() {
-  _uxTimer = 0;
-  try { _uxFinishStalled(); } catch (e) {}
-  if (Date.now() < _uxWatchUntil) _uxTimer = setTimeout(_uxWatchTick, 280);
-}
-function _uxFinishStalled() {
-  if (!_uxSeenTime || Date.now() > _uxWatchUntil || !document.getAnimations) return;
-  let list;
-  try { list = document.getAnimations(); } catch (e) { return; }
-  list.forEach((a) => {
-    if (!a.animationName || !_UX_ANIM_RE.test(a.animationName) || a.playState === "finished") return;
-    const t = a.currentTime;
-    if (_uxSeenTime.has(a) && _uxSeenTime.get(a) === t) {
-      try { a.finish(); } catch (e) {}
-    } else {
-      _uxSeenTime.set(a, t);
-    }
-  });
-}
-document.addEventListener("click", _uxWatch, true);
-window.addEventListener("popstate", _uxWatch);
-window.addEventListener("pageshow", _uxWatch);
-document.addEventListener("visibilitychange", _uxWatch);
-document.addEventListener("animationstart", (e) => { if (_UX_ANIM_RE.test(e.animationName)) _uxWatch(); }, true);
-
-// ── סגירה רכה: שכבה שנסגרת דוהה (0.2 שנ') ורק אז מוסרת מה-DOM ──
+// ── סגירה רכה: שכבה שנסגרת דוהה (0.14 שנ') ורק אז מוסרת מה-DOM ──
 // המצב הלוגי נסגר מיד כמו קודם (נעילת גלילה, מחסנית ההיסטוריה) — רק התמונה נשארת
 // לרגע, עם pointer-events:none, כך שהדף שמתחת פעיל מיד. getElementById לעולם לא
 // מחזיר שכבה בסגירה: חיפוש לפי ה-id שלה (פתיחה מחדש מהירה, רשומה יתומה ב-popstate,
@@ -1873,22 +1832,24 @@ function _uxFadeRemove(el) {
     _syncModalOpenClass();
   };
   el.__uxClosing = finish;
-  // אותו סדר כמו בפתיחה, הפוך (fade-through): קודם התוכן (ילדי השכבה + ה-X) נעלם
-  // ב-0.1 שנ', ורק אחריו הרקע המכהה — אף פעם לא רואים טקסט של החלון על הדף
+  // סגירה אחת רציפה: התוכן (ילדי השכבה + ה-X) נעלם מהר (90ms), ובאותו רגע הרקע
+  // מתחיל להתבהר — לאט בהתחלה ומהר בסוף (ease-in, 160ms). כשהדף מתחיל להיראות
+  // הטקסט כבר לא שם, כך שלא רואים טקסט של החלון על הדף. (נבדק בצילום פריימים:
+  // דהייה של כל השכבה יחד = טקסט על טקסט ⇒ "ריצוד"; שני שלבים נפרדים = "קפיצה")
   [el].concat(xs).forEach((n) => { n.style.pointerEvents = "none"; });
   try {
     Array.prototype.forEach.call(el.children, (k) => {
-      k.animate([{ opacity: 0, scale: "0.97" }], { duration: 100, easing: "ease-in", fill: "forwards" });
+      k.animate([{ opacity: 0 }], { duration: 90, easing: "ease-out", fill: "forwards" });
     });
-    xs.forEach((x) => x.animate([{ opacity: 0 }], { duration: 100, easing: "ease-in", fill: "forwards" }));
-    const a = el.animate([{ opacity: 1, offset: 0.35 }, { opacity: 0 }], { duration: 190, easing: "ease-out", fill: "forwards" });
+    xs.forEach((x) => x.animate([{ opacity: 0 }], { duration: 90, easing: "ease-out", fill: "forwards" }));
+    const a = el.animate([{ opacity: 0 }], { duration: 160, easing: "cubic-bezier(0.5, 0, 0.75, 0)", fill: "forwards" });
     // הסרה בסוף האנימציה בפועל: האנימציה מתחילה רק בפריים הבא, ואם הסגירה עצמה
     // תקעה את הדף (שחרור הנעילה) — טיימר שנספר מעכשיו היה מסיר את השכבה לפני
     // שהדהייה בכלל נראתה (נמדד: 250ms תקיעה במעבד טלפון ⇒ היעלמות חדה)
     a.onfinish = finish;
   } catch (e) {}
   // רשת ביטחון: ציר אנימציות קפוא — onfinish לא יגיע
-  setTimeout(finish, 700);
+  setTimeout(finish, 500);
 }
 (function () {
   const orig = Document.prototype.getElementById;

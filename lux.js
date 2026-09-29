@@ -6829,6 +6829,15 @@
     // סריקה מיד כשמתווסף/נגרע פופאפ + קצב קבוע כרשת ביטחון (זול: רק כשיש שכבה פתוחה)
     var pend = null;
     window.__luxUxTick = function () { try { schedTick(); } catch (e) {} };
+    // סריקה באותו פריים, לפני הציור — אחרי כל מעבר תצוגה בתוך פופאפ (pushModalState /
+    // חזור). עד 09/2026 ה-X הוזרק רק ~150ms אחרי כניסה לספר: ה-X של הספרייה נעלם
+    // וה-X הכללי הופיע רק אחר כך ("הבהוב" של הכפתור), ובחזרה לספרייה היו לרגע שני X
+    var nowPend = false;
+    window.__luxUxTickNow = function () {
+      if (nowPend) return;
+      nowPend = true;
+      requestAnimationFrame(function () { nowPend = false; try { tick(); } catch (e) {} });
+    };
     function schedTick() {
       if (pend) return;
       pend = setTimeout(function () { pend = null; tick(); }, 120);

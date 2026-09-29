@@ -6442,8 +6442,8 @@ body > #cal-month-year-picker {
    של פריים-שניים במובייל ונראה כהבהוב בתוך הפופאפ עצמו. לכן: במובייל
    אין טשטוש בשום מקום. פיצויי אטימות לבודדים שהיו שקופים מדי.
    (עד 09/2026 גם אנימציית הכניסה של .lux-sheet בוטלה כאן במובייל; היום
-   היריעה נכנסת באנימציית הפתיחה האחידה בסוף הקובץ — fade-through, קודם
-   הרקע ואז הכרטיס — שאין בה טשטוש ולכן אין ממה להבהב.)
+   היריעה נכנסת באנימציית הפתיחה האחידה בסוף הקובץ — תנועה בלבד, בלי
+   שקיפות ובלי טשטוש, ולכן אין ממה להבהב.)
    ═══════════════════════════════════════════════════════ */
 @media (max-width: 768px) {
   *,
@@ -8981,54 +8981,35 @@ html.dark .prayer-next-cta { box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45); }
 
 
 /* ═══════════════════════════════════════════════════════
-   ✦ אנימציית פתיחה אחידה לכל האתר (09/2026)
-   כל חלון/פופאפ/יריעה/ספר נפתח בהופעה רכה, רבע שנייה. CSS טהור — אנימציית CSS
-   מתחילה מעצמה כשהאלמנט נוסף לדף או עובר מ-display:none לגלוי, כך שאין צורך
-   לגעת באף פונקציית פתיחה.
-   שכבות-על — "fade-through" בשני שלבים: קודם השכבה עצמה (הרקע המכהה) מכסה את
-   הדף מהר (0.14 שנ'), ורק אחריה התוכן (ילדי השכבה) נכנס בזום עדין. גרסה ראשונה
-   דהתה את כל השכבה יחד — בטלפון נראה כריצוד: הדף הצבעוני נראה מבעד לטקסט,
-   וכל תזוזה של הדף מאחור (שורת הכתובת כשהגלילה ננעלת) נחשפה. לא לחזור לזה.
-   רק opacity ו-scale/translate — על ה-GPU, בלי פריסה מחדש ובלי CLS. המאפיינים
-   הנפרדים scale/translate (ולא transform) — לא דורסים transform קיים. בסיום לא
-   נשאר שום סגנון על האלמנט (backwards רק לזמן ההשהיה של התוכן).
-   רשת ביטחון מפני הקפאה (ה"לא נטען" של 09/2026): script.js, ליד
-   _revealModalNoFreeze (_uxWatch/_uxFinishStalled) — finish() לכל אנימציה
-   כזו שלא התקדמה כלל. הסגירה הרכה — _uxFadeRemove שם (אותו סדר, הפוך).
-   שם אנימציה חדש כאן חייב להתאים ל-_UX_ANIM_RE, אחרת אין לו רשת ביטחון.
+   ✦ אנימציית פתיחה אחידה לכל האתר (09/2026, גרסה 3)
+   הרקע של החלון מופיע מיד (כמו תמיד), והתוכן מופיע *מיד, מלא ולא שקוף* —
+   ורק "מתיישב" למקומו: עלייה קטנה והגדלה קלה, 0.22 שנ'. CSS טהור — אנימציית
+   CSS מתחילה מעצמה כשהאלמנט נוסף לדף או עובר מ-display:none לגלוי.
+   למה בלי שקיפות (שני ניסיונות קודמים באותו יום נכשלו בטלפון):
+   · גרסה 1 — כל השכבה דהתה יחד: הדף הצבעוני נראה מבעד לטקסט ⇒ "ריצוד".
+   · גרסה 2 — fade-through (קודם רקע כהה ריק, אחרי 60ms התוכן בדהייה): נראה
+     כמו "נפתח ואז נטען מחדש/רענון", ותחושת תקיעה עד שהתוכן מופיע.
+   תנועה בלבד (scale/translate — המאפיינים הנפרדים, לא transform, כדי לא לדרוס
+   transform קיים) רצה על ה-GPU, התוכן קריא מהפריים הראשון, ואנימציה קפואה
+   משאירה לכל היותר תוכן מוזז בכמה פיקסלים — לעולם לא חלון שקוף ("לא נטען").
+   לכן אין כאן opacity בכניסה — אל תחזיר. הסגירה: _uxFadeRemove ב-script.js
+   (דהייה קצרה אחת של כל החלון).
    אלמנטים שכבר יש להם אנימציית כניסה משלהם (#lux-stories, #lux-moon-pop,
    .lux-badge-pop, #lux-siyum, #lux-erev-panel, #lux-year-wheel) לא ברשימה.
    ═══════════════════════════════════════════════════════ */
-@keyframes ux-open {
-  from { opacity: 0; }
+@keyframes ux-rise {
+  from { translate: 0 14px; scale: 0.97; }
 }
-@keyframes ux-content {
-  from { opacity: 0; scale: 0.96; translate: 0 10px; }
+@keyframes ux-rise-sm {
+  from { translate: 0 10px; }
 }
 @keyframes ux-pop {
-  from { opacity: 0; scale: 0.94; translate: 0 6px; }
-}
-@keyframes ux-view {
-  from { opacity: 0; translate: 0 12px; }
+  from { translate: 0 6px; scale: 0.94; }
 }
 @keyframes ux-reveal {
-  from { opacity: 0; translate: 0 -6px; }
+  from { translate: 0 -6px; }
 }
-/* שכבות-על (מודאלים, קוראי ספרים ותפילות, יריעות) — שלב 1: הרקע מכסה את הדף */
-body > [id$="-modal"],
-body > .lux-sheet-overlay,
-body > #lux-nav-editor,
-body > #lux-plan-reader,
-body > #lux-track-reader,
-body > #lux-selichot-reader,
-body > #lux-print-sheet,
-body > #lux-tour-overlay,
-body > #lux-search-panel,
-body > #chapter-nav-popup,
-body > #cal-month-year-picker {
-  animation: ux-open 0.14s ease-out;
-}
-/* שלב 2: התוכן נכנס אחרי שהרקע כבר כיסה (השהיה + backwards = שקוף עד אז) */
+/* תוכן השכבות (מודאלים, קוראי ספרים ותפילות, יריעות) — השכבה עצמה בלי אנימציה */
 body > [id$="-modal"] > *,
 body > .lux-sheet-overlay > *,
 body > #lux-nav-editor > *,
@@ -9040,49 +9021,47 @@ body > #lux-tour-overlay > *,
 body > #lux-search-panel > *,
 body > #chapter-nav-popup > *,
 body > #cal-month-year-picker > * {
-  animation: ux-content 0.26s cubic-bezier(0.22, 1, 0.36, 1) 0.06s backwards;
+  animation: ux-rise 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+/* מעבר בין תצוגות בתוך חלון (כניסה לספר, לרשימת פרקים, לקורא): התצוגה עצמה
+   מופיעה במקומה, ורק התוכן שבתוכה מתיישב — כך לא נחשף פס של רקע אחר בשוליים
+   (קורא בהיר בתוך חלון כהה) */
+#sn-modal > [id$="-view"],
+#bih-reading-pane,
+#psalm-content-pane {
+  animation: none;
+}
+#sn-modal > [id$="-view"] > *,
+#bih-reading-pane > *,
+#psalm-content-pane > * {
+  animation: ux-rise-sm 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 /* סגירת המודאלים הסטטיים (לוח שנה, הגדרות, מצפן, ספריא, חוק לישראל, עומר: מוסיפים
-   opacity-0 ואחרי 300ms hidden) — גם כאן קודם התוכן נעלם ורק אז הרקע, ולא כל השכבה
-   יחד (אחרת רואים את הלוח/הטקסט מעל הדף במשך כל הדהייה). בפתיחה opacity-0 ו-hidden
-   יורדים יחד (_revealModalNoFreeze) — הכלל לא חל, ובלי transition בכיוון הפתיחה. */
+   opacity-0 ואחרי 300ms hidden) — כמו _uxFadeRemove: התוכן נעלם מהר והרקע מתבהר
+   לאט-ואז-מהר, בו-זמנית — בלי טקסט של החלון על הדף */
+body > [id$="-modal"].opacity-0:not(.hidden) {
+  transition-duration: 0.16s;
+  transition-timing-function: cubic-bezier(0.5, 0, 0.75, 0);
+}
 body > [id$="-modal"].opacity-0:not(.hidden) > * {
   opacity: 0;
-  transition: opacity 0.1s ease-in;
+  transition: opacity 0.09s ease-out;
 }
-/* פופאפים קטנים ופאנלים (סימניות, בורר מפרשים), וה-X האוניברסלי שמוזרק לשכבה */
-body > .lux-ux,
+/* פופאפים קטנים ופאנלים (סימניות, בורר מפרשים). ה-X האוניברסלי (body > .lux-ux) בכוונה
+   בלי אנימציה: הוא מתחלף עם ה-X של התצוגה באותו מקום — "קפיצה" שלו נראתה כהבהוב */
 [id$="-bm-panel"],
 #sn-cm-popover,
 #lux-pl-cm-pop,
 body > [id$="-pop"]:not(#lux-moon-pop),
 .rf-pop {
-  animation: ux-pop 0.2s cubic-bezier(0.22, 1, 0.36, 1);
-}
-/* מעבר בין תצוגות בתוך חלון — כניסה לספר, לרשימת פרקים, לקורא. התצוגה הקודמת
-   נעלמת מיד, והחדשה נכנסת אחרי רגע קצר על הרקע של החלון (גם כאן בלי טקסט על טקסט) */
-#sn-modal > [id$="-view"],
-#bih-reading-pane,
-#psalm-content-pane {
-  animation: ux-view 0.22s cubic-bezier(0.22, 1, 0.36, 1) 0.03s backwards;
+  animation: ux-pop 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 /* תוכן שנפתח בתוך הדף — "תפילות נוספות", שאלות נפוצות */
 #prayer-more-grid:not(.hidden),
 details[open] > :not(summary) {
-  animation: ux-reveal 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+  animation: ux-reveal 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 @media (prefers-reduced-motion: reduce) {
-  body > [id$="-modal"],
-  body > .lux-sheet-overlay,
-  body > #lux-nav-editor,
-  body > #lux-plan-reader,
-  body > #lux-track-reader,
-  body > #lux-selichot-reader,
-  body > #lux-print-sheet,
-  body > #lux-tour-overlay,
-  body > #lux-search-panel,
-  body > #chapter-nav-popup,
-  body > #cal-month-year-picker,
   body > [id$="-modal"] > *,
   body > .lux-sheet-overlay > *,
   body > #lux-nav-editor > *,
@@ -9094,15 +9073,14 @@ details[open] > :not(summary) {
   body > #lux-search-panel > *,
   body > #chapter-nav-popup > *,
   body > #cal-month-year-picker > *,
-  body > .lux-ux,
+  #sn-modal > [id$="-view"] > *,
+  #bih-reading-pane > *,
+  #psalm-content-pane > *,
   [id$="-bm-panel"],
   #sn-cm-popover,
   #lux-pl-cm-pop,
   body > [id$="-pop"]:not(#lux-moon-pop),
   .rf-pop,
-  #sn-modal > [id$="-view"],
-  #bih-reading-pane,
-  #psalm-content-pane,
   #prayer-more-grid:not(.hidden),
   details[open] > :not(summary) {
     animation: none;

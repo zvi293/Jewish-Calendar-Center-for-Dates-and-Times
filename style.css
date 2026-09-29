@@ -647,6 +647,12 @@
       }
 
       /* ── Scrollbar Styling ── */
+      /* מקום שמור לפס הגלילה כבר מהציור הראשון. בלי זה, במחשב (פס גלילה קלאסי) הציור
+         הראשון קורה כשהדף עדיין קצר מהמסך, ורגע אחרי כן פס הגלילה מופיע — ובדף RTL
+         Chrome סופר את זה כהזזה של כל ה-html: CLS 0.856 ב-PageSpeed מחשב (וגם כישלון
+         ב-Agentic Browsing). בנייד פס הגלילה צף ולא תופס מקום, לכן שם זה לא קרה.
+         בונוס: נעילת הגלילה במודאלים (body overflow:hidden) כבר לא מזיזה את הדף 6px. */
+      html { scrollbar-gutter: stable; }
       ::-webkit-scrollbar { width: 6px; height: 6px; }
       ::-webkit-scrollbar-track { background: transparent; }
       ::-webkit-scrollbar-thumb { background: rgba(180, 150, 80, 0.35); border-radius: 3px; }

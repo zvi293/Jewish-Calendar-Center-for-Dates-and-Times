@@ -399,7 +399,12 @@
          ו-preload לגופן הכותרת (העברית של Assistant) — LCP יציב ומהיר. -->
     <link rel="preload" href="/fonts/assistant-hebrew.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="/fonts.css?v=1" />
-    <link rel="stylesheet" href="style.css?v=66" />
+    <link rel="stylesheet" href="style.css?v=67" />
+    <!-- בלי ציור ראשון של "חצי הירו": הסקריפט של באנר היום (לפני ה-h1) גורם למפרסר לפנות
+         את התור, ו-Chrome צייר את ההירו חלקי — ואז קו הגל שבתחתיתו קפץ למטה (CLS). כאן
+         הציור הראשון מחכה עד שכל ההירו נפרסר (עד #main-content — מילישניות בודדות).
+         דפדפן שלא מכיר rel=expect פשוט מתעלם. -->
+    <link rel="expect" href="#main-content" blocking="render" />
     <!-- ביצועים (09/2026): בלוק "אודות" (SEO — 18 כרטיסים, 20 שאלות, טבלאות) כולו מתחת לקו
          הגלילה — content-visibility מדלג על הפריסה/ציור שלו עד שמתקרבים אליו. גובה משוער
          שמור (בלי קפיצת גלילה), ואחרי הציור הראשון הדפדפן זוכר את הגובה האמיתי (auto).

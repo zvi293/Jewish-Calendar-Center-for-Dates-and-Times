@@ -18,7 +18,7 @@ const STATIC_ASSETS = [
   // בדיוק; סטייה עתידית מכוסה ע"י ה-fallback עם ignoreSearch.
   "/script.js?v=63",
   "/lux.js?v=63",
-  "/style.css?v=71",
+  "/style.css?v=74",
   "/tailwind.css?v=2",
   "/fonts.css?v=1",
   "/fonts/assistant-hebrew.woff2",

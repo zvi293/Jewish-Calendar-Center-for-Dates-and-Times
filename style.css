@@ -8933,6 +8933,34 @@ html.dark .prayer-next-cta { box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45); }
 }
 #study-links .study-card:active { transform: scale(0.98); }
 #study-links .study-card:focus-visible { outline: 2px solid rgba(242, 217, 138, 0.9); outline-offset: 3px; }
+/* מובייל — כרטיסים קומפקטיים יותר (בקשת המשתמש: "גדולים מדי"): כותרת למעלה-ימין, חץ
+   למעלה-שמאל (באותה שורה — בלי שורה נפרדת לחץ), תגית התוכן למטה ברוחב מלא (לא נחתכת גם
+   ב-320px), סימן המים למטה-שמאל. .sc-body ב-display:contents — הכותרת והתגית נהיות
+   תאי הרשת של הכרטיס */
+@media (max-width: 767px) {
+  #study-links { gap: 0.55rem; }
+  #study-links .study-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "title go" "sub sub";
+    align-content: space-between;
+    gap: 0.5rem 0.4rem;
+    min-height: 6rem;
+    padding: 0.8rem 0.8rem 0.75rem;
+    border-radius: 1.1rem;
+  }
+  #study-links .sc-body { display: contents; }
+  #study-links .sc-title { grid-area: title; align-self: start; font-size: 0.95rem; }
+  #study-links .sc-sub { grid-area: sub; justify-self: start; align-self: end; font-size: 0.72rem; padding: 0.12rem 0.55rem; }
+  #study-links .sc-go { grid-area: go; align-self: start; order: 0; margin: -0.1rem 0 0 -0.1rem; width: 1.4rem; height: 1.4rem; padding: 0.3rem; }
+  #study-links .sc-ico { font-size: 3.2rem; left: -0.3rem; bottom: -0.55rem; }
+}
+/* מסכים צרים מאוד (320px): בלי החץ — כל הרוחב לכותרת (אחרת "שניים מקרא ואחד תרגום" = 4 שורות) */
+@media (max-width: 340px) {
+  #study-links .study-card { grid-template-columns: minmax(0, 1fr); grid-template-areas: "title" "sub"; padding: 0.75rem 0.7rem 0.7rem; }
+  #study-links .sc-go { display: none; }
+  #study-links .sc-title { font-size: 0.9rem; }
+}
 @media (prefers-reduced-motion: reduce) {
   #study-links .study-card, #study-links .sc-go { transition: none !important; }
 }

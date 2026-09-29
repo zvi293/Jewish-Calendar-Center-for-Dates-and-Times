@@ -27,6 +27,10 @@ dynColors.forEach((c) => {
 });
 
 module.exports = {
+  // hover: רק במכשירים שיש להם hover אמיתי (עכבר). בטלפון מצב hover "נדבק" אחרי נגיעה:
+  // כפתור/כרטיס נשאר מודגש (טבעת, רקע) גם אחרי שהחלון שנפתח ממנו נסגר, ו"קופץ" חזרה רק
+  // בנגיעה הבאה (09/2026). זו ברירת המחדל של Tailwind 4. אותו כלל ל-:hover ב-style.css.
+  future: { hoverOnlyWhenSupported: true },
   darkMode: "class",
   content: [
     "./index.html",

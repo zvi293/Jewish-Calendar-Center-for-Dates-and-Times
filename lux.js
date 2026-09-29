@@ -283,6 +283,14 @@
       var host = e.target.closest && e.target.closest(SEL);
       if (!host) return;
       if (navigator.vibrate) { try { navigator.vibrate(8); } catch (_) {} }
+      // הלחיצה פתחה חלון והכפתור נשאר מאחוריו — הגל ממילא מוסתר, ומדידת המיקום כאן (אחרי
+      // שהחלון נבנה והגלילה ננעלה) כופה פריסה של כל הדף באמצע הפתיחה: 71ms במעבד טלפון
+      // בפתיחת "ספרים נוספים" (נמדד 09/2026). בתוך חלון פתוח — הגל כרגיל
+      if (document.documentElement.classList.contains("lux-modal-open")) {
+        var top = host;
+        while (top.parentElement && top.parentElement !== document.body) top = top.parentElement;
+        if (!top.matches('[id$="-modal"], .lux-sheet-overlay, [id$="-reader"], #lux-nav-editor, #lux-search-panel')) return;
+      }
       var rect = host.getBoundingClientRect();
       var r = document.createElement("span");
       r.className = "lux-ripple";
@@ -6833,10 +6841,19 @@
     // חזור). עד 09/2026 ה-X הוזרק רק ~150ms אחרי כניסה לספר: ה-X של הספרייה נעלם
     // וה-X הכללי הופיע רק אחר כך ("הבהוב" של הכפתור), ובחזרה לספרייה היו לרגע שני X
     var nowPend = false;
+    // סריקה מיידית (סינכרונית) — אנימציית הפתיחה ב-script.js (_uxEnter) קוראת לה רגע לפני
+    // שהתוכן מתחיל לזוז, כדי שהמדידות (מקום פנוי ל-X) ייעשו על המיקום הסופי ולא באמצע התנועה
+    var syncAt = 0;
+    window.__luxUxTickSync = function () { syncAt = performance.now(); try { tick(); } catch (e) {} };
     window.__luxUxTickNow = function () {
       if (nowPend) return;
       nowPend = true;
-      requestAnimationFrame(function () { nowPend = false; try { tick(); } catch (e) {} });
+      requestAnimationFrame(function () {
+        nowPend = false;
+        // סריקה סינכרונית כבר רצה באותה משימה (פתיחת חלון) — אין צורך בשנייה לפני אותו ציור
+        if (performance.now() - syncAt < 40) return;
+        try { tick(); } catch (e) {}
+      });
     };
     function schedTick() {
       if (pend) return;

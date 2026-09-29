@@ -71,14 +71,16 @@
           inset 0 1px 0 rgba(255, 255, 255, 0.12);
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       }
-      .glass-card:hover {
-        background: linear-gradient(165deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.06) 100%);
-        border-color: rgba(232, 193, 90, 0.5);
-        transform: translateY(-3px);
-        box-shadow:
-          0 12px 44px rgba(0, 0, 0, 0.32),
-          0 0 22px rgba(232, 193, 90, 0.12),
-          inset 0 1px 0 rgba(255, 255, 255, 0.14);
+      @media (hover: hover) {
+        .glass-card:hover {
+          background: linear-gradient(165deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.06) 100%);
+          border-color: rgba(232, 193, 90, 0.5);
+          transform: translateY(-3px);
+          box-shadow:
+            0 12px 44px rgba(0, 0, 0, 0.32),
+            0 0 22px rgba(232, 193, 90, 0.12),
+            inset 0 1px 0 rgba(255, 255, 255, 0.14);
+        }
       }
       /* ── Filter Chips ── */
       .chip {
@@ -89,12 +91,16 @@
            וגורם לחיתוך הטקסט במובייל — מקבעים שלא יתכווץ */
         flex-shrink: 0;
       }
-      .chip:hover:not(.active) {
-        border-color: rgba(200, 155, 60, 0.55);
-        color: #a16207;
+      @media (hover: hover) {
+        .chip:hover:not(.active) {
+          border-color: rgba(200, 155, 60, 0.55);
+          color: #a16207;
+        }
       }
-      .dark .chip:hover:not(.active) {
-        color: #f2d98a;
+      @media (hover: hover) {
+        .dark .chip:hover:not(.active) {
+          color: #f2d98a;
+        }
       }
       .chip.active {
         background: linear-gradient(135deg, #f2d98a 0%, #dfb254 45%, #c9993a 100%) !important;
@@ -118,11 +124,13 @@
         opacity: 1;
         transform: translateY(0);
       }
-      .event-card:hover {
-        transform: translateY(-6px);
-        box-shadow:
-          0 20px 50px -12px rgba(15, 23, 42, 0.22),
-          0 0 0 1px rgba(200, 155, 60, 0.18);
+      @media (hover: hover) {
+        .event-card:hover {
+          transform: translateY(-6px);
+          box-shadow:
+            0 20px 50px -12px rgba(15, 23, 42, 0.22),
+            0 0 0 1px rgba(200, 155, 60, 0.18);
+        }
       }
       .event-card::before {
         content: '';
@@ -154,9 +162,11 @@
         box-shadow: 0 4px 24px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.10);
         transition: border-color 0.3s ease, box-shadow 0.3s ease;
       }
-      #shabbat-countdown-wrap:hover #shabbat-countdown-bar {
-        border-color: rgba(232, 193, 90, 0.5);
-        box-shadow: 0 6px 30px rgba(0, 0, 0, 0.3), 0 0 24px rgba(232, 193, 90, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+      @media (hover: hover) {
+        #shabbat-countdown-wrap:hover #shabbat-countdown-bar {
+          border-color: rgba(232, 193, 90, 0.5);
+          box-shadow: 0 6px 30px rgba(0, 0, 0, 0.3), 0 0 24px rgba(232, 193, 90, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+        }
       }
       @keyframes gold-breathe {
         0%, 100% { text-shadow: 0 0 14px rgba(232, 193, 90, 0.25); }
@@ -398,11 +408,13 @@
         min-height: 72px;
         box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
       }
-      .prayer-btn:hover {
-        background: linear-gradient(165deg, rgba(232,193,90,0.16) 0%, rgba(30,58,138,0.28) 100%);
-        border-color: rgba(232, 193, 90, 0.45);
-        transform: translateY(-2px);
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28), 0 0 18px rgba(232, 193, 90, 0.10);
+      @media (hover: hover) {
+        .prayer-btn:hover {
+          background: linear-gradient(165deg, rgba(232,193,90,0.16) 0%, rgba(30,58,138,0.28) 100%);
+          border-color: rgba(232, 193, 90, 0.45);
+          transform: translateY(-2px);
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28), 0 0 18px rgba(232, 193, 90, 0.10);
+        }
       }
       .prayer-btn:active {
         transform: translateY(0) scale(0.98);
@@ -412,7 +424,9 @@
         line-height: 1;
         transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
       }
-      .prayer-btn:hover .prayer-icon { transform: scale(1.18); }
+      @media (hover: hover) {
+        .prayer-btn:hover .prayer-icon { transform: scale(1.18); }
+      }
       .prayer-label {
         font-size: 0.7rem;
         font-weight: 700;
@@ -440,9 +454,11 @@
       .zman-card {
         transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
       }
-      .zman-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+      @media (hover: hover) {
+        .zman-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+        }
       }
       /* FAB scroll-to-top: desktop only */
       @media (max-width: 767px) {
@@ -614,8 +630,10 @@
       }
 
       /* ── Footer credits ── */
-      footer a:hover {
-        background: linear-gradient(135deg, rgba(37,99,235,0.08), rgba(139,92,246,0.08));
+      @media (hover: hover) {
+        footer a:hover {
+          background: linear-gradient(135deg, rgba(37,99,235,0.08), rgba(139,92,246,0.08));
+        }
       }
 
       /* ── Calendar day hover ── */
@@ -623,10 +641,12 @@
         transition: all 0.2s ease;
         cursor: pointer;
       }
-      #cal-days-grid > div:not([aria-hidden]):hover {
-        transform: scale(1.05);
-        box-shadow: 0 6px 18px rgba(0,0,0,0.14), 0 0 0 2px rgba(224, 183, 79, 0.55);
-        z-index: 2;
+      @media (hover: hover) {
+        #cal-days-grid > div:not([aria-hidden]):hover {
+          transform: scale(1.05);
+          box-shadow: 0 6px 18px rgba(0,0,0,0.14), 0 0 0 2px rgba(224, 183, 79, 0.55);
+          z-index: 2;
+        }
       }
 
       /* ── Scrollbar Styling ── */
@@ -639,7 +659,9 @@
       ::-webkit-scrollbar { width: 6px; height: 6px; }
       ::-webkit-scrollbar-track { background: transparent; }
       ::-webkit-scrollbar-thumb { background: rgba(180, 150, 80, 0.35); border-radius: 3px; }
-      ::-webkit-scrollbar-thumb:hover { background: rgba(200, 165, 90, 0.55); }
+      @media (hover: hover) {
+        ::-webkit-scrollbar-thumb:hover { background: rgba(200, 165, 90, 0.55); }
+      }
 
       /* ── Theme circle (settings panel) ── */
       .theme-circle {
@@ -788,7 +810,9 @@
   box-shadow: 0 6px 20px rgba(124, 58, 237, 0.35);
   transition: transform 0.15s ease;
 }
-.levana-blessed-btn:hover { transform: scale(1.04); }
+@media (hover: hover) {
+  .levana-blessed-btn:hover { transform: scale(1.04); }
+}
 .levana-blessed-btn.blessed {
   background: #10b981;
   box-shadow: 0 6px 20px rgba(16, 185, 129, 0.35);
@@ -1077,25 +1101,31 @@ nav[aria-label="סינון וחיפוש"] > div.relative > svg {
   border-color: rgba(232, 193, 90, 0.5) !important;
   transition: all 0.25s ease !important;
 }
-#omer-container button:hover {
-  background: rgba(232, 193, 90, 0.2) !important;
-  border-color: rgba(242, 217, 138, 0.8) !important;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3), 0 0 16px rgba(232, 193, 90, 0.2) !important;
+@media (hover: hover) {
+  #omer-container button:hover {
+    background: rgba(232, 193, 90, 0.2) !important;
+    border-color: rgba(242, 217, 138, 0.8) !important;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3), 0 0 16px rgba(232, 193, 90, 0.2) !important;
+  }
 }
 
 /* ── כפתורי סנכרון בכרטיסי אירועים ── */
 #resultsGrid .event-card button {
   transition: all 0.22s ease !important;
 }
-#resultsGrid .event-card button:hover {
-  border-color: rgba(200, 155, 60, 0.55) !important;
-  box-shadow: 0 4px 14px rgba(200, 155, 60, 0.18);
-  transform: translateY(-1px);
+@media (hover: hover) {
+  #resultsGrid .event-card button:hover {
+    border-color: rgba(200, 155, 60, 0.55) !important;
+    box-shadow: 0 4px 14px rgba(200, 155, 60, 0.18);
+    transform: translateY(-1px);
+  }
 }
 
 /* ── שאלות נפוצות — פתיחה בזהב ── */
-details.group summary:hover {
-  color: #a1762a !important;
+@media (hover: hover) {
+  details.group summary:hover {
+    color: #a1762a !important;
+  }
 }
 details.group summary .text-blue-500 {
   color: #c9993a !important;
@@ -1118,19 +1148,23 @@ details.group summary .text-blue-500 {
   box-shadow: 0 4px 16px rgba(5, 11, 26, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
-.nav-action-btn:hover {
-  background: rgba(20, 35, 78, 0.78) !important;
-  border-color: rgba(242, 217, 138, 0.7) !important;
-  box-shadow: 0 6px 22px rgba(5, 11, 26, 0.45), 0 0 18px rgba(232, 193, 90, 0.25) !important;
-  transform: translateY(-1px) scale(1.05);
+@media (hover: hover) {
+  .nav-action-btn:hover {
+    background: rgba(20, 35, 78, 0.78) !important;
+    border-color: rgba(242, 217, 138, 0.7) !important;
+    box-shadow: 0 6px 22px rgba(5, 11, 26, 0.45), 0 0 18px rgba(232, 193, 90, 0.25) !important;
+    transform: translateY(-1px) scale(1.05);
+  }
 }
 .nav-donate-btn {
   box-shadow: 0 4px 16px rgba(5, 11, 26, 0.35), 0 0 14px rgba(232, 193, 90, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
 }
-.nav-donate-btn:hover {
-  border-color: rgba(242, 217, 138, 0.8) !important;
-  box-shadow: 0 6px 22px rgba(5, 11, 26, 0.45), 0 0 22px rgba(232, 193, 90, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
-  transform: translateY(-1px);
+@media (hover: hover) {
+  .nav-donate-btn:hover {
+    border-color: rgba(242, 217, 138, 0.8) !important;
+    box-shadow: 0 6px 22px rgba(5, 11, 26, 0.45), 0 0 22px rgba(232, 193, 90, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
+    transform: translateY(-1px);
+  }
 }
 
 /* ── כפתורי CTA בהירו — לוח שנה / בתי כנסת / מוצאי שבת ── */
@@ -1141,11 +1175,13 @@ details.group summary .text-blue-500 {
   box-shadow: 0 6px 24px rgba(5, 11, 26, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.14) !important;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
-#btn-open-calendar:hover,
-#btn-motzei-shabbat:hover {
-  border-color: rgba(242, 217, 138, 0.8) !important;
-  box-shadow: 0 10px 32px rgba(5, 11, 26, 0.5), 0 0 24px rgba(232, 193, 90, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
-  transform: translateY(-2px);
+@media (hover: hover) {
+  #btn-open-calendar:hover,
+  #btn-motzei-shabbat:hover {
+    border-color: rgba(242, 217, 138, 0.8) !important;
+    box-shadow: 0 10px 32px rgba(5, 11, 26, 0.5), 0 0 24px rgba(232, 193, 90, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+    transform: translateY(-2px);
+  }
 }
 /* בתי כנסת, מקוואות וציוני צדיקים — כפתור עגול צף בקצה הימני של ההירו, מול
    הירח (#lux-moon: top 4.7rem, left 1.1rem) — בקשת משתמש 02/09/2026.
@@ -1172,10 +1208,12 @@ details.group summary .text-blue-500 {
   width: 23px;
   height: 23px;
 }
-#btn-shul-mikve:hover {
-  border-color: rgba(242, 217, 138, 0.85);
-  box-shadow: 0 8px 24px rgba(5, 11, 26, 0.5), 0 0 20px rgba(232, 193, 90, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2);
-  transform: scale(1.08);
+@media (hover: hover) {
+  #btn-shul-mikve:hover {
+    border-color: rgba(242, 217, 138, 0.85);
+    box-shadow: 0 8px 24px rgba(5, 11, 26, 0.5), 0 0 20px rgba(232, 193, 90, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    transform: scale(1.08);
+  }
 }
 /* אזור מגע מוגדל — כמו הירח שממול (אין שכן צמוד, אז ההרחבה סימטרית) */
 #btn-shul-mikve::after {
@@ -1217,10 +1255,12 @@ details.group summary .text-blue-500 {
   border: 1px solid rgba(232, 193, 90, 0.16) !important;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
-.zman-card:hover {
-  border-color: rgba(232, 193, 90, 0.55) !important;
-  background: linear-gradient(160deg, rgba(37, 51, 108, 0.75) 0%, rgba(20, 30, 66, 0.6) 100%) !important;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3), 0 0 16px rgba(232, 193, 90, 0.12);
+@media (hover: hover) {
+  .zman-card:hover {
+    border-color: rgba(232, 193, 90, 0.55) !important;
+    background: linear-gradient(160deg, rgba(37, 51, 108, 0.75) 0%, rgba(20, 30, 66, 0.6) 100%) !important;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3), 0 0 16px rgba(232, 193, 90, 0.12);
+  }
 }
 .zman-card > span:first-child {
   color: rgba(242, 217, 138, 0.88) !important;
@@ -1271,11 +1311,15 @@ nav[aria-label="סינון וחיפוש"]::before {
   font-family: var(--lux-serif);
   letter-spacing: 0.005em;
 }
-#resultsGrid .event-card:hover h3 {
-  color: #a1762a !important;
+@media (hover: hover) {
+  #resultsGrid .event-card:hover h3 {
+    color: #a1762a !important;
+  }
 }
-.dark #resultsGrid .event-card:hover h3 {
-  color: #f2d98a !important;
+@media (hover: hover) {
+  .dark #resultsGrid .event-card:hover h3 {
+    color: #f2d98a !important;
+  }
 }
 /* אריח האייקון בכרטיס — עומק וזהב עדין */
 #resultsGrid .event-card > div:first-child > div:first-child {
@@ -1286,8 +1330,10 @@ nav[aria-label="סינון וחיפוש"]::before {
 .dark #resultsGrid .event-card > div:first-child > div:first-child {
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
 }
-#resultsGrid .event-card:hover > div:first-child > div:first-child {
-  transform: scale(1.08) rotate(-3deg);
+@media (hover: hover) {
+  #resultsGrid .event-card:hover > div:first-child > div:first-child {
+    transform: scale(1.08) rotate(-3deg);
+  }
 }
 
 /* ── כרטיסיות הדשבורד — כותרות עדינות ── */
@@ -1309,11 +1355,16 @@ nav[aria-label="סינון וחיפוש"]::before {
   border: 1px solid rgba(200, 155, 60, 0.18);
   box-shadow: 0 30px 80px -20px rgba(5, 11, 26, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.04) !important;
 }
-#settings-modal select:focus,
-#settings-modal select:hover,
-#settings-modal button[onclick="openPrayerOrderEditor()"]:hover {
+#settings-modal select:focus {
   border-color: rgba(224, 183, 79, 0.55) !important;
   box-shadow: 0 0 0 3px rgba(224, 183, 79, 0.18);
+}
+@media (hover: hover) {
+  #settings-modal select:hover,
+  #settings-modal button[onclick="openPrayerOrderEditor()"]:hover {
+    border-color: rgba(224, 183, 79, 0.55) !important;
+    box-shadow: 0 0 0 3px rgba(224, 183, 79, 0.18);
+  }
 }
 #settings-modal button[onclick="saveSettings()"] {
   background: linear-gradient(135deg, #1e3a8a 0%, #172554 100%) !important;
@@ -1322,9 +1373,11 @@ nav[aria-label="סינון וחיפוש"]::before {
   box-shadow: 0 8px 24px rgba(23, 37, 84, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.12);
   transition: all 0.25s ease !important;
 }
-#settings-modal button[onclick="saveSettings()"]:hover {
-  box-shadow: 0 10px 30px rgba(23, 37, 84, 0.55), 0 0 18px rgba(232, 193, 90, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.15);
-  transform: translateY(-1px);
+@media (hover: hover) {
+  #settings-modal button[onclick="saveSettings()"]:hover {
+    box-shadow: 0 10px 30px rgba(23, 37, 84, 0.55), 0 0 18px rgba(232, 193, 90, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    transform: translateY(-1px);
+  }
 }
 #settings-modal input[type="range"] {
   accent-color: #e0b74f !important;
@@ -1335,13 +1388,17 @@ nav[aria-label="סינון וחיפוש"]::before {
   border: 1px solid rgba(161, 118, 42, 0.5);
   box-shadow: 0 6px 20px rgba(201, 153, 58, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.45) !important;
 }
-#settings-modal button[onclick="showContactModal()"]:hover {
-  filter: brightness(1.06);
-  transform: translateY(-1px);
-  box-shadow: 0 8px 26px rgba(201, 153, 58, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.5) !important;
+@media (hover: hover) {
+  #settings-modal button[onclick="showContactModal()"]:hover {
+    filter: brightness(1.06);
+    transform: translateY(-1px);
+    box-shadow: 0 8px 26px rgba(201, 153, 58, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.5) !important;
+  }
 }
-#settings-modal button[onclick="useGPS()"]:hover {
-  box-shadow: 0 0 0 2px rgba(224, 183, 79, 0.35);
+@media (hover: hover) {
+  #settings-modal button[onclick="useGPS()"]:hover {
+    box-shadow: 0 0 0 2px rgba(224, 183, 79, 0.35);
+  }
 }
 
 /* ── מודאל לוח שנה חודשי ── */
@@ -1361,17 +1418,21 @@ nav[aria-label="סינון וחיפוש"]::before {
   color: #fffaf0 !important;
   box-shadow: 0 3px 12px rgba(150, 105, 31, 0.4);
 }
-#calendar-modal button[onclick="resetMonth()"]:hover {
-  background: linear-gradient(135deg, #cf9c36, #a87724) !important;
+@media (hover: hover) {
+  #calendar-modal button[onclick="resetMonth()"]:hover {
+    background: linear-gradient(135deg, #cf9c36, #a87724) !important;
+  }
 }
 #calendar-modal button[onclick="downloadBulkICS()"] {
   background: linear-gradient(135deg, #0d9265, #06724f) !important;
   border: 1px solid rgba(167, 243, 208, 0.35);
   box-shadow: 0 3px 12px rgba(6, 114, 79, 0.4);
 }
-#calendar-modal button[onclick="downloadBulkICS()"]:hover {
-  filter: brightness(1.1);
-  box-shadow: 0 4px 16px rgba(13, 146, 101, 0.5), 0 0 12px rgba(232, 193, 90, 0.15);
+@media (hover: hover) {
+  #calendar-modal button[onclick="downloadBulkICS()"]:hover {
+    filter: brightness(1.1);
+    box-shadow: 0 4px 16px rgba(13, 146, 101, 0.5), 0 0 12px rgba(232, 193, 90, 0.15);
+  }
 }
 #cal-month-heb {
   color: var(--lux-gold-300) !important;
@@ -1401,15 +1462,19 @@ nav[aria-label="סינון וחיפוש"]::before {
 footer a {
   transition: all 0.25s ease !important;
 }
-footer a:hover {
-  border-color: rgba(200, 155, 60, 0.5) !important;
-  color: #a1762a !important;
-  box-shadow: 0 4px 14px rgba(200, 155, 60, 0.12);
-  transform: translateY(-1px);
+@media (hover: hover) {
+  footer a:hover {
+    border-color: rgba(200, 155, 60, 0.5) !important;
+    color: #a1762a !important;
+    box-shadow: 0 4px 14px rgba(200, 155, 60, 0.12);
+    transform: translateY(-1px);
+  }
 }
-.dark footer a:hover {
-  color: #f2d98a !important;
-  border-color: rgba(232, 193, 90, 0.4) !important;
+@media (hover: hover) {
+  .dark footer a:hover {
+    color: #f2d98a !important;
+    border-color: rgba(232, 193, 90, 0.4) !important;
+  }
 }
 
 /* ── טוסטים ── */
@@ -1490,12 +1555,14 @@ footer a:hover {
   border-color: rgba(232, 193, 90, 0.16) !important;
   transition: all 0.2s ease !important;
 }
-#sn-books-grid button:hover,
-#sn-subbook-grid button:hover,
-#sn-sections-grid button:hover {
-  border-color: rgba(232, 193, 90, 0.45) !important;
-  transform: translateY(-2px);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35), 0 0 12px rgba(232, 193, 90, 0.10);
+@media (hover: hover) {
+  #sn-books-grid button:hover,
+  #sn-subbook-grid button:hover,
+  #sn-sections-grid button:hover {
+    border-color: rgba(232, 193, 90, 0.45) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35), 0 0 12px rgba(232, 193, 90, 0.10);
+  }
 }
 
 /* ── מודאל מצפן — עיצוב מחדש 09/2026 (לילה מלכותי וזהב) ──
@@ -1543,7 +1610,9 @@ body:has(#compass-modal:not(.hidden)) > .lux-ux { display: none !important; }
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease;
 }
-.cmp-x:hover { background: rgba(255, 255, 255, 0.12); color: #fff; }
+@media (hover: hover) {
+  .cmp-x:hover { background: rgba(255, 255, 255, 0.12); color: #fff; }
+}
 .cmp-title {
   margin: 0.15rem 2.8rem 0;
   font-size: 1.5rem;
@@ -1776,7 +1845,9 @@ body:has(#compass-modal:not(.hidden)) > .lux-ux { display: none !important; }
   transition: background .15s ease, border-color .15s ease, transform .15s ease;
   -webkit-tap-highlight-color: transparent;
 }
-.prayer-cmp-btn:hover { border-color: rgba(201, 153, 58, 0.45); }
+@media (hover: hover) {
+  .prayer-cmp-btn:hover { border-color: rgba(201, 153, 58, 0.45); }
+}
 .prayer-cmp-btn:active { transform: scale(0.94); }
 .prayer-cmp-dark { background: rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.2); color: #e2e8f0; width: 2.2rem; height: 2.2rem; }   /* .lux-sel-head */
 @media (max-width: 420px) { .prayer-cmp-btn { width: 34px; height: 34px; font-size: 0.95rem; } }
@@ -1954,8 +2025,10 @@ body:has(#compass-modal:not(.hidden)) > .lux-ux { display: none !important; }
   cursor: pointer;
   transition: all 0.2s ease;
 }
-.lux-ne-chip:hover {
-  border-color: rgba(200, 155, 60, 0.55);
+@media (hover: hover) {
+  .lux-ne-chip:hover {
+    border-color: rgba(200, 155, 60, 0.55);
+  }
 }
 .lux-ne-chip.lux-ne-on {
   background: linear-gradient(165deg, #fdf9ec 0%, #f6eed7 100%);
@@ -2011,17 +2084,23 @@ body:has(#compass-modal:not(.hidden)) > .lux-ux { display: none !important; }
   color: #1a2547;
   box-shadow: 0 5px 16px rgba(201, 153, 58, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.45);
 }
-.lux-ne-save:hover { filter: brightness(1.05); transform: translateY(-1px); }
+@media (hover: hover) {
+  .lux-ne-save:hover { filter: brightness(1.05); transform: translateY(-1px); }
+}
 .lux-ne-reset {
   background: rgba(15, 23, 42, 0.07);
   color: #334155;
 }
-.lux-ne-reset:hover { background: rgba(15, 23, 42, 0.12); }
+@media (hover: hover) {
+  .lux-ne-reset:hover { background: rgba(15, 23, 42, 0.12); }
+}
 .lux-ne-cancel {
   background: none;
   color: #94a3b8;
 }
-.lux-ne-cancel:hover { color: #475569; }
+@media (hover: hover) {
+  .lux-ne-cancel:hover { color: #475569; }
+}
 /* ── עורך סרגל הניווט — תצוגה מקדימה חיה (אזור א') ──
    נראית בדיוק כמו #lux-bottom-nav (רקע כהה, מבטאי זהב, RTL, 5 משבצות),
    אבל בלי backdrop-filter (הפאנל בהיר ואין מה לטשטש). המשבצות נושאות
@@ -2258,10 +2337,12 @@ body > .lux-ne-slot {
   transition: all 0.25s ease;
   animation: lux-moon-glow 5s ease-in-out infinite;
 }
-#lux-moon:hover {
-  transform: scale(1.12);
-  border-color: rgba(242, 217, 138, 0.7);
-  box-shadow: 0 0 26px rgba(232, 193, 90, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+@media (hover: hover) {
+  #lux-moon:hover {
+    transform: scale(1.12);
+    border-color: rgba(242, 217, 138, 0.7);
+    box-shadow: 0 0 26px rgba(232, 193, 90, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  }
 }
 @keyframes lux-moon-glow {
   0%, 100% { box-shadow: 0 0 14px rgba(191, 219, 254, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.1); }
@@ -2294,8 +2375,10 @@ html.lux-js #resultsGrid .event-card.lux-in {
   opacity: 1;
   transform: translateY(0);
 }
-html.lux-js #resultsGrid .event-card.lux-in:hover {
-  transform: translateY(-6px);
+@media (hover: hover) {
+  html.lux-js #resultsGrid .event-card.lux-in:hover {
+    transform: translateY(-6px);
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   html.lux-js #resultsGrid .event-card {
@@ -2504,9 +2587,11 @@ html.lux-royal .chip.active {
   letter-spacing: normal;
   font-family: "Assistant", sans-serif;
 }
-.lux-zmanim-tools button:hover {
-  background: rgba(232, 193, 90, 0.25);
-  border-color: rgba(242, 217, 138, 0.7);
+@media (hover: hover) {
+  .lux-zmanim-tools button:hover {
+    background: rgba(232, 193, 90, 0.25);
+    border-color: rgba(242, 217, 138, 0.7);
+  }
 }
 
 /* ── גלגל השנה ── */
@@ -2533,10 +2618,12 @@ html.lux-royal .chip.active {
   box-shadow: 0 4px 16px rgba(5, 11, 26, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.12);
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
-#lux-year-wheel-btn:hover {
-  border-color: rgba(242, 217, 138, 0.8);
-  box-shadow: 0 8px 24px rgba(5, 11, 26, 0.5), 0 0 20px rgba(232, 193, 90, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.2);
-  transform: scale(1.08);
+@media (hover: hover) {
+  #lux-year-wheel-btn:hover {
+    border-color: rgba(242, 217, 138, 0.8);
+    box-shadow: 0 8px 24px rgba(5, 11, 26, 0.5), 0 0 20px rgba(232, 193, 90, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    transform: scale(1.08);
+  }
 }
 /* אזור מגע מוגדל — כמו #lux-moon; מצומצם למעלה כדי לא לחפוף את הירח */
 #lux-year-wheel-btn::after {
@@ -2654,10 +2741,12 @@ html.lux-royal .chip.active {
   filter: drop-shadow(0 0 5px rgba(232, 193, 90, 0.45));
   transition: all 0.2s ease;
 }
-.lux-yw-evt:hover .lux-yw-halo {
-  fill: rgba(60, 45, 12, 0.9);
-  stroke: rgba(253, 224, 71, 0.95);
-  filter: drop-shadow(0 0 10px rgba(232, 193, 90, 0.8));
+@media (hover: hover) {
+  .lux-yw-evt:hover .lux-yw-halo {
+    fill: rgba(60, 45, 12, 0.9);
+    stroke: rgba(253, 224, 71, 0.95);
+    filter: drop-shadow(0 0 10px rgba(232, 193, 90, 0.8));
+  }
 }
 .lux-yw-evt text {
   pointer-events: none;
@@ -3000,7 +3089,9 @@ body.lux-shabbat #shabbat-countdown-bar {
   cursor: pointer;
   box-shadow: 0 5px 16px rgba(201, 153, 58, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.45);
 }
-.lux-sheet-primary:hover { filter: brightness(1.05); }
+@media (hover: hover) {
+  .lux-sheet-primary:hover { filter: brightness(1.05); }
+}
 .lux-sheet-secondary {
   background: rgba(15, 23, 42, 0.07);
   color: #334155;
@@ -3019,7 +3110,9 @@ body.lux-shabbat #shabbat-countdown-bar {
   font-weight: 700;
   cursor: pointer;
 }
-.lux-sheet-cancel:hover { color: #475569; }
+@media (hover: hover) {
+  .lux-sheet-cancel:hover { color: #475569; }
+}
 /* כפתור פעולה מסוכנת (מחיקה/איפוס) ביריעות lux — אדום רך, באותה שפה עיצובית */
 .lux-sheet-danger {
   background: linear-gradient(135deg, #fecaca 0%, #f87171 55%, #dc2626 100%);
@@ -3032,7 +3125,9 @@ body.lux-shabbat #shabbat-countdown-bar {
   cursor: pointer;
   box-shadow: 0 5px 16px rgba(220, 38, 38, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.35);
 }
-.lux-sheet-danger:hover { filter: brightness(1.05); }
+@media (hover: hover) {
+  .lux-sheet-danger:hover { filter: brightness(1.05); }
+}
 /* ── בורר מטרות התפילה (שמות לתפילה) — צ'יפים רב-בחירה ── */
 .lux-pp-grid {
   display: flex;
@@ -3090,7 +3185,9 @@ body.lux-shabbat #shabbat-countdown-bar {
   align-items: center;
   justify-content: center;
 }
-.lux-pp-close:hover { background: rgba(15, 23, 42, 0.12); }
+@media (hover: hover) {
+  .lux-pp-close:hover { background: rgba(15, 23, 42, 0.12); }
+}
 .lux-pp-custom-row .lux-sheet-input { margin-bottom: 0; flex: 1; }
 /* כפתור פתיחת בורר המטרות — נראה כמו שדה קלט, עם חץ */
 .lux-pp-trigger {
@@ -3173,8 +3270,10 @@ body.lux-shabbat #shabbat-countdown-bar {
 }
 .dark .lux-sp-item { color: #e2e8f0; }
 .lux-sp-item:last-child { border-bottom: none; }
-.lux-sp-item:hover {
-  background: rgba(224, 183, 79, 0.1);
+@media (hover: hover) {
+  .lux-sp-item:hover {
+    background: rgba(224, 183, 79, 0.1);
+  }
 }
 .lux-sp-ico { font-size: 1.1rem; flex-shrink: 0; }
 .lux-sp-txt { flex: 1; font-weight: 700; font-size: 0.92rem; }
@@ -3259,9 +3358,11 @@ body.lux-shabbat #shabbat-countdown-bar {
   flex-shrink: 0;
   transition: background 0.2s ease, color 0.2s ease;
 }
-#lux-crit-pill .lux-crit-x:hover {
-  background: rgba(255, 237, 213, 0.2);
-  color: #fff;
+@media (hover: hover) {
+  #lux-crit-pill .lux-crit-x:hover {
+    background: rgba(255, 237, 213, 0.2);
+    color: #fff;
+  }
 }
 @keyframes lux-crit-in {
   from { opacity: 0; transform: translate(-50%, -12px) scale(0.96); }
@@ -3858,7 +3959,9 @@ html.dark .lux-sel-chip { color: #d9c48a; border-color: rgba(224, 183, 79, 0.35)
   transition: background 0.2s ease;
   -webkit-tap-highlight-color: rgba(224, 183, 79, 0.2);
 }
-#lux-th-progress:hover { background: #faf0d8; }
+@media (hover: hover) {
+  #lux-th-progress:hover { background: #faf0d8; }
+}
 #lux-th-progress:active { background: #f5e8c8; }
 .lux-th-readgrid {
   display: grid;
@@ -3880,9 +3983,11 @@ html.dark .lux-sel-chip { color: #d9c48a; border-color: rgba(224, 183, 79, 0.35)
   cursor: pointer;
   transition: transform 0.12s ease, box-shadow 0.15s ease;
 }
-.lux-th-readchip:hover {
-  transform: scale(1.06);
-  box-shadow: 0 3px 10px rgba(224, 183, 79, 0.4);
+@media (hover: hover) {
+  .lux-th-readchip:hover {
+    transform: scale(1.06);
+    box-shadow: 0 3px 10px rgba(224, 183, 79, 0.4);
+  }
 }
 .lux-th-readchip:active { transform: scale(0.95); }
 
@@ -4597,7 +4702,9 @@ html.dark .lux-hc-row b { color: #f2d98a; }
   background: linear-gradient(135deg, rgba(232, 193, 90, 0.1), rgba(232, 193, 90, 0.04));
   transition: all 0.2s ease;
 }
-#lux-shana-entry:hover { background: rgba(232, 193, 90, 0.16); }
+@media (hover: hover) {
+  #lux-shana-entry:hover { background: rgba(232, 193, 90, 0.16); }
+}
 /* ראשונה בתוכן (אין כרטיס סליחות מעליה): ה-main עולה 4rem על תחתית ההירו (-mt-16) והכרטיס השקוף
    נחתך בדיוק על הגל — חצי על הכחול וחצי על הרקע הבהיר. הגל בגובה 60px קבוע (6px–66px מראש ה-main,
    הכחול יורד בו עד ~45px) — מורידים את הכרטיס כולו אל מתחת לגל, עם מרווח נקי */
@@ -4755,7 +4862,9 @@ html.dark .lux-tracks-title { color: #f2d98a; }
   transition: transform 0.15s ease, box-shadow 0.2s ease;
   text-align: center;
 }
-.lux-track-card:hover { transform: translateY(-3px); box-shadow: 0 8px 22px rgba(161, 118, 42, 0.22); }
+@media (hover: hover) {
+  .lux-track-card:hover { transform: translateY(-3px); box-shadow: 0 8px 22px rgba(161, 118, 42, 0.22); }
+}
 .lux-track-card:active { transform: scale(0.97); }
 html.dark .lux-track-card {
   background: linear-gradient(165deg, #101a35, #0c1530);
@@ -4962,7 +5071,9 @@ html.dark .lux-sn-h.lux-sn-f-on, html.dark .lux-sn-g.lux-sn-f-on {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
   transition: transform 0.15s ease, background 0.15s ease;
 }
-.lux-ux:hover { background: rgba(30, 41, 70, 0.92); transform: scale(1.06); }
+@media (hover: hover) {
+  .lux-ux:hover { background: rgba(30, 41, 70, 0.92); transform: scale(1.06); }
+}
 .lux-ux:active { transform: scale(0.94); }
 
 /* הערה: ה-X של הגדרות/עומר הועבר ב-HTML אל שורש האוברליי (מחוץ לפאנל
@@ -5202,7 +5313,9 @@ html.dark .lux-pl-cmchip-on { background: rgba(124, 58, 237, 0.8); color: #fff; 
   cursor: pointer;
   transition: all 0.15s ease;
 }
-.lux-pl-cm-mainbtn:hover { background: rgba(124, 58, 237, 0.16); }
+@media (hover: hover) {
+  .lux-pl-cm-mainbtn:hover { background: rgba(124, 58, 237, 0.16); }
+}
 .lux-pl-cm-badge {
   min-width: 17px;
   height: 17px;
@@ -5608,7 +5721,9 @@ html.dark .lux-dt-lbl { color: #d9c48a; }
   font-size: 0.85rem;
   line-height: 1.6;
 }
-.lux-plan-empty:hover { border-color: #c9993a; box-shadow: 0 6px 20px rgba(224, 183, 79, 0.25); }
+@media (hover: hover) {
+  .lux-plan-empty:hover { border-color: #c9993a; box-shadow: 0 6px 20px rgba(224, 183, 79, 0.25); }
+}
 .lux-plan-empty small { color: #8a7434; font-weight: 600; }
 .lux-plan-plus {
   flex-shrink: 0;
@@ -5664,7 +5779,9 @@ html.dark .lux-plan-name { color: #f2d98a; }
   padding: 0.15rem 0.35rem;
   border-radius: 50%;
 }
-.lux-plan-del:hover { color: #b45309; }
+@media (hover: hover) {
+  .lux-plan-del:hover { color: #b45309; }
+}
 .lux-plan-bar {
   height: 9px;
   border-radius: 999px;
@@ -5700,7 +5817,9 @@ html.dark .lux-plan-stats { color: #b8a97a; }
   cursor: pointer;
   transition: all 0.2s ease;
 }
-.lux-plan-open:hover { box-shadow: 0 4px 14px rgba(224, 183, 79, 0.45); }
+@media (hover: hover) {
+  .lux-plan-open:hover { box-shadow: 0 4px 14px rgba(224, 183, 79, 0.45); }
+}
 .lux-plan-open-done {
   background: linear-gradient(135deg, #ecfdf5, #d1fae5);
   color: #047857;
@@ -5783,7 +5902,9 @@ html.dark .lux-plan-flame { background: rgba(251, 146, 60, 0.14); color: #fdba74
   padding: 0;
   transition: transform 0.15s ease;
 }
-.lux-plan-edit:hover { transform: rotate(35deg) scale(1.1); }
+@media (hover: hover) {
+  .lux-plan-edit:hover { transform: rotate(35deg) scale(1.1); }
+}
 html.dark .lux-plan-edit { color: #f2d98a; background: rgba(242, 217, 138, 0.1); }
 .lux-plan-barrow { display: flex; align-items: center; gap: 0.55rem; }
 .lux-plan-barrow .lux-plan-bar { flex: 1; margin: 0; }
@@ -5961,7 +6082,9 @@ html.dark .lux-plan-day.on {
   padding: 0.5rem 0.6rem;
   transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
 }
-#lux-plan-wizard .lux-pw-book:hover { transform: translateY(-1px); border-color: rgba(201, 153, 58, 0.55); }
+@media (hover: hover) {
+  #lux-plan-wizard .lux-pw-book:hover { transform: translateY(-1px); border-color: rgba(201, 153, 58, 0.55); }
+}
 .lux-pw-book-ico {
   grid-row: 1 / span 2;
   display: inline-flex;
@@ -6151,7 +6274,9 @@ html.dark #lux-plan-pace .lux-dt-out { color: #e2e8f0; }
   margin-bottom: 0.3rem;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
-.lux-pw-pick-all:hover { transform: translateY(-1px); box-shadow: 0 8px 22px rgba(201, 153, 58, 0.45); }
+@media (hover: hover) {
+  .lux-pw-pick-all:hover { transform: translateY(-1px); box-shadow: 0 8px 22px rgba(201, 153, 58, 0.45); }
+}
 .lux-pw-pick-all small { display: block; font-size: 0.68rem; font-weight: 700; color: #4a3a10; }
 .lux-pw-pick-grp {
   display: flex;
@@ -6192,7 +6317,9 @@ html.dark #lux-plan-pace .lux-dt-out { color: #e2e8f0; }
   cursor: pointer;
   transition: border-color 0.15s ease, transform 0.15s ease;
 }
-.lux-pw-pick-chip:hover { transform: translateY(-1px); border-color: rgba(201, 153, 58, 0.6); }
+@media (hover: hover) {
+  .lux-pw-pick-chip:hover { transform: translateY(-1px); border-color: rgba(201, 153, 58, 0.6); }
+}
 .lux-pw-pick-chip-t {
   display: block;
   font-weight: 800;
@@ -6549,7 +6676,9 @@ body:has(#chapter-nav-popup) > .lux-ux { display: none !important; }
   display: flex; align-items: center; justify-content: center;
   transition: background 0.15s ease, transform 0.15s ease;
 }
-.cnp-x:hover { background: rgba(15, 23, 42, 0.12); }
+@media (hover: hover) {
+  .cnp-x:hover { background: rgba(15, 23, 42, 0.12); }
+}
 .cnp-x:active { transform: scale(0.92); }
 .cnp-search { padding: 0.6rem 1rem 0; flex-shrink: 0; }
 .cnp-search-in {
@@ -6590,7 +6719,9 @@ body:has(#chapter-nav-popup) > .lux-ux { display: none !important; }
   transition: background 0.15s ease, border-color 0.15s ease, transform 0.12s ease, box-shadow 0.15s ease;
 }
 .cnp-grid-long .cnp-item { text-align: right; padding: 0.7rem 0.9rem; }
-.cnp-item:hover { background: rgba(242, 217, 138, 0.22); border-color: rgba(201, 153, 58, 0.55); }
+@media (hover: hover) {
+  .cnp-item:hover { background: rgba(242, 217, 138, 0.22); border-color: rgba(201, 153, 58, 0.55); }
+}
 .cnp-item:active { transform: scale(0.97); }
 .cnp-item.is-sub {
   font-weight: 700;
@@ -6635,7 +6766,9 @@ html.dark .cnp-x { background: rgba(255, 255, 255, 0.08); border-color: rgba(255
 html.dark .cnp-search-in { background: rgba(255, 255, 255, 0.06); color: #f1f5f9; border-color: rgba(255, 255, 255, 0.18); }
 html.dark .cnp-item { background: rgba(255, 255, 255, 0.06); color: #e2e8f0; border-color: rgba(242, 217, 138, 0.18); }
 html.dark .cnp-item.is-sub { color: #cbd5e1; background: transparent; }
-html.dark .cnp-item:hover { background: rgba(242, 217, 138, 0.16); }
+@media (hover: hover) {
+  html.dark .cnp-item:hover { background: rgba(242, 217, 138, 0.16); }
+}
 html.dark .cnp-item.is-active { color: #1a2547; }
 html.dark .cnp-foot { color: #64748b; }
 /* מובייל — יריעה תחתונה עם ידית, בלי טשטוש ובלי אנימציה (ראו כללי המובייל למעלה) */
@@ -6996,7 +7129,9 @@ body.lux-erev #prayer-grid-wrap > :not(#lux-erev-grid) { display: none !importan
   transition: opacity 0.25s ease, left 0.25s ease, right 0.25s ease;
   pointer-events: none;
 }
-.lux-erev-btn:hover::before { opacity: 1; left: 10%; right: 10%; }
+@media (hover: hover) {
+  .lux-erev-btn:hover::before { opacity: 1; left: 10%; right: 10%; }
+}
 .lux-erev-btn .lux-erev-ico {
   display: inline-flex;
   align-items: center;
@@ -7011,12 +7146,16 @@ body.lux-erev #prayer-grid-wrap > :not(#lux-erev-grid) { display: none !importan
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 0 14px rgba(251, 191, 36, 0.12);
   transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-.lux-erev-btn:hover .lux-erev-ico { transform: scale(1.14) rotate(-4deg); }
+@media (hover: hover) {
+  .lux-erev-btn:hover .lux-erev-ico { transform: scale(1.14) rotate(-4deg); }
+}
 .lux-erev-btn .prayer-label { color: rgba(248, 250, 252, 0.94); font-size: 0.72rem; }
-.lux-erev-btn:hover {
-  background: linear-gradient(170deg, rgba(255, 214, 110, 0.20) 0%, rgba(168, 85, 247, 0.14) 100%) !important;
-  border-color: rgba(255, 224, 138, 0.75) !important;
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.3), 0 0 24px rgba(251, 191, 36, 0.22) !important;
+@media (hover: hover) {
+  .lux-erev-btn:hover {
+    background: linear-gradient(170deg, rgba(255, 214, 110, 0.20) 0%, rgba(168, 85, 247, 0.14) 100%) !important;
+    border-color: rgba(255, 224, 138, 0.75) !important;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.3), 0 0 24px rgba(251, 191, 36, 0.22) !important;
+  }
 }
 /* השלישייה הראשית — זוהרת */
 .lux-erev-btn.lux-erev-hot {
@@ -7119,7 +7258,9 @@ body:not(.lux-erev) #hero-section h1 span[data-i18n-key="app_title_2"] { animati
   opacity: 0.85;
   transition: left 0.35s ease, right 0.35s ease, opacity 0.35s ease;
 }
-#dashboard-state > div.glass-card:hover::before { left: 5%; right: 5%; opacity: 1; }
+@media (hover: hover) {
+  #dashboard-state > div.glass-card:hover::before { left: 5%; right: 5%; opacity: 1; }
+}
 #dashboard-state > div.glass-card::after {
   position: absolute;
   bottom: -14px;
@@ -7131,7 +7272,9 @@ body:not(.lux-erev) #hero-section h1 span[data-i18n-key="app_title_2"] { animati
   transform: rotate(-8deg);
   transition: transform 0.4s ease, opacity 0.4s ease;
 }
-#dashboard-state > div.glass-card:hover::after { transform: rotate(-2deg) scale(1.08); opacity: 0.12; }
+@media (hover: hover) {
+  #dashboard-state > div.glass-card:hover::after { transform: rotate(-2deg) scale(1.08); opacity: 0.12; }
+}
 /* 1 · התאריך היום — ענבר */
 #dashboard-state > div:nth-child(1)::before { background: linear-gradient(90deg, transparent, #fbbf24, transparent); }
 #dashboard-state > div:nth-child(1)::after { content: "✡"; color: #fbbf24; }
@@ -7196,8 +7339,10 @@ body:not(.lux-erev) #hero-section h1 span[data-i18n-key="app_title_2"] { animati
   transition: background 0.3s ease;
   pointer-events: none;
 }
-.zman-card:hover::before {
-  background: linear-gradient(90deg, transparent, rgba(242, 217, 138, 0.9), transparent);
+@media (hover: hover) {
+  .zman-card:hover::before {
+    background: linear-gradient(90deg, transparent, rgba(242, 217, 138, 0.9), transparent);
+  }
 }
 .zman-card span[dir="ltr"] {
   color: #fdf9ec !important;
@@ -7275,7 +7420,9 @@ body:not(.lux-erev) .prayer-btn::before {
   opacity: 0;
   transition: opacity 0.25s ease, left 0.25s ease, right 0.25s ease;
 }
-body:not(.lux-erev) .prayer-btn:hover::before { opacity: 1; left: 10%; right: 10%; }
+@media (hover: hover) {
+  body:not(.lux-erev) .prayer-btn:hover::before { opacity: 1; left: 10%; right: 10%; }
+}
 body:not(.lux-erev) .prayer-btn .prayer-icon {
   display: inline-flex;
   align-items: center;
@@ -7289,10 +7436,12 @@ body:not(.lux-erev) .prayer-btn .prayer-icon {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 0 14px rgba(99, 102, 241, 0.12);
   transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.25s ease, box-shadow 0.25s ease;
 }
-body:not(.lux-erev) .prayer-btn:hover .prayer-icon {
-  transform: scale(1.14) rotate(-5deg);
-  border-color: rgba(242, 217, 138, 0.6);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 0 20px rgba(232, 193, 90, 0.28);
+@media (hover: hover) {
+  body:not(.lux-erev) .prayer-btn:hover .prayer-icon {
+    transform: scale(1.14) rotate(-5deg);
+    border-color: rgba(242, 217, 138, 0.6);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 0 20px rgba(232, 193, 90, 0.28);
+  }
 }
 body:not(.lux-erev) .prayer-btn .prayer-label { font-size: 0.72rem; letter-spacing: 0.01em; }
 /* שני הכפתורים המודגשים (תפילות/ספרים נוספים) — הילה זהובה */
@@ -7318,28 +7467,34 @@ body:not(.lux-erev) .prayer-btn.prayer-cta-highlight .prayer-icon {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.09), 0 4px 14px rgba(0, 0, 0, 0.22) !important;
   transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.22s ease, box-shadow 0.22s ease, background 0.22s ease !important;
 }
-#sn-books-grid button:hover {
-  background:
-    radial-gradient(ellipse 90% 55% at 50% -8%, rgba(251, 191, 36, 0.10) 0%, transparent 60%),
-    linear-gradient(170deg, rgba(255, 255, 255, 0.13) 0%, rgba(255, 255, 255, 0.05) 100%) !important;
-  border-color: rgba(242, 217, 138, 0.55) !important;
-  transform: translateY(-3px);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 10px 26px rgba(0, 0, 0, 0.32), 0 0 18px rgba(232, 193, 90, 0.14) !important;
+@media (hover: hover) {
+  #sn-books-grid button:hover {
+    background:
+      radial-gradient(ellipse 90% 55% at 50% -8%, rgba(251, 191, 36, 0.10) 0%, transparent 60%),
+      linear-gradient(170deg, rgba(255, 255, 255, 0.13) 0%, rgba(255, 255, 255, 0.05) 100%) !important;
+    border-color: rgba(242, 217, 138, 0.55) !important;
+    transform: translateY(-3px);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 10px 26px rgba(0, 0, 0, 0.32), 0 0 18px rgba(232, 193, 90, 0.14) !important;
+  }
 }
 #sn-books-grid button:active { transform: translateY(-1px) scale(0.98); }
 /* האייקון בכרטיס ספר — קופץ קלות בהובר */
 #sn-books-grid button > span:first-child {
   transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-#sn-books-grid button:hover > span:first-child { transform: scale(1.18) rotate(-4deg); }
+@media (hover: hover) {
+  #sn-books-grid button:hover > span:first-child { transform: scale(1.18) rotate(-4deg); }
+}
 /* תתי-ספרים וסעיפים — אותה שפה */
 #sn-subbook-grid button, #sn-sections-grid button {
   border-radius: 1rem !important;
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease !important;
 }
-#sn-subbook-grid button:hover, #sn-sections-grid button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3), 0 0 14px rgba(232, 193, 90, 0.12);
+@media (hover: hover) {
+  #sn-subbook-grid button:hover, #sn-sections-grid button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3), 0 0 14px rgba(232, 193, 90, 0.12);
+  }
 }
 
 /* ── 4ב. הניווט התחתון — קו זהב חי ומצב פעיל זוהר ── */
@@ -7377,9 +7532,11 @@ body:not(.lux-erev) .prayer-btn.prayer-cta-highlight .prayer-icon {
 }
 
 /* ── ה-X האוניברסלי — טבעת זהב בהובר, שפה אחת עם שאר האתר ── */
-.lux-ux:hover {
-  border-color: rgba(242, 217, 138, 0.75);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45), 0 0 16px rgba(232, 193, 90, 0.25);
+@media (hover: hover) {
+  .lux-ux:hover {
+    border-color: rgba(242, 217, 138, 0.75);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45), 0 0 16px rgba(232, 193, 90, 0.25);
+  }
 }
 
 /* ── פוטר — קו זהב עדין וכפתורים שמתחממים בהובר ── */
@@ -7387,41 +7544,53 @@ footer > div { border-top-color: rgba(200, 155, 60, 0.22) !important; }
 footer a[href$=".html"] {
   transition: transform 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease !important;
 }
-footer a[href$=".html"]:hover {
-  transform: translateY(-2px);
-  border-color: rgba(200, 155, 60, 0.55) !important;
-  color: #a16207 !important;
-  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.12), 0 0 12px rgba(232, 193, 90, 0.12);
+@media (hover: hover) {
+  footer a[href$=".html"]:hover {
+    transform: translateY(-2px);
+    border-color: rgba(200, 155, 60, 0.55) !important;
+    color: #a16207 !important;
+    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.12), 0 0 12px rgba(232, 193, 90, 0.12);
+  }
 }
-.dark footer a[href$=".html"]:hover { color: #f2d98a !important; }
+@media (hover: hover) {
+  .dark footer a[href$=".html"]:hover { color: #f2d98a !important; }
+}
 
 /* ── תהילים (נייר בהיר) — אריחי פרקים חמים עם הרמה ── */
 #tehillim-modal button[onclick^="window._tehillimOpenPsalm"] {
   transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease !important;
 }
-#tehillim-modal button[onclick^="window._tehillimOpenPsalm"]:hover {
-  transform: translateY(-2px);
-  border-color: rgba(180, 130, 40, 0.55) !important;
-  background: rgba(232, 193, 90, 0.10) !important;
-  box-shadow: 0 6px 16px rgba(120, 85, 20, 0.14);
+@media (hover: hover) {
+  #tehillim-modal button[onclick^="window._tehillimOpenPsalm"]:hover {
+    transform: translateY(-2px);
+    border-color: rgba(180, 130, 40, 0.55) !important;
+    background: rgba(232, 193, 90, 0.10) !important;
+    box-shadow: 0 6px 16px rgba(120, 85, 20, 0.14);
+  }
 }
 #tehillim-modal button[onclick^="window._tehillimSwitchDay"] {
   transition: transform 0.18s ease, box-shadow 0.18s ease !important;
 }
-#tehillim-modal button[onclick^="window._tehillimSwitchDay"]:hover { transform: translateY(-1px); }
+@media (hover: hover) {
+  #tehillim-modal button[onclick^="window._tehillimSwitchDay"]:hover { transform: translateY(-1px); }
+}
 
 /* ── לוח השנה החודשי — טבעת זהב על יום בהובר ── */
 #cal-days-grid [data-date] { transition: box-shadow 0.15s ease, transform 0.15s ease; border-radius: 0.75rem; }
-#cal-days-grid [data-date]:hover {
-  box-shadow: inset 0 0 0 1.5px rgba(224, 183, 79, 0.65), 0 4px 12px rgba(5, 11, 26, 0.18);
-  transform: translateY(-1px);
+@media (hover: hover) {
+  #cal-days-grid [data-date]:hover {
+    box-shadow: inset 0 0 0 1.5px rgba(224, 183, 79, 0.65), 0 4px 12px rgba(5, 11, 26, 0.18);
+    transform: translateY(-1px);
+  }
 }
 
 /* ── לוח ההילולות — אריחים חיים ── */
 #hil-cal-grid button { transition: transform 0.15s ease, box-shadow 0.15s ease; }
-#hil-cal-grid button:hover {
-  transform: translateY(-1px);
-  box-shadow: inset 0 0 0 1.5px rgba(224, 183, 79, 0.5);
+@media (hover: hover) {
+  #hil-cal-grid button:hover {
+    transform: translateY(-1px);
+    box-shadow: inset 0 0 0 1.5px rgba(224, 183, 79, 0.5);
+  }
 }
 
 /* ── שדות חיפוש/סינון בכל האתר — זוהר זהב בפוקוס ── */
@@ -7431,8 +7600,10 @@ input[type="search"]:focus, input[type="text"]:focus, #sn-sections-filter:focus 
 }
 
 /* ── כפתורי חזרה-למעלה — טבעת זהב בהובר ── */
-#fab-top:hover, #scroll-top-btn:hover {
-  box-shadow: 0 6px 28px rgba(37, 99, 235, 0.55), 0 0 0 1.5px rgba(242, 217, 138, 0.55) !important;
+@media (hover: hover) {
+  #fab-top:hover, #scroll-top-btn:hover {
+    box-shadow: 0 6px 28px rgba(37, 99, 235, 0.55), 0 0 0 1.5px rgba(242, 217, 138, 0.55) !important;
+  }
 }
 
 /* ── באנר התקנת PWA — נגיעת זהב בקצה ── */
@@ -7696,7 +7867,9 @@ body.lux-season-av9 .lux-hero-orb { opacity: 0.15; }
   box-shadow: 0 6px 24px rgba(201, 153, 58, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.5);
   transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
 }
-.lux-siyum-btn:hover { transform: translateY(-2px) scale(1.03); box-shadow: 0 10px 32px rgba(201, 153, 58, 0.6); }
+@media (hover: hover) {
+  .lux-siyum-btn:hover { transform: translateY(-2px) scale(1.03); box-shadow: 0 10px 32px rgba(201, 153, 58, 0.6); }
+}
 .lux-siyum-btn:active { transform: scale(0.97); }
 
 @media (prefers-reduced-motion: reduce) {
@@ -7760,10 +7933,12 @@ body.lux-season-av9 .lux-hero-orb { opacity: 0.15; }
   color: #fdf3d0 !important;
   transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
-#hil-prev:hover, #hil-next:hover,
-#hilulot-cal-modal button[onclick^="window._hilCalNav"]:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3), 0 0 14px rgba(232, 193, 90, 0.25);
+@media (hover: hover) {
+  #hil-prev:hover, #hil-next:hover,
+  #hilulot-cal-modal button[onclick^="window._hilCalNav"]:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3), 0 0 14px rgba(232, 193, 90, 0.25);
+  }
 }
 #hil-datelabel { color: #efe0ff !important; font-weight: 800 !important; }
 
@@ -7797,10 +7972,12 @@ body.lux-season-av9 .lux-hero-orb { opacity: 0.15; }
   animation: hil-card-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
   transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
-.hil-card:hover {
-  transform: translateY(-2px);
-  border-color: rgba(242, 217, 138, 0.55);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 8px 22px rgba(0, 0, 0, 0.3), 0 0 16px rgba(232, 193, 90, 0.14);
+@media (hover: hover) {
+  .hil-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(242, 217, 138, 0.55);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 8px 22px rgba(0, 0, 0, 0.3), 0 0 16px rgba(232, 193, 90, 0.14);
+  }
 }
 @keyframes hil-card-in {
   from { opacity: 0; transform: translateY(10px); }
@@ -7940,10 +8117,12 @@ html.dark #chok-israel-modal.chok-dark-skin .chok-targum b {
   padding: 0;
   transition: all 0.2s;
 }
-.snbm-close:hover {
-  background: rgba(239, 68, 68, 0.18);
-  color: #fca5a5;
-  border-color: rgba(239, 68, 68, 0.4);
+@media (hover: hover) {
+  .snbm-close:hover {
+    background: rgba(239, 68, 68, 0.18);
+    color: #fca5a5;
+    border-color: rgba(239, 68, 68, 0.4);
+  }
 }
 .snbm-row {
   display: flex;
@@ -7955,9 +8134,11 @@ html.dark #chok-israel-modal.chok-dark-skin .chok-targum b {
   overflow: hidden;
   transition: background 0.18s, border-color 0.18s;
 }
-.snbm-row:hover {
-  background: rgba(232, 193, 90, 0.09);
-  border-color: rgba(232, 193, 90, 0.35);
+@media (hover: hover) {
+  .snbm-row:hover {
+    background: rgba(232, 193, 90, 0.09);
+    border-color: rgba(232, 193, 90, 0.35);
+  }
 }
 .snbm-row-lp {
   background: rgba(232, 193, 90, 0.1);
@@ -8015,9 +8196,11 @@ html.dark #chok-israel-modal.chok-dark-skin .chok-targum b {
   flex-shrink: 0;
   transition: all 0.18s;
 }
-.snbm-del:hover {
-  color: #fca5a5;
-  background: rgba(239, 68, 68, 0.12);
+@media (hover: hover) {
+  .snbm-del:hover {
+    color: #fca5a5;
+    background: rgba(239, 68, 68, 0.12);
+  }
 }
 .snbm-empty {
   text-align: center;
@@ -8116,10 +8299,12 @@ html.dark #chok-israel-modal.chok-dark-skin .chok-targum b {
   border-color: rgba(242, 217, 138, 0.35);
 }
 .hilc-has .hilc-heb { color: #fdf3d0; font-weight: 800; }
-.hilc-has:hover {
-  transform: translateY(-2px);
-  border-color: rgba(242, 217, 138, 0.7);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3), 0 0 14px rgba(232, 193, 90, 0.2);
+@media (hover: hover) {
+  .hilc-has:hover {
+    transform: translateY(-2px);
+    border-color: rgba(242, 217, 138, 0.7);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3), 0 0 14px rgba(232, 193, 90, 0.2);
+  }
 }
 .hilc-mark {
   position: relative;
@@ -8354,7 +8539,9 @@ html[data-reader-font="tinos"] #prayer-modal .holy-text-style, html[data-reader-
   transition: transform 0.15s ease, box-shadow 0.15s ease;
   padding: 0;
 }
-.rf-btn:hover { transform: scale(1.08); box-shadow: 0 4px 10px rgba(180, 83, 9, 0.25); }
+@media (hover: hover) {
+  .rf-btn:hover { transform: scale(1.08); box-shadow: 0 4px 10px rgba(180, 83, 9, 0.25); }
+}
 /* "אא" — אות גדולה ואות קטנה (המקבילה העברית ל-Aa): האות השנייה מצוירת ב-::after,
    כך שכל 13 הכפתורים ברחבי האתר מקבלים אותה בלי לגעת בתבניות */
 .rf-btn::after {
@@ -8400,7 +8587,9 @@ html.dark .rf-btn {
   border: 1.5px solid rgba(0, 0, 0, 0.1); background: rgba(0, 0, 0, 0.02);
   transition: border-color 0.15s ease, background 0.15s ease;
 }
-.rf-row:hover { border-color: rgba(180, 83, 9, 0.45); }
+@media (hover: hover) {
+  .rf-row:hover { border-color: rgba(180, 83, 9, 0.45); }
+}
 .rf-row-on { border-color: #b45309; background: rgba(180, 83, 9, 0.07); }
 .rf-row-check {
   width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
@@ -8744,7 +8933,9 @@ html.dark #lux-th-progress {
   background: rgba(232, 193, 90, 0.1);
   border-bottom-color: rgba(232, 193, 90, 0.25);
 }
-html.dark #lux-th-progress:hover { background: rgba(232, 193, 90, 0.16); }
+@media (hover: hover) {
+  html.dark #lux-th-progress:hover { background: rgba(232, 193, 90, 0.16); }
+}
 html.dark #lux-th-progress:active { background: rgba(232, 193, 90, 0.22); }
 html.dark .lux-thp-txt { color: #f2d98a; }
 
@@ -8811,14 +9002,18 @@ html.dark .tc-show-full { color: #fcd34d; background: rgba(224, 183, 79, 0.1); }
   box-shadow: 0 6px 18px rgba(201, 153, 58, 0.35);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
-.prayer-next-cta:hover { transform: translateY(-1px); box-shadow: 0 8px 22px rgba(201, 153, 58, 0.45); }
+@media (hover: hover) {
+  .prayer-next-cta:hover { transform: translateY(-1px); box-shadow: 0 8px 22px rgba(201, 153, 58, 0.45); }
+}
 .prayer-next-cta:active { transform: scale(0.97); }
 .prayer-next-cta-arrow { font-size: 1.1rem; }
 html.dark .prayer-next-cta { box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45); }
 
 /* ── לוח ברכות הנהנין — קפיצה מסמל המקרא לפרק הברכה (09/2026) ── */
 .bb-jump { transition: transform 0.12s ease, filter 0.12s ease; }
-.bb-jump:hover { filter: brightness(0.95); }
+@media (hover: hover) {
+  .bb-jump:hover { filter: brightness(0.95); }
+}
 .bb-jump:active { transform: scale(0.95); }
 @keyframes bb-cat-flash { 0% { background: rgba(242, 217, 138, 0.6); } 100% { background: transparent; } }
 .bb-cat-flash { animation: bb-cat-flash 1.5s ease-out; border-radius: 0.5rem; }
@@ -8981,27 +9176,18 @@ html.dark .prayer-next-cta { box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45); }
 
 
 /* ═══════════════════════════════════════════════════════
-   ✦ אנימציית פתיחה אחידה לכל האתר (09/2026, גרסה 3)
-   הרקע של החלון מופיע מיד (כמו תמיד), והתוכן מופיע *מיד, מלא ולא שקוף* —
-   ורק "מתיישב" למקומו: עלייה קטנה והגדלה קלה, 0.22 שנ'. CSS טהור — אנימציית
-   CSS מתחילה מעצמה כשהאלמנט נוסף לדף או עובר מ-display:none לגלוי.
-   למה בלי שקיפות (שני ניסיונות קודמים באותו יום נכשלו בטלפון):
-   · גרסה 1 — כל השכבה דהתה יחד: הדף הצבעוני נראה מבעד לטקסט ⇒ "ריצוד".
-   · גרסה 2 — fade-through (קודם רקע כהה ריק, אחרי 60ms התוכן בדהייה): נראה
-     כמו "נפתח ואז נטען מחדש/רענון", ותחושת תקיעה עד שהתוכן מופיע.
-   תנועה בלבד (scale/translate — המאפיינים הנפרדים, לא transform, כדי לא לדרוס
-   transform קיים) רצה על ה-GPU, התוכן קריא מהפריים הראשון, ואנימציה קפואה
-   משאירה לכל היותר תוכן מוזז בכמה פיקסלים — לעולם לא חלון שקוף ("לא נטען").
-   לכן אין כאן opacity בכניסה — אל תחזיר. הסגירה: _uxFadeRemove ב-script.js
-   (דהייה קצרה אחת של כל החלון).
-   אלמנטים שכבר יש להם אנימציית כניסה משלהם (#lux-stories, #lux-moon-pop,
-   .lux-badge-pop, #lux-siyum, #lux-erev-panel, #lux-year-wheel) לא ברשימה.
+   ✦ אנימציית פתיחה אחידה לכל האתר (09/2026, גרסה 4)
+   הפתיחה עצמה עברה ל-JS (_uxEnter / _uxEnterView ב-script.js): אנימציה אחת (WAAPI)
+   ברגע הפתיחה, שלא חוזרת כשהתוכן מתחלף. עד גרסה 3 היו כאן אנימציות CSS על "כל ילד של
+   שכבה" (body > [id$="-modal"] > * וכו') — אנימציית CSS מתנגנת מחדש בכל פעם שאלמנט נכנס
+   לדף, ולכן כל בנייה מחדש של תוכן החלון (מעבר פריט בדבר התורה, חזרה לרשימת הפרקים)
+   "טענה מחדש" את החלון מול העין. אל תחזיר לכאן אנימציות על ילדי השכבות.
+   העקרונות (שלושה סבבים בטלפון, 29/09): התוכן מלא ולא שקוף מהפריים הראשון; בלי השהיה;
+   בלי "שני שלבים" (רקע ואז תוכן / תוכן ואז רקע) — הכול מתחיל ונגמר יחד.
    ═══════════════════════════════════════════════════════ */
-@keyframes ux-rise {
-  from { translate: 0 14px; scale: 0.97; }
-}
-@keyframes ux-rise-sm {
-  from { translate: 0 10px; }
+/* ליריעות lux יש אנימציית כניסה משלהן (lux-yw-card-in, עם שקיפות) — הפתיחה האחידה במקומה */
+body > .lux-sheet-overlay > .lux-sheet {
+  animation: none;
 }
 @keyframes ux-pop {
   from { translate: 0 6px; scale: 0.94; }
@@ -9009,73 +9195,43 @@ html.dark .prayer-next-cta { box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45); }
 @keyframes ux-reveal {
   from { translate: 0 -6px; }
 }
-/* תוכן השכבות (מודאלים, קוראי ספרים ותפילות, יריעות) — השכבה עצמה בלי אנימציה */
-body > [id$="-modal"] > *,
-body > .lux-sheet-overlay > *,
-body > #lux-nav-editor > *,
-body > #lux-plan-reader > *,
-body > #lux-track-reader > *,
-body > #lux-selichot-reader > *,
-body > #lux-print-sheet > *,
-body > #lux-tour-overlay > *,
-body > #lux-search-panel > *,
-body > #chapter-nav-popup > *,
-body > #cal-month-year-picker > * {
-  animation: ux-rise 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-/* מעבר בין תצוגות בתוך חלון (כניסה לספר, לרשימת פרקים, לקורא): התצוגה עצמה
-   מופיעה במקומה, ורק התוכן שבתוכה מתיישב — כך לא נחשף פס של רקע אחר בשוליים
-   (קורא בהיר בתוך חלון כהה) */
-#sn-modal > [id$="-view"],
-#bih-reading-pane,
-#psalm-content-pane {
-  animation: none;
-}
-#sn-modal > [id$="-view"] > *,
-#bih-reading-pane > *,
-#psalm-content-pane > * {
-  animation: ux-rise-sm 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
 /* סגירת המודאלים הסטטיים (לוח שנה, הגדרות, מצפן, ספריא, חוק לישראל, עומר: מוסיפים
-   opacity-0 ואחרי 300ms hidden) — כמו _uxFadeRemove: התוכן נעלם מהר והרקע מתבהר
-   לאט-ואז-מהר, בו-זמנית — בלי טקסט של החלון על הדף */
+   opacity-0 ואחרי 300ms hidden) — כמו _uxFadeRemove: התוכן נעלם מהר והרקע מתבהר מהרגע
+   הראשון (ease-out). עד גרסה 3 הרקע נשאר כהה ורק אז התבהר (ease-in) — "מצמוץ" של מסך
+   כהה ריק באמצע הסגירה */
 body > [id$="-modal"].opacity-0:not(.hidden) {
-  transition-duration: 0.16s;
-  transition-timing-function: cubic-bezier(0.5, 0, 0.75, 0);
+  transition-duration: 0.18s;
+  transition-timing-function: cubic-bezier(0.33, 1, 0.68, 1);
 }
 body > [id$="-modal"].opacity-0:not(.hidden) > * {
   opacity: 0;
-  transition: opacity 0.09s ease-out;
+  transition: opacity 0.11s ease-out;
 }
-/* פופאפים קטנים ופאנלים (סימניות, בורר מפרשים). ה-X האוניברסלי (body > .lux-ux) בכוונה
-   בלי אנימציה: הוא מתחלף עם ה-X של התצוגה באותו מקום — "קפיצה" שלו נראתה כהבהוב */
+/* פופאפים קטנים ופאנלים (סימניות, בורר מפרשים) — האלמנט עצמו, פעם אחת בכל הופעה. ה-X
+   האוניברסלי (body > .lux-ux) בכוונה בלי אנימציה: הוא מתחלף עם ה-X של התצוגה באותו מקום */
 [id$="-bm-panel"],
 #sn-cm-popover,
 #lux-pl-cm-pop,
 body > [id$="-pop"]:not(#lux-moon-pop),
 .rf-pop {
-  animation: ux-pop 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  animation: ux-pop 0.22s cubic-bezier(0.22, 1, 0.36, 1);
 }
 /* תוכן שנפתח בתוך הדף — "תפילות נוספות", שאלות נפוצות */
 #prayer-more-grid:not(.hidden),
 details[open] > :not(summary) {
-  animation: ux-reveal 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  animation: ux-reveal 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+/* הודעת "טוען..." בקוראים (ספרים, תפילות, ספריא) — מופיעה רק אם הטעינה באמת נמשכת. בטעינה
+   רגילה (חצי שנייה) הייתה מהבהבת ומתחלפת מיד בטקסט — "נפתח ואז נטען מחדש". הטקסט שמגיע
+   נכנס ברכות (_uxSoftIn ב-script.js) */
+.ux-ph {
+  animation: ux-ph-in 0.25s ease-out 0.45s backwards;
+}
+@keyframes ux-ph-in {
+  from { opacity: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
-  body > [id$="-modal"] > *,
-  body > .lux-sheet-overlay > *,
-  body > #lux-nav-editor > *,
-  body > #lux-plan-reader > *,
-  body > #lux-track-reader > *,
-  body > #lux-selichot-reader > *,
-  body > #lux-print-sheet > *,
-  body > #lux-tour-overlay > *,
-  body > #lux-search-panel > *,
-  body > #chapter-nav-popup > *,
-  body > #cal-month-year-picker > *,
-  #sn-modal > [id$="-view"] > *,
-  #bih-reading-pane > *,
-  #psalm-content-pane > *,
+  .ux-ph,
   [id$="-bm-panel"],
   #sn-cm-popover,
   #lux-pl-cm-pop,

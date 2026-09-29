@@ -569,9 +569,12 @@ function _syncModalOpenClass() {
 // `html.lux-modal-open #hero-section *` — וכל החלפה של המחלקה חישבה מחדש את הסגנון
 // של כל ~3,600 האלמנטים בדף (134–290ms במעבד טלפון) בכל פתיחה ובכל סגירה.
 // רק אינסופיות: אנימציית כניסה חד-פעמית שנעצרת באמצע = אלמנט שקוף ("לא נטען").
+// body > [role="toolbar"] — הסרגל העליון (הגדרות/חיפוש/שיתוף): טבעת הסטוריז שבו פועמת
+// ב-box-shadow, כלומר ציור מחדש בכל פריים — עד 09/2026 היא המשיכה לפעום מאחורי כל
+// חלון פתוח וגזלה זמן ציור מאנימציות וגלילה בתוך החלון
 const _BG_ANIM_ROOTS =
   "#hero-section, #main-content, body > section, body > footer, " +
-  "#lux-bottom-nav, #lux-shabbat-scene, #pwa-install-banner";
+  "#lux-bottom-nav, #lux-shabbat-scene, #pwa-install-banner, body > [role=\"toolbar\"]";
 let _bgPausedAnims = null;
 function _pauseBgAnimations(on) {
   if (!document.getAnimations) return;
@@ -1787,6 +1790,11 @@ window._markLevanaBlessed = function (btn) {
 // showDashboard); מעבר הסגירה נשאר — הסגירה ממילא מושלמת בטיימר.
 function _revealModalNoFreeze(m, alsoUnscale) {
   if (!m) return;
+  // פתיחה אמיתית (לא חשיפה חוזרת של חלון פתוח, למשל רינדור-מחדש של ספריא) — אנימציית
+  // הפתיחה האחידה, בסוף המשימה הנוכחית (אחרי נעילת הגלילה וה-X, לפני הציור)
+  if (m.classList.contains("hidden") || m.classList.contains("opacity-0")) {
+    _uxLater(() => _uxEnter(m));
+  }
   m.classList.remove("hidden");
   const prev = m.style.transition;
   m.style.transition = "none";
@@ -1805,7 +1813,187 @@ function _revealModalNoFreeze(m, alsoUnscale) {
   m.style.transition = prev || "";
 }
 
-// ── סגירה רכה: שכבה שנסגרת דוהה (0.14 שנ') ורק אז מוסרת מה-DOM ──
+// ── אנימציית פתיחה אחידה — פעם אחת בכל פתיחה (09/2026, גרסה 4) ──
+// עד גרסה 3 זו הייתה אנימציית CSS על "כל ילד של שכבה" (body > [id$="-modal"] > *): היא
+// התנגנה מחדש בכל פעם שילד חדש נכנס לשכבה — מעבר פריט בדבר התורה, בנייה מחדש של רשימה,
+// חזרה מהקורא לרשימת הפרקים — וזה נראה בדיוק כמו "החלון נטען מחדש/רענון". עכשיו: אנימציה
+// אחת (WAAPI) שמתחילה ברגע הפתיחה עצמו ולא חוזרת, גם כשהתוכן מתחלף.
+// · התוכן מלא ולא שקוף מהפריים הראשון — תנועה בלבד (translate/scale רצים על ה-GPU; אנימציה
+//   קפואה משאירה לכל היותר תוכן מוזז בכמה פיקסלים, לעולם לא חלון שקוף/"לא נטען").
+// · חלון-כרטיס (רקע מוחשך + כרטיס אטום): הכרטיס עולה וגדל בעדינות, והרקע מתכהה ברכות באותו
+//   זמן — במקום "מכה" של מסך כהה בבת אחת ואז תזוזה (שני אירועים = "קפיצה"). מעל כרטיס שקוף-
+//   למחצה הרקע לא מונפש: שם הדף הצבעוני היה נראה מבעד לטקסט (הריצוד של גרסה 1).
+// · מסך מלא (ספרים, קוראים, תפילות): הרקע במקומו, רק התוכן עולה — בלי scale (טקסט במסך מלא
+//   ש"מתקרב" נראה כמו רענון) ובלי לחשוף פס של רקע אחר בשוליים.
+// · מעבר בין תצוגות בתוך חלון (ספרייה ← ספר ← קורא): רק קדימה; חזרה אחורה — מיידית.
+const _UX_LAYER_SEL =
+  'body > [id$="-modal"], body > .lux-sheet-overlay, body > #lux-nav-editor, body > #lux-plan-reader, ' +
+  "body > #lux-track-reader, body > #lux-selichot-reader, body > #lux-print-sheet, body > #lux-tour-overlay, " +
+  "body > #lux-search-panel, body > #chapter-nav-popup, body > #cal-month-year-picker";
+// פס ההתקדמות וה-X נשארים במקומם — X שזז "קופץ" מול העין
+const _UX_SKIP = ".lux-progress, .lux-ux, script, style, template, link";
+// האטה רכה: בלי "זינוק" גדול בפריים הראשון (שנראה כריצוד), ובלי זנב ארוך שנראה כתקיעה
+const _UX_EASE = "cubic-bezier(0.22, 1, 0.36, 1)";
+function _uxLater(f) {
+  if (window.queueMicrotask) window.queueMicrotask(f);
+  else Promise.resolve().then(f);
+}
+function _uxNoMotion() {
+  if (document.hidden) return true;
+  try { return window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { return false; }
+}
+function _uxAlpha(c) {
+  const m = /rgba?\(([^)]+)\)/.exec(c || "");
+  if (!m) return c === "transparent" ? 0 : 1;
+  const p = m[1].split(/[\s,\/]+/).filter(Boolean);
+  return p.length > 3 ? parseFloat(p[3]) : 1;
+}
+// רקע אטום — צבע, או מעבר-צבעים שכל צבעיו אטומים (כרטיס דבר התורה)
+function _uxOpaque(el) {
+  const cs = getComputedStyle(el);
+  if (_uxAlpha(cs.backgroundColor) >= 0.85) return true;
+  const img = cs.backgroundImage || "none";
+  if (!/gradient/.test(img)) return false;
+  const cols = img.match(/rgba?\([^)]*\)/g) || [];
+  return cols.length > 0 && cols.every((c) => _uxAlpha(c) >= 0.85);
+}
+function _uxKids(el) {
+  const out = [];
+  Array.prototype.forEach.call(el.children, (k) => {
+    if (k.matches(_UX_SKIP) || getComputedStyle(k).display === "none") return;
+    out.push(k);
+  });
+  return out;
+}
+function _uxAnimate(targets, frames, dur, anims) {
+  targets.forEach((t) => {
+    try { anims.push(t.animate(frames, { duration: dur, easing: _UX_EASE })); } catch (e) {}
+  });
+  return anims;
+}
+// רשת ביטחון: ציר אנימציות קפוא (PWA ברקע, מסך כבוי) — מסיימים בכוח
+function _uxGuard(anims, dur) {
+  if (!anims.length) return;
+  setTimeout(() => {
+    anims.forEach((a) => { try { if (a.playState !== "finished") a.finish(); } catch (e) {} });
+  }, dur + 800);
+}
+function _uxEnter(layer) {
+  if (!layer || !layer.isConnected || layer.__uxClosing) return;
+  layer.__uxShown = true;
+  layer.__uxEnterT = performance.now();
+  if (!layer.animate || _uxNoMotion()) return;
+  // סורק ה-X האוניברסלי (lux.js) מודד מיקומים כדי לפנות מקום ל-X — מריצים אותו לפני
+  // שהתוכן זז, אחרת הוא מודד את התוכן באמצע התנועה ומתקן אחר כך (קפיצה של הכותרת)
+  try { if (window.__luxUxTickSync) window.__luxUxTickSync(); } catch (e) {}
+  const kids = _uxKids(layer);
+  let panel = null, area = 0;
+  // המלבן המאחד של כל התוכן: חלון-קורא בנוי מכמה ילדים (כותרת + טקסט + סרגל גופן) שיחד
+  // ממלאים את המסך — הוא "מסך מלא" גם כשאף ילד לבדו לא ממלא אותו
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  const rects = kids.map((k) => {
+    const r = k.getBoundingClientRect();
+    if (r.width * r.height > area) { area = r.width * r.height; panel = k; }
+    if (r.width && r.height) { x0 = Math.min(x0, r.left); y0 = Math.min(y0, r.top); x1 = Math.max(x1, r.right); y1 = Math.max(y1, r.bottom); }
+    return r;
+  });
+  if (!panel) return;
+  const full = x1 - x0 >= window.innerWidth * 0.96 && y1 - y0 >= window.innerHeight * 0.86;
+  layer.__uxKind = full ? "full" : "card";
+  const anims = [];
+  if (!full) {
+    // רק הכרטיס (וילדים בסדר גודל שלו) — כפתור X צדדי שמעוגן לפינת המסך נשאר במקומו
+    const moving = kids.filter((k, i) => rects[i].width * rects[i].height >= area * 0.25);
+    _uxAnimate(moving, [{ translate: "0 20px", scale: "0.95" }, { translate: "0 0", scale: "1" }], 340, anims);
+    const cs = getComputedStyle(layer);
+    const a = _uxAlpha(cs.backgroundColor);
+    if (a > 0.04 && a < 0.995 && (cs.backgroundImage || "none") === "none" && _uxOpaque(panel)) {
+      const f0 = { backgroundColor: cs.backgroundColor.replace(/rgba?\(([^,\s]+)[,\s]+([^,\s]+)[,\s]+([^,\s)]+).*\)/, "rgba($1, $2, $3, 0)") };
+      const f1 = { backgroundColor: cs.backgroundColor };
+      // טשטוש הרקע (מחשב בלבד — בנייד אין טשטוש) מתעצם יחד עם ההכהיה
+      const bf = cs.backdropFilter;
+      if (bf && /^blur\([^)]*\)$/.test(bf)) { f0.backdropFilter = "blur(0px)"; f1.backdropFilter = bf; }
+      try { anims.push(layer.animate([f0, f1], { duration: 240, easing: "cubic-bezier(0.33, 1, 0.68, 1)" })); } catch (e) {}
+    }
+  } else {
+    // תצוגה יחידה שממלאת את השכבה (הספרייה, קורא) — התוכן שבתוכה עולה והתצוגה עצמה
+    // נשארת, כך שלא נחשף פס של רקע אחר בשוליים (קורא בהיר בתוך חלון כהה)
+    let targets = kids;
+    if (kids.length === 1) {
+      const inner = _uxKids(kids[0]);
+      if (inner.length) targets = inner;
+    }
+    _uxAnimate(targets, [{ translate: "0 16px" }, { translate: "0 0" }], 300, anims);
+  }
+  _uxGuard(anims, 340);
+}
+// מעבר קדימה לתצוגה בתוך חלון פתוח (ספר, קורא, חיפוש) — רק התוכן החדש עולה. בסוף המשימה
+// (microtask): אחרי שהתצוגה נבנתה ואחרי pushModalState, ולפני הציור
+function _uxEnterView(view) {
+  if (!view || !view.animate) return;
+  _uxLater(() => {
+    if (!view.isConnected || _uxNoMotion() || getComputedStyle(view).display === "none") return;
+    const layer = view.closest("body > *");
+    // החלון עצמו נפתח עכשיו (באותה משימה) — אנימציית הפתיחה שלו כבר מטפלת בתצוגה הזו
+    if (!layer || !layer.__uxShown || layer.__uxClosing) return;
+    if (performance.now() - (layer.__uxEnterT || 0) < 150) return;
+    try { if (window.__luxUxTickSync) window.__luxUxTickSync(); } catch (e) {}
+    const anims = _uxAnimate(_uxKids(view), [{ translate: "0 14px" }, { translate: "0 0" }], 280, []);
+    _uxGuard(anims, 280);
+  });
+}
+window._uxEnterView = _uxEnterView;
+// תוכן שהגיע מהרשת אחרי שהקורא כבר נפתח (פרק בספר, תפילה, דף גמרא) — נכנס ברכות במקום
+// "לקפוץ" לתוך הדף הריק (הקפיצה הזו נראתה כמו "החלון נטען מחדש"). שקיפות כאן בטוחה: הטקסט
+// נכנס על הרקע האטום של הקורא, לא מעל הדף. ph = סימון מצב הטעינה (_uxPhMark): רק אם מצב
+// הטעינה *צויר בפועל* לפחות פריים אחד. תוכן שהגיע לפני הפריים הראשון (מהמטמון, באותה משימה)
+// מופיע מיד עם החלון — לא "חלון ריק ואז תוכן נמוג פנימה" (בדיוק ה"נטען מחדש" של גרסה 2).
+// (בדיקה לפי זמן לא מספיקה: בניית טקסט ארוך כמו מנחה לוקחת מאות ms בלי שום פריים באמצע.)
+// הודעות "טוען..." עצמן (class="ux-ph") מופיעות רק אם הטעינה באמת נמשכת (style.css).
+function _uxPhMark() {
+  const ph = { painted: false };
+  try { requestAnimationFrame(() => { ph.painted = true; }); } catch (e) { ph.painted = true; }
+  return ph;
+}
+function _uxSoftIn(els, ph) {
+  if (_uxNoMotion() || (ph && !ph.painted)) return;
+  const anims = [];
+  const vh = window.innerHeight;
+  let n = 0;
+  (els && els.length != null ? Array.prototype.slice.call(els) : [els]).forEach((el) => {
+    if (!el || !el.animate || !el.isConnected || n >= 16) return;
+    // רק מה שעל המסך — פרק שלם הוא עשרות פסקאות, ואנימציה לכל אחת = עשרות שכבות GPU
+    const r = el.getBoundingClientRect();
+    if (r.bottom <= 0 || r.top >= vh || !r.height) return;
+    n++;
+    try { anims.push(el.animate([{ opacity: 0, translate: "0 8px" }, { opacity: 1, translate: "0 0" }], { duration: 240, easing: _UX_EASE })); } catch (e) {}
+  });
+  _uxGuard(anims, 240);
+}
+window._uxSoftIn = _uxSoftIn;
+// קורא שממתין לטקסט הראשון שלו (__uxSoftAt נקבע בפתיחה) — רק הכתיבה הראשונה נכנסת ברכות;
+// רינדור חוזר (הדלקת רש"י, שלב הפירושים) מתחלף במקום, בלי אנימציה
+function _uxSoftFirst(cont) {
+  const at = cont && cont.__uxSoftAt;
+  if (at == null) return;
+  cont.__uxSoftAt = null;
+  _uxSoftIn(cont.children, at);
+}
+// שכבות שנוספות ל-body (רוב החלונות) — הפתיחה מזוהה כאן, פעם אחת לכל שכבה. הקריאה
+// מגיעה בסוף המשימה שפתחה את החלון (microtask), לפני הציור הראשון שלו
+try {
+  new MutationObserver((muts) => {
+    muts.forEach((mu) => {
+      mu.addedNodes.forEach((n) => {
+        if (n.nodeType !== 1 || n.__uxShown || n.parentElement !== document.body) return;
+        if (!n.matches(_UX_LAYER_SEL) || n.classList.contains("hidden")) return;
+        _uxEnter(n);
+      });
+    });
+  }).observe(document.body, { childList: true });
+} catch (e) {}
+
+// ── סגירה רכה: שכבה שנסגרת דוהה (0.18 שנ') ורק אז מוסרת מה-DOM ──
 // המצב הלוגי נסגר מיד כמו קודם (נעילת גלילה, מחסנית ההיסטוריה) — רק התמונה נשארת
 // לרגע, עם pointer-events:none, כך שהדף שמתחת פעיל מיד. getElementById לעולם לא
 // מחזיר שכבה בסגירה: חיפוש לפי ה-id שלה (פתיחה מחדש מהירה, רשומה יתומה ב-popstate,
@@ -1832,17 +2020,21 @@ function _uxFadeRemove(el) {
     _syncModalOpenClass();
   };
   el.__uxClosing = finish;
-  // סגירה אחת רציפה: התוכן (ילדי השכבה + ה-X) נעלם מהר (90ms), ובאותו רגע הרקע
-  // מתחיל להתבהר — לאט בהתחלה ומהר בסוף (ease-in, 160ms). כשהדף מתחיל להיראות
-  // הטקסט כבר לא שם, כך שלא רואים טקסט של החלון על הדף. (נבדק בצילום פריימים:
-  // דהייה של כל השכבה יחד = טקסט על טקסט ⇒ "ריצוד"; שני שלבים נפרדים = "קפיצה")
+  // סגירה אחת רציפה: התוכן (ילדי השכבה + ה-X) נעלם מהר (110ms), והרקע מתבהר *מהרגע
+  // הראשון* (ease-out, 180ms) — הכול מתחיל ונגמר יחד. עד 09/2026 (גרסה 3) הרקע נשאר
+  // כהה ורק אז התבהר (ease-in): התוכן כבר נעלם והרקע הכהה עוד עמד — "מצמוץ" של מסך
+  // כהה ריק באמצע הסגירה. דהייה של כל השכבה בקצב אחד = טקסט על טקסט ⇒ "ריצוד" (גרסה 1)
   [el].concat(xs).forEach((n) => { n.style.pointerEvents = "none"; });
   try {
+    // כרטיס: שוקע ומתכווץ מעט בזמן שהוא נעלם (היפוך תנועת הפתיחה); מסך מלא — דהייה בלבד
+    const kf = el.__uxKind === "card"
+      ? [{ opacity: 0, translate: "0 8px", scale: "0.97" }]
+      : [{ opacity: 0 }];
     Array.prototype.forEach.call(el.children, (k) => {
-      k.animate([{ opacity: 0 }], { duration: 90, easing: "ease-out", fill: "forwards" });
+      k.animate(kf, { duration: 110, easing: "ease-out", fill: "forwards" });
     });
-    xs.forEach((x) => x.animate([{ opacity: 0 }], { duration: 90, easing: "ease-out", fill: "forwards" }));
-    const a = el.animate([{ opacity: 0 }], { duration: 160, easing: "cubic-bezier(0.5, 0, 0.75, 0)", fill: "forwards" });
+    xs.forEach((x) => x.animate([{ opacity: 0 }], { duration: 110, easing: "ease-out", fill: "forwards" }));
+    const a = el.animate([{ opacity: 0 }], { duration: 180, easing: "cubic-bezier(0.33, 1, 0.68, 1)", fill: "forwards" });
     // הסרה בסוף האנימציה בפועל: האנימציה מתחילה רק בפריים הבא, ואם הסגירה עצמה
     // תקעה את הדף (שחרור הנעילה) — טיימר שנספר מעכשיו היה מסיר את השכבה לפני
     // שהדהייה בכלל נראתה (נמדד: 250ms תקיעה במעבד טלפון ⇒ היעלמות חדה)
@@ -1920,8 +2112,10 @@ async function openSefariaModal(hebTitle, enRef, opts) {
   const m = document.getElementById("sefaria-modal");
   document.getElementById("sefaria-modal-title").textContent =
     CURRENT_LANG === "he" ? hebTitle : enRef;
-  document.getElementById("sefaria-modal-content").innerHTML =
-    `<div class="animate-pulse text-center mt-10">${ui.sefariaLoading || 'טוען טקסט ממסד הנתונים...'}</div>`;
+  const _sefCont = document.getElementById("sefaria-modal-content");
+  _sefCont.innerHTML =
+    `<div class="ux-ph"><div class="animate-pulse text-center mt-10">${ui.sefariaLoading || 'טוען טקסט ממסד הנתונים...'}</div></div>`;
+  _sefCont.__uxSoftAt = null;
   // הקרדיט המוטמע למטה ב-textHtml מטפל בקישור — לא צריך עוד ב-credit-link element
 
   if (m.__hideTimer) { clearTimeout(m.__hideTimer); m.__hideTimer = null; }
@@ -1942,6 +2136,7 @@ async function openSefariaModal(hebTitle, enRef, opts) {
       el.textContent = _prayerFontSize + "%";
     });
 
+  _sefCont.__uxSoftAt = _uxPhMark();
   try {
     const data = await fetchHebcalWithCache(
       `https://www.sefaria.org/api/texts/${cleanRef}?context=0`,
@@ -1972,7 +2167,9 @@ async function openSefariaModal(hebTitle, enRef, opts) {
     textHtml += '<div style="margin-top:2rem;padding-top:0.85rem;border-top:1px solid rgba(0,0,0,0.08);color:#94a3b8;font-size:0.72rem;text-align:center;direction:rtl;">מקור הטקסט: <a href="https://www.sefaria.org.il/" target="_blank" rel="noopener" style="color:#3b82f6;">Sefaria.org</a> · ברישיון פתוח</div>';
     document.getElementById("sefaria-modal-content").innerHTML = textHtml;
     applyPrayerFontSize("#sefaria-modal-content");
+    _uxSoftFirst(_sefCont);
   } catch (e) {
+    _sefCont.__uxSoftAt = null;
     document.getElementById("sefaria-modal-content").innerHTML =
       "<p class='text-center text-rose-500 font-bold mt-10'>שגיאה בטעינת הטקסט. אנא בדוק חיבור לאינטרנט.</p>";
   }
@@ -2222,6 +2419,7 @@ async function renderDafContent() {
       html +
       parasHtml +
       `<div style="text-align:center;color:#7c3aed;font-size:0.78rem;font-style:italic;margin-top:0.6rem;">טוען פירושים...</div>`;
+    _uxSoftFirst(cont);
   }
   if (showRashi) {
     const r = await _fetchDafCommentary("Rashi", st.ref);
@@ -2259,6 +2457,7 @@ async function renderDafContent() {
     '<div style="margin-top:2rem;padding-top:0.85rem;border-top:1px solid rgba(0,0,0,0.08);color:#94a3b8;font-size:0.72rem;text-align:center;direction:rtl;">מקור הטקסט: <a href="https://www.sefaria.org.il/" target="_blank" rel="noopener" style="color:#3b82f6;">Sefaria.org</a> · ברישיון פתוח</div>';
   cont.innerHTML = html;
   applyPrayerFontSize("#sefaria-modal-content");
+  _uxSoftFirst(cont);
   // המרקר האחיד מצייר את השורה השמורה מיד (לא בטיק הבא של 1.2 שניות)
   if (typeof window._luxMarkRestore === "function") window._luxMarkRestore();
 }
@@ -23795,6 +23994,7 @@ function openBenIshHaiPage() {
     if (_activeModals[_activeModals.length - 1] !== "bih-reading-pane") {
       pushModalState("bih-reading-pane");
     }
+    if (pane.style.display !== "flex" && typeof window._uxEnterView === "function") window._uxEnterView(pane);
     pane.style.display = "flex"; pane.style.flexDirection = "column";
     // רשימת הפרשיות מוסתרת מאחורי הקורא — כך ה-✕ שלה לא נחשב "גלוי" וה-X האוניברסלי מוזרק לקורא
     const gridView = document.getElementById("bih-grid-view");
@@ -24156,7 +24356,7 @@ function renderPrayerModalShell(title, isPopup, prayerKey) {
               </div>
               <div id="prayer-modal-meta" style="color:#64748b;font-size:0.75rem;margin-bottom:1rem;">טוען נוסח מלא…</div>
               <div id="prayer-modal-body" class="prayer-modal-body-mobile" style="background:rgba(0,0,0,0.02);border-radius:1rem;min-height:240px;flex:1;overflow:hidden;display:flex;flex-direction:column;">
-                <div style="text-align:center;padding:2rem;color:#94a3b8;">טוען טקסט מלא ממקור זמין…</div>
+                <div class="ux-ph" style="text-align:center;padding:2rem;color:#94a3b8;">טוען טקסט מלא ממקור זמין…</div>
               </div>
             </div>`;
     modal.addEventListener("click", (event) => {
@@ -24177,7 +24377,7 @@ function renderPrayerModalShell(title, isPopup, prayerKey) {
               <button onclick="closePrayerModal()" style="background:rgba(0,0,0,0.06);border:none;color:#64748b;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.1rem;flex-shrink:0;">✕</button>
             </div>
             <div id="prayer-modal-body" class="prayer-modal-body-mobile" style="flex:1;overflow-y:auto;background:#faf9f6;text-align:center;direction:rtl;">
-              <div style="text-align:center;padding:2rem;color:#94a3b8;">טוען טקסט מלא ממקור זמין…</div>
+              <div class="ux-ph" style="text-align:center;padding:2rem;color:#94a3b8;">טוען טקסט מלא ממקור זמין…</div>
             </div>`;
   }
   document.body.appendChild(modal);
@@ -24348,6 +24548,7 @@ openPrayer = async function (key, heLabel, enLabel) {
     } else {
       pushModalState("prayer-modal");
     }
+    const _ph = _uxPhMark();
     try {
       const content = await getFullPrayerContent(key);
       const meta = document.getElementById("prayer-modal-meta");
@@ -24380,6 +24581,13 @@ openPrayer = async function (key, heLabel, enLabel) {
                 </div>`;
         }
       }
+      // מנחה / ברכת המזון נפתחות ישר בעוגן — כבר לפני הציור הראשון. עד 09/2026 רק אחרי 120ms:
+      // הטקסט הופיע מראשו ואז "קפץ" לעוגן. (הקריאות ב-120/500ms למטה נשארות כבדיקה חוזרת)
+      const _anchor = key === "mincha" ? "mincha-korbanot-start" : key === "birkat-hamazon" ? "birkat-hamazon-start" : null;
+      if (_anchor) scrollPrayerToAnchor(_anchor);
+      // הטקסט שהגיע אחרי "טוען..." נכנס ברכות (ראו _uxSoftIn) — אחרי הגלילה לעוגן, כדי שהמדידה
+      // שלה תיעשה על המיקום הסופי ולא על תוכן באמצע תנועה
+      if (body && typeof window._uxSoftIn === "function") window._uxSoftIn(body.children, _ph);
       // ברכת הלבנה: זמני החודש והמצב העדכני (תחילה/סוף לפי המולד) בבאנר העליון
       if (key === "kiddush-levana" && body) {
         try { _levanaFillPrayerTimes(body); } catch (e) {}
@@ -24991,6 +25199,7 @@ openTehillimPage = function () {
     if (_activeModals[_activeModals.length - 1] !== "tehillim-psalm-pane") {
       pushModalState("tehillim-psalm-pane");
     }
+    if (pane.style.display !== "flex" && typeof window._uxEnterView === "function") window._uxEnterView(pane);
     pane.style.display = "flex";
     window._tehillimLoadedChapters = new Set();
     window._tehillimCurrentChapter = chapter;
@@ -33015,33 +33224,39 @@ function openSefarimNosafimPage(_pageMode) {
 
   // ── View management ──
   var ALL_VIEWS = ["sn-books-view","sn-subbook-view","sn-sections-view","sn-reader-view","sn-search-view"];
-  function showView(id) {
+  function showView(id, back) {
     // ה-X האוניברסלי מוזרק לפי סריקת DOM — מעבר תצוגה לא משנה את ילדי body, אז מבקשים סריקה מיידית
     try { if (typeof window.__luxUxTick === "function") setTimeout(window.__luxUxTick, 0); } catch (e) {}
+    var shown = null;
     ALL_VIEWS.forEach(function(v) {
       var el = document.getElementById(v);
-      if (el) el.style.display = v === id ? "flex" : "none";
+      if (!el) return;
+      if (v === id && el.style.display !== "flex") shown = el;
+      el.style.display = v === id ? "flex" : "none";
     });
     var bp = document.getElementById("sn-book-bm-panel");
     if (bp && bp.style.display !== "none" && bp.style.display) {
       window._popupSyncDismiss("sn-book-bm-panel");
       _snBookBMHideNow();
     }
+    // כניסה קדימה (ספר, קורא) — התוכן החדש עולה בעדינות, פעם אחת. חזרה אחורה — מיידית
+    // (עד 09/2026 גם החזרה "נטענה מחדש" באנימציה: רשימת הפרקים נבנית מחדש בכל חזרה)
+    if (shown && !back && typeof window._uxEnterView === "function") window._uxEnterView(shown);
   }
 
   // ── popstate callbacks ──
   window._snOnReaderClose = function() {
     // נפתח ישירות מהדף הראשי — סגירת הקורא סוגרת את כל החלון (רשומת sn-modal שמתחתיו)
     if (window.__snDirectBook) { window.__snDirectBook = null; history.back(); return; }
-    if (_bk && (_bk.type === "hardcoded" || _bk.solo)) { showView("sn-books-view"); }
-    else if (_bk) { buildSectionsGrid(); showView("sn-sections-view"); }
-    else { showView("sn-books-view"); }
+    if (_bk && (_bk.type === "hardcoded" || _bk.solo)) { showView("sn-books-view", true); }
+    else if (_bk) { buildSectionsGrid(); showView("sn-sections-view", true); }
+    else { showView("sn-books-view", true); }
   };
   window._snOnSectionsClose = function() {
-    if (_bk && _bk.type === "multi") { buildSubBookView(_bk); showView("sn-subbook-view"); }
-    else { showView("sn-books-view"); }
+    if (_bk && _bk.type === "multi") { buildSubBookView(_bk); showView("sn-subbook-view", true); }
+    else { showView("sn-books-view", true); }
   };
-  window._snOnSubBookClose = function() { showView("sn-books-view"); _bk = null; _sbk = null; };
+  window._snOnSubBookClose = function() { showView("sn-books-view", true); _bk = null; _sbk = null; };
   window._snOnSearchClose = function() {
     if (_sAb) { _sAb.abort(); _sAb = null; }
     clearTimeout(_sDeb);
@@ -33311,7 +33526,14 @@ function openSefarimNosafimPage(_pageMode) {
       chapterDiv.setAttribute("data-sn-idx", String(idx));
       chapterDiv.style.cssText = "max-width:680px;margin:0 auto;padding:1.25rem 1rem 1rem;font-family:'Frank Ruhl Libre','David Libre',serif;direction:rtl;color:#1e293b;border-bottom:1px solid rgba(0,0,0,0.08);";
     }
-    chapterDiv.innerHTML = heading + "<p style=\"color:#94a3b8;text-align:center;\">טוען...</p>";
+    chapterDiv.innerHTML = heading + "<p class=\"ux-ph\" style=\"color:#94a3b8;text-align:center;\">טוען...</p>";
+    // הטקסט שיגיע נכנס ברכות (לא "קופץ" לדף הריק) — רק התוכן, לא הכותרת שכבר מוצגת
+    var _snPh = _uxPhMark(), _snSoftDone = false;
+    var _snSoft = function() {
+      if (_snSoftDone) return;
+      _snSoftDone = true;
+      if (typeof window._uxSoftIn === "function") window._uxSoftIn(Array.prototype.slice.call(chapterDiv.children, 1), _snPh);
+    };
     if (!reuseDiv) {
       if (prepend && area.firstChild) area.insertBefore(chapterDiv, area.firstChild);
       else area.appendChild(chapterDiv);
@@ -33350,6 +33572,7 @@ function openSefarimNosafimPage(_pageMode) {
       diburCms.forEach(function(c) { loadingHtml += loadLine(c.emoji || "📖", c.color || "#64748b", "טוען " + c.he + "..."); });
       if (verseCms.length) loadingHtml += loadLine("📖", "#64748b", "טוען פירושים...");
       chapterDiv.innerHTML = heading + renderParagraphs(he, _bk.color, idx, null, sec.ref) + loadingHtml;
+      _snSoft();
     }
 
     // שיבוץ כל שכבות הדיבור-המתחיל הפעילות בתוך HTML נתון (לפי סדר הרשומה)
@@ -33455,6 +33678,7 @@ function openSefarimNosafimPage(_pageMode) {
     // השכבות (שו"ע / פירושים) נכנסות גם מעל השורה שנקראת — שורת הקריאה נשארת במקומה
     var _snFinalHtml = heading + saBlockHtml + parasHtml + bottomNotes;
     _fsaKeepAround(area, function() { chapterDiv.innerHTML = _snFinalHtml; });
+    _snSoft();
   }
 
   // ── הדגשה וגלילה למיקום מדויק של תוצאת חיפוש ──
@@ -33796,6 +34020,7 @@ function openSefarimNosafimPage(_pageMode) {
   window._snOpenSearch = function() {
     var ov = document.getElementById("sn-search-view");
     if (!ov) return;
+    if (ov.style.display !== "flex" && typeof window._uxEnterView === "function") window._uxEnterView(ov);
     ov.style.display = "flex"; ov.style.flexDirection = "column";
     // ספרים עם searchExclude (תלמוד בבלי/ירושלמי — אלפי יחידות) אינם נסרקים ולא מופיעים בבורר
     var preselect = (_bk && !_bk.searchExclude) ? _bk.id : "all";
@@ -34378,7 +34603,9 @@ function closeSefarimNosafimModal() {
     var active = getActiveReader();
     btn.style.display = active ? "flex" : "none";
     if (active) {
-      setTimeout(updateButtonPosition, 60);
+      // הגובה נקבע לפני הציור הראשון. עד 09/2026 — 60ms אחרי שהכפתור כבר הופיע, והוא "קפץ"
+      // ~10px ממקום ברירת המחדל (5rem) למקומו מעל סרגל הכלים
+      updateButtonPosition();
     } else if (_lpResizeObs) {
       _lpResizeObs.disconnect();
       _lpResizeObs = null;
@@ -34386,14 +34613,16 @@ function closeSefarimNosafimModal() {
   }
   window.addEventListener("resize", function(){ setTimeout(updateButtonPosition, 100); });
 
-  // Hook into navigation events
-  window.addEventListener("popstate", function(){ setTimeout(updateButtonVisibility, 30); });
+  // Hook into navigation events — עדכון בסוף המשימה, לפני הציור (_uxLater). עד 09/2026 זה
+  // היה setTimeout של 20–30ms: הכפתור הופיע פריים-שניים אחרי הקורא ("קפיצה" פנימה), ונשאר
+  // לרגע על המסך אחרי היציאה מהקורא
+  window.addEventListener("popstate", function(){ _uxLater(updateButtonVisibility); });
   // Also patch pushModalState to update visibility after each push
   if (typeof pushModalState === "function") {
     var _origPMS = pushModalState;
     window.pushModalState = function(s) {
       var r = _origPMS.apply(this, arguments);
-      setTimeout(updateButtonVisibility, 20);
+      _uxLater(updateButtonVisibility);
       return r;
     };
   }

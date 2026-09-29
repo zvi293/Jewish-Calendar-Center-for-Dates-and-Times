@@ -35232,3 +35232,17 @@ function closeSefarimNosafimModal() {
     document.addEventListener("DOMContentLoaded", function() { setTimeout(_init, 50); });
   }
 })();
+
+// ── כל הגופנים נטענים מראש, בזמן סרק אחרי הטעינה (09/2026, סבב 6) ──
+// גופן שעוד לא שימש בדף נטען רק כשחלון שצריך אותו נפתח: הטקסט מוצג קודם בגופן חלופי
+// ומתחלף פריים-שניים אחר כך ("הטקסט בחלון מתחלף") — נמדד בברכות הנהנין (Frank Ruhl 400).
+// הקבצים קטנים ובמטמון ה-SW; טעינה מראש = אין החלפה בשום חלון.
+(function () {
+  if (!document.fonts || !document.fonts.forEach) return;
+  const go = () => {
+    try { document.fonts.forEach((f) => { if (f.status === "unloaded") f.load().catch(() => {}); }); } catch (e) {}
+  };
+  const idle = (f) => (window.requestIdleCallback ? window.requestIdleCallback(f, { timeout: 4000 }) : setTimeout(f, 1500));
+  if (document.readyState === "complete") idle(go);
+  else window.addEventListener("load", () => idle(go), { once: true });
+})();

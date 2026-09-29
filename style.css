@@ -9240,3 +9240,39 @@ details[open] > :not(summary) {
     animation: none;
   }
 }
+
+
+/* ═══════════════════════════════════════════════════════
+   ✦ מובייל (09/2026, סבב 6): בלי "פעימות" שמציירות מחדש בכל פריים
+   אנימציות אינסופיות של box-shadow/text-shadow/צבעים (ירח, טבעת הסטוריז, תג הפרימיום,
+   כפתור "תפילות נוספות"...) מחייבות סגנון+ציור+רסטר בכל פריים — נמדד בדשבורד בסרק:
+   ~40% מה-main thread ו-~160ms/s של GPU (בלעדיהן: כמעט אפס). בטלפון זה מתחרה בכל גלילה
+   ופתיחת חלון ⇒ "כרטיסים נעלמים וחוזרים" בגלילה מהירה, והבהובים. בנייד — זוהר קבוע;
+   טבעת הסטוריז פועמת ב-transform בלבד (על ה-GPU, בלי ציור). אל תחזירו.
+   ═══════════════════════════════════════════════════════ */
+@media (max-width: 768px), (pointer: coarse) {
+  #lux-moon,
+  .lux-premium-badge,
+  #prayer-more-btn.chevron-cta-pulse,
+  .prayer-btn.prayer-cta-highlight,
+  .countdown-digit,
+  #cal-days-grid > div.border-blue-500,
+  #tehillim-modal .lux-th-goldread,
+  #lux-shabbat-banner .lux-sb-candles,
+  .lux-erev-title {
+    animation: none !important;
+  }
+  .lux-premium-badge {
+    box-shadow: 0 0 22px rgba(232, 193, 90, 0.28), 0 0 38px rgba(59, 130, 246, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  }
+  #prayer-more-btn.chevron-cta-pulse {
+    background-color: rgba(251, 191, 36, 0.12);
+    border-color: rgba(251, 191, 36, 0.4);
+    color: rgb(254, 243, 199);
+  }
+  .lux-sr-ring { animation-name: lux-sr-pulse-t; }
+}
+@keyframes lux-sr-pulse-t {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.07); }
+}

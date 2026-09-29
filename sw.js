@@ -23,6 +23,10 @@ const STATIC_ASSETS = [
   "/fonts.css?v=1",
   "/fonts/assistant-hebrew.woff2",
   "/fonts/frank-ruhl-libre-hebrew.woff2",
+  // תת-הקבוצה הלטינית = גם הספרות והפיסוק (U+0000-00FF) — נטענת בכל דף ממילא; בלעדיה
+  // אופליין במכשיר שה-SW שלו חדש התקבל net::ERR_FAILED בקונסול (09/2026)
+  "/fonts/assistant-latin.woff2",
+  "/fonts/frank-ruhl-libre-latin.woff2",
   // ספריית הזמנים מוגשת מאותו מקור (במקום unpkg) — הגרסה בשם הקובץ
   "/kosher-zmanim-0.9.0.min.js",
 ];

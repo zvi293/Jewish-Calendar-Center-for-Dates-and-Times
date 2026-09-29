@@ -315,8 +315,114 @@
         font-size: 16px; /* פחות מ-16px ⇒ אייפון מגדיל את הדף במיקוד */
         font-family: inherit;
       }
-      .city-input:focus { outline: none; border-color: rgba(242, 217, 138, 0.6); }
+      .city-input:focus {
+        outline: none;
+        border-color: rgba(242, 217, 138, 0.65);
+        box-shadow: 0 0 0 3px rgba(232, 193, 90, 0.14);
+      }
       .city-input::placeholder { color: rgba(148, 163, 184, 0.8); }
+      /* כרטיס הבקרות מעל הכרטיסים שאחריו — כדי שרשימת ההצעות לא תוסתר מתחתם */
+      #controls-card { position: relative; z-index: 10; }
+      .city-form { display: flex; gap: 0.5rem; align-items: stretch; }
+      .city-combo { position: relative; flex: 1; min-width: 0; display: flex; }
+      .city-combo .city-input { width: 100%; padding-inline-start: 2.45rem; padding-inline-end: 2.3rem; }
+      .city-combo-icon {
+        position: absolute;
+        inset-inline-start: 0.85rem;
+        top: 50%;
+        width: 1.05rem;
+        height: 1.05rem;
+        transform: translateY(-50%);
+        color: rgba(242, 217, 138, 0.85);
+        pointer-events: none;
+      }
+      .city-clear {
+        position: absolute;
+        inset-inline-end: 0.45rem;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 1.8rem;
+        height: 1.8rem;
+        border-radius: 999px;
+        border: none;
+        background: rgba(255, 255, 255, 0.08);
+        color: rgba(203, 213, 225, 0.9);
+        font-size: 0.8rem;
+        cursor: pointer;
+      }
+      .city-clear:hover { background: rgba(255, 255, 255, 0.16); color: #fff; }
+      .city-suggest {
+        position: absolute;
+        top: calc(100% + 0.4rem);
+        inset-inline: 0;
+        z-index: 30;
+        margin: 0;
+        padding: 0.35rem;
+        list-style: none;
+        max-height: min(19rem, 52vh);
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        background:
+          radial-gradient(ellipse 120% 60% at 50% -10%, rgba(232, 193, 90, 0.08) 0%, transparent 60%),
+          linear-gradient(165deg, #172243 0%, #0c1530 100%);
+        border: 1px solid rgba(232, 193, 90, 0.38);
+        border-radius: 0.95rem;
+        box-shadow: 0 18px 46px rgba(2, 6, 23, 0.65), 0 0 20px rgba(232, 193, 90, 0.08);
+        scrollbar-width: thin;
+        scrollbar-color: rgba(232, 193, 90, 0.45) transparent;
+        animation: city-suggest-in 0.16s ease-out;
+      }
+      .city-suggest[hidden] { display: none; }
+      @keyframes city-suggest-in {
+        from { opacity: 0; transform: translateY(-4px); }
+        to { opacity: 1; transform: none; }
+      }
+      @media (prefers-reduced-motion: reduce) { .city-suggest { animation: none; } }
+      .city-suggest-head {
+        padding: 0.4rem 0.75rem 0.3rem;
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        color: rgba(242, 217, 138, 0.75);
+      }
+      .city-suggest-empty {
+        padding: 0.8rem 0.75rem;
+        font-size: 0.85rem;
+        color: rgba(148, 163, 184, 0.95);
+        text-align: center;
+      }
+      .city-opt {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        padding: 0.62rem 0.75rem;
+        border-radius: 0.65rem;
+        color: #e2e8f0;
+        font-size: 0.98rem;
+        cursor: pointer;
+        transition: background 0.12s ease;
+      }
+      .city-opt + .city-opt { margin-top: 1px; }
+      .city-opt .pin {
+        flex-shrink: 0;
+        width: 1.7rem;
+        height: 1.7rem;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8rem;
+        background: rgba(232, 193, 90, 0.12);
+        border: 1px solid rgba(232, 193, 90, 0.25);
+      }
+      .city-opt .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .city-opt mark { background: none; color: #f2d98a; font-weight: 800; }
+      .city-opt .pop { flex-shrink: 0; font-size: 0.72rem; color: rgba(148, 163, 184, 0.85); }
+      .city-opt:hover, .city-opt.active {
+        background: linear-gradient(90deg, rgba(232, 193, 90, 0.16), rgba(232, 193, 90, 0.06));
+        color: #fff;
+      }
+      .city-opt.active { box-shadow: inset 0 0 0 1px rgba(232, 193, 90, 0.35); }
       #city-pick-msg { font-size: 0.75rem; color: rgba(252, 211, 77, 0.9); margin-top: 0.5rem; }
       .gradient-title {
         font-family: var(--lux-serif);
@@ -532,7 +638,7 @@
       </div>
 
       <!-- ══════ Controls Card ══════ -->
-      <div class="card p-4 mb-5">
+      <div class="card p-4 mb-5" id="controls-card">
         <!-- Location row -->
         <div class="flex items-center justify-between flex-wrap gap-3 mb-4">
           <div class="flex items-center gap-2 text-sm">
@@ -555,12 +661,21 @@
         <!-- בחירת יישוב ידנית — בלי שיתוף מיקום (רשימת היישובים: places/cities.json) -->
         <div id="city-pick" class="mb-4" style="display:none;">
           <label for="city-input" class="text-xs text-slate-400 mb-2 block">הקלידו שם יישוב — התוצאות יוצגו סביבו, בלי לשתף מיקום:</label>
-          <form id="city-form" class="flex gap-2" onsubmit="return pickCityFromInput(event)">
-            <input id="city-input" class="city-input" list="city-list" type="text" autocomplete="off"
-              enterkeyhint="search" placeholder="לדוגמה: בני ברק" />
+          <!-- רשימת הצעות משלנו (לא <datalist> — הרשימה המובנית של הדפדפן לבנה ואי אפשר לעצב אותה) -->
+          <form id="city-form" class="city-form" autocomplete="off" onsubmit="return pickCityFromInput(event)">
+            <div class="city-combo">
+              <svg class="city-combo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="11" cy="11" r="7"></circle><path d="M21 21l-4.3-4.3"></path>
+              </svg>
+              <input id="city-input" class="city-input" type="text" autocomplete="off" enterkeyhint="search"
+                role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="city-suggest"
+                placeholder="לדוגמה: בני ברק" />
+              <button type="button" id="city-clear" class="city-clear" aria-label="ניקוי" hidden>✕</button>
+              <ul id="city-suggest" class="city-suggest" role="listbox" aria-label="יישובים" hidden></ul>
+            </div>
             <button type="submit" class="btn-action primary">הצג</button>
           </form>
-          <datalist id="city-list"></datalist>
           <div id="city-pick-msg" style="display:none;"></div>
         </div>
 
@@ -664,7 +779,8 @@
 
       <!-- ══════ Footer info ══════ -->
       <div class="mt-10 text-center text-xs text-slate-400">
-        <p>מקורות הנתונים: מקוואות — מאגר המקוואות של המשרד לשירותי דת (data.gov.il) ו-OpenStreetMap;
+        <p>מקורות הנתונים: מקוואות — מאגר המקוואות של המשרד לשירותי דת (data.gov.il; ביישובים שחסרים
+          במאגר העדכני — המאגר של 2018) ו-OpenStreetMap;
           בתי כנסת — OpenStreetMap ומאגר עיריית באר שבע; ציוני צדיקים — רשימה מאומתת (OpenStreetMap וויקיפדיה).
           הנתונים שמורים באתר ומוצגים מיד, ועדכונים מ-OpenStreetMap נטענים ברקע.
           אם פספסנו מקום או נתקלת בשגיאה — אפשר לעדכן אותו דרך openstreetmap.org.</p>
@@ -797,7 +913,7 @@
       //  ומוסיף רק מקומות שנוספו ל-OSM מאז הבילד האחרון.
       // ══════════════════════════════════════════════════
       // חותמת תוכן — מתעדכנת אוטומטית ב-build-places.mjs (אותו תוכן = אותה כתובת = מטמון תקף)
-      const PLACES_VER = "9b13ce7fc8";
+      const PLACES_VER = "ba93f36756";
       const _placesCache = {};
       function loadPlaces(name) {
         if (!_placesCache[name]) {
@@ -893,9 +1009,12 @@
         const f = localStorage.getItem(LS_MK_FILTER_KEY);
         if (/^[MKAB]$/.test(f || "")) mikvahFilter = f;
       } catch (e) {}
+      // מקווה מהמאגר הממשלתי: "g" = המאגר העדכני, "g18" = השלמה מהמאגר של 2018 ליישובים
+      // שחסרים בעדכני (חיפה, נתניה, אשדוד, טבריה, אילת...) — שם מוצגת הערת "לוודא בטלפון"
+      const isGovMikveh = (x) => !!x && (x.s === "g" || x.s === "g18");
       function mikvahMatches(it, f) {
         const x = it.local;
-        if (!x || x.s !== "g") return false; // בלי נתוני משרד הדתות אין לנו מידע לסנן לפיו
+        if (!isGovMikveh(x)) return false; // בלי נתוני משרד הדתות אין לנו מידע לסנן לפיו
         if (f === "A") return x.acc >= 1;
         return (x.f || "").indexOf(f) !== -1;
       }
@@ -929,7 +1048,7 @@
       function wazeUrl(it) {
         const ll = encodeURIComponent(it.lat + "," + it.lon);
         const x = it.local;
-        if (x && x.s === "g" && x.q > 0) {
+        if (isGovMikveh(x) && x.q > 0) {
           const q = x.a ? x.a + ", " + x.c : "מקווה " + x.c;
           return "https://waze.com/ul?q=" + encodeURIComponent(q) + "&ll=" + ll + "&navigate=yes";
         }
@@ -1318,18 +1437,136 @@
         const open = typeof force === "boolean" ? force : box.style.display === "none";
         box.style.display = open ? "" : "none";
         if (btn) btn.setAttribute("aria-expanded", open ? "true" : "false");
-        if (!open) return;
-        loadPlaces("cities").then((list) => {
-          const dl = document.getElementById("city-list");
-          if (!list || !dl || dl.childElementCount) return;
-          const frag = document.createDocumentFragment();
-          list.forEach((c) => { const o = document.createElement("option"); o.value = c[0]; frag.appendChild(o); });
-          dl.appendChild(frag);
-        });
+        if (!open) { closeCitySuggest(); return; }
+        loadPlaces("cities"); // טעינה מוקדמת — ההצעות מוכנות כשמתחילים להקליד
         if (typeof force !== "boolean") {
           setTimeout(() => { try { document.getElementById("city-input").focus(); } catch (e) {} }, 60);
         }
       }
+
+      // ── רשימת הצעות מעוצבת (combobox) ─────────────────────
+      // התאמה: תחילת השם ← תחילת מילה ← הכלה; בכל קבוצה — היישובים הגדולים קודם
+      // (אוכלוסייה מקובץ הלמ"ס). בלי הקלדה — היישובים הגדולים. כתיב חסר/מלא מותר.
+      const _cityLoose = (s) => _normCityName(s).replace(/יי/g, "י").replace(/וו/g, "ו");
+      let _cityItems = [], _cityActive = -1, _cityBlurTimer = null;
+      function citySuggestions(q, list) {
+        const byPop = (a, b) => (b[3] || 0) - (a[3] || 0) || a[0].localeCompare(b[0], "he");
+        const lq = _cityLoose(q);
+        if (!lq) return { head: "יישובים גדולים", items: list.slice().sort(byPop).slice(0, 8) };
+        const starts = [], words = [], contains = [];
+        for (const c of list) {
+          const k = _cityLoose(c[0]);
+          if (k.startsWith(lq)) starts.push(c);
+          else if (k.split(" ").some((w) => w.startsWith(lq))) words.push(c);
+          else if (k.includes(lq)) contains.push(c);
+        }
+        return { head: "", items: [...starts.sort(byPop), ...words.sort(byPop), ...contains.sort(byPop)].slice(0, 8) };
+      }
+      function cityHighlight(name, q) {
+        const qq = _normCityName(q);
+        const i = qq ? name.indexOf(qq) : -1;
+        if (i < 0) return escapeHtml(name);
+        return escapeHtml(name.slice(0, i)) + "<mark>" + escapeHtml(name.slice(i, i + qq.length)) + "</mark>" + escapeHtml(name.slice(i + qq.length));
+      }
+      function cityPopText(p) {
+        if (!p || p < 1000) return "";
+        if (p >= 1000000) return (p / 1000000).toFixed(1).replace(/\.0$/, "") + " מיליון תושבים";
+        return Math.round(p / 1000).toLocaleString("he-IL") + " אלף תושבים";
+      }
+      function closeCitySuggest() {
+        const ul = document.getElementById("city-suggest");
+        const input = document.getElementById("city-input");
+        if (ul) ul.hidden = true;
+        if (input) { input.setAttribute("aria-expanded", "false"); input.removeAttribute("aria-activedescendant"); }
+        _cityActive = -1;
+      }
+      function setCityActive(i) {
+        const ul = document.getElementById("city-suggest");
+        const input = document.getElementById("city-input");
+        const opts = ul.querySelectorAll(".city-opt");
+        if (!opts.length) return;
+        _cityActive = (i + opts.length) % opts.length;
+        opts.forEach((o, j) => { o.classList.toggle("active", j === _cityActive); o.setAttribute("aria-selected", j === _cityActive ? "true" : "false"); });
+        input.setAttribute("aria-activedescendant", opts[_cityActive].id);
+        opts[_cityActive].scrollIntoView({ block: "nearest" });
+      }
+      function chooseCity(c) {
+        const input = document.getElementById("city-input");
+        const msg = document.getElementById("city-pick-msg");
+        closeCitySuggest();
+        if (input) { input.value = c[0]; input.blur(); }
+        if (msg) msg.style.display = "none";
+        toggleCityPick(false);
+        setManualLocation(c[0], c[1], c[2]);
+      }
+      function renderCitySuggest() {
+        const ul = document.getElementById("city-suggest");
+        const input = document.getElementById("city-input");
+        const clr = document.getElementById("city-clear");
+        if (clr) clr.hidden = !input.value;
+        loadPlaces("cities").then((list) => {
+          if (!list || document.activeElement !== input) return;
+          const { head, items } = citySuggestions(input.value, list);
+          _cityItems = items;
+          ul.innerHTML = "";
+          if (head && items.length) {
+            const h = document.createElement("li");
+            h.className = "city-suggest-head";
+            h.setAttribute("role", "presentation");
+            h.textContent = head;
+            ul.appendChild(h);
+          }
+          if (!items.length) {
+            const e = document.createElement("li");
+            e.className = "city-suggest-empty";
+            e.setAttribute("role", "presentation");
+            e.textContent = "לא נמצא יישוב בשם הזה";
+            ul.appendChild(e);
+          }
+          items.forEach((c, i) => {
+            const li = document.createElement("li");
+            li.className = "city-opt";
+            li.id = "city-opt-" + i;
+            li.setAttribute("role", "option");
+            li.setAttribute("aria-selected", "false");
+            const pop = cityPopText(c[3]);
+            li.innerHTML = '<span class="pin" aria-hidden="true">📍</span><span class="name">' + cityHighlight(c[0], input.value) + "</span>" +
+              (pop ? '<span class="pop">' + pop + "</span>" : "");
+            // click (לא pointerdown) — כך גלילה ברשימה במגע לא בוחרת יישוב בטעות
+            li.addEventListener("click", () => chooseCity(c));
+            ul.appendChild(li);
+          });
+          ul.hidden = false;
+          input.setAttribute("aria-expanded", "true");
+          _cityActive = -1;
+        });
+      }
+      (function initCityCombo() {
+        const input = document.getElementById("city-input");
+        const ul = document.getElementById("city-suggest");
+        const clr = document.getElementById("city-clear");
+        if (!input || !ul) return;
+        input.addEventListener("focus", () => { clearTimeout(_cityBlurTimer); renderCitySuggest(); });
+        // נגיעה בשדה שכבר בפוקוס (הרשימה נסגרה ב-Esc / אחרי בחירה) — פותחת שוב
+        input.addEventListener("click", () => { if (ul.hidden) renderCitySuggest(); });
+        input.addEventListener("input", () => {
+          const msg = document.getElementById("city-pick-msg");
+          if (msg) msg.style.display = "none";
+          renderCitySuggest();
+        });
+        // סגירה קצת אחרי יציאה מהשדה — כדי שהקליק על הצעה יספיק להירשם
+        input.addEventListener("blur", () => { _cityBlurTimer = setTimeout(closeCitySuggest, 180); });
+        // עכבר: לחיצה על הרשימה לא מוציאה את הפוקוס מהשדה (גם לגרירת פס הגלילה)
+        ul.addEventListener("mousedown", (e) => e.preventDefault());
+        input.addEventListener("keydown", (e) => {
+          const open = !ul.hidden;
+          if (e.key === "ArrowDown") { e.preventDefault(); if (!open) renderCitySuggest(); else setCityActive(_cityActive + 1); }
+          else if (e.key === "ArrowUp") { e.preventDefault(); if (open) setCityActive(_cityActive - 1); }
+          else if (e.key === "Enter" && open && _cityActive >= 0 && _cityItems[_cityActive]) { e.preventDefault(); chooseCity(_cityItems[_cityActive]); }
+          else if (e.key === "Escape" && open) { e.preventDefault(); closeCitySuggest(); }
+        });
+        if (clr) clr.addEventListener("click", () => { input.value = ""; clr.hidden = true; input.focus(); renderCitySuggest(); });
+      })();
       function pickCityFromInput(ev) {
         // preventDefault מיד (לפני כל await) — אחרת הטופס נשלח ומרענן את הדף
         if (ev) ev.preventDefault();
@@ -1511,17 +1748,40 @@
         }
       }
 
-      // ── Overpass fetch with parallel endpoint race ────
-      // We fire the query at ALL endpoints simultaneously and resolve with
-      // whichever one returns valid JSON first. This is the most robust
-      // approach against 504/overload from individual servers — if one mirror
-      // is slow or down, the others can still deliver a fast response.
-      // Each endpoint has a 35s client-side AbortController timeout.
+      // ── Overpass fetch: one server at a time (background enrichment) ────
+      // עד 09/2026 השאילתה נשלחה לכל 3 השרתים במקביל (מרוץ) — המשתמש חיכה לתשובה.
+      // היום המאגר המקומי מוצג מיד ו-Overpass רק משלים ברקע, ולכן: שרת אחד בכל פעם,
+      // מעבר לבא רק בכשל. פי 3 פחות עומס על Overpass (לפי מדיניות השימוש שלהם), פי 3
+      // פחות שגיאות בקונסול, ופחות חסימות 429. אחרי 429 ("יותר מדי בקשות") — הפסקה של
+      // 15 דק' בשאילתות החיות (נשמר במכשיר); המאגר המקומי ממשיך להציג הכל.
+      const LS_OVERPASS_PAUSE_KEY = "shulMikve_overpassPauseUntil";
+      const OVERPASS_PAUSE_MS = 15 * 60 * 1000;
+      function overpassPaused() {
+        try { return Date.now() < +(localStorage.getItem(LS_OVERPASS_PAUSE_KEY) || 0); } catch (e) { return false; }
+      }
+      const pauseOverpass = (ms) => {
+        try { localStorage.setItem(LS_OVERPASS_PAUSE_KEY, String(Date.now() + ms)); } catch (_) {}
+      };
       async function overpassFetch(query) {
-        const fetchOne = (endpoint) => {
+        const errors = [];
+        for (const endpoint of OVERPASS_ENDPOINTS) {
+          if (overpassPaused()) break;
+          try {
+            return await overpassFetchOne(endpoint, query);
+          } catch (e) {
+            errors.push(e.message || String(e));
+            if (e.status === 429) { pauseOverpass(OVERPASS_PAUSE_MS); break; }
+          }
+        }
+        // כל השרתים נכשלו (לא זמינים / חסומים ברשת הזו) — הפסקה של 10 דק', כדי שכל
+        // מעבר לשונית לא ימתין שוב לשלושה שרתים שלא עונים
+        if (errors.length >= OVERPASS_ENDPOINTS.length) pauseOverpass(10 * 60 * 1000);
+        throw new Error(errors.join(" | ") || "Overpass paused");
+      }
+      function overpassFetchOne(endpoint, query) {
           return new Promise((resolve, reject) => {
             const controller = new AbortController();
-            const timer = setTimeout(() => controller.abort(), 35000);
+            const timer = setTimeout(() => controller.abort(), 25000);
             fetch(endpoint, {
               method: "POST",
               headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -1530,7 +1790,9 @@
             }).then(res => {
               clearTimeout(timer);
               if (!res.ok) {
-                reject(new Error("HTTP " + res.status + " from " + endpoint));
+                const err = new Error("HTTP " + res.status + " from " + endpoint);
+                err.status = res.status; // 429 ⇒ הפסקה בשאילתות החיות (overpassFetch)
+                reject(err);
                 return;
               }
               return res.text().then(text => {
@@ -1549,20 +1811,6 @@
               reject(new Error((e && e.message ? e.message : "fetch failed") + " (" + endpoint + ")"));
             });
           });
-        };
-
-        const promises = OVERPASS_ENDPOINTS.map(fetchOne);
-        try {
-          // Promise.any returns the first FULFILLED promise (ignores rejections
-          // until all fail). Native in modern browsers (2021+).
-          return await Promise.any(promises);
-        } catch (aggregateErr) {
-          // All endpoints failed — collect error messages for diagnostics
-          const errs = (aggregateErr && aggregateErr.errors)
-            ? aggregateErr.errors.map(e => e.message || String(e))
-            : ["all endpoints failed"];
-          throw new Error(errs.join(" | "));
-        }
       }
 
       // ── Parse Overpass elements ───────────────────────
@@ -1715,6 +1963,12 @@
       function buildMikvehInfo(x, key) {
         const wrap = document.createElement("div");
         const flags = x.f || "";
+        if (x.s === "g18") {
+          const old = document.createElement("div");
+          old.className = "approx-note";
+          old.textContent = "ℹ️ מידע משנת 2018 — מומלץ לוודא בטלפון לפני הגעה";
+          wrap.appendChild(old);
+        }
         const chips = [];
         if (flags.indexOf("M") !== -1) chips.push("👨 גברים");
         if (flags.indexOf("K") !== -1) chips.push("🍽️ כלים");
@@ -1766,7 +2020,9 @@
           });
           const src = document.createElement("div");
           src.className = "mk-src";
-          src.textContent = "מקור: מאגר המקוואות של המשרד לשירותי דת (data.gov.il)";
+          src.textContent = x.s === "g18"
+            ? "מקור: מאגר המקוואות של המשרד לשירותי דת, 2018 (data.gov.il) — היישוב חסר במאגר העדכני"
+            : "מקור: מאגר המקוואות של המשרד לשירותי דת (data.gov.il)";
           det.appendChild(src);
           const setOpen = (open) => {
             det.hidden = !open;
@@ -1845,7 +2101,9 @@
           const approx = !!(x && x.q === 2);
           const dist = document.createElement("div");
           dist.className = "item-distance";
-          dist.textContent = "מרחק: " + (approx ? "כ-" : "") + formatDistance(it.distanceKm);
+          // מיקום משוער (מרכז היישוב) — "כ-0 מ'" לא אומר כלום; מתחת לחצי ק"מ מציגים טווח
+          dist.textContent = "מרחק: " + (approx && it.distanceKm < 0.5 ? "פחות מחצי ק\"מ"
+            : (approx ? "כ-" : "") + formatDistance(it.distanceKm));
           left.appendChild(dist);
           if (approx) {
             const n = document.createElement("div");
@@ -1853,7 +2111,7 @@
             n.textContent = "📍 מיקום משוער לפי היישוב — הניווט יחפש את הכתובת";
             left.appendChild(n);
           }
-          if (x && x.s === "g") left.appendChild(buildMikvehInfo(x, key));
+          if (isGovMikveh(x)) left.appendChild(buildMikvehInfo(x, key));
 
           const right = document.createElement("div");
           right.className = "card-actions";
@@ -1963,6 +2221,8 @@
           : [];
         const cachedExtras = loadCachedResults(tab, radius, lat, lon) || [];
         const shownFirst = mergeItems(base, cachedExtras, tab);
+        // Overpass בהפסקה (היה 429 ב-15 הדק' האחרונות) והמאגר המקומי זמין — בלי שאילתה חיה
+        const liveEnabled = !(localAll && overpassPaused());
         let hasCacheShown = false;
         let renderedSig = "";
         const sigOf = (list) => list.length + "|" + list.filter((it) => !it.local)
@@ -1971,11 +2231,12 @@
           lastResults = shownFirst;
           renderResults(shownFirst, tab);
           renderedSig = sigOf(shownFirst);
-          showRefreshHint("בודק אם נוספו מקומות חדשים…");
+          if (liveEnabled) showRefreshHint("בודק אם נוספו מקומות חדשים…");
           hasCacheShown = true;
         } else if (localAll) {
           lastResults = [];
-          setStatus("לא נמצאו " + noun + " ברדיוס " + radius + " ק\"מ במאגר.\nבודק מקורות נוספים…");
+          setStatus("לא נמצאו " + noun + " ברדיוס " + radius + " ק\"מ." +
+            (liveEnabled ? "\nבודק מקורות נוספים…" : "\nנסה להרחיב את רדיוס החיפוש."), liveEnabled);
         } else {
           const statusMsg = tab === "shul"
             ? "מחפש " + noun + " ברדיוס " + radius + " ק\"מ…"
@@ -1985,7 +2246,7 @@
 
         // 2. LIVE OVERPASS (background)
         const liveRadius = Math.min(radius, LIVE_MAX_RADIUS_KM[tab] || radius);
-        const queries = buildQueries(tab, lat, lon, liveRadius);
+        const queries = liveEnabled ? buildQueries(tab, lat, lon, liveRadius) : [];
         const seenIds = new Set();
         const allElements = [];
         let succeededCount = 0;
@@ -2292,7 +2553,7 @@
               radius: 9, color: "#a1762a", fillColor: "#e0b74f", fillOpacity: 0.92, weight: 2
             });
             const x = it.local;
-            const mkHours = x && x.s === "g" && x.h ? (isIsraelSummerTime() ? x.h[0] : x.h[1]) : "";
+            const mkHours = isGovMikveh(x) && x.h ? (isIsraelSummerTime() ? x.h[0] : x.h[1]) : "";
             const html =
               '<div style="direction:rtl;text-align:right;min-width:170px;">' +
                 '<div style="font-weight:800;font-size:0.95rem;margin-bottom:2px;">' + icon + " " + escapeHtml(it.name || "") + "</div>" +

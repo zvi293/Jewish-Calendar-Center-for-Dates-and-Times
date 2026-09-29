@@ -53,6 +53,7 @@ const OVERPASS_ENDPOINTS = [
 ];
 const MIKVAOT_RESOURCE = "e80a5e59-3b0f-4be9-983a-dc0971907626"; // מקוואות טהרה — המשרד לשירותי דת
 const CBS_LOCALITIES_RESOURCE = "d47a54ff-87f0-44b3-b33a-f284c0c38e5a"; // קובץ היישובים 2023 — הלמ"ס
+const MIKVAOT_2018_RESOURCE = "9a939c58-d149-4c07-b37f-77dbf0d50e35"; // מקוואות טהרה 2018 — השלמה ליישובים החסרים
 const BEERSHEBA_SHULS_RESOURCE = "40de91c6-1eb3-4f12-9cea-5c44484377d7"; // בתי כנסת — עיריית באר שבע
 
 const log = (...a) => console.log("[places]", ...a);
@@ -290,21 +291,30 @@ function itmToWgs84(E, N) {
   lon += (-dX * so + dY * co) / (Rn * cl);
   return [(lat * 180) / Math.PI, (lon * 180) / Math.PI];
 }
-// מפתח השוואה לשמות יישובים: בלי גרשיים/מרכאות, מקף בלי רווחים, כתיב מלא "נווה"
+// מפתח השוואה לשמות יישובים: בלי גרשיים/מרכאות, מקף = רווח, וכיווץ יו"ד/וי"ו כפולות —
+// כך "קרית שמונה"="קריית שמונה", "נהריה"="נהרייה", "פתח תקוה"="פתח תקווה",
+// "נוה צוף"="נווה צוף", "תל אביב - יפו"="תל אביב-יפו" (המאגרים כותבים כל אחד אחרת)
 const cityKey = (s) =>
-  clean(s).replace(/["'׳״]/g, "").replace(/\s*[-־–]\s*/g, "-").replace(/(^|[\s-])נוה(?=[\s-]|$)/g, "$1נווה").replace(/\s+/g, " ");
-const cbsCities = new Map(); // cityKey → { name, la, lo }
+  clean(s).replace(/["'׳״]/g, "").replace(/[\s\-־–]+/g, " ").replace(/יי/g, "י").replace(/וו/g, "ו").trim();
+const cbsCities = new Map(); // cityKey → { name, la, lo, pop }
+// שמות המועצות האזוריות — אינם יישוב ("מטה בנימין", "חבל מודיעין"); במאגר של 2018 הם
+// מופיעים לפעמים בשדה היישוב, ו-Nominatim מחזיר עליהם את מרכז שטח המועצה (עד עשרות ק"מ)
+const regionalCouncils = new Set();
 async function loadCbsLocalities() {
   try {
     const recs = await dataGovRecords(CBS_LOCALITIES_RESOURCE);
     for (const r of recs) {
+      const mun = clean(r["שם מעמד מונציפאלי"]);
+      if (/^מועצה אזורית\s/.test(mun)) regionalCouncils.add(cityKey(mun.replace(/^מועצה אזורית\s+/, "")));
       const rel = r["דת יישוב"];
       const coord = String(r["קואורדינטות"] || "");
       const name = clean(r["שם יישוב"]).replace(/\s*-\s*/g, "-");
       if ((rel !== 1 && rel !== 4) || coord.length !== 12 || !name || /\*|מ["״]א/.test(name)) continue;
       const [la, lo] = itmToWgs84(+coord.slice(0, 6), +coord.slice(6));
       if (!inServiceArea(la, lo)) continue;
-      cbsCities.set(cityKey(name), { name, la: round5(la), lo: round5(lo) });
+      // אוכלוסייה — לסדר ההצעות בחלונית "בחירת יישוב" (הקלדת "ב" ⇒ בני ברק, באר שבע קודם)
+      const pop = +r["סך הכל אוכלוסייה 2023 - ארעי"] || 0;
+      cbsCities.set(cityKey(name), { name, la: round5(la), lo: round5(lo), pop });
     }
     log(`CBS localities (Jewish + mixed): ${cbsCities.size}`);
   } catch (e) {
@@ -395,8 +405,31 @@ const stripPlaceWords = (s) =>
     .replace(/\s+(מס['׳]?\s*)?\d+\s*$/, "")
     .replace(/\s+/g, " ")
     .trim();
-// יישובים שהשם שלהם במאגר הממשלתי שונה מהשם ב-OSM (נבדק מול Nominatim, 29/09/2026)
-const CITY_ALIASES = { "אורה עמינדב": "אורה" };
+// יישובים שהשם שלהם במאגרי המקוואות שונה מהשם הרשמי בלמ"ס (נבדק מול קובץ הלמ"ס, 29/09/2026).
+// המפתח עובר cityKey, כך שכתיב חסר/מלא ומקפים לא משנים.
+const CITY_ALIASES_RAW = {
+  "אורה עמינדב": "אורה",
+  "תל אביב": "תל אביב-יפו",
+  "נצרת עילית": "נוף הגליל",
+  "מעלות": "מעלות-תרשיחא",
+  "יקנעם": "יקנעם עילית",
+  "ביתר": "ביתר עילית",
+  "בנימינה": "בנימינה-גבעת עדה",
+  "גבעת עדה": "בנימינה-גבעת עדה",
+  "קרית ארבע חברון": "קריית ארבע",
+  "טלז סטון": "קריית יערים",
+  "חצור": "חצור הגלילית",
+  "צור יגאל": "כוכב יאיר",
+  "פקיעין": "פקיעין חדשה",
+  "יהוד נוה מונסון": "יהוד-מונוסון",
+  // במאגר העדכני: יישוב "מול בית מס 2", כתובת "מקווה גבעת ישעיהו 2"
+  "מול בית מס 2": "גבעת ישעיהו",
+  "קדימה": "קדימה-צורן",
+  "זכר": "זכרון יעקב", // שם קטוע במאגר העדכני
+};
+// מילים כלליות שאינן שם יישוב — "מקווה דרום" (בזכרון יעקב) הפך ליישוב "דרום" ליד צפת
+const NOT_A_PLACE = /^(דרום|צפון|מזרח|מערב|מרכז|מרכזי|חדש|חדשה|ותיק|ותיקה|ישן|ישנה|עליון|תחתון)$/;
+const CITY_ALIASES = Object.fromEntries(Object.entries(CITY_ALIASES_RAW).map(([k, v]) => [cityKey(k), v]));
 // ישיבה/מוסד שאינו יישוב ב-OSM — מיקום המוסד עצמו (Nominatim: amenity=college "כרם ביבנה")
 const CITY_FIXED = { "כרם ביבנה": { la: 31.8179, lo: 34.7224, q: 2 } };
 async function resolveCity(r) {
@@ -404,15 +437,28 @@ async function resolveCity(r) {
   const fixed = CITY_FIXED[stripPlaceWords(raw)];
   if (fixed) return { name: stripPlaceWords(raw), geo: fixed };
   const cands = [];
-  const base = [CITY_ALIASES[raw], raw, stripPlaceWords(raw), stripPlaceWords(r.mikveName), stripPlaceWords(r.MikveAddress)];
-  // כתיב חסר/מלא: "נוה צוף" במאגר, "נווה צוף" ב-OSM
-  for (const c of base.slice()) if (c && /(^|\s)נוה(\s|$)/.test(c)) base.push(c.replace(/(^|\s)נוה(?=\s|$)/g, "$1נווה"));
+  // הכתובת משמשת כמועמד רק כשאין בה מספר בית ("בת חפר", "מקוה כסלון") — "הדקל 10" אינו
+  // שם יישוב, ו"הדקל" היה עלול להתאים ליישוב/שכונה אחרים לגמרי. המועצה הדתית — אחרונה.
+  const addrRaw = clean(r.MikveAddress);
+  const council = clean(r.council || r.counciName || "");
+  const base = [
+    CITY_ALIASES[cityKey(raw)], raw, stripPlaceWords(raw), CITY_ALIASES[cityKey(stripPlaceWords(raw))],
+    stripPlaceWords(r.mikveName),
+    /\d/.test(addrRaw) ? null : stripPlaceWords(addrRaw),
+    council ? CITY_ALIASES[cityKey(council)] || stripPlaceWords(council) : null,
+  ];
   for (const c of base) {
     // "ליד סופר אופיר" / "רחוב קטלב" — כתובת במקום יישוב; אבל "רחוב" לבדו הוא מושב בעמק בית שאן
     if (c && c.length >= 2 && !/\d/.test(c) && !/^(ליד|מול|רחוב|רח)\s/.test(c) && !cands.includes(c)) cands.push(c);
   }
+  // כשהמועצה הדתית היא עיר (זכרון יעקב, קריית ארבע) — היישוב חייב להיות בטווח 15 ק"מ ממנה;
+  // אחרת זה יישוב/שכונה באותו שם במקום אחר לגמרי
+  const councilRef = council ? cbsCities.get(cityKey(CITY_ALIASES[cityKey(council)] || council)) : null;
   for (const c of cands) {
+    if (NOT_A_PLACE.test(c)) continue;
+    if (regionalCouncils.has(cityKey(c)) && !cbsCities.has(cityKey(c))) continue;
     const geo = await geocodeCity(c);
+    if (geo && geo.la != null && councilRef && haversineKm(geo.la, geo.lo, councilRef.la, councilRef.lo) > 15) continue;
     // שם היישוב כפי שהוא בלמ"ס ("תל אביב-יפו", "נווה צוף") — אחיד עם רשימת היישובים
     if (geo && geo.la != null) return { name: (cbsCities.get(cityKey(c)) || { name: c }).name, geo };
   }
@@ -504,7 +550,7 @@ async function buildMikvaot(osmMikvehEls) {
     warn("no raw OSM mikvaot list yet — keeping previous mikvah.json unchanged");
     // היישובים של המקוואות — לרשימת "בחירת יישוב" (מקווה במיקום לפי יישוב = מרכז היישוב)
     for (const x of prev.items) {
-      if (x.s !== "g" || !x.c) continue;
+      if ((x.s !== "g" && x.s !== "g18") || !x.c) continue;
       if (!usedCities.has(x.c) || x.q === 2) usedCities.set(x.c, { la: x.la, lo: x.lo });
     }
     return prev.items;
@@ -556,6 +602,67 @@ async function buildMikvaot(osmMikvehEls) {
   } catch (e) {
     warn("mikvaot (gov) failed — keeping previous:", e.message);
   }
+
+  // ── השלמה מהמאגר של 2018 — רק ליישובים שאין להם אף מקווה במאגר העדכני ──
+  // המאגר העדכני חלקי (101 מועצות דתיות — חסרות חיפה, נתניה, אשדוד, טבריה, אילת, עפולה,
+  // עכו...), והמאגר של 2018 (אותו משרד) כולל אותן. ביישוב שכן מופיע במאגר העדכני — הוא
+  // קובע (מקווה שנעלם ממנו אולי נסגר), ולכן לא מערבבים. בדף: "מידע משנת 2018 — מומלץ
+  // לוודא בטלפון". אין במאגר של 2018 גברים/כלים/חדר כלה — רק שעות, טלפון ונגישות.
+  let gov18 = prevBySrc(prev, "g18");
+  try {
+    const recs = await dataGovRecords(MIKVAOT_2018_RESOURCE);
+    const covered = new Set(gov.map((x) => cityKey(x.c)));
+    const fresh = [];
+    let skippedCovered = 0, none = 0;
+    for (const r0 of recs) {
+      // אותה צורה כמו רשומה של המאגר העדכני — כדי להשתמש באותם resolveCity/geocodeAddress
+      const r = {
+        mikveCity: clean(r0.City) || clean(r0.Religious_Council),
+        mikveName: clean(r0.neighborhood),
+        MikveAddress: clean(r0.Mikve_Address),
+        council: clean(r0.Religious_Council),
+      };
+      if (!r.mikveCity) continue;
+      const rc = await resolveCity(r);
+      if (!rc) { none++; continue; }
+      const city = rc.name;
+      if (covered.has(cityKey(city))) { skippedCovered++; continue; }
+      usedCities.set(city, rc.geo);
+      const g = await geocodeAddress(r.MikveAddress, city, rc.geo, neighborhoodHint(r, city));
+      if (!g || g.la == null) { none++; continue; }
+      const shownAddr = normStreet(r.MikveAddress);
+      const nb = r.mikveName && r.mikveName !== city ? r.mikveName.replace(/^מקו(ו)?ה\s+/, "") : "";
+      const item = {
+        n: nb ? "מקווה " + nb + " — " + city : "מקווה " + city,
+        a: shownAddr && shownAddr !== city && !/^מקו(ו)?ה(\s|$)/.test(shownAddr) ? shownAddr : "",
+        c: city,
+        la: g.la,
+        lo: g.lo,
+        q: g.q,
+        s: "g18",
+      };
+      const eve = hoursText(r0.Opening_Hours_Holiday_Eve_Shabat_Eve);
+      const motz = hoursText(r0.Opening_Hours_Saturday_Night_Good_Day);
+      const h = [
+        hoursText(r0.Opening_Hours_Summer),
+        hoursText(r0.Opening_Hours_Winter),
+        [eve && "ערב שבת/חג: " + eve, motz && "מוצאי שבת/חג: " + motz].filter(Boolean).join(" · "),
+      ];
+      if (h.some(Boolean)) item.h = h;
+      const p = phoneText(r0.Phone) || phoneText(r0.Notes);
+      if (p) item.p = p;
+      const acc = clean(r0.Accessibility);
+      if (/חלק/.test(acc)) item.acc = 1;
+      else if (/מלא|^כן|נגיש/.test(acc) && !/^(לא|ללא)/.test(acc)) item.acc = 2;
+      item.f = "";
+      fresh.push(item);
+    }
+    log(`mikvaot 2018 (gap-fill): ${fresh.length} added · ${skippedCovered} skipped (settlement covered by the current database) · ${none} unplaced`);
+    gov18 = saneOrPrev(fresh, gov18, "mikvaot 2018");
+  } catch (e) {
+    warn("mikvaot 2018 failed — keeping previous:", e.message);
+  }
+  gov = [...gov, ...gov18];
 
   // OSM: מיקום מדויק למקוואות שהמאגר הממשלתי שם עליהם רק רחוב/יישוב; היתר נוספים כפריטים.
   // הרשימה הגולמית נשמרת ב-places-src/osm-mikvaot.json — כשהשאילתה נכשלת (תמיד בבילד של
@@ -667,9 +774,10 @@ function buildCities() {
   const prev = prevFile("cities").items || [];
   if (!cbsCities.size && prev.length > usedCities.size) return prev;
   const out = new Map();
-  for (const c of cbsCities.values()) out.set(cityKey(c.name), [c.name, c.la, c.lo]);
+  // [שם, lat, lon, אוכלוסייה] — אוכלוסייה 0 ליישוב שאינו בלמ"ס (מאחזים)
+  for (const c of cbsCities.values()) out.set(cityKey(c.name), [c.name, c.la, c.lo, c.pop || 0]);
   for (const [name, g] of usedCities) {
-    if (g && g.la != null && !out.has(cityKey(name))) out.set(cityKey(name), [name, g.la, g.lo]);
+    if (g && g.la != null && !out.has(cityKey(name))) out.set(cityKey(name), [name, g.la, g.lo, 0]);
   }
   // המקוואות לא נבנו מחדש בריצה הזו (נשמר הקובץ הקודם) — היישובים שהגיעו מהם (מאחזים
   // שאינם בלמ"ס) נלקחים מהרשימה הקודמת

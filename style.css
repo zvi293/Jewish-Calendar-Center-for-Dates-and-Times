@@ -2280,13 +2280,14 @@ body > .lux-ne-slot {
   #lux-moon::after { inset: -16px -16px -6px -16px; }
 }
 
-/* ── גלילה חושפת ── */
+/* ── גלילה חושפת ── (09/2026: עדינה יותר — 14px ו-0.4 שנ' במקום 26px ו-0.55 שנ',
+   ונחשפת רגע לפני הכניסה למסך; ראו scrollReveal ב-lux.js) */
 html.lux-js #resultsGrid .event-card {
   opacity: 0;
-  transform: translateY(26px);
+  transform: translateY(14px);
   transition:
-    opacity 0.55s ease,
-    transform 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.4s ease-out,
+    transform 0.45s cubic-bezier(0.22, 1, 0.36, 1),
     box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 html.lux-js #resultsGrid .event-card.lux-in {
@@ -6372,15 +6373,30 @@ html.dark #lux-plan-reader { background: #0f172a; }
    מוסתרות) ומורידים את הטשטוש מסרגל הניווט התחתון. הכול חוזר לחיים
    מיד עם הסגירה. אין לגעת בתוכן הפופאפים עצמם — הם אחים ישירים של
    body ולכן לא נתפסים בסלקטורים האלה.
+   09/2026: ההשהיה עברה ל-JS (_pauseBgAnimations ב-script.js, pause()/play()
+   על האנימציות האינסופיות בלבד). הכלל שהיה כאן — `html.lux-modal-open
+   #hero-section *` וכו' — גרם בכל פתיחה ובכל סגירה של פופאפ לחישוב-סגנון
+   מחדש של כל ~3,600 האלמנטים בדף (134–290ms במעבד טלפון) — ה"גמגום" בפתיחה.
+   אין להחזיר כאן כלל עם html.lux-modal-open ... * (כל כלל כזה = אותה עלות).
    ═══════════════════════════════════════════════════════ */
-html.lux-modal-open #hero-section *,
-html.lux-modal-open #main-content *,
-html.lux-modal-open body > section *,
-html.lux-modal-open body > footer *,
-html.lux-modal-open #lux-bottom-nav *,
-html.lux-modal-open #lux-shabbat-scene *,
-html.lux-modal-open #pwa-install-banner * {
-  animation-play-state: paused !important;
+/* touch-action לשכבות — בלי צביטת-זום/גרירה אופקית של הדף בזמן פופאפ. עד 09/2026
+   lockBodyScroll שם touch-action:pan-y על body בכל פתיחה; החלפה כזו על body מחשבת
+   מחדש את כל עץ האלמנטים (133–281ms במעבד טלפון, ועוד בסגירה). כלל קבוע על השכבות
+   עצמן נותן אותה התנהגות בלי שום עלות בזמן הפתיחה. */
+body > [id$="-modal"],
+body > .lux-sheet-overlay,
+body > #lux-stories,
+body > #lux-year-wheel,
+body > #lux-nav-editor,
+body > #lux-plan-reader,
+body > #lux-track-reader,
+body > #lux-selichot-reader,
+body > #lux-tour-overlay,
+body > #lux-search-panel,
+body > #lux-print-sheet,
+body > #chapter-nav-popup,
+body > #cal-month-year-picker {
+  touch-action: pan-y;
 }
 /* אחרי הניגון הראשון של כניסת הדשבורד — קריאות חוזרות ל-showDashboard
    לא מריצות שוב את fadeSlideUp מאפס (זה הבהב את ארבעת הכרטיסים) */
@@ -6425,8 +6441,9 @@ html.lux-modal-open #pwa-install-banner * {
    הפנימי של ספריא/חוק-לישראל, טוסטים) — וכל אחד מהם "קופץ" באיחור
    של פריים-שניים במובייל ונראה כהבהוב בתוך הפופאפ עצמו. לכן: במובייל
    אין טשטוש בשום מקום. פיצויי אטימות לבודדים שהיו שקופים מדי.
-   אנימציית הכניסה של .lux-sheet מבוטלת במובייל — הופעה מיידית
-   אינה יכולה להבהב (בדסקטופ הכול נשאר כשהיה).
+   (עד 09/2026 גם אנימציית הכניסה של .lux-sheet בוטלה כאן במובייל; היום
+   היריעה נכנסת באנימציית הפתיחה האחידה בסוף הקובץ — fade-through, קודם
+   הרקע ואז הכרטיס — שאין בה טשטוש ולכן אין ממה להבהב.)
    ═══════════════════════════════════════════════════════ */
 @media (max-width: 768px) {
   *,
@@ -6441,9 +6458,6 @@ html.lux-modal-open #pwa-install-banner * {
   #sefaria-modal > div:first-child,
   #chok-israel-modal > div:first-child {
     background: rgba(250, 248, 243, 0.97) !important;
-  }
-  .lux-sheet {
-    animation: none !important;
   }
 }
 
@@ -8968,33 +8982,39 @@ html.dark .prayer-next-cta { box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45); }
 
 /* ═══════════════════════════════════════════════════════
    ✦ אנימציית פתיחה אחידה לכל האתר (09/2026)
-   כל חלון/פופאפ/יריעה/ספר נפתח בהופעה רכה: שקיפות + הגדלה קלה + עלייה
-   של כמה פיקסלים, רבע שנייה. CSS טהור — אנימציית CSS מתחילה מעצמה כשהאלמנט
-   נוסף לדף או עובר מ-display:none לגלוי, כך שאין צורך לגעת באף פונקציית
-   פתיחה. רק opacity ו-scale/translate — רצים על ה-GPU, בלי פריסה מחדש
-   ובלי CLS. נעשה שימוש במאפיינים scale/translate הנפרדים (ולא transform)
-   כדי לא לדרוס transform קיים של אלמנט (מרכוז ב-translate(-50%) וכד').
-   בלי fill-mode — בסיום לא נשאר שום סגנון על האלמנט.
+   כל חלון/פופאפ/יריעה/ספר נפתח בהופעה רכה, רבע שנייה. CSS טהור — אנימציית CSS
+   מתחילה מעצמה כשהאלמנט נוסף לדף או עובר מ-display:none לגלוי, כך שאין צורך
+   לגעת באף פונקציית פתיחה.
+   שכבות-על — "fade-through" בשני שלבים: קודם השכבה עצמה (הרקע המכהה) מכסה את
+   הדף מהר (0.14 שנ'), ורק אחריה התוכן (ילדי השכבה) נכנס בזום עדין. גרסה ראשונה
+   דהתה את כל השכבה יחד — בטלפון נראה כריצוד: הדף הצבעוני נראה מבעד לטקסט,
+   וכל תזוזה של הדף מאחור (שורת הכתובת כשהגלילה ננעלת) נחשפה. לא לחזור לזה.
+   רק opacity ו-scale/translate — על ה-GPU, בלי פריסה מחדש ובלי CLS. המאפיינים
+   הנפרדים scale/translate (ולא transform) — לא דורסים transform קיים. בסיום לא
+   נשאר שום סגנון על האלמנט (backwards רק לזמן ההשהיה של התוכן).
    רשת ביטחון מפני הקפאה (ה"לא נטען" של 09/2026): script.js, ליד
    _revealModalNoFreeze (_uxWatch/_uxFinishStalled) — finish() לכל אנימציה
-   כזו שלא התקדמה כלל. הסגירה הרכה (דהייה 0.16 שנ') — _uxFadeRemove שם.
+   כזו שלא התקדמה כלל. הסגירה הרכה — _uxFadeRemove שם (אותו סדר, הפוך).
    שם אנימציה חדש כאן חייב להתאים ל-_UX_ANIM_RE, אחרת אין לו רשת ביטחון.
    אלמנטים שכבר יש להם אנימציית כניסה משלהם (#lux-stories, #lux-moon-pop,
    .lux-badge-pop, #lux-siyum, #lux-erev-panel, #lux-year-wheel) לא ברשימה.
    ═══════════════════════════════════════════════════════ */
 @keyframes ux-open {
-  from { opacity: 0; scale: 0.97; translate: 0 10px; }
+  from { opacity: 0; }
+}
+@keyframes ux-content {
+  from { opacity: 0; scale: 0.96; translate: 0 10px; }
 }
 @keyframes ux-pop {
   from { opacity: 0; scale: 0.94; translate: 0 6px; }
 }
 @keyframes ux-view {
-  from { opacity: 0; translate: 0 14px; }
+  from { opacity: 0; translate: 0 12px; }
 }
 @keyframes ux-reveal {
   from { opacity: 0; translate: 0 -6px; }
 }
-/* שכבות-על (מודאלים, קוראי ספרים ותפילות, יריעות) */
+/* שכבות-על (מודאלים, קוראי ספרים ותפילות, יריעות) — שלב 1: הרקע מכסה את הדף */
 body > [id$="-modal"],
 body > .lux-sheet-overlay,
 body > #lux-nav-editor,
@@ -9006,7 +9026,29 @@ body > #lux-tour-overlay,
 body > #lux-search-panel,
 body > #chapter-nav-popup,
 body > #cal-month-year-picker {
-  animation: ux-open 0.26s cubic-bezier(0.22, 1, 0.36, 1);
+  animation: ux-open 0.14s ease-out;
+}
+/* שלב 2: התוכן נכנס אחרי שהרקע כבר כיסה (השהיה + backwards = שקוף עד אז) */
+body > [id$="-modal"] > *,
+body > .lux-sheet-overlay > *,
+body > #lux-nav-editor > *,
+body > #lux-plan-reader > *,
+body > #lux-track-reader > *,
+body > #lux-selichot-reader > *,
+body > #lux-print-sheet > *,
+body > #lux-tour-overlay > *,
+body > #lux-search-panel > *,
+body > #chapter-nav-popup > *,
+body > #cal-month-year-picker > * {
+  animation: ux-content 0.26s cubic-bezier(0.22, 1, 0.36, 1) 0.06s backwards;
+}
+/* סגירת המודאלים הסטטיים (לוח שנה, הגדרות, מצפן, ספריא, חוק לישראל, עומר: מוסיפים
+   opacity-0 ואחרי 300ms hidden) — גם כאן קודם התוכן נעלם ורק אז הרקע, ולא כל השכבה
+   יחד (אחרת רואים את הלוח/הטקסט מעל הדף במשך כל הדהייה). בפתיחה opacity-0 ו-hidden
+   יורדים יחד (_revealModalNoFreeze) — הכלל לא חל, ובלי transition בכיוון הפתיחה. */
+body > [id$="-modal"].opacity-0:not(.hidden) > * {
+  opacity: 0;
+  transition: opacity 0.1s ease-in;
 }
 /* פופאפים קטנים ופאנלים (סימניות, בורר מפרשים), וה-X האוניברסלי שמוזרק לשכבה */
 body > .lux-ux,
@@ -9017,11 +9059,12 @@ body > [id$="-pop"]:not(#lux-moon-pop),
 .rf-pop {
   animation: ux-pop 0.2s cubic-bezier(0.22, 1, 0.36, 1);
 }
-/* מעבר בין תצוגות בתוך חלון — כניסה לספר, לרשימת פרקים, לקורא */
+/* מעבר בין תצוגות בתוך חלון — כניסה לספר, לרשימת פרקים, לקורא. התצוגה הקודמת
+   נעלמת מיד, והחדשה נכנסת אחרי רגע קצר על הרקע של החלון (גם כאן בלי טקסט על טקסט) */
 #sn-modal > [id$="-view"],
 #bih-reading-pane,
 #psalm-content-pane {
-  animation: ux-view 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+  animation: ux-view 0.22s cubic-bezier(0.22, 1, 0.36, 1) 0.03s backwards;
 }
 /* תוכן שנפתח בתוך הדף — "תפילות נוספות", שאלות נפוצות */
 #prayer-more-grid:not(.hidden),
@@ -9040,6 +9083,17 @@ details[open] > :not(summary) {
   body > #lux-search-panel,
   body > #chapter-nav-popup,
   body > #cal-month-year-picker,
+  body > [id$="-modal"] > *,
+  body > .lux-sheet-overlay > *,
+  body > #lux-nav-editor > *,
+  body > #lux-plan-reader > *,
+  body > #lux-track-reader > *,
+  body > #lux-selichot-reader > *,
+  body > #lux-print-sheet > *,
+  body > #lux-tour-overlay > *,
+  body > #lux-search-panel > *,
+  body > #chapter-nav-popup > *,
+  body > #cal-month-year-picker > *,
   body > .lux-ux,
   [id$="-bm-panel"],
   #sn-cm-popover,

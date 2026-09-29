@@ -589,16 +589,18 @@
         .card { background: rgba(15, 23, 42, 0.92) !important; }
         .top-nav { background: rgba(5, 11, 26, 0.96) !important; }
       }
-      /* אנימציית פתיחה אחידה — כמו בדף הראשי (style.css "ux-open"): שקיפות + הגדלה
-         קלה, רבע שנייה, רק opacity/scale/translate. רשת ביטחון מפני הקפאה בסקריפט למטה */
-      @keyframes ux-open { from { opacity: 0; scale: 0.97; translate: 0 10px; } }
-      @keyframes ux-fade { from { opacity: 0; } }
+      /* אנימציית פתיחה אחידה — כמו בדף הראשי (style.css): fade-through — קודם הרקע
+         המכהה מכסה את הדף (0.14 שנ') ורק אז התוכן נכנס בזום עדין, בלי טקסט על טקסט.
+         רק opacity/scale/translate. רשת ביטחון מפני הקפאה בסקריפט למטה */
+      @keyframes ux-open { from { opacity: 0; } }
+      @keyframes ux-content { from { opacity: 0; scale: 0.96; translate: 0 10px; } }
       @keyframes ux-reveal { from { opacity: 0; translate: 0 -6px; } }
-      #tzaddik-prayers-modal { animation: ux-open 0.26s cubic-bezier(0.22, 1, 0.36, 1); }
-      #beta-popup { animation: ux-fade 0.22s ease-out; }
+      #tzaddik-prayers-modal, #beta-popup { animation: ux-open 0.14s ease-out; }
+      #tzaddik-prayers-modal > * { animation: ux-content 0.26s cubic-bezier(0.22, 1, 0.36, 1) 0.06s backwards; }
+      #beta-popup-card { animation-delay: 0.06s; animation-fill-mode: backwards; }
       #city-pick { animation: ux-reveal 0.22s cubic-bezier(0.22, 1, 0.36, 1); }
       @media (prefers-reduced-motion: reduce) {
-        #tzaddik-prayers-modal, #beta-popup, #city-pick { animation: none; }
+        #tzaddik-prayers-modal, #tzaddik-prayers-modal > *, #beta-popup, #city-pick { animation: none; }
       }
     </style>
     <script type="application/ld+json">

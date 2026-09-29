@@ -180,13 +180,15 @@
       entries.forEach(function (en) {
         if (en.isIntersecting) {
           var el = en.target;
-          el.style.transitionDelay = (el._luxIdx % 5) * 70 + "ms";
+          el.style.transitionDelay = (el._luxIdx % 5) * 40 + "ms";
           el.classList.add("lux-in");
           io.unobserve(el);
           setTimeout(function () { el.style.transitionDelay = ""; }, 900);
         }
       });
-    }, { rootMargin: "0px 0px -6% 0px", threshold: 0.04 });
+    // 09/2026: חשיפה רגע *לפני* שהכרטיס נכנס למסך (שוליים חיוביים) — בגלילה רגילה
+    // הכרטיס כבר שם כשמגיעים אליו, במקום שטח ריק שמתמלא מול העיניים (הורגש כריצוד)
+    }, { rootMargin: "0px 0px 35% 0px", threshold: 0.01 });
     var pending = null;
     function watch() {
       pending = null;

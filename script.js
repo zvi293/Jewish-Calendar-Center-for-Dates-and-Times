@@ -403,8 +403,10 @@ function lockBodyScroll() {
     // חובה לקרוא את מיקום הגלילה לפני position:fixed — ההצבה מאפסת את window.scrollY,
     // וקריאה אחריה שמרה תמיד 0: הרקע קפץ לראש הדף בפתיחה והסגירה החזירה לראש במקום למקום האמיתי
     const y = window.scrollY;
+    // בלי body.style.touchAction (היה "pan-y"): שינוי touch-action על body מחשב מחדש את
+    // כל עץ האלמנטים — 133–281ms בכל פתיחה ועוד כמעט כך בסגירה, במעבד טלפון (נמדד
+    // 09/2026). אותה התנהגות קבועה ב-CSS על שכבות-העל עצמן (style.css, "touch-action לשכבות")
     document.body.style.overflow = "hidden";
-    document.body.style.touchAction = "pan-y";
     document.body.style.position = "fixed";
     document.body.style.width = "100%";
     document.body.style.top = `-${y}px`;
@@ -419,7 +421,6 @@ function unlockBodyScroll() {
   if (_modalScrollLockCount === 0) {
     const scrollY = parseInt(document.body.dataset.scrollY || "0", 10);
     document.body.style.overflow = "";
-    document.body.style.touchAction = "";
     document.body.style.position = "";
     document.body.style.width = "";
     document.body.style.top = "";
@@ -546,7 +547,7 @@ function _sefariaJson(url, opts) {
 }
 window._sefariaJson = _sefariaJson;
 // html.lux-modal-open — סימון מרכזי "פופאפ כלשהו פתוח": משהה את קנבס הכוכבים,
-// את שעוני-הכפייה ואת האנימציות האינסופיות שברקע (כללי CSS בסוף style.css).
+// את שעוני-הכפייה ואת האנימציות האינסופיות שברקע (_pauseBgAnimations למטה).
 // הבדיקה משקפת את ה-DOM עצמו ולכן עמידה גם מול פופאפים שלא נועלים גלילה.
 const _OVERLAY_OPEN_SELECTOR =
   'body > [id$="-modal"]:not(.hidden), body > .lux-sheet-overlay, ' +
@@ -560,7 +561,39 @@ function _isAnyOverlayOpen() {
   );
 }
 function _syncModalOpenClass() {
-  document.documentElement.classList.toggle("lux-modal-open", _isAnyOverlayOpen());
+  const open = _isAnyOverlayOpen();
+  document.documentElement.classList.toggle("lux-modal-open", open);
+  _pauseBgAnimations(open);
+}
+// השהיית אנימציות הרקע האינסופיות בזמן פופאפ (הן מוסתרות ממילא) — דרך pause()/play()
+// על האנימציות עצמן, בלי לגעת בסגנונות. עד 09/2026 זה היה כלל CSS
+// `html.lux-modal-open #hero-section *` — וכל החלפה של המחלקה חישבה מחדש את הסגנון
+// של כל ~3,600 האלמנטים בדף (134–290ms במעבד טלפון) בכל פתיחה ובכל סגירה.
+// רק אינסופיות: אנימציית כניסה חד-פעמית שנעצרת באמצע = אלמנט שקוף ("לא נטען").
+const _BG_ANIM_ROOTS =
+  "#hero-section, #main-content, body > section, body > footer, " +
+  "#lux-bottom-nav, #lux-shabbat-scene, #pwa-install-banner";
+let _bgPausedAnims = null;
+function _pauseBgAnimations(on) {
+  if (!document.getAnimations) return;
+  if (on) {
+    if (_bgPausedAnims) return;
+    _bgPausedAnims = [];
+    try {
+      document.getAnimations().forEach((a) => {
+        const t = a.effect && a.effect.target;
+        if (!t || a.playState !== "running" || !t.closest) return;
+        if (a.effect.getComputedTiming().iterations !== Infinity) return;
+        if (!t.closest(_BG_ANIM_ROOTS)) return;
+        a.pause();
+        _bgPausedAnims.push(a);
+      });
+    } catch (e) {}
+  } else if (_bgPausedAnims) {
+    const list = _bgPausedAnims;
+    _bgPausedAnims = null;
+    list.forEach((a) => { try { if (a.playState === "paused") a.play(); } catch (e) {} });
+  }
 }
 setInterval(function () {
   // בלשונית מוסתרת אין מה לסנכרן (אין רינדור) — חוסך CPU/סוללה
@@ -1780,7 +1813,7 @@ function _revealModalNoFreeze(m, alsoUnscale) {
 // אין להסתמך על animationstart: כשהציר קפוא האירוע לא נשלח בכלל.
 // var ולא let/const: _uxWatch נקראת גם מ-pushModalState/lockBodyScroll שמוגדרות למעלה
 // בקובץ — בלי TDZ גם אם מודאל נפתח עוד לפני שהשורות האלה רצו
-var _UX_ANIM_RE = /^ux-(open|pop|view|reveal)$/;
+var _UX_ANIM_RE = /^ux-(open|content|pop|view|reveal)$/;
 var _uxWatchUntil = 0;
 var _uxSeenTime = new WeakMap();
 var _uxTimer = 0;
@@ -1813,7 +1846,7 @@ window.addEventListener("pageshow", _uxWatch);
 document.addEventListener("visibilitychange", _uxWatch);
 document.addEventListener("animationstart", (e) => { if (_UX_ANIM_RE.test(e.animationName)) _uxWatch(); }, true);
 
-// ── סגירה רכה: שכבה שנסגרת דוהה 0.16 שנ' ורק אז מוסרת מה-DOM ──
+// ── סגירה רכה: שכבה שנסגרת דוהה (0.2 שנ') ורק אז מוסרת מה-DOM ──
 // המצב הלוגי נסגר מיד כמו קודם (נעילת גלילה, מחסנית ההיסטוריה) — רק התמונה נשארת
 // לרגע, עם pointer-events:none, כך שהדף שמתחת פעיל מיד. getElementById לעולם לא
 // מחזיר שכבה בסגירה: חיפוש לפי ה-id שלה (פתיחה מחדש מהירה, רשומה יתומה ב-popstate,
@@ -1840,17 +1873,22 @@ function _uxFadeRemove(el) {
     _syncModalOpenClass();
   };
   el.__uxClosing = finish;
-  [el].concat(xs).forEach((n) => {
-    n.style.pointerEvents = "none";
-    try {
-      n.animate(
-        [{ opacity: 1 }, { opacity: 0, scale: "0.98", translate: "0 8px" }],
-        { duration: 160, easing: "ease-in", fill: "forwards" },
-      );
-    } catch (e) {}
-  });
-  // טיימר ולא onfinish — מסיר גם אם ציר האנימציות קפוא
-  setTimeout(finish, 170);
+  // אותו סדר כמו בפתיחה, הפוך (fade-through): קודם התוכן (ילדי השכבה + ה-X) נעלם
+  // ב-0.1 שנ', ורק אחריו הרקע המכהה — אף פעם לא רואים טקסט של החלון על הדף
+  [el].concat(xs).forEach((n) => { n.style.pointerEvents = "none"; });
+  try {
+    Array.prototype.forEach.call(el.children, (k) => {
+      k.animate([{ opacity: 0, scale: "0.97" }], { duration: 100, easing: "ease-in", fill: "forwards" });
+    });
+    xs.forEach((x) => x.animate([{ opacity: 0 }], { duration: 100, easing: "ease-in", fill: "forwards" }));
+    const a = el.animate([{ opacity: 1, offset: 0.35 }, { opacity: 0 }], { duration: 190, easing: "ease-out", fill: "forwards" });
+    // הסרה בסוף האנימציה בפועל: האנימציה מתחילה רק בפריים הבא, ואם הסגירה עצמה
+    // תקעה את הדף (שחרור הנעילה) — טיימר שנספר מעכשיו היה מסיר את השכבה לפני
+    // שהדהייה בכלל נראתה (נמדד: 250ms תקיעה במעבד טלפון ⇒ היעלמות חדה)
+    a.onfinish = finish;
+  } catch (e) {}
+  // רשת ביטחון: ציר אנימציות קפוא — onfinish לא יגיע
+  setTimeout(finish, 700);
 }
 (function () {
   const orig = Document.prototype.getElementById;

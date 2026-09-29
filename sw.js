@@ -1,4 +1,4 @@
-const STATIC_CACHE = "moadim-static-v95";
+const STATIC_CACHE = "moadim-static-v96";
 // מטמון ריצה: תשובות API וקבצים חיצוניים (ספריא, hebcal, פונטים, ספריות CDN)
 // נשמרים אחרי הצפייה הראשונה — כך האתר, התפילות והספרים עובדים גם בלי אינטרנט.
 const RUNTIME_CACHE = "moadim-runtime-v1";
@@ -46,11 +46,66 @@ const RUNTIME_CACHE_ORIGINS = [
   // המשתמש ואין טעם לשמר אותן במטמון ללא תפוגה; החיפוש ממילא דורש חיבור.
   "https://www.toratemetfreeware.com",
 ];
+const isTileUrl = (url) =>
+  url.hostname === "tile.openstreetmap.org" || url.hostname.endsWith(".tile.openstreetmap.org");
 function isRuntimeCacheable(url) {
-  return (
-    RUNTIME_CACHE_ORIGINS.includes(url.origin) ||
-    url.hostname === "tile.openstreetmap.org" ||
-    url.hostname.endsWith(".tile.openstreetmap.org")
+  return RUNTIME_CACHE_ORIGINS.includes(url.origin) || isTileUrl(url);
+}
+
+// אריחי המפה שנצפו נשמרים לפתיחה מהירה/אופליין — אבל עם תקרה (~600 אריחים ≈ 10MB),
+// כדי שגלילה במפה לא תמלא את האחסון. put מעביר רשומה קיימת לסוף הרשימה, ולכן
+// הוותיקות ביותר (לפי סדר המפתחות) הן אלו שלא נצפו הכי הרבה זמן — הן נמחקות.
+const TILE_CACHE_MAX = 600;
+let tileTrimPending = null;
+let tilesSinceTrim = 0;
+function trimTileCache() {
+  // מסך מפה אחד = עשרות אריחים — בודקים את הגודל פעם ב-25 אריחים, לא על כל אחד
+  if (++tilesSinceTrim < 25) return Promise.resolve();
+  tilesSinceTrim = 0;
+  if (tileTrimPending) return tileTrimPending;
+  tileTrimPending = caches
+    .open(RUNTIME_CACHE)
+    .then((cache) =>
+      cache.keys().then((keys) => {
+        const tiles = keys.filter((req) => isTileUrl(new URL(req.url)));
+        const extra = tiles.length - TILE_CACHE_MAX;
+        if (extra > 0) return Promise.all(tiles.slice(0, extra).map((req) => cache.delete(req)));
+      }),
+    )
+    .catch(() => {})
+    .then(() => {
+      tileTrimPending = null;
+    });
+  return tileTrimPending;
+}
+
+// מאגר המקומות (places/*.json?v=<חותמת תוכן>): אותה כתובת = אותו תוכן ⇒ מהמטמון מיד
+// (גם ברשת איטית/אופליין), ורק גרסה חדשה יורדת מהרשת. גרסאות קודמות של אותו קובץ נמחקות.
+function placesResponse(request, url) {
+  return caches.open(RUNTIME_CACHE).then((cache) =>
+    cache.match(request).then((hit) => {
+      if (hit) return hit;
+      return fetch(request).then((response) => {
+        if (response && response.ok) {
+          const copy = response.clone();
+          cache
+            .put(request, copy)
+            .then(() => cache.keys())
+            .then((keys) =>
+              Promise.all(
+                keys
+                  .filter((req) => {
+                    const u = new URL(req.url);
+                    return u.origin === url.origin && u.pathname === url.pathname && u.search !== url.search;
+                  })
+                  .map((req) => cache.delete(req)),
+              ),
+            )
+            .catch(() => {});
+        }
+        return response;
+      });
+    }),
   );
 }
 
@@ -189,6 +244,7 @@ self.addEventListener("fetch", (event) => {
         stored = caches
           .open(RUNTIME_CACHE)
           .then((cache) => cache.put(request, copy))
+          .then(() => (isTileUrl(url) ? trimTileCache() : undefined))
           .catch(() => {});
       }
       return response;
@@ -211,6 +267,11 @@ self.addEventListener("fetch", (event) => {
           );
         }),
     );
+    return;
+  }
+
+  if (url.pathname.startsWith("/places/") && url.search) {
+    event.respondWith(placesResponse(request, url));
     return;
   }
 

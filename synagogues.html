@@ -237,6 +237,87 @@
         color: rgba(148, 163, 184, 0.85);
         margin-top: 0.15rem;
       }
+      /* ── פרטי מקווה (מאגר המשרד לשירותי דת) ── */
+      .mk-chips { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.45rem; }
+      .mk-chip {
+        font-size: 0.7rem;
+        font-weight: 700;
+        padding: 0.12rem 0.5rem;
+        border-radius: 999px;
+        background: rgba(147, 197, 253, 0.12);
+        border: 1px solid rgba(147, 197, 253, 0.28);
+        color: #c7d2fe;
+        white-space: nowrap;
+      }
+      .mk-hours { font-size: 0.8rem; color: #e2e8f0; margin-top: 0.4rem; line-height: 1.55; }
+      .mk-hours b { color: #c4b5fd; font-weight: 700; }
+      .mk-more {
+        margin-top: 0.35rem;
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: #a5b4fc;
+        background: none;
+        border: none;
+        padding: 0.2rem 0;
+        cursor: pointer;
+      }
+      .mk-details {
+        margin-top: 0.3rem;
+        padding-top: 0.4rem;
+        border-top: 1px dashed rgba(148, 163, 184, 0.25);
+        font-size: 0.8rem;
+        color: rgba(203, 213, 225, 0.95);
+        line-height: 1.65;
+      }
+      .mk-details b { color: #c4b5fd; font-weight: 700; }
+      .mk-src { font-size: 0.7rem; color: rgba(148, 163, 184, 0.8); margin-top: 0.25rem; }
+      .approx-note { font-size: 0.72rem; color: rgba(252, 211, 77, 0.85); margin-top: 0.2rem; }
+      .card-actions { display: flex; flex-direction: column; gap: 0.45rem; align-items: stretch; flex-shrink: 0; }
+      .phone-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.35rem;
+        padding: 0.45rem 0.9rem;
+        border-radius: 999px;
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: #e0e7ff;
+        background: rgba(99, 102, 241, 0.18);
+        border: 1px solid rgba(165, 180, 252, 0.4);
+        text-decoration: none;
+        white-space: nowrap;
+      }
+      .phone-btn:hover { background: rgba(99, 102, 241, 0.3); }
+      .more-results-btn {
+        display: block;
+        width: 100%;
+        margin-top: 0.25rem;
+        padding: 0.75rem 1rem;
+        border-radius: 0.9rem;
+        font-weight: 800;
+        font-size: 0.92rem;
+        color: #fdf3d0;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(232, 193, 90, 0.35);
+        cursor: pointer;
+      }
+      .more-results-btn:hover { background: rgba(255, 255, 255, 0.1); }
+      /* ── בחירת יישוב ── */
+      .city-input {
+        flex: 1;
+        min-width: 0;
+        padding: 0.6rem 0.85rem;
+        border-radius: 0.75rem;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        color: #f1f5f9;
+        font-size: 16px; /* פחות מ-16px ⇒ אייפון מגדיל את הדף במיקוד */
+        font-family: inherit;
+      }
+      .city-input:focus { outline: none; border-color: rgba(242, 217, 138, 0.6); }
+      .city-input::placeholder { color: rgba(148, 163, 184, 0.8); }
+      #city-pick-msg { font-size: 0.75rem; color: rgba(252, 211, 77, 0.9); margin-top: 0.5rem; }
       .gradient-title {
         font-family: var(--lux-serif);
         font-weight: 900;
@@ -404,7 +485,7 @@
       }
     </style>
     <script type="application/ld+json">
-    {"@context":"https://schema.org","@type":"WebPage","@id":"https://jewishcalendar.co.il/synagogues.html","url":"https://jewishcalendar.co.il/synagogues.html","name":"בתי כנסת ומקוואות באזור","description":"מצא בתי כנסת, מקוואות וציוני צדיקים באזור שלך לפי מיקום, ראה מרחק ונווט בלחיצה. מבוסס נתוני OpenStreetMap.","inLanguage":"he-IL","isPartOf":{"@type":"WebSite","@id":"https://jewishcalendar.co.il/#website","url":"https://jewishcalendar.co.il/","name":"הלוח היהודי"},"breadcrumb":{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"הלוח היהודי","item":"https://jewishcalendar.co.il/"},{"@type":"ListItem","position":2,"name":"בתי כנסת ומקוואות","item":"https://jewishcalendar.co.il/synagogues.html"}]}}
+    {"@context":"https://schema.org","@type":"WebPage","@id":"https://jewishcalendar.co.il/synagogues.html","url":"https://jewishcalendar.co.il/synagogues.html","name":"בתי כנסת ומקוואות באזור","description":"מצא בתי כנסת, מקוואות וציוני צדיקים באזור שלך לפי מיקום, ראה מרחק ונווט בלחיצה. מבוסס נתוני המשרד לשירותי דת ו-OpenStreetMap.","inLanguage":"he-IL","isPartOf":{"@type":"WebSite","@id":"https://jewishcalendar.co.il/#website","url":"https://jewishcalendar.co.il/","name":"הלוח היהודי"},"breadcrumb":{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"הלוח היהודי","item":"https://jewishcalendar.co.il/"},{"@type":"ListItem","position":2,"name":"בתי כנסת ומקוואות","item":"https://jewishcalendar.co.il/synagogues.html"}]}}
     </script>
   </head>
 
@@ -461,9 +542,26 @@
             </svg>
             <span id="location-status" class="text-slate-300/90">בודק מיקום…</span>
           </div>
-          <button id="btn-refresh-loc" class="btn-action" onclick="refreshLocation()" type="button">
-            עדכן מיקום
-          </button>
+          <div class="flex gap-2">
+            <button id="btn-city-pick" class="btn-action" onclick="toggleCityPick()" type="button" aria-controls="city-pick" aria-expanded="false">
+              🔎 בחירת יישוב
+            </button>
+            <button id="btn-refresh-loc" class="btn-action" onclick="refreshLocation()" type="button">
+              עדכן מיקום
+            </button>
+          </div>
+        </div>
+
+        <!-- בחירת יישוב ידנית — בלי שיתוף מיקום (רשימת היישובים: places/cities.json) -->
+        <div id="city-pick" class="mb-4" style="display:none;">
+          <label for="city-input" class="text-xs text-slate-400 mb-2 block">הקלידו שם יישוב — התוצאות יוצגו סביבו, בלי לשתף מיקום:</label>
+          <form id="city-form" class="flex gap-2" onsubmit="return pickCityFromInput(event)">
+            <input id="city-input" class="city-input" list="city-list" type="text" autocomplete="off"
+              enterkeyhint="search" placeholder="לדוגמה: בני ברק" />
+            <button type="submit" class="btn-action primary">הצג</button>
+          </form>
+          <datalist id="city-list"></datalist>
+          <div id="city-pick-msg" style="display:none;"></div>
         </div>
 
         <!-- Radius row -->
@@ -478,6 +576,18 @@
             <button class="radius-chip" data-r="50" type="button">50 ק"מ</button>
             <button class="radius-chip" data-r="100" type="button">100 ק"מ</button>
             <button class="radius-chip" data-r="150" type="button">150 ק"מ</button>
+          </div>
+        </div>
+
+        <!-- סינון מקוואות (לשונית מקוואות בלבד) — לפי נתוני המשרד לשירותי דת -->
+        <div id="mikvah-filter-row" class="mt-4" style="display:none;">
+          <div class="text-xs text-slate-400 mb-2">סינון מקוואות:</div>
+          <div class="flex flex-wrap gap-2" id="mikvah-filter-chips">
+            <button class="radius-chip active" data-f="" type="button" aria-pressed="true">הכל</button>
+            <button class="radius-chip" data-f="M" type="button" aria-pressed="false">👨 לגברים</button>
+            <button class="radius-chip" data-f="K" type="button" aria-pressed="false">🍽️ טבילת כלים</button>
+            <button class="radius-chip" data-f="A" type="button" aria-pressed="false">♿ נגיש</button>
+            <button class="radius-chip" data-f="B" type="button" aria-pressed="false">👰 חדר כלה</button>
           </div>
         </div>
 
@@ -547,16 +657,18 @@
 
       <div id="map-wrap" style="display:none;">
         <div id="osm-map"></div>
-        <div id="map-hint">לחיצה על סימון מציגה פרטים וכפתור ניווט · הנתונים מ-OpenStreetMap</div>
+        <div id="map-hint">לחיצה על סימון מציגה פרטים וכפתור ניווט · מפה: © תורמי OpenStreetMap</div>
       </div>
 
       <div id="results" class="space-y-3"></div>
 
       <!-- ══════ Footer info ══════ -->
       <div class="mt-10 text-center text-xs text-slate-400">
-        <p>הנתונים מבוססים על OpenStreetMap. אם פספסנו מקום או נתקלת בשגיאה — אפשר לעדכן אותו דרך
-          openstreetmap.org.</p>
-        <p class="text-xs text-slate-400 dark:text-slate-500 text-center">הנתונים באדיבות © תורמי OpenStreetMap (רישיון ODbL)</p>
+        <p>מקורות הנתונים: מקוואות — מאגר המקוואות של המשרד לשירותי דת (data.gov.il) ו-OpenStreetMap;
+          בתי כנסת — OpenStreetMap ומאגר עיריית באר שבע; ציוני צדיקים — רשימה מאומתת (OpenStreetMap וויקיפדיה).
+          הנתונים שמורים באתר ומוצגים מיד, ועדכונים מ-OpenStreetMap נטענים ברקע.
+          אם פספסנו מקום או נתקלת בשגיאה — אפשר לעדכן אותו דרך openstreetmap.org.</p>
+        <p class="text-xs text-slate-400 dark:text-slate-500 text-center">הנתונים באדיבות © תורמי OpenStreetMap (רישיון ODbL) · data.gov.il</p>
       </div>
 
     <!-- ══════ Tzaddik Prayers Modal ══════ -->
@@ -584,8 +696,9 @@
           ואנחנו ממשיכים לשפר ולהרחיב אותו.
         </p>
         <p id="beta-popup-note">
-          הנתונים מבוססים על מאגר OpenStreetMap הציבורי — ייתכנו מקומות חסרים,
-          כפולים או פרטים לא מעודכנים. נשמח שתעדכנו אותנו על כל טעות שמצאתם.
+          הנתונים מבוססים על מאגר המקוואות של המשרד לשירותי דת, מאגר עיריית באר שבע
+          ומאגר OpenStreetMap הציבורי — ייתכנו מקומות חסרים, כפולים או פרטים לא
+          מעודכנים. נשמח שתעדכנו אותנו על כל טעות שמצאתם.
         </p>
         <button type="button" id="beta-popup-ok" onclick="closeBetaPopup()">הבנתי, אפשר להמשיך</button>
       </div>
@@ -605,7 +718,8 @@
     <script>
       // ══════════════════════════════════════════════════
       //  SYNAGOGUES & MIKVAHS — Location-based finder
-      //  Data: OpenStreetMap (Overpass API)
+      //  Data: local database (places/*.json, built by build-places.mjs)
+      //        + live OpenStreetMap (Overpass API) in the background
       //  Navigation: Waze
       // ══════════════════════════════════════════════════
 
@@ -674,6 +788,163 @@
         }
       } catch (e) { /* ignore */ }
       currentRadiusKm = getRadiusForTab(currentTab);
+
+      // ══════════════════════════════════════════════════
+      //  מאגר מקומי — places/*.json (נבנה ע"י build-places.mjs בכל דיפלוי)
+      //  בתי כנסת: OSM ארצי + עיריית באר שבע · מקוואות: המשרד לשירותי דת
+      //  (data.gov.il) + OSM · ציוני צדיקים: רשימה מאומתת ידנית.
+      //  מוצג מיד (וגם אופליין — ה-SW שומר את הקבצים); Overpass החי ממשיך ברקע
+      //  ומוסיף רק מקומות שנוספו ל-OSM מאז הבילד האחרון.
+      // ══════════════════════════════════════════════════
+      // חותמת תוכן — מתעדכנת אוטומטית ב-build-places.mjs (אותו תוכן = אותה כתובת = מטמון תקף)
+      const PLACES_VER = "9dd70b34db";
+      const _placesCache = {};
+      function loadPlaces(name) {
+        if (!_placesCache[name]) {
+          _placesCache[name] = fetch("/places/" + name + ".json?v=" + PLACES_VER)
+            .then((r) => (r.ok ? r.json() : Promise.reject(new Error("HTTP " + r.status))))
+            .then((d) => (d && Array.isArray(d.items) ? d.items : []))
+            // כשל (אופליין בלי עותק שמור) — null, והניסיון הבא ינסה שוב
+            .catch(() => { delete _placesCache[name]; return null; });
+        }
+        return _placesCache[name];
+      }
+      // הלשונית הפעילה נטענת מיד; שתי האחרות — כשהדפדפן פנוי (מעבר לשונית מיידי)
+      loadPlaces(currentTab);
+      (window.requestIdleCallback || ((f) => setTimeout(f, 1500)))(() => {
+        ["shul", "mikvah", "tzaddik"].forEach((t) => loadPlaces(t));
+      });
+
+      function localToItem(x, lat, lon) {
+        const address = x.a && x.c && x.a.indexOf(x.c) === -1 ? x.a + ", " + x.c : (x.a || x.c || "");
+        return { name: x.n, address, lat: x.la, lon: x.lo, distanceKm: haversineKm(lat, lon, x.la, x.lo), local: x };
+      }
+
+      // מיזוג בלי כפילויות: אותו מקום משני מקורות (המאגר המקומי + Overpass החי) מוצג
+      // פעם אחת — גרסת המאגר (העשירה יותר) נשמרת. חיפוש שכנים ברשת תאים (~200 מ')
+      // במקום השוואת כל זוג (אלפי פריטים ברדיוס 150 ק"מ).
+      // מקוואות: רדיוס רחב — מיקום מקווה ממשלתי לפי כתובת עשוי לסטות ממיקומו ב-OSM.
+      const DUP_METERS = { shul: 40, mikvah: 150, tzaddik: 80 };
+      const _normTz = (s) => String(s || "")
+        .replace(/["'׳״]/g, "")
+        .replace(/(^|\s)(קבר|קברי|ציון|מערת|הצדיק|התנא|הקדוש|רבי|ר|הרב|רב)(?=\s|$)/g, " ")
+        .replace(/\s+/g, " ").trim();
+      function mergeItems(base, extra, tab) {
+        const CELL = 0.002;
+        const grid = new Map();
+        const addToGrid = (it) => {
+          const k = Math.floor(it.lat / CELL) + ":" + Math.floor(it.lon / CELL);
+          if (!grid.has(k)) grid.set(k, []);
+          grid.get(k).push(it);
+        };
+        const out = [];
+        base.forEach((it) => { out.push(it); addToGrid(it); });
+        const maxKm = (DUP_METERS[tab] || 40) / 1000;
+        const tzNames = tab === "tzaddik" ? base.map((b) => [_normTz(b.name), b]) : null;
+        for (const it of extra) {
+          const ci = Math.floor(it.lat / CELL), cj = Math.floor(it.lon / CELL);
+          let dup = false;
+          for (let di = -1; di <= 1 && !dup; di++) {
+            for (let dj = -1; dj <= 1 && !dup; dj++) {
+              const arr = grid.get((ci + di) + ":" + (cj + dj));
+              if (arr) dup = arr.some((o) => haversineKm(o.lat, o.lon, it.lat, it.lon) <= maxKm);
+            }
+          }
+          // ציון שממופה ב-OSM פעמיים (נקודה + מבנה, מאות מטרים זה מזה) — אותו שם בטווח 3 ק"מ
+          if (!dup && tzNames) {
+            const n = _normTz(it.name);
+            dup = !!n && tzNames.some(([bn, b]) => bn && (bn === n || bn.includes(n) || n.includes(bn)) &&
+              haversineKm(b.lat, b.lon, it.lat, it.lon) <= 3);
+          }
+          if (!dup) { out.push(it); addToGrid(it); }
+        }
+        return out.sort((a, b) => a.distanceKm - b.distanceKm);
+      }
+
+      // ── סינון יהודי לתוצאות Overpass החיות (אותם כללים כמו ב-build-places.mjs) ──
+      // מקום תפילה שאינו יהודי / קהילה משיחית / קראית / שומרונית / חורבה — לא מוצג לעולם
+      const NON_JEWISH_NAME_RE = /משיחי|ישוע|Messianic|Yeshua|Jesus|Christ|Church|Chapel|כנסיי?ה|קפלה|מנזר|מסגד|Mosque|Masjid|Samaritan|שומרוני|Karaite/i;
+      const KARAITE_WORD_RE = /(^|[\s\-־"'(])(קראי|קראים|הקראים)(?=$|[\s\-־"')])/;
+      const BAD_DENOMINATION_RE = /messianic|karaite|samaritan|christian|catholic|orthodox_church|protestant|muslim|sunni|shia|druze|bahai/i;
+      function isJewishPlaceTags(tags, name) {
+        if (tags.religion && tags.religion !== "jewish") return false;
+        if (tags.denomination && BAD_DENOMINATION_RE.test(tags.denomination)) return false;
+        const allNames = [name, tags.name, tags["name:en"], tags["name:he"], tags.alt_name, tags.description].filter(Boolean).join(" ");
+        if (NON_JEWISH_NAME_RE.test(allNames) || KARAITE_WORD_RE.test(allNames)) return false;
+        if (tags.historic === "archaeological_site" || tags.historic === "ruins" || tags.ruins === "yes") return false;
+        // חורבה לפי השם ("Horbat Kanaf Synagogue") — אבל לא "בית הכנסת החורבה" הפעיל
+        if (/(^|\s)(חורבת|ח['׳]רבת|Horbat|Hurvat|Khirbet|Khirbat)(\s|$)/i.test(allNames)) return false;
+        if (tags["disused:amenity"] || tags["abandoned:amenity"] || tags.disused === "yes" || tags.abandoned === "yes") return false;
+        return true;
+      }
+      function isLiveMikveh(tags, name) {
+        // "מקווה ישראל" — כפר הנוער/הצומת, לא מקווה
+        if (/מקווה\s+ישראל|Mikve(h)?\s+Israel/i.test(name) && !/טהרה/.test(name)) return false;
+        if (tags.highway || tags.place || tags.boundary || tags.landuse === "residential") return false;
+        const am = tags.amenity;
+        if (am && !/^(mikveh|mikvah|ritual_bath|public_bath|place_of_worship|community_centre|social_facility)$/.test(am)) return false;
+        return true;
+      }
+
+      // ── סינון מקוואות (לגברים / כלים / נגיש / חדר כלה) — לפי נתוני המשרד לשירותי דת ──
+      const LS_MK_FILTER_KEY = "shulMikve_mikvahFilter";
+      let mikvahFilter = "";
+      try {
+        const f = localStorage.getItem(LS_MK_FILTER_KEY);
+        if (/^[MKAB]$/.test(f || "")) mikvahFilter = f;
+      } catch (e) {}
+      function mikvahMatches(it, f) {
+        const x = it.local;
+        if (!x || x.s !== "g") return false; // בלי נתוני משרד הדתות אין לנו מידע לסנן לפיו
+        if (f === "A") return x.acc >= 1;
+        return (x.f || "").indexOf(f) !== -1;
+      }
+      function applyMikvahFilter(items, tab) {
+        if (tab !== "mikvah" || !mikvahFilter) return items || [];
+        return (items || []).filter((it) => mikvahMatches(it, mikvahFilter));
+      }
+      function syncMikvahFilterChips() {
+        document.querySelectorAll("#mikvah-filter-chips .radius-chip").forEach((c) => {
+          const on = (c.dataset.f || "") === mikvahFilter;
+          c.classList.toggle("active", on);
+          c.setAttribute("aria-pressed", on ? "true" : "false");
+        });
+      }
+      document.querySelectorAll("#mikvah-filter-chips .radius-chip").forEach((chip) => {
+        chip.addEventListener("click", () => {
+          const f = chip.dataset.f || "";
+          if (f === mikvahFilter) return;
+          mikvahFilter = f;
+          try { localStorage.setItem(LS_MK_FILTER_KEY, f); } catch (e) {}
+          syncMikvahFilterChips();
+          if (currentTab === "mikvah" && lastResults.length) renderResults(lastResults, "mikvah");
+        });
+      });
+      syncMikvahFilterChips();
+
+      // ── ניווט בוויז ──
+      // מקווה שמיקומו לפי רחוב/יישוב בלבד (הכתובת במאגר הממשלתי לא נמצאה עד רמת הבית):
+      // וויז מחפש את הכתובת עצמה ליד הנקודה ומנווט אליה (q + ll + navigate — תיעוד Waze
+      // Deep Links: "search for an address and then navigate to that address").
+      function wazeUrl(it) {
+        const ll = encodeURIComponent(it.lat + "," + it.lon);
+        const x = it.local;
+        if (x && x.s === "g" && x.q > 0) {
+          const q = x.a ? x.a + ", " + x.c : "מקווה " + x.c;
+          return "https://waze.com/ul?q=" + encodeURIComponent(q) + "&ll=" + ll + "&navigate=yes";
+        }
+        return "https://waze.com/ul?ll=" + ll + "&navigate=yes";
+      }
+
+      // שעון קיץ בישראל (שעות הפתיחה של המקוואות מחולקות לקיץ/חורף)
+      function isIsraelSummerTime() {
+        try {
+          const s = new Date().toLocaleString("en-US", { timeZone: "Asia/Jerusalem", timeZoneName: "shortOffset" });
+          if (/GMT\+[23]\b/.test(s)) return /GMT\+3\b/.test(s);
+        } catch (e) {}
+        const m = new Date().getMonth();
+        return m >= 3 && m <= 9;
+      }
 
       // ── UI helpers ────────────────────────────────────
       function setStatus(text, showSpinner = true) {
@@ -853,6 +1124,9 @@
       function updateTzaddikPrayersVisibility() {
         const sec = document.getElementById("tzaddik-prayers-section");
         if (sec) sec.style.display = (currentTab === "tzaddik") ? "block" : "none";
+        // שורת סינון המקוואות — רק בלשונית המקוואות
+        const mk = document.getElementById("mikvah-filter-row");
+        if (mk) mk.style.display = (currentTab === "mikvah") ? "" : "none";
       }
 
       // ── Beta notice popup ─────────────────────────────
@@ -1009,6 +1283,7 @@
           setStatus("מאתר מיקום…");
           const { lat, lon } = await requestGeolocation();
           rememberLocationApproval();
+          manualLocation = false; // מיקום GPS אמיתי מחליף יישוב שנבחר ידנית
           userLat = lat; userLon = lon;
           // Save coords immediately so app works even if reverse geocoding fails
           saveLocationCache(lat, lon, null);
@@ -1025,13 +1300,91 @@
           await rgPromise;
         } catch (e) {
           setError(e.message || "שגיאה באיתור המיקום.");
+          // בלי מיקום — מציעים מיד חיפוש לפי יישוב
+          toggleCityPick(true);
         }
       }
 
-      function updateLocationLabel(lat, lon, address) {
+      // ── בחירת יישוב ידנית (בלי שיתוף מיקום) ────────────────
+      // רשימת היישובים (places/cities.json) = כל היישובים שיש בהם מקווה רשמי (כמעט כל
+      // יישוב יהודי), עם מרכז היישוב. הבחירה נשמרת כמיקום האחרון; רענון GPS אוטומטי
+      // לא דורס אותה — רק "עדכן מיקום".
+      let manualLocation = false;
+      const _normCityName = (s) => String(s || "").replace(/["'׳״]/g, "").replace(/[\s\-־]+/g, " ").trim();
+      function toggleCityPick(force) {
+        const box = document.getElementById("city-pick");
+        const btn = document.getElementById("btn-city-pick");
+        if (!box) return;
+        const open = typeof force === "boolean" ? force : box.style.display === "none";
+        box.style.display = open ? "" : "none";
+        if (btn) btn.setAttribute("aria-expanded", open ? "true" : "false");
+        if (!open) return;
+        loadPlaces("cities").then((list) => {
+          const dl = document.getElementById("city-list");
+          if (!list || !dl || dl.childElementCount) return;
+          const frag = document.createDocumentFragment();
+          list.forEach((c) => { const o = document.createElement("option"); o.value = c[0]; frag.appendChild(o); });
+          dl.appendChild(frag);
+        });
+        if (typeof force !== "boolean") {
+          setTimeout(() => { try { document.getElementById("city-input").focus(); } catch (e) {} }, 60);
+        }
+      }
+      function pickCityFromInput(ev) {
+        // preventDefault מיד (לפני כל await) — אחרת הטופס נשלח ומרענן את הדף
+        if (ev) ev.preventDefault();
+        const input = document.getElementById("city-input");
+        const msg = document.getElementById("city-pick-msg");
+        const showMsg = (t) => { if (msg) { msg.textContent = t; msg.style.display = t ? "" : "none"; } };
+        const q = _normCityName(input && input.value);
+        if (!q) return false;
+        loadPlaces("cities").then((list) => {
+          if (!list) { showMsg("רשימת היישובים לא נטענה — בדקו את החיבור ונסו שוב."); return; }
+          let hit = list.find((c) => _normCityName(c[0]) === q);
+          if (!hit) {
+            const starts = list.filter((c) => _normCityName(c[0]).startsWith(q));
+            if (starts.length === 1) hit = starts[0];
+          }
+          if (!hit) {
+            const inc = list.filter((c) => _normCityName(c[0]).includes(q));
+            if (inc.length === 1) hit = inc[0];
+          }
+          if (!hit) {
+            // כתיב חסר/מלא: "נהריה" ↔ "נהרייה" (כך בלמ"ס), "קרית" ↔ "קריית", "נוה" ↔ "נווה"
+            // רק כיווץ יו"ד/וי"ו כפולות — הסרה מלאה הייתה מבלבלת את "נהריה" עם המושב "נהורה"
+            const loose = (s) => _normCityName(s).replace(/יי/g, "י").replace(/וו/g, "ו");
+            const lq = loose(q);
+            const exact = list.filter((c) => loose(c[0]) === lq);
+            const starts = exact.length ? exact : list.filter((c) => loose(c[0]).startsWith(lq));
+            if (starts.length === 1) hit = starts[0];
+          }
+          if (!hit) { showMsg("לא מצאנו יישוב בשם הזה — בחרו מהרשימה שנפתחת בזמן ההקלדה."); return; }
+          showMsg("");
+          if (input) input.blur();
+          toggleCityPick(false);
+          setManualLocation(hit[0], hit[1], hit[2]);
+        });
+        return false;
+      }
+      function setManualLocation(name, lat, lon) {
+        manualLocation = true;
+        userLat = lat; userLon = lon;
+        try {
+          localStorage.setItem(LS_LOC_KEY, JSON.stringify({ lat, lon, ts: Date.now(), address: name, manual: true }));
+        } catch (e) {}
+        updateLocationLabel(lat, lon, name, true);
+        fetchAndRender();
+      }
+      window.toggleCityPick = toggleCityPick;
+      window.pickCityFromInput = pickCityFromInput;
+
+      function updateLocationLabel(lat, lon, address, manual) {
         const el = document.getElementById("location-status");
         const coords = lat.toFixed(4) + ", " + lon.toFixed(4);
-        if (address) {
+        if (manual && address) {
+          el.innerHTML = '<span class="text-slate-300/90">מיקום נבחר:</span> '
+                       + '<span class="font-bold text-white/95">' + escapeHtml(address) + '</span>';
+        } else if (address) {
           el.innerHTML = '<span class="text-slate-300/90">המיקום שלך:</span> '
                        + '<span class="font-bold text-white/95">' + escapeHtml(address) + '</span>'
                        + ' <span class="text-slate-400/70 text-xs">(' + coords + ')</span>';
@@ -1226,7 +1579,14 @@
         // Hebrew letter (which would mean it is part of a different Hebrew word
         // like "שיחה" / "שיחות" — conversation).
         if (/שיח(?![א-ת])/.test(name)) return false;
+        // "שייח'" בשני יודים ("קבר השייח' ר'אנם") — הדפוס הקודם פספס אותו
+        if (/שייח|שיך(?![א-ת])/.test(name)) return false;
         if (/شيخ|Sheikh|Sheik/i.test(name)) return false;
+        // יד אבשלום (אבשלום בן דוד — לא צדיק) וקברי מנהיגים/אישי ציבור שאינם ציוני צדיקים
+        // ("קבר יוסף שפרינצק" עבר בגלל "קבר יוסף", "קבר מאיר הר ציון" בגלל "ציון")
+        if (/אבשלום/.test(name)) return false;
+        // (גבול מילה אחרי "רבין"/"הרצל"/"רפול" — כדי לא לפסול את "רבינו ..." או "הרצליה")
+        if (/שפרינצק|הרצל(?![א-ת])|טרומפלדור|ז['׳]?בוטינסקי|ו?וייצמן|ווייסגל|גולדה\s+מאיר|(^|\s)רבין(?![א-ת])|בן[\s-]?גוריון|לוי\s+אשכול|יצחק\s+שמיר|שמעון\s+פרס|שז["״]?ר|טדי\s+קולק|יצחק\s+נבון|קריניצי|(^|\s)רפול(?![א-ת])|מאיר\s+הר[\s-]?ציון/.test(name)) return false;
         // Non-Hebrew scripts (Arabic, Coptic, Greek beyond basic)
         if (/[؀-ۿ܀-ݏͰ-ϿⲀ-⳿]/.test(name)) return false;
         // Generic cemetery sections / unnamed burial caves — NOT specific tzaddikim
@@ -1259,7 +1619,7 @@
         // Specific famous tzaddikim by name (chassidic / mussar / etc.)
         if (/(הבעל\s+שם\s+טוב|הבעש["׳']?ט|רבי\s+שמעון\s+בר\s+יוחאי|רבי\s+נחמן|רבי\s+מאיר\s+בעל\s+הנס|רבי\s+עקיבא|רבי\s+ישראל|רבי\s+יהודה|הרב\s+קוק|חיים\s+בן\s+עטר|מנדבורנה|חתם\s+סופר|חזון\s+איש|חפץ\s+חיים|ה?ב?אבא\s+סאלי|בעל\s+הסולם|אור\s+החיים)/.test(name)) return true;
         // Famous tombs not always prefixed with "קבר"
-        if (/(^|\s)(קבר\s+ה?אימהות|ה?אימהות|ה?אבות|יד\s+אבשלום)(?=\s|$|[^א-ת])/.test(name)) return true;
+        if (/(^|\s)(קבר\s+ה?אימהות|ה?אימהות|ה?אבות)(?=\s|$|[^א-ת])/.test(name)) return true;
         // Bare biblical-figure names (Patriarchs, Matriarchs, key prophets/leaders).
         // Must be a full standalone reference, not part of a longer phrase like "אברהם הירדני".
         if (/^(אברהם\s+אבינו|יצחק\s+אבינו|יעקב\s+אבינו|שרה\s+אמנו|רבקה\s+אמנו|לאה\s+אמנו|רחל\s+אמנו|יהושע\s+בן\s+נון)$/.test(name.trim())) return true;
@@ -1294,6 +1654,15 @@
           if (t === "tzaddik") {
             if (name === defaultName) continue; // skip unnamed (user wanted named only)
             if (!isJewishTzaddikItem(tags, name)) continue;
+          } else if (t === "shul") {
+            // רק מקום תפילה יהודי פעיל (בלי משיחיים/קראים/חורבות, בלי מבנה שהפך לשימוש אחר)
+            if (!isJewishPlaceTags(tags, name)) continue;
+            if (tags.amenity && tags.amenity !== "place_of_worship") continue;
+            // קבר צדיק שמסומן גם כמקום תפילה — מקומו בלשונית ציוני הצדיקים
+            if (tags.historic === "tomb" || tags.historic === "memorial" ||
+                /^(קבר|קברי|ציון קבר|מערת קבורה)\s|^(Tomb|Grave|Cave) of\s/i.test(name)) continue;
+          } else {
+            if (!isJewishPlaceTags(tags, name) || !isLiveMikveh(tags, name)) continue;
           }
           // Build a simple address line
           const addrParts = [];
@@ -1341,33 +1710,125 @@
         { name: "הרב עוזי אזולאי משולם", address: "בית עלמין יהוד", lat: 32.03168, lon: 34.88455 }
       ];
 
+      // ── פרטי מקווה מהמאגר הממשלתי: תגיות, שעות העונה הנוכחית, פרטים נוספים ──
+      const _expandedCards = new Set(); // "פרטים נוספים" פתוחים — נשארים פתוחים גם אחרי עדכון רקע
+      function buildMikvehInfo(x, key) {
+        const wrap = document.createElement("div");
+        const flags = x.f || "";
+        const chips = [];
+        if (flags.indexOf("M") !== -1) chips.push("👨 גברים");
+        if (flags.indexOf("K") !== -1) chips.push("🍽️ כלים");
+        if (flags.indexOf("B") !== -1) chips.push("👰 חדר כלה");
+        if (x.acc === 2) chips.push("♿ נגיש");
+        else if (x.acc === 1) chips.push("♿ נגישות חלקית");
+        if (flags.indexOf("S") !== -1) chips.push("🛡️ ממוגן");
+        if (chips.length) {
+          const c = document.createElement("div");
+          c.className = "mk-chips";
+          chips.forEach((txt) => {
+            const s = document.createElement("span");
+            s.className = "mk-chip";
+            s.textContent = txt;
+            c.appendChild(s);
+          });
+          wrap.appendChild(c);
+        }
+        const h = x.h || [];
+        const summer = isIsraelSummerTime();
+        const nowHours = summer ? h[0] : h[1];
+        if (nowHours) {
+          const d = document.createElement("div");
+          d.className = "mk-hours";
+          const b = document.createElement("b");
+          b.textContent = "🕐 שעות (" + (summer ? "קיץ" : "חורף") + "): ";
+          d.appendChild(b);
+          d.appendChild(document.createTextNode(nowHours));
+          wrap.appendChild(d);
+        }
+        const rows = [];
+        if (h[0]) rows.push(["שעות בקיץ", h[0]]);
+        if (h[1]) rows.push(["שעות בחורף", h[1]]);
+        if (h[2]) rows.push(["שבת וחג", h[2]]);
+        if (x.p) rows.push(["טלפון", x.p]);
+        if (rows.length) {
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "mk-more";
+          const det = document.createElement("div");
+          det.className = "mk-details";
+          rows.forEach(([k, v]) => {
+            const r = document.createElement("div");
+            const b = document.createElement("b");
+            b.textContent = k + ": ";
+            r.appendChild(b);
+            r.appendChild(document.createTextNode(v));
+            det.appendChild(r);
+          });
+          const src = document.createElement("div");
+          src.className = "mk-src";
+          src.textContent = "מקור: מאגר המקוואות של המשרד לשירותי דת (data.gov.il)";
+          det.appendChild(src);
+          const setOpen = (open) => {
+            det.hidden = !open;
+            btn.textContent = open ? "▴ הסתר פרטים" : "▾ שעות ופרטים נוספים";
+            btn.setAttribute("aria-expanded", open ? "true" : "false");
+          };
+          setOpen(_expandedCards.has(key));
+          btn.onclick = () => {
+            const open = det.hidden;
+            setOpen(open);
+            if (open) _expandedCards.add(key); else _expandedCards.delete(key);
+          };
+          wrap.appendChild(btn);
+          wrap.appendChild(det);
+        }
+        return wrap;
+      }
+
       // ── Render results ────────────────────────────────
-      function renderResults(items, tab) {
+      // עד 150 כרטיסים בכל פעם (ברדיוס רחב יש אלפי בתי כנסת) + "הצג עוד".
+      // opts.quiet — עדכון רקע (Overpass הוסיף מקומות): בלי אנימציית כניסה, ובלי לאפס
+      // את מספר הכרטיסים המוצגים.
+      const PAGE_SIZE = 150;
+      let _renderLimit = PAGE_SIZE;
+      function renderResults(items, tab, opts) {
         const t = tab || currentTab;
+        const quiet = !!(opts && opts.quiet);
+        if (!quiet) _renderLimit = PAGE_SIZE;
         const out = document.getElementById("results");
+        const hadHint = !!out.querySelector(".refresh-hint");
+        const hintText = hadHint ? out.querySelector(".refresh-hint span:last-child").textContent : "";
         out.innerHTML = "";
         const noun = t === "shul" ? "בתי כנסת"
                   : t === "mikvah" ? "מקוואות"
                   : "ציוני צדיקים";
-        if (!items || items.length === 0) {
+        const shown = applyMikvahFilter(items, t);
+        if (shown.length === 0) {
+          const filtered = t === "mikvah" && mikvahFilter && items && items.length;
           setStatus(
-            "לא נמצאו " + noun + " ברדיוס " + currentRadiusKm + " ק\"מ.\nנסה להרחיב את רדיוס החיפוש.",
+            filtered
+              ? "לא נמצאו מקוואות שמתאימים לסינון שנבחר ברדיוס " + currentRadiusKm + " ק\"מ.\nנסה להרחיב את הרדיוס או לבחור \"הכל\"."
+              : "לא נמצאו " + noun + " ברדיוס " + currentRadiusKm + " ק\"מ.\nנסה להרחיב את רדיוס החיפוש.",
             false
           );
+          if (typeof viewMode !== "undefined" && viewMode === "map") renderMap(items);
           return;
         }
         hideStatus();
 
         const header = document.createElement("div");
         header.className = "text-slate-300/80 text-sm mb-2 px-1";
-        header.textContent = "נמצאו " + items.length + " " + noun +
-                             " ברדיוס " + currentRadiusKm + " ק\"מ";
+        header.textContent = "נמצאו " + shown.length.toLocaleString("he-IL") + " " + noun +
+                             " ברדיוס " + currentRadiusKm + " ק\"מ" +
+                             (shown.length > _renderLimit ? " · מוצגים " + _renderLimit + " הקרובים" : "");
         out.appendChild(header);
 
-        items.forEach((it, idx) => {
+        shown.slice(0, _renderLimit).forEach((it, idx) => {
+          const x = it.local;
+          const key = it.name + "|" + it.lat.toFixed(5) + "|" + it.lon.toFixed(5);
           const card = document.createElement("div");
-          card.className = "card p-4 flex items-center justify-between gap-3 fade-in";
-          card.style.animationDelay = Math.min(idx * 35, 600) + "ms";
+          card.className = "card p-4 flex items-center justify-between gap-3" + (quiet ? "" : " fade-in");
+          if (!quiet) card.style.animationDelay = Math.min(idx * 35, 600) + "ms";
 
           const left = document.createElement("div");
           left.className = "flex-1 min-w-0";
@@ -1381,13 +1842,21 @@
             ad.textContent = it.address;
             left.appendChild(ad);
           }
+          const approx = !!(x && x.q === 2);
           const dist = document.createElement("div");
           dist.className = "item-distance";
-          dist.textContent = "מרחק: " + formatDistance(it.distanceKm);
+          dist.textContent = "מרחק: " + (approx ? "כ-" : "") + formatDistance(it.distanceKm);
           left.appendChild(dist);
+          if (approx) {
+            const n = document.createElement("div");
+            n.className = "approx-note";
+            n.textContent = "📍 מיקום משוער לפי היישוב — הניווט יחפש את הכתובת";
+            left.appendChild(n);
+          }
+          if (x && x.s === "g") left.appendChild(buildMikvehInfo(x, key));
 
           const right = document.createElement("div");
-          right.className = "flex-shrink-0";
+          right.className = "card-actions";
           const navBtn = document.createElement("button");
           navBtn.className = "nav-btn";
           navBtn.type = "button";
@@ -1396,20 +1865,39 @@
             '<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' +
             '<polygon points="3 11 22 2 13 21 11 13 3 11"></polygon>' +
             '</svg><span>לניווט</span>';
-          navBtn.onclick = () => openInWaze(it.lat, it.lon);
+          navBtn.onclick = () => openInWaze(it);
           right.appendChild(navBtn);
+          if (x && x.p) {
+            const tel = document.createElement("a");
+            tel.className = "phone-btn";
+            tel.href = "tel:" + x.p.replace(/[^\d+]/g, "");
+            tel.setAttribute("aria-label", "חיוג אל " + it.name);
+            tel.textContent = "📞 חיוג";
+            right.appendChild(tel);
+          }
 
           card.appendChild(left);
           card.appendChild(right);
           out.appendChild(card);
         });
+        if (shown.length > _renderLimit) {
+          const more = document.createElement("button");
+          more.type = "button";
+          more.className = "more-results-btn";
+          more.textContent = "הצג עוד (" + (shown.length - _renderLimit).toLocaleString("he-IL") + " נוספים)";
+          more.onclick = () => {
+            _renderLimit += PAGE_SIZE;
+            renderResults(items, t, { quiet: true });
+          };
+          out.appendChild(more);
+        }
+        if (hadHint) showRefreshHint(hintText);
         // תצוגת מפה פעילה — לסנכרן את הסימונים עם התוצאות החדשות
         if (typeof viewMode !== "undefined" && viewMode === "map") renderMap(items);
       }// ── Open in Waze ──────────────────────────────────
-      function openInWaze(lat, lon) {
-        const url = "https://waze.com/ul?ll=" + encodeURIComponent(lat + "," + lon) + "&navigate=yes";
+      function openInWaze(it) {
         // Open in new tab so the user's session here is preserved
-        window.open(url, "_blank", "noopener");
+        window.open(wazeUrl(it), "_blank", "noopener");
       }
 
       // ── Small UI helpers for streaming/instant-cache mode ──
@@ -1444,47 +1932,66 @@
         out.insertBefore(n, out.firstChild);
       }
 
-      // ── Main fetch & render flow (streaming + instant cache) ──
+      // ── Main fetch & render flow (local database first, live OSM in background) ──
       // Behaviour:
-      //  1. INSTANT CACHE: If we have a recent successful result in localStorage,
-      //     render it immediately so the user sees data in ~0ms.
-      //  2. STREAMING: Fire all queries in parallel; as each one resolves, merge
-      //     and re-render. This shows the first batch of fresh results as soon
-      //     as they are available, without waiting for every query to finish.
+      //  1. LOCAL DATABASE: places/<tab>.json (+ extras found live on a previous
+      //     visit, from localStorage) — rendered immediately, also offline.
+      //  2. LIVE OVERPASS IN THE BACKGROUND: all queries in parallel; whatever
+      //     they find that is NOT already in the local list is merged in (quiet
+      //     re-render, no flicker). Radius is capped for shuls/mikvaot — the local
+      //     database already holds all of OSM as of the last build, so the live
+      //     query only catches places added since then.
       //  3. RACE-SAFE: fetchGen prevents stale fetches from overwriting fresh ones.
-      //  4. CACHE-ON-FAILURE: If all queries fail and we displayed cache, keep
-      //     showing cache + an amber stale notice. Otherwise show a clear error.
+      //  4. FAILURE: if the live servers fail, the local list simply stays (no
+      //     warning needed). Only without local data do the old cache/error paths run.
+      const LIVE_MAX_RADIUS_KM = { shul: 20, mikvah: 30, tzaddik: 150 };
       async function fetchAndRender() {
         if (userLat == null || userLon == null) return;
         const myGen = ++fetchGen;
         const tab = currentTab; // snapshot for use throughout this run
+        const radius = currentRadiusKm;
+        const lat = userLat, lon = userLon;
+        const noun = tab === "shul" ? "בתי כנסת"
+                  : tab === "mikvah" ? "מקוואות"
+                  : "ציוני צדיקים";
 
-        // 1. INSTANT CACHE
-        const cachedResults = loadCachedResults(tab, currentRadiusKm, userLat, userLon);
+        // 1. LOCAL DATABASE (+ live extras from the previous visit)
+        const localAll = await loadPlaces(tab);
+        if (myGen !== fetchGen) return;
+        const base = localAll
+          ? localAll.map((x) => localToItem(x, lat, lon)).filter((it) => it.distanceKm <= radius + 0.05)
+          : [];
+        const cachedExtras = loadCachedResults(tab, radius, lat, lon) || [];
+        const shownFirst = mergeItems(base, cachedExtras, tab);
         let hasCacheShown = false;
-        if (cachedResults && cachedResults.length > 0) {
-          if (myGen !== fetchGen) return;
-          lastResults = cachedResults;
-          renderResults(cachedResults, tab);
-          showRefreshHint("מעדכן נתונים…");
+        let renderedSig = "";
+        const sigOf = (list) => list.length + "|" + list.filter((it) => !it.local)
+          .map((it) => it.lat.toFixed(5) + "," + it.lon.toFixed(5)).join(";");
+        if (shownFirst.length > 0) {
+          lastResults = shownFirst;
+          renderResults(shownFirst, tab);
+          renderedSig = sigOf(shownFirst);
+          showRefreshHint("בודק אם נוספו מקומות חדשים…");
           hasCacheShown = true;
+        } else if (localAll) {
+          lastResults = [];
+          setStatus("לא נמצאו " + noun + " ברדיוס " + radius + " ק\"מ במאגר.\nבודק מקורות נוספים…");
         } else {
-          const noun = tab === "shul" ? "בתי כנסת"
-                    : tab === "mikvah" ? "מקוואות"
-                    : "ציוני צדיקים";
           const statusMsg = tab === "shul"
-            ? "מחפש " + noun + " ברדיוס " + currentRadiusKm + " ק\"מ…"
-            : "מחפש " + noun + " ברדיוס " + currentRadiusKm + " ק\"מ…\nהחיפוש עשוי להימשך עד 30 שניות.";
+            ? "מחפש " + noun + " ברדיוס " + radius + " ק\"מ…"
+            : "מחפש " + noun + " ברדיוס " + radius + " ק\"מ…\nהחיפוש עשוי להימשך עד 30 שניות.";
           setStatus(statusMsg);
         }
 
-        // 2. STREAMING
-        const queries = buildQueries(tab, userLat, userLon, currentRadiusKm);
+        // 2. LIVE OVERPASS (background)
+        const liveRadius = Math.min(radius, LIVE_MAX_RADIUS_KM[tab] || radius);
+        const queries = buildQueries(tab, lat, lon, liveRadius);
         const seenIds = new Set();
         const allElements = [];
         let succeededCount = 0;
         let pendingCount = queries.length;
         let lastError = null;
+        let liveItems = [];
 
         const handleOne = async (q) => {
           try {
@@ -1501,16 +2008,19 @@
                 allElements.push(el);
               }
             }
-            // Re-render whenever we have items (replaces cache/previous batch)
             if (allElements.length > 0) {
-              const items = parseElements(allElements, userLat, userLon, tab);
-              const filtered = items.filter(it => it.distanceKm <= currentRadiusKm + 0.05);
+              liveItems = parseElements(allElements, lat, lon, tab).filter((it) => it.distanceKm <= radius + 0.05);
+              const merged = mergeItems(base, liveItems, tab);
               if (myGen !== fetchGen) return;
-              lastResults = filtered;
-              renderResults(filtered, tab);
-              if (pendingCount > 0) {
-                showRefreshHint("מחפש עוד תוצאות…");
+              const sig = sigOf(merged);
+              // מתרנדר מחדש רק אם באמת נוסף/השתנה משהו
+              if (merged.length > 0 && sig !== renderedSig) {
+                const wasShown = lastResults.length > 0;
+                lastResults = merged;
+                renderResults(merged, tab, { quiet: wasShown });
+                renderedSig = sig;
               }
+              if (pendingCount > 0 && lastResults.length) showRefreshHint("מחפש עוד תוצאות…");
             }
           } catch (err) {
             lastError = err;
@@ -1526,27 +2036,31 @@
         showRefreshHint(null); // remove the live "updating" indicator
 
         if (succeededCount > 0) {
-          // At least one query succeeded.
-          if (allElements.length > 0) {
-            // Fresh results shown via streaming — persist them for next visit.
-            saveCachedResults(tab, currentRadiusKm, userLat, userLon, lastResults);
-          } else {
+          // At least one query succeeded — the fresh live picture replaces the cached extras
+          const merged = mergeItems(base, liveItems, tab);
+          const extras = merged.filter((it) => !it.local);
+          saveCachedResults(tab, radius, lat, lon, extras);
+          if (sigOf(merged) !== renderedSig) {
+            lastResults = merged;
+            if (merged.length) renderResults(merged, tab, { quiet: true });
+          }
+          if (!lastResults.length) {
             // Queries OK but genuinely empty (e.g., too-small radius).
             lastResults = [];
-            saveCachedResults(tab, currentRadiusKm, userLat, userLon, []);
-            const nNoun = tab === "shul" ? "בתי כנסת"
-                        : tab === "mikvah" ? "מקוואות"
-                        : "ציוני צדיקים";
             setStatus(
-              "לא נמצאו " + nNoun + " ברדיוס " + currentRadiusKm + " ק\"מ.\nנסה להרחיב את רדיוס החיפוש.",
+              "לא נמצאו " + noun + " ברדיוס " + radius + " ק\"מ.\nנסה להרחיב את רדיוס החיפוש.",
               false
             );
           }
         } else {
-          // All queries failed.
+          // All live queries failed.
           if (hasCacheShown) {
-            // Keep the cache displayed, add a "stale" amber notice.
-            showStaleNotice("⚠ השרתים עמוסים. מציג תוצאות מהחיפוש הקודם.");
+            // המאגר המקומי מוצג — הוא מקור הנתונים העיקרי, אין צורך באזהרה
+          } else if (localAll) {
+            setStatus(
+              "לא נמצאו " + noun + " ברדיוס " + radius + " ק\"מ.\nנסה להרחיב את רדיוס החיפוש.",
+              false
+            );
           } else {
             // Last-ditch: try ANY cache we have for this tab (any radius/location)
             const anyCache = loadAnyCacheForTab(tab);
@@ -1639,6 +2153,8 @@
       function silentLocationRefresh(prevLat, prevLon) {
         try {
           if (!("geolocation" in navigator)) return;
+          // יישוב שנבחר ידנית — לא דורסים אותו ב-GPS (רק "עדכן מיקום" מחזיר ל-GPS)
+          if (manualLocation) return;
           let flag = null, legacy = false;
           try {
             flag = localStorage.getItem(GEO_AUTO_KEY);
@@ -1690,14 +2206,16 @@
         if (_leafletReady) { cb(); return; }
         if (_leafletLoading) { setTimeout(() => ensureLeaflet(cb), 150); return; }
         _leafletLoading = true;
+        // Leaflet 1.9.4 באחסון עצמי (vendor/) — בלי תלות ב-unpkg; ה-integrity זהה לקובץ
+        // המקורי מ-npm (אומת sha384), ו-.gitattributes מונע המרת CRLF ששוברת אותו
         const css = document.createElement("link");
         css.rel = "stylesheet";
-        css.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+        css.href = "/vendor/leaflet-1.9.4/leaflet.css";
         css.integrity = "sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H";
         css.crossOrigin = "anonymous";
         document.head.appendChild(css);
         const s = document.createElement("script");
-        s.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+        s.src = "/vendor/leaflet-1.9.4/leaflet.js";
         s.integrity = "sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH";
         s.crossOrigin = "anonymous";
         s.onload = () => { _leafletReady = true; _leafletLoading = false; cb(); };
@@ -1723,14 +2241,18 @@
         if (viewMode === "map") renderMap(lastResults);
       }
 
-      function renderMap(items) {
+      // עד 2,000 הסימונים הקרובים (ברדיוס 150 ק"מ יש אלפי בתי כנסת); ציור על canvas
+      // (preferCanvas) במקום אלפי אלמנטי SVG — חלק גם בטלפון
+      const MAP_MAX_MARKERS = 2000;
+      function renderMap(allItems) {
+        const items = applyMikvahFilter(allItems, currentTab).slice(0, MAP_MAX_MARKERS);
         ensureLeaflet(() => {
           const wrap = document.getElementById("map-wrap");
           if (!wrap || wrap.style.display === "none") return;
           const center = userLat != null ? [userLat, userLon]
             : (items && items.length ? [items[0].lat, items[0].lon] : [31.778, 35.235]);
           if (!_map) {
-            _map = L.map("osm-map", { zoomControl: true });
+            _map = L.map("osm-map", { zoomControl: true, preferCanvas: true });
             L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
               maxZoom: 19,
               attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -1748,18 +2270,39 @@
             bounds.push([userLat, userLon]);
           }
           const icon = currentTab === "shul" ? "🕍" : currentTab === "mikvah" ? "💧" : "🕯️";
+          // כמה מקומות על אותה נקודה בדיוק (מקוואות שמיקומם לפי מרכז היישוב) — מפוזרים
+          // בטבעת קטנה (~25 מ') כדי שכל סימון יהיה לחיץ; הניווט והמרחק לפי המיקום המקורי
+          const _ptKey = (it) => it.lat.toFixed(5) + "," + it.lon.toFixed(5);
+          const _stack = new Map(), _stackSeen = new Map();
+          (items || []).forEach((it) => {
+            if (typeof it.lat === "number") _stack.set(_ptKey(it), (_stack.get(_ptKey(it)) || 0) + 1);
+          });
           (items || []).forEach((it) => {
             if (typeof it.lat !== "number" || typeof it.lon !== "number") return;
-            const m = L.circleMarker([it.lat, it.lon], {
+            let mLat = it.lat, mLon = it.lon;
+            const _n = _stack.get(_ptKey(it)) || 1;
+            if (_n > 1) {
+              const _i = _stackSeen.get(_ptKey(it)) || 0;
+              _stackSeen.set(_ptKey(it), _i + 1);
+              const _a = (2 * Math.PI * _i) / _n;
+              mLat += 0.00022 * Math.cos(_a);
+              mLon += 0.00026 * Math.sin(_a);
+            }
+            const m = L.circleMarker([mLat, mLon], {
               radius: 9, color: "#a1762a", fillColor: "#e0b74f", fillOpacity: 0.92, weight: 2
             });
+            const x = it.local;
+            const mkHours = x && x.s === "g" && x.h ? (isIsraelSummerTime() ? x.h[0] : x.h[1]) : "";
             const html =
               '<div style="direction:rtl;text-align:right;min-width:170px;">' +
                 '<div style="font-weight:800;font-size:0.95rem;margin-bottom:2px;">' + icon + " " + escapeHtml(it.name || "") + "</div>" +
                 (it.address ? '<div style="color:#475569;font-size:0.78rem;margin-bottom:2px;">' + escapeHtml(it.address) + "</div>" : "") +
-                (typeof it.distanceKm === "number" ? '<div style="color:#64748b;font-size:0.78rem;margin-bottom:6px;">מרחק: ' + formatDistance(it.distanceKm) + "</div>" : "") +
-                '<a href="https://waze.com/ul?ll=' + encodeURIComponent(it.lat + "," + it.lon) + '&navigate=yes" target="_blank" rel="noopener" ' +
+                (mkHours ? '<div style="color:#4338ca;font-size:0.78rem;margin-bottom:2px;">🕐 ' + escapeHtml(mkHours) + "</div>" : "") +
+                (typeof it.distanceKm === "number" ? '<div style="color:#64748b;font-size:0.78rem;margin-bottom:6px;">מרחק: ' + (x && x.q === 2 ? "כ-" : "") + formatDistance(it.distanceKm) + "</div>" : "") +
+                '<a href="' + escapeHtml(wazeUrl(it)) + '" target="_blank" rel="noopener" ' +
                   'style="display:inline-block;background:#0ea5e9;color:#fff;font-weight:800;font-size:0.8rem;padding:5px 12px;border-radius:8px;text-decoration:none;">🚗 ניווט בוויז</a>' +
+                (x && x.p ? ' <a href="tel:' + escapeHtml(x.p.replace(/[^\d+]/g, "")) + '" ' +
+                  'style="display:inline-block;background:#6366f1;color:#fff;font-weight:800;font-size:0.8rem;padding:5px 12px;border-radius:8px;text-decoration:none;">📞 חיוג</a>' : "") +
               "</div>";
             m.bindPopup(html);
             m.addTo(_markersLayer);
@@ -1779,6 +2322,15 @@
 
       async function startFlow(forceFresh = false) {
         const cached = !forceFresh ? loadCachedLocation() : null;
+        if (cached && cached.manual) {
+          // יישוב שנבחר ידנית בביקור קודם
+          manualLocation = true;
+          userLat = cached.lat;
+          userLon = cached.lon;
+          updateLocationLabel(cached.lat, cached.lon, cached.address || "", true);
+          await fetchAndRender();
+          return;
+        }
         if (cached) {
           userLat = cached.lat;
           userLon = cached.lon;

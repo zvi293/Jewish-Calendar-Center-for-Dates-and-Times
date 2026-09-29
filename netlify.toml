@@ -49,6 +49,20 @@
   status = 404
   force = true
 
+# מאגר המקומות: סקריפט הבנייה וקבצי המקור שלו (מטמון המרת כתובות, רשימת הציונים) —
+# נדרשים רק בבילד. הפלט עצמו (places/*.json) מוגש לדף.
+[[redirects]]
+  from = "/build-places.mjs"
+  to = "/404.html"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/places-src/*"
+  to = "/404.html"
+  status = 404
+  force = true
+
 [[redirects]]
   from = "/tailwind.config.js"
   to = "/404.html"
@@ -135,6 +149,20 @@
   for = "/kosher-zmanim-0.9.0.min.js"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
+
+# Leaflet באחסון עצמי — הגרסה בשם התיקייה ⇒ מטמון ארוך ובלתי-משתנה
+[[headers]]
+  for = "/vendor/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# מאגר המקומות (בתי כנסת/מקוואות/ציונים) — הדף מבקש אותו עם ?v=<חותמת תוכן>,
+# כך שיום במטמון בטוח; לא לאינדוקס (קבצי נתונים, לא דפים)
+[[headers]]
+  for = "/places/*"
+  [headers.values]
+    Cache-Control = "public, max-age=86400, stale-while-revalidate=604800"
+    X-Robots-Tag = "noindex"
 
 # מפות מקור (נוצרות ב-minify.mjs) + המקור הקריא (*.src.js) שהן מצביעות אליו —
 # נטענים רק כש-DevTools פתוח; לא לאינדוקס

@@ -17,7 +17,7 @@
 ## עמודים עיקריים (Main pages)
 
 - [דף הבית — לוח שנה, זמנים ומועדים](https://jewishcalendar.co.il/): זמני שבת, זמני הלכה לפי מיקום, מועדי ישראל, ספירת העומר, תפילות, תהילים וייצוא ליומן
-- [בתי כנסת ומקוואות](https://jewishcalendar.co.il/synagogues.html): איתור בתי כנסת, מקוואות וציוני צדיקים לפי מיקום (נתוני OpenStreetMap)
+- [בתי כנסת ומקוואות](https://jewishcalendar.co.il/synagogues.html): איתור בתי כנסת, מקוואות וציוני צדיקים לפי מיקום או לפי יישוב, עם שעות פתיחה וטלפון של כ-650 מקוואות (נתוני המשרד לשירותי דת ו-OpenStreetMap)
 - [ווידג'טים למסך הבית](https://jewishcalendar.co.il/widget.html): ווידג'טים של זמני היום, שבת וספירת העומר להתקנה במסך הבית
 - [קרדיטים ומקורות נתונים](https://jewishcalendar.co.il/credits.html)
 - [מדיניות פרטיות](https://jewishcalendar.co.il/privacy.html)

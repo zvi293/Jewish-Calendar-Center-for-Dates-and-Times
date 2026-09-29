@@ -1,0 +1,6 @@
+# קבצי ספרייה שנטענים עם integrity (SRI, sha384) — בלי המרת סופי שורות (CRLF) ב-checkout
+# ב-Windows (core.autocrlf=true), אחרת ה-hash נשבר והדפדפן חוסם את הקובץ.
+/vendor/** -text
+*.min.js -text
+# מאגר המקומות — החותמת (PLACES_VER) מחושבת מהתוכן; אותם בייטים בכל מערכת
+/places/*.json -text

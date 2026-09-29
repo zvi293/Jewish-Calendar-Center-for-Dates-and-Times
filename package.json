@@ -2,9 +2,9 @@
   "name": "jewish-calendar",
   "version": "1.0.0",
   "private": true,
-  "description": "Build pipeline: auto-rolls the Hebrew-year content, compiles tailwind.css, then minifies the JS for production (repo stays readable).",
+  "description": "Build pipeline: auto-rolls the Hebrew-year content, refreshes the local places database (synagogues/mikvaot/tzaddikim), compiles tailwind.css, then minifies the JS for production (repo stays readable).",
   "scripts": {
-    "build": "node build-year.mjs && tailwindcss -c tailwind.config.js -i tailwind.input.css -o tailwind.css --minify && node minify.mjs"
+    "build": "node build-year.mjs && node build-places.mjs && tailwindcss -c tailwind.config.js -i tailwind.input.css -o tailwind.css --minify && node minify.mjs"
   },
   "devDependencies": {
     "esbuild": "^0.28.2",

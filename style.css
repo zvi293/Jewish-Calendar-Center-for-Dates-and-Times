@@ -8964,3 +8964,93 @@ html.dark .prayer-next-cta { box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45); }
 @media (prefers-reduced-motion: reduce) {
   #study-links .study-card, #study-links .sc-go { transition: none !important; }
 }
+
+
+/* ═══════════════════════════════════════════════════════
+   ✦ אנימציית פתיחה אחידה לכל האתר (09/2026)
+   כל חלון/פופאפ/יריעה/ספר נפתח בהופעה רכה: שקיפות + הגדלה קלה + עלייה
+   של כמה פיקסלים, רבע שנייה. CSS טהור — אנימציית CSS מתחילה מעצמה כשהאלמנט
+   נוסף לדף או עובר מ-display:none לגלוי, כך שאין צורך לגעת באף פונקציית
+   פתיחה. רק opacity ו-scale/translate — רצים על ה-GPU, בלי פריסה מחדש
+   ובלי CLS. נעשה שימוש במאפיינים scale/translate הנפרדים (ולא transform)
+   כדי לא לדרוס transform קיים של אלמנט (מרכוז ב-translate(-50%) וכד').
+   בלי fill-mode — בסיום לא נשאר שום סגנון על האלמנט.
+   רשת ביטחון מפני הקפאה (ה"לא נטען" של 09/2026): script.js, ליד
+   _revealModalNoFreeze (_uxWatch/_uxFinishStalled) — finish() לכל אנימציה
+   כזו שלא התקדמה כלל. הסגירה הרכה (דהייה 0.16 שנ') — _uxFadeRemove שם.
+   שם אנימציה חדש כאן חייב להתאים ל-_UX_ANIM_RE, אחרת אין לו רשת ביטחון.
+   אלמנטים שכבר יש להם אנימציית כניסה משלהם (#lux-stories, #lux-moon-pop,
+   .lux-badge-pop, #lux-siyum, #lux-erev-panel, #lux-year-wheel) לא ברשימה.
+   ═══════════════════════════════════════════════════════ */
+@keyframes ux-open {
+  from { opacity: 0; scale: 0.97; translate: 0 10px; }
+}
+@keyframes ux-pop {
+  from { opacity: 0; scale: 0.94; translate: 0 6px; }
+}
+@keyframes ux-view {
+  from { opacity: 0; translate: 0 14px; }
+}
+@keyframes ux-reveal {
+  from { opacity: 0; translate: 0 -6px; }
+}
+/* שכבות-על (מודאלים, קוראי ספרים ותפילות, יריעות) */
+body > [id$="-modal"],
+body > .lux-sheet-overlay,
+body > #lux-nav-editor,
+body > #lux-plan-reader,
+body > #lux-track-reader,
+body > #lux-selichot-reader,
+body > #lux-print-sheet,
+body > #lux-tour-overlay,
+body > #lux-search-panel,
+body > #chapter-nav-popup,
+body > #cal-month-year-picker {
+  animation: ux-open 0.26s cubic-bezier(0.22, 1, 0.36, 1);
+}
+/* פופאפים קטנים ופאנלים (סימניות, בורר מפרשים), וה-X האוניברסלי שמוזרק לשכבה */
+body > .lux-ux,
+[id$="-bm-panel"],
+#sn-cm-popover,
+#lux-pl-cm-pop,
+body > [id$="-pop"]:not(#lux-moon-pop),
+.rf-pop {
+  animation: ux-pop 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+/* מעבר בין תצוגות בתוך חלון — כניסה לספר, לרשימת פרקים, לקורא */
+#sn-modal > [id$="-view"],
+#bih-reading-pane,
+#psalm-content-pane {
+  animation: ux-view 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+}
+/* תוכן שנפתח בתוך הדף — "תפילות נוספות", שאלות נפוצות */
+#prayer-more-grid:not(.hidden),
+details[open] > :not(summary) {
+  animation: ux-reveal 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  body > [id$="-modal"],
+  body > .lux-sheet-overlay,
+  body > #lux-nav-editor,
+  body > #lux-plan-reader,
+  body > #lux-track-reader,
+  body > #lux-selichot-reader,
+  body > #lux-print-sheet,
+  body > #lux-tour-overlay,
+  body > #lux-search-panel,
+  body > #chapter-nav-popup,
+  body > #cal-month-year-picker,
+  body > .lux-ux,
+  [id$="-bm-panel"],
+  #sn-cm-popover,
+  #lux-pl-cm-pop,
+  body > [id$="-pop"]:not(#lux-moon-pop),
+  .rf-pop,
+  #sn-modal > [id$="-view"],
+  #bih-reading-pane,
+  #psalm-content-pane,
+  #prayer-more-grid:not(.hidden),
+  details[open] > :not(summary) {
+    animation: none;
+  }
+}

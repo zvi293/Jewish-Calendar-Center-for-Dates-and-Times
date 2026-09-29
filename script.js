@@ -397,6 +397,7 @@ window.addEventListener("scroll", () => {
 // --- Modal Scroll Lock & History Management ---
 let _modalScrollLockCount = 0;
 function lockBodyScroll() {
+  _uxWatch(); // אנימציית פתיחה מתחילה עכשיו — רשת הביטחון מפני הקפאה (ראו _uxFinishStalled)
   _modalScrollLockCount++;
   if (_modalScrollLockCount === 1) {
     // חובה לקרוא את מיקום הגלילה לפני position:fixed — ההצבה מאפסת את window.scrollY,
@@ -581,6 +582,7 @@ setInterval(function () {
 // History-based back button: push state when modal opens, pop to close
 let _activeModals = [];
 function pushModalState(modalId) {
+  _uxWatch(); // כל פתיחה (מודאל, תצוגת-משנה, פאנל) — רשת הביטחון של אנימציית הפתיחה
   _activeModals.push(modalId);
   history.pushState({ modal: modalId }, "");
 }
@@ -627,8 +629,7 @@ function removeModalById(modalId) {
   // רשומה יתומה (האלמנט כבר הוסר בדרך אחרת) — אין מה לסגור ואין נעילה לשחרר
   if (!el) return;
   if (el.classList.contains("hidden")) return;
-  if (el.remove) el.remove();
-  else el.classList.add("hidden");
+  _uxFadeRemove(el); // דוהה ואז מוסר (ראו _uxFadeRemove)
   unlockBodyScroll();
 }
 window.addEventListener("popstate", function (e) {
@@ -649,7 +650,7 @@ window.addEventListener("popstate", function (e) {
       modalId === "zman-opinions-modal"
     ) {
       const el = document.getElementById(modalId);
-      if (el) el.remove();
+      _uxFadeRemove(el);
       unlockBodyScroll();
     } else if (modalId === "sefaria-modal") {
       closeSefariaModal();
@@ -672,7 +673,7 @@ window.addEventListener("popstate", function (e) {
       unlockBodyScroll();
     } else if (modalId === "motzei-shabbat-modal") {
       const el = document.getElementById(modalId);
-      if (el) el.remove();
+      _uxFadeRemove(el);
       _motzeiShabbatModalOpen = false;
       unlockBodyScroll();
     } else if (modalId === "sn-reader-pane") {
@@ -687,7 +688,7 @@ window.addEventListener("popstate", function (e) {
       closeSefarimNosafimModal();
     } else if (modalId === "donation-modal" || modalId === "contact-modal" || modalId === "chapter-nav-popup" || modalId === "cal-month-year-picker") {
       var _popupEl = document.getElementById(modalId);
-      if (_popupEl) _popupEl.remove();
+      _uxFadeRemove(_popupEl);
       // בחירת פריט בתוכן העניינים: הפעולה (גלילה/פתיחת פרק) רצה רק אחרי שהפופאפ
       // ירד מהמחסנית — כך קוראים שדוחפים מצב משלהם לא יוצרים רשומה כפולה
       if (modalId === "chapter-nav-popup" && window._chapterNavPending) {
@@ -1749,6 +1750,7 @@ window._markLevanaBlessed = function (btn) {
 // showDashboard); מעבר הסגירה נשאר — הסגירה ממילא מושלמת בטיימר.
 function _revealModalNoFreeze(m, alsoUnscale) {
   if (!m) return;
+  _uxWatch();
   m.classList.remove("hidden");
   const prev = m.style.transition;
   m.style.transition = "none";
@@ -1766,6 +1768,101 @@ function _revealModalNoFreeze(m, alsoUnscale) {
   void m.offsetWidth; // מקבע את המצב הגלוי לפני החזרת המעבר
   m.style.transition = prev || "";
 }
+
+// ── אנימציית הפתיחה האחידה (style.css: ux-open/ux-pop/ux-view/ux-reveal) — רשת ביטחון ──
+// האנימציה מתחילה ב-opacity:0. כשהדפדפן מקפיא את ציר האנימציות (ראו למעלה; נצפה גם
+// כשהדף "visible" אבל הרינדור מושהה — timeline.currentTime עומד, טיימרים ממשיכים)
+// היא נתקעת בהתחלה והחלון נשאר שקוף. finish() הוא הדרך היחידה שבאמת משחררת
+// אנימציה קפואה (כמו _forceRevealHeroEls). הבדיקה רצה בטיימר קצר משלה רק בחלון של
+// כמה שניות אחרי פעולת פתיחה אפשרית — אנימציה שלא התקדמה כלל בין שתי בדיקות מסוימת
+// בכוח; תקינה לא נפגעת. לא דרך ה-interval הקבוע של 300ms: שרשרת טיימרים ארוכה מואטת
+// ע"י הדפדפן בדיוק במצב הזה (נבדק — לא רץ כלל 2.5 שנ'), ושרשרת חדשה קצרה — לא.
+// אין להסתמך על animationstart: כשהציר קפוא האירוע לא נשלח בכלל.
+// var ולא let/const: _uxWatch נקראת גם מ-pushModalState/lockBodyScroll שמוגדרות למעלה
+// בקובץ — בלי TDZ גם אם מודאל נפתח עוד לפני שהשורות האלה רצו
+var _UX_ANIM_RE = /^ux-(open|pop|view|reveal)$/;
+var _uxWatchUntil = 0;
+var _uxSeenTime = new WeakMap();
+var _uxTimer = 0;
+function _uxWatch() {
+  _uxWatchUntil = Date.now() + 6000;
+  if (!_uxTimer) _uxTimer = setTimeout(_uxWatchTick, 280);
+}
+function _uxWatchTick() {
+  _uxTimer = 0;
+  try { _uxFinishStalled(); } catch (e) {}
+  if (Date.now() < _uxWatchUntil) _uxTimer = setTimeout(_uxWatchTick, 280);
+}
+function _uxFinishStalled() {
+  if (!_uxSeenTime || Date.now() > _uxWatchUntil || !document.getAnimations) return;
+  let list;
+  try { list = document.getAnimations(); } catch (e) { return; }
+  list.forEach((a) => {
+    if (!a.animationName || !_UX_ANIM_RE.test(a.animationName) || a.playState === "finished") return;
+    const t = a.currentTime;
+    if (_uxSeenTime.has(a) && _uxSeenTime.get(a) === t) {
+      try { a.finish(); } catch (e) {}
+    } else {
+      _uxSeenTime.set(a, t);
+    }
+  });
+}
+document.addEventListener("click", _uxWatch, true);
+window.addEventListener("popstate", _uxWatch);
+window.addEventListener("pageshow", _uxWatch);
+document.addEventListener("visibilitychange", _uxWatch);
+document.addEventListener("animationstart", (e) => { if (_UX_ANIM_RE.test(e.animationName)) _uxWatch(); }, true);
+
+// ── סגירה רכה: שכבה שנסגרת דוהה 0.16 שנ' ורק אז מוסרת מה-DOM ──
+// המצב הלוגי נסגר מיד כמו קודם (נעילת גלילה, מחסנית ההיסטוריה) — רק התמונה נשארת
+// לרגע, עם pointer-events:none, כך שהדף שמתחת פעיל מיד. getElementById לעולם לא
+// מחזיר שכבה בסגירה: חיפוש לפי ה-id שלה (פתיחה מחדש מהירה, רשומה יתומה ב-popstate,
+// בדיקת "כבר פתוח") מסיים ומסיר אותה מיד — כך אין שום שינוי התנהגות מלבד המראה.
+function _uxFadeRemove(el) {
+  if (!el) return;
+  if (el.__uxClosing) return;
+  let reduce = false;
+  try { reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) {}
+  if (!el.animate || reduce || document.hidden || !el.isConnected) {
+    el.remove();
+    return;
+  }
+  // ה-X האוניברסלי (lux.js) יושב על body ומשויך לשכבה — דוהה ונעלם יחד איתה
+  const xs = [];
+  document.querySelectorAll("body > .lux-ux").forEach((x) => { if (x.__luxFor === el) xs.push(x); });
+  let done = false;
+  const finish = () => {
+    if (done) return;
+    done = true;
+    el.__uxClosing = null;
+    el.remove();
+    xs.forEach((x) => x.remove());
+    _syncModalOpenClass();
+  };
+  el.__uxClosing = finish;
+  [el].concat(xs).forEach((n) => {
+    n.style.pointerEvents = "none";
+    try {
+      n.animate(
+        [{ opacity: 1 }, { opacity: 0, scale: "0.98", translate: "0 8px" }],
+        { duration: 160, easing: "ease-in", fill: "forwards" },
+      );
+    } catch (e) {}
+  });
+  // טיימר ולא onfinish — מסיר גם אם ציר האנימציות קפוא
+  setTimeout(finish, 170);
+}
+(function () {
+  const orig = Document.prototype.getElementById;
+  Document.prototype.getElementById = function (id) {
+    let el = orig.call(this, id);
+    if (el && el.__uxClosing) {
+      el.__uxClosing();
+      el = orig.call(this, id);
+    }
+    return el;
+  };
+})();
 
 function openOmerModal() {
   const m = document.getElementById("omer-modal");
@@ -1996,7 +2093,9 @@ function _buildCmPickerBar(fontBar, wrapId, opts) {
     pop.style.cssText =
       "position:fixed;left:0.75rem;right:0.75rem;bottom:" + bottomPx + "px;z-index:10050;max-height:56vh;overflow-y:auto;" +
       "background:#fff;border:1px solid rgba(0,0,0,0.1);border-radius:1rem;padding:0.75rem 0.9rem 0.6rem;direction:rtl;text-align:right;" +
-      "box-shadow:0 12px 36px rgba(0,0,0,0.22);max-width:560px;margin:0 auto;font-family:inherit;";
+      "box-shadow:0 12px 36px rgba(0,0,0,0.22);max-width:560px;margin:0 auto;font-family:inherit;" +
+      // פתיחה-מחדש אחרי rerender (הדלקת מפרש) — בלי אנימציית פתיחה, שלא "תקפוץ" בכל בחירה
+      (pushHist === false ? "animation:none;" : "");
     var chips = entries.map(function (en, i) {
       var on = en.get();
       var col = en.color || accent;
@@ -5843,11 +5942,9 @@ function toggleSettings() {
   const m = document.getElementById("settings-modal");
   if (m.classList.contains("hidden")) {
     updateNotifStatusUI();
-    m.classList.remove("hidden");
-    setTimeout(() => {
-      m.classList.remove("opacity-0");
-      m.children[0].classList.remove("scale-95");
-    }, 10);
+    // חשיפה בלי מעבר opacity (ראו _revealModalNoFreeze) — הדהייה באה מאנימציית הפתיחה האחידה
+    _revealModalNoFreeze(m);
+    m.children[0].classList.remove("scale-95");
     lockBodyScroll();
     pushModalState("settings-modal");
   } else {
@@ -34145,7 +34242,7 @@ function closeSefarimNosafimModal() {
     if (h) { try { h(); } catch (e) {} }
   });
   var el = document.getElementById("sn-modal");
-  if (el) el.remove();
+  _uxFadeRemove(el);
   unlockBodyScroll();
   var snStates = ["sn-reader-pane","sn-sections-view","sn-subbook-view","sn-search-view",
     "sn-book-bm-panel","sn-bm-panel","sn-cm-popover","sn-modal"];

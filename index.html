@@ -400,11 +400,19 @@
     <link rel="preload" href="/fonts/assistant-hebrew.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="/fonts.css?v=1" />
     <link rel="stylesheet" href="style.css?v=66" />
+    <!-- ביצועים (09/2026): בלוק "אודות" (SEO — 18 כרטיסים, 20 שאלות, טבלאות) כולו מתחת לקו
+         הגלילה — content-visibility מדלג על הפריסה/ציור שלו עד שמתקרבים אליו. גובה משוער
+         שמור (בלי קפיצת גלילה), ואחרי הציור הראשון הדפדפן זוכר את הגובה האמיתי (auto).
+         התוכן נשאר ב-HTML: גלוי למנועי חיפוש, לקוראי מסך ולחיפוש בדף. -->
+    <style>
+      #seo-about { content-visibility: auto; contain-intrinsic-size: auto 4600px; }
+      @media (max-width: 767px) { #seo-about { contain-intrinsic-size: auto 8700px; } }
+    </style>
     <!-- הקוד הראשי יורד מוקדם (preload) אך מוזרק ומתבצע רק אחרי הציור הראשון —
          ראו הטוען בסוף ה-body. ה-?v= כאן חייב להיות זהה לזה שבטוען וב-sw.js.
          fetchpriority=low: שלא יתחרו ברוחב-הפס עם ה-CSS החוסם (FCP) — כמו defer. -->
     <link rel="preload" href="script.js?v=62" as="script" fetchpriority="low" />
-    <link rel="preload" href="lux.js?v=61" as="script" fetchpriority="low" />
+    <link rel="preload" href="lux.js?v=62" as="script" fetchpriority="low" />
 
     <!-- OneSignal Web Push SDK -->
     <script>
@@ -706,6 +714,39 @@
         <!-- שומר-מקום לברכת השעה (lux.js "greeting" ממלא אותו) — כך הכותרת לא זזה
              כשהברכה מוזרקת אחרי הציור הראשון (CLS/LCP) -->
         <div id="lux-greeting"></div>
+        <script>
+          // באנר יום מיוחד (ראש חודש / צום / חג) — נבנה כבר לפני הציור הראשון כשהמידע זמין
+          // (התאריך העברי מ-Intl + אירועי היום השמורים מהביקור הקודם). עד 09/2026 lux.js
+          // הכניס אותו אחרי הציור, מעל הכותרת, והכותרת כולה קפצה ~50px (CLS). lux.js
+          // (dayBanner) מאמץ את האלמנט הקיים. אותה לוגיקה כמו שם — לשנות בשני המקומות יחד.
+          (function () {
+            try {
+              var d = new Date();
+              var iso = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+              if (localStorage.getItem("lux_banner_dismiss") === iso) return;
+              var msg = null;
+              var dNum = parseInt(new Intl.DateTimeFormat("en-u-ca-hebrew", { day: "numeric" }).format(d), 10);
+              var mHe = new Intl.DateTimeFormat("he-u-ca-hebrew", { month: "long" }).format(d);
+              if (dNum === 1) msg = "🌒 ראש חודש " + mHe + " — אומרים יעלה ויבוא בתפילה";
+              else if (dNum === 30) msg = "🌒 א' דראש חודש — אומרים יעלה ויבוא בתפילה";
+              if (!msg) {
+                var evs = JSON.parse(localStorage.getItem("moadim_cached_events_v3") || "null") || [];
+                for (var i = 0; i < evs.length; i++) {
+                  if (evs[i].date === iso) {
+                    if (evs[i].type === "fast") { msg = "🕯️ היום: " + evs[i].name + " — צום קל ומועיל"; break; }
+                    if (evs[i].type === "major") { msg = "✨ היום: " + evs[i].name + " — חג שמח!"; break; }
+                  }
+                }
+              }
+              if (!msg) return;
+              var el = document.createElement("div");
+              el.id = "lux-day-banner";
+              el.innerHTML = '<span></span><button type="button" aria-label="סגור">✕</button>';
+              el.firstChild.textContent = msg;
+              document.getElementById("lux-greeting").insertAdjacentElement("afterend", el);
+            } catch (e) {}
+          })();
+        </script>
         <h1
           class="text-5xl md:text-7xl font-extrabold text-white mb-6 tracking-tighter"
           style="text-shadow: 0 0 60px rgba(96,165,250,0.3);"
@@ -1231,6 +1272,7 @@
 
     <!-- SEO Rich Content Block — visible to search engines, subtle for users -->
     <section
+      id="seo-about"
       aria-label="אודות הלוח היהודי"
       class="max-w-6xl mx-auto px-4 pt-10 pb-4"
     >
@@ -2642,19 +2684,13 @@
       if (!btn) return;
       // מובייל בלבד — max-width 768px
       function isMobile(){ return window.innerWidth <= 768; }
-      // מצא את אלמנט החיפוש כדי לדעת מתי עוברים אותו
-      function getSearchBottom(){
-        var el = document.getElementById('mainSearch');
-        if (!el) return 120;
-        var rect = el.getBoundingClientRect();
-        return window.scrollY + rect.bottom + 40;
-      }
-      var threshold = null;
-      function onScroll(){
+      var shown = false;
+      function setVisible(on){
         // פופאפ נועל את הרקע → scrollY קורס ל-0; הסתרת הכפתור אז נראית כהבהוב
         if (document.body.style.position === 'fixed') return;
-        if (threshold === null) threshold = getSearchBottom();
-        if (window.scrollY > threshold){
+        if (on === shown) return; // כתיבה לסגנון רק כשהמצב משתנה — לא בכל אירוע גלילה
+        shown = on;
+        if (on){
           btn.style.display='flex';
           btn.style.opacity='1';
         } else {
@@ -2662,8 +2698,34 @@
           setTimeout(function(){ if(parseFloat(btn.style.opacity)===0) btn.style.display='none'; }, 260);
         }
       }
+      // הכפתור מופיע כשגוללים 40px מעבר לתיבת החיפוש.
+      // ביצועים (09/2026): עד כה resize איפס את הסף וחישב אותו מיד (getBoundingClientRect) —
+      // פריסה כפויה של כל הדף: 136ms באמצע הטעינה (~600ms חסימה ב-Lighthouse מובייל), ובטלפון
+      // שוב ושוב תוך כדי גלילה, כי הסתרת/הופעת שורת הכתובת יורה resize. עכשיו:
+      //  • ליד ראש הדף — בלי שום חישוב; הסף מחושב פעם אחת, בגלילה הראשונה שמעבר ל-150px;
+      //  • IntersectionObserver רק מסמן "לחשב מחדש" כשהתיבה נכנסת/יוצאת מהמסך (לא שומר מיקום —
+      //    בטעינה היא עוד זזה למטה כשהלוח שמעליה מתרנדר);
+      //  • resize מאפס את הסף רק כשהרוחב משתנה (סיבוב), לא בשינוי גובה של שורת הכתובת.
+      // (IntersectionObserver לבדו לא מספיק: קפיצת גלילה מעל התיבה לא משנה "הצטלבות" ולא מדווחת.)
+      var search = document.getElementById('mainSearch');
+      var threshold = null, lastW = window.innerWidth;
+      function computeThreshold(){
+        if (!search) return 400;
+        return window.scrollY + search.getBoundingClientRect().bottom + 40;
+      }
+      function onScroll(){
+        var y = window.scrollY;
+        if (y < 150) { setVisible(false); return; }
+        if (threshold === null) threshold = computeThreshold();
+        setVisible(y > threshold);
+      }
       window.addEventListener('scroll', onScroll, {passive:true});
-      window.addEventListener('resize', function(){ threshold=null; onScroll(); });
+      window.addEventListener('resize', function(){
+        if (window.innerWidth !== lastW) { lastW = window.innerWidth; threshold = null; }
+      }, {passive:true});
+      if (search && 'IntersectionObserver' in window){
+        new IntersectionObserver(function(){ threshold = null; }).observe(search);
+      }
     })();
     </script>
 
@@ -2724,7 +2786,7 @@
             },
           });
           addScript("script.js?v=62");
-          addScript("lux.js?v=61");
+          addScript("lux.js?v=62");
         }
         function afterFirstPaint() {
           // rAF אחד (רץ ממש לפני ציור הפריים הראשון) ואז setTimeout(0) — משימה

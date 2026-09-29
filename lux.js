@@ -2328,17 +2328,27 @@
         }
       }
     }
-    if (!msg) return;
-    var el = document.createElement("div");
-    el.id = "lux-day-banner";
-    el.innerHTML = "<span>" + esc(msg) + '</span><button type="button" aria-label="סגור">✕</button>';
+    // index.html בונה את הבאנר כבר לפני הציור הראשון כשהמידע זמין (בלי קפיצת כותרת) —
+    // כאן מאמצים אותו: מעדכנים טקסט אם צריך ומחברים את כפתור הסגירה
+    var existing = document.getElementById("lux-day-banner");
+    if (!msg) { if (existing) existing.remove(); return; }
+    var el = existing || document.createElement("div");
+    if (existing) {
+      var sp = existing.querySelector("span");
+      if (sp && sp.textContent !== msg) sp.textContent = msg;
+    } else {
+      el.id = "lux-day-banner";
+      el.innerHTML = "<span>" + esc(msg) + '</span><button type="button" aria-label="סגור">✕</button>';
+    }
     el.querySelector("button").addEventListener("click", function () {
       try { localStorage.setItem("lux_banner_dismiss", todayKey); } catch (e) {}
       el.remove();
     });
-    var greet = document.getElementById("lux-greeting");
-    if (greet) greet.insertAdjacentElement("afterend", el);
-    else hero.insertAdjacentElement("afterbegin", el);
+    if (!existing) {
+      var greet = document.getElementById("lux-greeting");
+      if (greet) greet.insertAdjacentElement("afterend", el);
+      else hero.insertAdjacentElement("afterbegin", el);
+    }
   });
 
   /* ── 28. מעקב קריאת תהילים + חגיגת סיום הספר ───────────────────── */

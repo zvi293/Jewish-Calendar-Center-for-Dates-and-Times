@@ -622,9 +622,12 @@ function pushModalState(modalId) {
   // X האוניברסלי (lux.js) מתעדכן באותו פריים שבו החלון/התצוגה מופיעים — בלי X שנעלם
   // לרגע בכניסה לספר ומופיע באיחור
   if (window.__luxUxTickNow) window.__luxUxTickNow();
+  // וגם כפתורי הכותרת שמוזרקים (🖍️ וכו') — בסוף המשימה, אחרי שהתצוגה נבנתה ולפני הציור
+  _uxLater(_uxPreEnter);
 }
 window.addEventListener("popstate", function () {
   if (window.__luxUxTickNow) window.__luxUxTickNow();
+  _uxLater(_uxPreEnter);
 });
 // ── פופאפים קלים היסטוריה-בטוחים (פאנלי סימניות, בורר נושאי כלים) — 09/2026 ──
 // האלמנטים שלהם חיים בתוך מודאל-הורה: אסור להסירם (removeModalById) ואסור לשחרר
@@ -669,7 +672,7 @@ function removeModalById(modalId) {
   // רשומה יתומה (האלמנט כבר הוסר בדרך אחרת) — אין מה לסגור ואין נעילה לשחרר
   if (!el) return;
   if (el.classList.contains("hidden")) return;
-  _uxFadeRemove(el); // דוהה ואז מוסר (ראו _uxFadeRemove)
+  _uxFadeRemove(el); // יוצא (צונח/גולש מטה) ואז מוסר — ראו _uxExit
   unlockBodyScroll();
 }
 window.addEventListener("popstate", function (e) {
@@ -706,8 +709,7 @@ window.addEventListener("popstate", function (e) {
       const el = document.getElementById(modalId);
       if (el) {
         el.__closing = false;
-        el.classList.add("opacity-0");
-        setTimeout(() => el.classList.add("hidden"), 300);
+        _uxHideModal(el);
       }
       _stopOmerCountdown();
       unlockBodyScroll();
@@ -1790,6 +1792,8 @@ window._markLevanaBlessed = function (btn) {
 // showDashboard); מעבר הסגירה נשאר — הסגירה ממילא מושלמת בטיימר.
 function _revealModalNoFreeze(m, alsoUnscale) {
   if (!m) return;
+  // נפתח שוב באמצע יציאה (_uxHideModal) — מבטלים אותה: החלון נשאר פתוח במקומו
+  if (m.__uxExitCancel) m.__uxExitCancel();
   // פתיחה אמיתית (לא חשיפה חוזרת של חלון פתוח, למשל רינדור-מחדש של ספריא) — אנימציית
   // הפתיחה האחידה, בסוף המשימה הנוכחית (אחרי נעילת הגלילה וה-X, לפני הציור)
   if (m.classList.contains("hidden") || m.classList.contains("opacity-0")) {
@@ -1829,7 +1833,7 @@ function _revealModalNoFreeze(m, alsoUnscale) {
 const _UX_LAYER_SEL =
   'body > [id$="-modal"], body > .lux-sheet-overlay, body > #lux-nav-editor, body > #lux-plan-reader, ' +
   "body > #lux-track-reader, body > #lux-selichot-reader, body > #lux-print-sheet, body > #lux-tour-overlay, " +
-  "body > #lux-search-panel, body > #chapter-nav-popup, body > #cal-month-year-picker";
+  "body > #lux-search-panel, body > #chapter-nav-popup, body > #cal-month-year-picker, body > #lux-stories";
 // פס ההתקדמות וה-X נשארים במקומם — X שזז "קופץ" מול העין
 const _UX_SKIP = ".lux-progress, .lux-ux, script, style, template, link";
 // האטה רכה: בלי "זינוק" גדול בפריים הראשון (שנראה כריצוד), ובלי זנב ארוך שנראה כתקיעה
@@ -1848,14 +1852,31 @@ function _uxAlpha(c) {
   const p = m[1].split(/[\s,\/]+/).filter(Boolean);
   return p.length > 3 ? parseFloat(p[3]) : 1;
 }
-// רקע אטום — צבע, או מעבר-צבעים שכל צבעיו אטומים (כרטיס דבר התורה)
+// רקע אטום — צבע, או שכבת רקע אחת (מעבר-צבעים) שכל צבעיה אטומים (כרטיס דבר התורה).
+// שכבת זוהר שקופה *מעל* בסיס אטום לא הופכת את הכרטיס לשקוף: עד 09/2026 (גרסה 4) כל
+// הצבעים בכל השכבות נבדקו יחד, והזוהר העדין של כרטיסי ההילולות, לוח ההילולות והמצפן
+// סיווג אותם "שקופים" ⇒ בלי הכהיה רכה ⇒ המסך "נפל" לחושך בבת אחת בפתיחה (הבהוב)
+function _uxBgLayers(img) {
+  const out = [];
+  let depth = 0, cur = "";
+  for (const ch of img) {
+    if (ch === "(") depth++;
+    else if (ch === ")") depth--;
+    if (ch === "," && depth === 0) { out.push(cur); cur = ""; } else cur += ch;
+  }
+  out.push(cur);
+  return out;
+}
 function _uxOpaque(el) {
   const cs = getComputedStyle(el);
   if (_uxAlpha(cs.backgroundColor) >= 0.85) return true;
   const img = cs.backgroundImage || "none";
   if (!/gradient/.test(img)) return false;
-  const cols = img.match(/rgba?\([^)]*\)/g) || [];
-  return cols.length > 0 && cols.every((c) => _uxAlpha(c) >= 0.85);
+  return _uxBgLayers(img).some((l) => {
+    if (!/gradient/.test(l)) return false;
+    const cols = l.match(/rgba?\([^)]*\)/g) || [];
+    return cols.length > 0 && cols.every((c) => _uxAlpha(c) >= 0.85);
+  });
 }
 function _uxKids(el) {
   const out = [];
@@ -1878,18 +1899,12 @@ function _uxGuard(anims, dur) {
     anims.forEach((a) => { try { if (a.playState !== "finished") a.finish(); } catch (e) {} });
   }, dur + 800);
 }
-function _uxEnter(layer) {
-  if (!layer || !layer.isConnected || layer.__uxClosing) return;
-  layer.__uxShown = true;
-  layer.__uxEnterT = performance.now();
-  if (!layer.animate || _uxNoMotion()) return;
-  // סורק ה-X האוניברסלי (lux.js) מודד מיקומים כדי לפנות מקום ל-X — מריצים אותו לפני
-  // שהתוכן זז, אחרת הוא מודד את התוכן באמצע התנועה ומתקן אחר כך (קפיצה של הכותרת)
-  try { if (window.__luxUxTickSync) window.__luxUxTickSync(); } catch (e) {}
+// מיון שכבה: הילדים הנראים ומלבניהם, הפאנל (הילד הגדול), והאם התוכן ממלא את המסך. המלבן
+// המאחד של כל התוכן: חלון-קורא בנוי מכמה ילדים (כותרת + טקסט + סרגל גופן) שיחד ממלאים את
+// המסך — הוא "מסך מלא" גם כשאף ילד לבדו לא ממלא אותו
+function _uxLayout(layer) {
   const kids = _uxKids(layer);
   let panel = null, area = 0;
-  // המלבן המאחד של כל התוכן: חלון-קורא בנוי מכמה ילדים (כותרת + טקסט + סרגל גופן) שיחד
-  // ממלאים את המסך — הוא "מסך מלא" גם כשאף ילד לבדו לא ממלא אותו
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
   const rects = kids.map((k) => {
     const r = k.getBoundingClientRect();
@@ -1897,41 +1912,116 @@ function _uxEnter(layer) {
     if (r.width && r.height) { x0 = Math.min(x0, r.left); y0 = Math.min(y0, r.top); x1 = Math.max(x1, r.right); y1 = Math.max(y1, r.bottom); }
     return r;
   });
-  if (!panel) return;
-  const full = x1 - x0 >= window.innerWidth * 0.96 && y1 - y0 >= window.innerHeight * 0.86;
-  layer.__uxKind = full ? "full" : "card";
+  const full = !!panel && x1 - x0 >= window.innerWidth * 0.96 && y1 - y0 >= window.innerHeight * 0.86;
+  return { kids: kids, rects: rects, panel: panel, area: area, full: full };
+}
+// "העברת חושך": הרקע כבר כהה ברגע שחלון מוחשך חדש נפתח — חלון מוחשך אחר הוסר/הוחלף באותה
+// משימה (הילולות ⇄ לוח הילולות), או שהדף קפץ מאחורי החלון (סדר לימוד). אז החלון החדש נפתח
+// עם הכהיה מלאה, בלי "להדליק" לרגע את הדף שמאחור ולהחשיך שוב (הבהוב)
+// הדגל תקף עד סוף המשימה הנוכחית (כולל ה-microtasks שלה, שבהם רץ _uxEnter) — לא לפי זמן:
+// בניית חלון כבד יכולה לקחת מאות ms בין הקפיצה לפתיחה
+let _uxDimHandoffOn = false, _uxDimHandoffT = 0;
+window._uxDimHandoff = function () {
+  _uxDimHandoffOn = true;
+  clearTimeout(_uxDimHandoffT);
+  _uxDimHandoffT = setTimeout(() => { _uxDimHandoffOn = false; }, 0);
+};
+// תוספות שרכיבים אחרים מזריקים לחלון (כפתור 🖍️ בכותרת קורא, פס ההתקדמות והשמות בתהילים —
+// lux.js נרשם ב-window.__uxPreEnter) רצות *לפני* המדידה והציור הראשון. עד 09/2026 הן חיכו
+// לטיימר (150ms–1.2 שנ'): הכפתור נכנס לכותרת אחרי שהחלון כבר צויר, הכותרת נשברה לשתי שורות
+// וכל הטקסט "קפץ" מטה — בכל כניסה לספר או לקורא
+// קריאות כפולות באותו רגע (פתיחה = גם _uxEnter וגם pushModalState) מאוחדות: קריאה שנרשמה לפני
+// שהראשונה רצה רואה אותו DOM סופי של המשימה — מדלגים עליה; השחרור נרשם בתור אחריהן
+let _uxPreEnterBusy = false;
+function _uxPreEnter() {
+  if (_uxPreEnterBusy) return;
+  _uxPreEnterBusy = true;
+  _uxLater(() => { _uxPreEnterBusy = false; });
+  (window.__uxPreEnter || []).forEach((f) => { try { f(); } catch (e) {} });
+}
+// אנימציות אינסופיות בתוך השכבה (להבות, פעימות, טבעת מסתובבת, כוכבי SMIL בשעון) מוקפאות
+// בזמן כניסה/יציאה: תוכן שמשתנה בכל פריים מכריח ציור-מחדש של כל השכבה בכל פריים של
+// התנועה — בטלפון אריחים ריקים לרגע (ריצוד). אחרי הכניסה הן ממשיכות מאותה נקודה.
+function _uxHoldInner(layer, ms) {
+  const held = [];
+  const svgs = [];
+  try {
+    layer.getAnimations({ subtree: true }).forEach((a) => {
+      if (a.playState !== "running" || !a.effect || a.effect.getComputedTiming().iterations !== Infinity) return;
+      a.pause();
+      held.push(a);
+    });
+  } catch (e) {}
+  try {
+    layer.querySelectorAll("svg").forEach((s) => {
+      if (s.pauseAnimations && s.animationsPaused && !s.animationsPaused()) { s.pauseAnimations(); svgs.push(s); }
+    });
+  } catch (e) {}
+  let done = false;
+  const release = () => {
+    if (done) return;
+    done = true;
+    held.forEach((a) => { try { if (a.playState === "paused") a.play(); } catch (e) {} });
+    svgs.forEach((s) => { try { s.unpauseAnimations(); } catch (e) {} });
+  };
+  if (ms) setTimeout(release, ms);
+  return release;
+}
+function _uxEnter(layer) {
+  if (!layer || !layer.isConnected || layer.__uxClosing) return;
+  layer.__uxShown = true;
+  // חלון שבאמצע יציאה — מסיימים מיד: הכניסה החדשה היא התנועה היחידה על המסך
+  _uxFinishExits(layer);
+  _uxPreEnter();
+  if (!layer.animate || _uxNoMotion()) { layer.__uxEnterT = performance.now(); return; }
+  // סורק ה-X האוניברסלי (lux.js) מודד מיקומים כדי לפנות מקום ל-X — מריצים אותו לפני
+  // שהתוכן זז, אחרת הוא מודד את התוכן באמצע התנועה ומתקן אחר כך (קפיצה של הכותרת)
+  try { if (window.__luxUxTickSync) window.__luxUxTickSync(); } catch (e) {}
+  const L = _uxLayout(layer);
+  if (!L.panel) { layer.__uxEnterT = performance.now(); return; }
+  layer.__uxKind = L.full ? "full" : "card";
   const anims = [];
-  if (!full) {
+  if (!L.full) {
     // רק הכרטיס (וילדים בסדר גודל שלו) — כפתור X צדדי שמעוגן לפינת המסך נשאר במקומו
-    const moving = kids.filter((k, i) => rects[i].width * rects[i].height >= area * 0.25);
+    const moving = L.kids.filter((k, i) => L.rects[i].width * L.rects[i].height >= L.area * 0.25);
     _uxAnimate(moving, [{ translate: "0 20px", scale: "0.95" }, { translate: "0 0", scale: "1" }], 340, anims);
     const cs = getComputedStyle(layer);
     const a = _uxAlpha(cs.backgroundColor);
-    if (a > 0.04 && a < 0.995 && (cs.backgroundImage || "none") === "none" && _uxOpaque(panel)) {
-      const f0 = { backgroundColor: cs.backgroundColor.replace(/rgba?\(([^,\s]+)[,\s]+([^,\s]+)[,\s]+([^,\s)]+).*\)/, "rgba($1, $2, $3, 0)") };
-      const f1 = { backgroundColor: cs.backgroundColor };
-      // טשטוש הרקע (מחשב בלבד — בנייד אין טשטוש) מתעצם יחד עם ההכהיה
-      const bf = cs.backdropFilter;
-      if (bf && /^blur\([^)]*\)$/.test(bf)) { f0.backdropFilter = "blur(0px)"; f1.backdropFilter = bf; }
-      try { anims.push(layer.animate([f0, f1], { duration: 240, easing: "cubic-bezier(0.33, 1, 0.68, 1)" })); } catch (e) {}
+    if (a > 0.04 && a < 0.995 && (cs.backgroundImage || "none") === "none") {
+      layer.__uxDim = true;
+      if (_uxOpaque(L.panel) && !_uxDimHandoffOn) {
+        const f0 = { backgroundColor: cs.backgroundColor.replace(/rgba?\(([^,\s]+)[,\s]+([^,\s]+)[,\s]+([^,\s)]+).*\)/, "rgba($1, $2, $3, 0)") };
+        const f1 = { backgroundColor: cs.backgroundColor };
+        // טשטוש הרקע (מחשב בלבד — בנייד אין טשטוש) מתעצם יחד עם ההכהיה
+        const bf = cs.backdropFilter;
+        if (bf && /^blur\([^)]*\)$/.test(bf)) { f0.backdropFilter = "blur(0px)"; f1.backdropFilter = bf; }
+        try { anims.push(layer.animate([f0, f1], { duration: 240, easing: "cubic-bezier(0.33, 1, 0.68, 1)" })); } catch (e) {}
+      }
     }
   } else {
-    // תצוגה יחידה שממלאת את השכבה (הספרייה, קורא) — התוכן שבתוכה עולה והתצוגה עצמה
-    // נשארת, כך שלא נחשף פס של רקע אחר בשוליים (קורא בהיר בתוך חלון כהה)
-    let targets = kids;
-    if (kids.length === 1) {
-      const inner = _uxKids(kids[0]);
-      if (inner.length) targets = inner;
-    }
+    // תצוגה שממלאת את השכבה (הספרייה, קורא, שקופית סטוריז) — התוכן שבתוכה עולה והתצוגה
+    // עצמה נשארת, כך שלא נחשף פס של רקע אחר בשוליים (קורא בהיר בתוך חלון כהה)
+    const targets = [];
+    L.kids.forEach((k, i) => {
+      const r = L.rects[i];
+      const inner = r.width >= window.innerWidth * 0.96 && r.height >= window.innerHeight * 0.86 ? _uxKids(k) : null;
+      if (inner && inner.length) inner.forEach((c) => targets.push(c));
+      else targets.push(k);
+    });
     _uxAnimate(targets, [{ translate: "0 16px" }, { translate: "0 0" }], 300, anims);
   }
+  _uxHoldInner(layer, 360);
   _uxGuard(anims, 340);
+  // נרשם בסוף — המדידה עצמה יכולה לקחת מאות ms (פריסה ראשונה של ספר ענק), ו-_uxEnterView
+  // שרץ מיד אחרינו באותה משימה חייב לזהות שזו אותה פתיחה (אחרת התוכן היה מונפש פעמיים)
+  layer.__uxEnterT = performance.now();
 }
 // מעבר קדימה לתצוגה בתוך חלון פתוח (ספר, קורא, חיפוש) — רק התוכן החדש עולה. בסוף המשימה
 // (microtask): אחרי שהתצוגה נבנתה ואחרי pushModalState, ולפני הציור
 function _uxEnterView(view) {
   if (!view || !view.animate) return;
   _uxLater(() => {
+    _uxPreEnter();
     if (!view.isConnected || _uxNoMotion() || getComputedStyle(view).display === "none") return;
     const layer = view.closest("body > *");
     // החלון עצמו נפתח עכשיו (באותה משימה) — אנימציית הפתיחה שלו כבר מטפלת בתצוגה הזו
@@ -1979,10 +2069,16 @@ function _uxSoftFirst(cont) {
   cont.__uxSoftAt = null;
   _uxSoftIn(cont.children, at);
 }
+window._uxPhMark = _uxPhMark;
 // שכבות שנוספות ל-body (רוב החלונות) — הפתיחה מזוהה כאן, פעם אחת לכל שכבה. הקריאה
 // מגיעה בסוף המשימה שפתחה את החלון (microtask), לפני הציור הראשון שלו
 try {
   new MutationObserver((muts) => {
+    // קודם ההסרות: חלון מוחשך שהוסר באותה משימה שבה נפתח חלון חדש (מעבר ישיר בין חלונות)
+    // ⇒ הרקע כבר כהה, והחדש נפתח בלי להחשיך מחדש מאפס
+    muts.forEach((mu) => {
+      mu.removedNodes.forEach((n) => { if (n.__uxDim && !n.__uxExitDone) window._uxDimHandoff(); });
+    });
     muts.forEach((mu) => {
       mu.addedNodes.forEach((n) => {
         if (n.nodeType !== 1 || n.__uxShown || n.parentElement !== document.body) return;
@@ -1993,56 +2089,129 @@ try {
   }).observe(document.body, { childList: true });
 } catch (e) {}
 
-// ── סגירה רכה: שכבה שנסגרת דוהה (0.18 שנ') ורק אז מוסרת מה-DOM ──
-// המצב הלוגי נסגר מיד כמו קודם (נעילת גלילה, מחסנית ההיסטוריה) — רק התמונה נשארת
-// לרגע, עם pointer-events:none, כך שהדף שמתחת פעיל מיד. getElementById לעולם לא
-// מחזיר שכבה בסגירה: חיפוש לפי ה-id שלה (פתיחה מחדש מהירה, רשומה יתומה ב-popstate,
-// בדיקת "כבר פתוח") מסיים ומסיר אותה מיד — כך אין שום שינוי התנהגות מלבד המראה.
-function _uxFadeRemove(el) {
-  if (!el) return;
-  if (el.__uxClosing) return;
-  let reduce = false;
-  try { reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) {}
-  if (!el.animate || reduce || document.hidden || !el.isConnected) {
-    el.remove();
-    return;
-  }
-  // ה-X האוניברסלי (lux.js) יושב על body ומשויך לשכבה — דוהה ונעלם יחד איתה
+// ── סגירה: יציאה אחת רציפה, בלי שום שקיפות מעל הדף (09/2026, גרסה 5) ──
+// עד גרסה 4 השכבה דהתה (0.11–0.18 שנ'): באמצע הדהייה טקסט החלון נראה *מעל* טקסט הדף —
+// "חשיפה כפולה" שבטלפון נראית כריצוד/הבהוב, ובקורא בהיר מעל הדף הכהה — כשטיפה לבנה. עכשיו
+// שום דבר לא נעשה שקוף: כרטיס צונח מטה אל מחוץ למסך (אטום לכל אורך הדרך) והרקע המוחשך
+// מתבהר באותו זמן; תצוגה במסך מלא (ספר, קורא, תהילים, סטוריז) גולשת כולה מטה וחושפת את הדף.
+// המצב הלוגי נסגר מיד כמו קודם (נעילת גלילה, מחסנית ההיסטוריה) — רק התמונה נשארת לרגע,
+// עם pointer-events:none, כך שהדף שמתחת פעיל מיד.
+const _UX_EXIT_EASE = "cubic-bezier(0.4, 0, 0.85, 0.4)"; // מאיץ — יציאה רכה ש"נופלת" החוצה
+const _uxExiting = new Set();
+// כניסה של חלון חדש מסיימת מיד יציאות שעוד רצות (שתי תנועות בו-זמנית = בלגן על המסך)
+function _uxFinishExits(except) {
+  Array.from(_uxExiting).forEach((el) => {
+    if (el !== except && el.__uxExitFinish) el.__uxExitFinish();
+  });
+}
+// done(xs, cancelled): הסרה/הסתרה בפועל בסוף. מחזירה finish (אידמפוטנטית)
+function _uxExit(el, done) {
   const xs = [];
   document.querySelectorAll("body > .lux-ux").forEach((x) => { if (x.__luxFor === el) xs.push(x); });
-  let done = false;
+  const anims = [];
+  let release = null, main = null;
+  let fin = false, cancelled = false;
   const finish = () => {
-    if (done) return;
-    done = true;
+    if (fin) return;
+    fin = true;
+    _uxExiting.delete(el);
+    // נקטעה בתחילתה (חלון חדש נפתח / פתיחה מחדש) כשהרקע עוד כהה — מי שנפתח עכשיו יירש
+    // את החושך במקום להחשיך מאפס
+    if (!cancelled && el.__uxDim && main && main.playState !== "finished" && performance.now() - (el.__uxExitT0 || 0) < 120) window._uxDimHandoff();
+    el.__uxExitFinish = null;
+    el.__uxExitCancel = null;
+    el.__uxExitDone = true;
+    try { done(xs, cancelled); } catch (e) {}
+    // מודאל סטטי שהוסתר (או נפתח שוב): מחזירים את מצבו הרגיל — מוסתר כבר, אז בלי קפיצה
+    anims.forEach((a) => { try { a.cancel(); } catch (e) {} });
+    [el].concat(xs).forEach((n) => { n.style.pointerEvents = ""; });
+    if (release) release();
+    _syncModalOpenClass();
+  };
+  el.__uxExitFinish = finish;
+  el.__uxExitCancel = () => { cancelled = true; finish(); };
+  el.__uxExitDone = false;
+  if (!el.animate || _uxNoMotion() || !el.isConnected) { finish(); return finish; }
+  _uxExiting.add(el);
+  el.__uxExitT0 = performance.now();
+  try {
+    const vh = window.innerHeight;
+    // מדידה קודם (הפריסה עוד נקייה), ורק אחריה שינויי סגנון — אחרת שני חישובי פריסה בסגירה
+    const L = _uxLayout(el);
+    release = _uxHoldInner(el, 0);
+    [el].concat(xs).forEach((n) => { n.style.pointerEvents = "none"; });
+    const full = el.__uxKind ? el.__uxKind === "full" : L.full;
+    if (full || !L.panel) {
+      // מסך מלא: כל השכבה (יחד עם ה-X שלה) גולשת מטה אל מחוץ למסך
+      const kf = [{ translate: "0 0" }, { translate: "0 " + vh + "px" }];
+      main = el.animate(kf, { duration: 260, easing: _UX_EXIT_EASE, fill: "forwards" });
+      anims.push(main);
+      xs.forEach((x) => anims.push(x.animate(kf, { duration: 260, easing: _UX_EXIT_EASE, fill: "forwards" })));
+    } else {
+      // כרטיס: הכרטיס (וילדים בסדר גודל שלו) צונח עד מתחת לתחתית המסך
+      let top = vh;
+      const moving = [];
+      L.kids.forEach((k, i) => {
+        if (L.rects[i].width * L.rects[i].height >= L.area * 0.25) { moving.push(k); top = Math.min(top, L.rects[i].top); }
+      });
+      const kf = [{ translate: "0 0" }, { translate: "0 " + Math.round(Math.max(160, vh - top + 24)) + "px" }];
+      moving.forEach((k) => {
+        const a = k.animate(kf, { duration: 230, easing: _UX_EXIT_EASE, fill: "forwards" });
+        anims.push(a);
+        if (!main) main = a;
+      });
+      // קטנים (X בפינת המסך, פס טעינה) — נעלמים מהר; זעירים מכדי שחשיפה כפולה תיראה
+      const small = L.kids.filter((k) => moving.indexOf(k) === -1).concat(xs);
+      el.querySelectorAll(":scope > .lux-ux, :scope > .lux-progress").forEach((k) => { if (small.indexOf(k) === -1) small.push(k); });
+      small.forEach((k) => anims.push(k.animate([{ opacity: 0 }], { duration: 90, easing: "ease-out", fill: "forwards" })));
+      // הרקע המוחשך מתבהר יחד עם הנפילה, בקצב אחיד — עקומת ease-out "הדליקה" את הדף כבר
+      // בפריים הראשון, כשהכרטיס עוד בקושי זז (נראה כשני שלבים: אור ואז נפילה)
+      const cs = getComputedStyle(el);
+      if (_uxAlpha(cs.backgroundColor) > 0.02 && (cs.backgroundImage || "none") === "none") {
+        const f1 = { backgroundColor: cs.backgroundColor.replace(/rgba?\(([^,\s]+)[,\s]+([^,\s]+)[,\s]+([^,\s)]+).*\)/, "rgba($1, $2, $3, 0)") };
+        const bf = cs.backdropFilter;
+        if (bf && /^blur\([^)]*\)$/.test(bf)) f1.backdropFilter = "blur(0px)";
+        anims.push(el.animate([f1], { duration: 230, easing: "linear", fill: "forwards" }));
+      }
+    }
+  } catch (e) {}
+  if (!main) { finish(); return finish; }
+  // הסרה בסוף האנימציה בפועל: האנימציה מתחילה רק בפריים הבא, ואם הסגירה עצמה תקעה את
+  // הדף (שחרור הנעילה) — טיימר שנספר מעכשיו היה מסיר את השכבה לפני שהתנועה בכלל נראתה
+  main.onfinish = finish;
+  // רשת ביטחון: ציר אנימציות קפוא — onfinish לא יגיע
+  setTimeout(finish, 800);
+  return finish;
+}
+// שכבה דינמית: יוצאת ואז מוסרת מה-DOM. getElementById לעולם לא מחזיר שכבה בסגירה: חיפוש
+// לפי ה-id שלה (פתיחה מחדש מהירה, רשומה יתומה ב-popstate, בדיקת "כבר פתוח") מסיים ומסיר
+// אותה מיד — כך אין שום שינוי התנהגות מלבד המראה. (בדיקות תקופתיות שרק "מציצות" אם החלון
+// פתוח משתמשות ב-querySelector ומדלגות על __uxClosing, כדי לא לקטוע את היציאה באמצע.)
+function _uxFadeRemove(el) {
+  if (!el || el.__uxClosing) return;
+  if (!el.isConnected) { el.remove(); return; }
+  el.__uxClosing = function () { if (el.__uxExitFinish) el.__uxExitFinish(); };
+  _uxExit(el, (xs) => {
     el.__uxClosing = null;
     el.remove();
     xs.forEach((x) => x.remove());
-    _syncModalOpenClass();
-  };
-  el.__uxClosing = finish;
-  // סגירה אחת רציפה: התוכן (ילדי השכבה + ה-X) נעלם מהר (110ms), והרקע מתבהר *מהרגע
-  // הראשון* (ease-out, 180ms) — הכול מתחיל ונגמר יחד. עד 09/2026 (גרסה 3) הרקע נשאר
-  // כהה ורק אז התבהר (ease-in): התוכן כבר נעלם והרקע הכהה עוד עמד — "מצמוץ" של מסך
-  // כהה ריק באמצע הסגירה. דהייה של כל השכבה בקצב אחד = טקסט על טקסט ⇒ "ריצוד" (גרסה 1)
-  [el].concat(xs).forEach((n) => { n.style.pointerEvents = "none"; });
-  try {
-    // כרטיס: שוקע ומתכווץ מעט בזמן שהוא נעלם (היפוך תנועת הפתיחה); מסך מלא — דהייה בלבד
-    const kf = el.__uxKind === "card"
-      ? [{ opacity: 0, translate: "0 8px", scale: "0.97" }]
-      : [{ opacity: 0 }];
-    Array.prototype.forEach.call(el.children, (k) => {
-      k.animate(kf, { duration: 110, easing: "ease-out", fill: "forwards" });
-    });
-    xs.forEach((x) => x.animate([{ opacity: 0 }], { duration: 110, easing: "ease-out", fill: "forwards" }));
-    const a = el.animate([{ opacity: 0 }], { duration: 180, easing: "cubic-bezier(0.33, 1, 0.68, 1)", fill: "forwards" });
-    // הסרה בסוף האנימציה בפועל: האנימציה מתחילה רק בפריים הבא, ואם הסגירה עצמה
-    // תקעה את הדף (שחרור הנעילה) — טיימר שנספר מעכשיו היה מסיר את השכבה לפני
-    // שהדהייה בכלל נראתה (נמדד: 250ms תקיעה במעבד טלפון ⇒ היעלמות חדה)
-    a.onfinish = finish;
-  } catch (e) {}
-  // רשת ביטחון: ציר אנימציות קפוא — onfinish לא יגיע
-  setTimeout(finish, 500);
+  });
 }
+// מודאל סטטי (קבוע ב-HTML — ספריא, מצפן, הגדרות, לוח שנה, עומר...): אותה יציאה, ובסופה
+// opacity-0 + hidden כמו קודם (scaleEl: גם scale-95 לכרטיס, כמו שהפתיחה שלו מצפה). פתיחה
+// מחדש באמצע היציאה (_revealModalNoFreeze, או רשומה חדשה במחסנית) משאירה אותו פתוח.
+function _uxHideModal(m, scaleEl) {
+  if (!m || m.classList.contains("hidden") || m.__uxExitFinish) return;
+  const id = m.id;
+  _uxExit(m, (xs, cancelled) => {
+    if (cancelled || (id && _activeModals.indexOf(id) !== -1)) return;
+    // X אוניברסלי של המודאל — יצא איתו; בלי הסרה הוא "חוזר" לפינה עד סריקת הניקוי הבאה
+    xs.forEach((x) => x.remove());
+    m.classList.add("opacity-0", "hidden");
+    if (scaleEl) scaleEl.classList.add("scale-95");
+  });
+}
+window._uxHideModal = _uxHideModal;
 (function () {
   const orig = Document.prototype.getElementById;
   Document.prototype.getElementById = function (id) {
@@ -2079,8 +2248,7 @@ function closeOmerModal() {
     return;
   }
   m.__closing = false;
-  m.classList.add("opacity-0");
-  setTimeout(() => m.classList.add("hidden"), 300);
+  _uxHideModal(m);
   _stopOmerCountdown();
   unlockBodyScroll();
 }
@@ -2865,8 +3033,7 @@ function closeSefariaModal() {
     return;
   }
   m.__closing = false;
-  m.classList.add("opacity-0");
-  m.__hideTimer = setTimeout(() => m.classList.add("hidden"), 300);
+  _uxHideModal(m);
   unlockBodyScroll();
 }
 
@@ -3792,8 +3959,7 @@ function closeChokLeIsraelModal() {
     return;
   }
   m.__closing = false;
-  m.classList.add('opacity-0');
-  m.__hideTimer = setTimeout(() => m.classList.add('hidden'), 300);
+  _uxHideModal(m);
   unlockBodyScroll();
 }
 window.openChokLeIsraelModal = openChokLeIsraelModal;
@@ -6154,9 +6320,7 @@ function toggleSettings() {
       return;
     }
     m.__closing = false;
-    m.classList.add("opacity-0");
-    m.children[0].classList.add("scale-95");
-    setTimeout(() => m.classList.add("hidden"), 300);
+    _uxHideModal(m, m.children[0]);
     unlockBodyScroll();
   }
 }
@@ -6753,8 +6917,7 @@ function closeCompass() {
   // איפוס נעל הכניסה-החוזרת — מודאל סטטי, בלי זה ה-X מת לצמיתות אחרי הסגירה הראשונה
   m.__closing = false;
   if (m.classList.contains("hidden")) return;
-  m.classList.add("opacity-0");
-  setTimeout(() => m.classList.add("hidden"), 300);
+  _uxHideModal(m);
   _compassUnbind();
   if (_cmp.raf) { cancelAnimationFrame(_cmp.raf); _cmp.raf = 0; }
   _cmp.mode = "";
@@ -7386,11 +7549,7 @@ function closeCalendar() {
   }
   m.__closing = false;
   closeCalendarDay();
-  m.classList.add("opacity-0");
-  m.querySelector("div").classList.add("scale-95");
-  setTimeout(() => {
-    m.classList.add("hidden");
-  }, 300);
+  _uxHideModal(m, m.querySelector("div"));
   unlockBodyScroll();
 }
 
@@ -25155,7 +25314,18 @@ openTehillimPage = function () {
     }
   };
 
-  async function loadPsalmChapter(chapter, area, prepend) {
+  // פרק שנבנה מחוץ למסך נכנס מעל התוכן הקיים בלי להזיז את מה שעל המסך (פיצוי גלילה באותה משימה)
+  function _thPrependKeep(area, div) {
+    const anchor = area.firstElementChild;
+    const t0 = anchor ? anchor.getBoundingClientRect().top : 0;
+    area.insertBefore(div, area.firstChild);
+    if (anchor) {
+      const d = anchor.getBoundingClientRect().top - t0;
+      if (d) area.scrollTop += d;
+    }
+  }
+  // deferPrepend: הפרק הקודם בפתיחת פרק — נבנה מחוץ למסך ונכנס מעל רק כשהוא מוכן
+  async function loadPsalmChapter(chapter, area, prepend, deferPrepend) {
     if (
       chapter < 1 ||
       chapter > 150 ||
@@ -25167,11 +25337,17 @@ openTehillimPage = function () {
     chapterDiv.id = `psalm-chapter-${chapter}`;
     chapterDiv.style.cssText =
       "margin-bottom:2rem;padding-bottom:1.5rem;border-bottom:1px solid rgba(0,0,0,0.08);";
-    chapterDiv.innerHTML = `<h4 style="color:#1e40af;font-size:1.1rem;font-weight:900;margin-bottom:0.75rem;text-align:center;">תהילים פרק ${toHebrewPsalmNumber(chapter)}</h4><p style="color:#94a3b8;text-align:center;">טוען...</p>`;
-    if (prepend && area.firstChild) {
-      area.insertBefore(chapterDiv, area.firstChild);
-    } else {
-      area.appendChild(chapterDiv);
+    // "טוען..." רק אם הטעינה באמת נמשכת (.ux-ph), והטקסט שמגיע נכנס ברכות (_uxSoftIn) — עד
+    // 09/2026 ההודעה הבהבה לרגע והפסוקים "קפצו" פנימה
+    chapterDiv.innerHTML = `<h4 style="color:#1e40af;font-size:1.1rem;font-weight:900;margin-bottom:0.75rem;text-align:center;">תהילים פרק ${toHebrewPsalmNumber(chapter)}</h4><p class="ux-ph" style="color:#94a3b8;text-align:center;">טוען...</p>`;
+    const _thPh = _uxPhMark();
+    const _thTok = window._tehillimLoadedChapters;
+    if (!deferPrepend) {
+      if (prepend && area.firstChild) {
+        area.insertBefore(chapterDiv, area.firstChild);
+      } else {
+        area.appendChild(chapterDiv);
+      }
     }
     try {
       const data = await _sefariaJson(
@@ -25188,6 +25364,12 @@ openTehillimPage = function () {
       chapterDiv.innerHTML = `<h4 style="color:#1e40af;font-size:1.1rem;font-weight:900;margin-bottom:0.5rem;text-align:center;">תהילים פרק ${toHebrewPsalmNumber(chapter)}</h4>${bmBtn}${verses || "<p>לא נמצא טקסט.</p>"}`;
     } catch (error) {
       chapterDiv.innerHTML = `<h4 style="color:#1e40af;font-size:1.1rem;font-weight:900;margin-bottom:0.75rem;text-align:center;">תהילים פרק ${toHebrewPsalmNumber(chapter)}</h4><p style="color:#ef4444;">לא הצלחתי לטעון פרק זה.</p>`;
+    }
+    if (deferPrepend) {
+      // נפתח בינתיים פרק אחר (סט חדש) או שהקורא נסגר — לא מכניסים לקורא של מישהו אחר
+      if (area.isConnected && window._tehillimLoadedChapters === _thTok) _thPrependKeep(area, chapterDiv);
+    } else if (chapterDiv.isConnected) {
+      _uxSoftIn(Array.prototype.slice.call(chapterDiv.children, 1), _thPh);
     }
   }
 
@@ -25209,13 +25391,15 @@ openTehillimPage = function () {
     area.style.cssText =
       "padding:1.25rem;overflow-y:auto;flex:1;font-family:'Frank Ruhl Libre','David Libre',serif;font-size:25px;font-weight:700;line-height:1.7;color:#000000;text-align:center;direction:rtl;";
     applyPrayerFontSize("#psalm-text-area");
-    // Load current chapter and neighbors
-    if (chapter > 1) await loadPsalmChapter(chapter - 1, area, false);
+    // הפרק המבוקש נטען ומוצג ראשון; הקודם נבנה מחוץ למסך ונכנס מעליו רק כשהוא מוכן — בלי להזיז
+    // את מה שעל המסך; הבא נוסף מתחת. עד 09/2026 הקודם נטען ראשון: בכניסה לפרק נראה קודם הטקסט
+    // של הפרק הקודם, ואחרי שהכול נטען הקורא "קפץ" לפרק המבוקש
     await loadPsalmChapter(chapter, area, false);
-    if (chapter < 150) await loadPsalmChapter(chapter + 1, area, false);
     // Scroll to current chapter — לא אם כבר שינו גודל כתב בזמן הטעינה (השורה שנקראת נשמרה)
     const currentEl = document.getElementById(`psalm-chapter-${chapter}`);
     if (currentEl && !_fontScrollAnchorSince(area, _thOpenT)) currentEl.scrollIntoView({ block: "start" });
+    if (chapter > 1) await loadPsalmChapter(chapter - 1, area, true, true);
+    if (chapter < 150) await loadPsalmChapter(chapter + 1, area, false);
     // Infinite scroll: load more chapters on scroll
     // שמירת state ל-throttle ו-guard (מניעת race conditions בגלילה מהירה/אוטומטית)
     let _thScrollBusy = false;
@@ -26986,7 +27170,7 @@ document.addEventListener("keydown", (e) => {
           var hasTorah = !!t.torah;
           return (
             '<div class="hil-item">' +
-            '<div class="hil-card' + (hasTorah ? " hil-card-torah" : "") + '" style="animation-delay:' + (i * 0.07).toFixed(2) + 's;"' +
+            '<div class="hil-card' + (hasTorah ? " hil-card-torah" : "") + '"' +
             (hasTorah
               ? ' role="button" tabindex="0" aria-expanded="false" title="לחץ לדבר תורה"' +
                 ' onclick="window._hilToggleTorah(this)"' +
@@ -33510,7 +33694,20 @@ function openSefarimNosafimPage(_pageMode) {
     if (tries < 10) chapterDiv.__snAutoT = setTimeout(retry, tries < 2 ? 6000 : 12000);
   }
 
-  async function _snLoadChapter(idx, area, prepend, reuseDiv) {
+  // פרק שנבנה מחוץ למסך נכנס מעל התוכן הקיים בלי להזיז את מה שעל המסך (פיצוי גלילה באותה משימה)
+  function _snPrependKeep(area, div) {
+    var sc = document.getElementById("sn-reader-content");
+    var anchor = area.firstElementChild;
+    var t0 = anchor ? anchor.getBoundingClientRect().top : 0;
+    area.insertBefore(div, area.firstChild);
+    if (anchor && sc) {
+      var d = anchor.getBoundingClientRect().top - t0;
+      if (d) sc.scrollTop += d;
+    }
+  }
+
+  // deferPrepend: הפרק הקודם בפתיחת סעיף — נבנה מחוץ למסך ונכנס מעל רק כשהוא מוכן (_snPrependKeep)
+  async function _snLoadChapter(idx, area, prepend, reuseDiv, deferPrepend) {
     if (!_bk) return;
     var sections = _sbk ? _sbk.sections : _bk.sections;
     if (idx < 0 || idx >= sections.length) return;
@@ -33534,7 +33731,7 @@ function openSefarimNosafimPage(_pageMode) {
       _snSoftDone = true;
       if (typeof window._uxSoftIn === "function") window._uxSoftIn(Array.prototype.slice.call(chapterDiv.children, 1), _snPh);
     };
-    if (!reuseDiv) {
+    if (!reuseDiv && !deferPrepend) {
       if (prepend && area.firstChild) area.insertBefore(chapterDiv, area.firstChild);
       else area.appendChild(chapterDiv);
     }
@@ -33548,11 +33745,12 @@ function openSefarimNosafimPage(_pageMode) {
     clearTimeout(_slowT);
     // הפרק הוסר בזמן הטעינה (מעבר ספר / רינדור-מחדש אחרי שינוי מפרשים) — לא ממשיכים
     // לשלוף פירושים של ספר אחר עבור div יתום
-    if (!chapterDiv.isConnected) return;
+    if (deferPrepend ? !area.isConnected : !chapterDiv.isConnected) return;
     if (he && he._snFailed) {
       // תקלת רשת/ספריא — לא "לא נמצא טקסט": כרטיס "נסה שוב" + ניסיון אוטומטי
       // (כל 12 שניות עד 10 פעמים, ומיד כשהחיבור חוזר). הצלחה מחליפה את הכרטיס בטקסט.
       _snRenderFailedChapter(chapterDiv, heading, idx, area);
+      if (deferPrepend) _snPrependKeep(area, chapterDiv);
       return;
     }
     var isMBBook = _bk && _bk.id === "mishna-berura";
@@ -33677,7 +33875,12 @@ function openSefarimNosafimPage(_pageMode) {
 
     // השכבות (שו"ע / פירושים) נכנסות גם מעל השורה שנקראת — שורת הקריאה נשארת במקומה
     var _snFinalHtml = heading + saBlockHtml + parasHtml + bottomNotes;
-    _fsaKeepAround(area, function() { chapterDiv.innerHTML = _snFinalHtml; });
+    if (deferPrepend) {
+      chapterDiv.innerHTML = _snFinalHtml;
+      if (area.isConnected) _snPrependKeep(area, chapterDiv);
+    } else {
+      _fsaKeepAround(area, function() { chapterDiv.innerHTML = _snFinalHtml; });
+    }
     _snSoft();
   }
 
@@ -33790,20 +33993,25 @@ function openSefarimNosafimPage(_pageMode) {
     cred.innerHTML = (_bk.creditUrl
       ? "<a href=\"" + _bk.creditUrl + "\" target=\"_blank\" rel=\"noopener\" style=\"color:#94a3b8;font-size:0.7rem;text-decoration:none;\">" + _bk.credit + "</a>"
       : "<span style=\"color:#94a3b8;font-size:0.7rem;\">" + _bk.credit + "</span>");
+    // מוסתר (בלי לשנות פריסה) עד שהפרק נטען: עד 09/2026 שורת הקרדיט הופיעה מיד מתחת
+    // לכותרת בזמן הטעינה ונדחפה החוצה כשהטקסט הגיע — "הבהוב" בכל כניסה לסימן/פרק
+    cred.style.visibility = "hidden";
     content.appendChild(cred);
 
     _snLoadedIdx = new Set();
     var _snOpenT = Date.now();
 
-    // Load prev (if exists), current, next (if exists)
-    if (idx > 0) await _snLoadChapter(idx - 1, area, false);
+    // הפרק המבוקש נטען ומוצג ראשון (בראש הקורא); הקודם נבנה מחוץ למסך ונכנס מעליו רק כשהוא
+    // מוכן — בלי להזיז את מה שעל המסך; הבא נוסף מתחת. עד 09/2026 הקודם נטען ראשון: בכניסה
+    // לסימן נראה קודם טקסט הסימן הקודם, ורק אחרי שהכול נטען הקורא "קפץ" לסימן המבוקש
     await _snLoadChapter(idx, area, false);
-    if (idx < sections.length - 1) await _snLoadChapter(idx + 1, area, false);
-
+    cred.style.visibility = "";
     // Scroll to current chapter — אלא אם המשתמש כבר הגדיל/הקטין כתב בזמן הטעינה (ספריא איטית):
     // עוגן הגלילה שמר את השורה שהוא קורא, והקפיצה לראש הפרק הייתה "מבריחה" אותה
     var currentEl = document.getElementById("sn-chapter-" + idx);
     if (currentEl && !_fontScrollAnchorSince(content, _snOpenT)) currentEl.scrollIntoView({ block: "start" });
+    if (idx > 0) await _snLoadChapter(idx - 1, area, true, null, true);
+    if (idx < sections.length - 1) await _snLoadChapter(idx + 1, area, false);
     // אם החיפוש העביר אותנו לכאן — קפיצה למיקום המדויק של המילים בתוך הפרק
     if (hlWords && hlWords.length) {
       setTimeout(function() {

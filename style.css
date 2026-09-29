@@ -4338,12 +4338,10 @@ body.lux-shabbat-scene-on #countdown-display {
   background: #04070f;
   direction: rtl;
   overflow: hidden;
-  animation: lux-st-in 0.28s ease;
+  /* בלי אנימציית כניסה משלו: עד 09/2026 השכבה דהתה פנימה (opacity 0→1 + זום) — הדשבורד
+     הצבעוני נראה מבעד לטקסט כ-0.3 שנ' (ריצוד). עכשיו אטום מהפריים הראשון; התוכן עולה
+     בפתיחה האחידה (_uxEnter ב-script.js) */
   touch-action: pan-y;
-}
-@keyframes lux-st-in {
-  from { opacity: 0; transform: scale(1.04); }
-  to { opacity: 1; transform: none; }
 }
 .lux-st-bars {
   position: absolute;
@@ -4362,15 +4360,18 @@ body.lux-shabbat-scene-on #countdown-display {
   overflow: hidden;
   direction: ltr;
 }
+/* המילוי ב-transform (על ה-GPU) ולא ב-width — width מחשב פריסה בכל פריים במשך 6 שניות */
 .lux-st-bar i {
   display: block;
   height: 100%;
-  width: 0%;
+  width: 100%;
   background: linear-gradient(90deg, #e0b74f, #f2d98a);
   border-radius: 2px;
+  transform: scaleX(0);
+  transform-origin: left center;
 }
-.lux-st-bar.lux-st-done i { width: 100%; }
-@keyframes lux-st-fill { from { width: 0%; } to { width: 100%; } }
+.lux-st-bar.lux-st-done i { transform: none; }
+@keyframes lux-st-fill { from { transform: scaleX(0); } to { transform: none; } }
 .lux-st-x {
   position: absolute;
   top: calc(1.4rem + env(safe-area-inset-top));
@@ -4403,14 +4404,9 @@ body.lux-shabbat-scene-on #countdown-display {
   justify-content: center;
   text-align: center;
   padding: 3.5rem 1.6rem;
-  animation: lux-st-slide-in 0.4s ease;
   background:
     radial-gradient(ellipse 120% 60% at 50% -5%, rgba(232, 193, 90, 0.14) 0%, transparent 55%),
     linear-gradient(165deg, #050b1a 0%, #0c1530 55%, #16233f 100%);
-}
-@keyframes lux-st-slide-in {
-  from { opacity: 0; transform: translateX(-14px); }
-  to { opacity: 1; transform: none; }
 }
 .lux-st-slide.lux-st-pearl {
   background:
@@ -7969,7 +7965,8 @@ body.lux-season-av9 .lux-hero-orb { opacity: 0.15; }
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.09), 0 4px 14px rgba(0, 0, 0, 0.22);
   direction: rtl;
   text-align: right;
-  animation: hil-card-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+  /* בלי דהייה-פנימה מדורגת לכל כרטיס (hil-card-in, עד 09/2026): הרשימה נראתה כ"שלב שני"
+     אחרי שהחלון כבר נפתח, ובכל דפדוף בין ימים (‹ ›) היא "נטענה מחדש" מול העין */
   transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 @media (hover: hover) {
@@ -9185,8 +9182,10 @@ html.dark .prayer-next-cta { box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45); }
    העקרונות (שלושה סבבים בטלפון, 29/09): התוכן מלא ולא שקוף מהפריים הראשון; בלי השהיה;
    בלי "שני שלבים" (רקע ואז תוכן / תוכן ואז רקע) — הכול מתחיל ונגמר יחד.
    ═══════════════════════════════════════════════════════ */
-/* ליריעות lux יש אנימציית כניסה משלהן (lux-yw-card-in, עם שקיפות) — הפתיחה האחידה במקומה */
-body > .lux-sheet-overlay > .lux-sheet {
+/* ליריעות lux ולתוכן העניינים (☰ בקוראים) יש אנימציית כניסה משלהן (lux-yw-card-in, עם שקיפות —
+   טקסט הקורא נראה מבעד לכרטיס) — הפתיחה האחידה במקומה. במובייל התוכן-עניינים כבר היה בלי */
+body > .lux-sheet-overlay > .lux-sheet,
+body > #chapter-nav-popup > .cnp-card {
   animation: none;
 }
 @keyframes ux-pop {
@@ -9195,10 +9194,9 @@ body > .lux-sheet-overlay > .lux-sheet {
 @keyframes ux-reveal {
   from { translate: 0 -6px; }
 }
-/* סגירת המודאלים הסטטיים (לוח שנה, הגדרות, מצפן, ספריא, חוק לישראל, עומר: מוסיפים
-   opacity-0 ואחרי 300ms hidden) — כמו _uxFadeRemove: התוכן נעלם מהר והרקע מתבהר מהרגע
-   הראשון (ease-out). עד גרסה 3 הרקע נשאר כהה ורק אז התבהר (ease-in) — "מצמוץ" של מסך
-   כהה ריק באמצע הסגירה */
+/* רשת ביטחון בלבד: המודאלים הסטטיים (לוח שנה, הגדרות, מצפן, ספריא, חוק לישראל, עומר) נסגרים
+   מ-09/2026 (גרסה 5) דרך _uxHideModal ב-script.js — הכרטיס צונח אטום והרקע מתבהר, ורק בסוף
+   opacity-0 + hidden יחד. הכללים כאן חלים רק על מסלול ישן שמוסיף opacity-0 לבד ואחריו hidden */
 body > [id$="-modal"].opacity-0:not(.hidden) {
   transition-duration: 0.18s;
   transition-timing-function: cubic-bezier(0.33, 1, 0.68, 1);

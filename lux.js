@@ -788,6 +788,14 @@
       });
     }
     setInterval(function () { if (!document.hidden) syncReaderBtns(); }, 1200);
+    // לפני הציור הראשון של חלון/תצוגה שנפתחים (script.js: _uxEnter / _uxEnterView /
+    // pushModalState) — הכפתור כבר בכותרת. עד 09/2026 הוא חיכה לטיימר (150ms–1.2 שנ'),
+    // נכנס לכותרת אחרי שהקורא צויר, הכותרת נשברה לשתי שורות וכל הטקסט "קפץ" מטה
+    (window.__uxPreEnter = window.__uxPreEnter || []).push(function () {
+      if (document.hidden) return;
+      syncReaderBtns();
+      ensureTapHosts();
+    });
     var _mkPend = null;
     try {
       new MutationObserver(function () {
@@ -888,33 +896,18 @@
           if (Array.isArray(plans) && plans.length && plans[0] && plans[0].id && typeof window.luxOpenPlanReader === "function") window.luxOpenPlanReader(plans[0].id);
           else if (typeof window.luxOpenPlanWizard === "function") window.luxOpenPlanWizard();
         };
-        // בקשת משתמש 02/09/2026: קודם גוללים לכרטיס "סדר הלימוד האישי שלי" בדף
-        // ורק אז פותחים. אם הכרטיס כבר נראה במסך (או שטרם הוזרק) — פותחים מיד.
-        // פותחים רק אחרי שהגלילה נרגעה (שתי דגימות scrollY זהות) — פתיחה באמצע
-        // גלילה חלקה גורמת לנעילת המודאל ללכוד מיקום ביניים, והסגירה מחזירה
-        // את המשתמש לאמצע הדרך במקום לכרטיס. טיימאאוט 1.6ש' לכל מקרה.
+        // בקשת משתמש 02/09/2026: הדף מגיע לכרטיס "סדר הלימוד האישי שלי" — כך שבסגירה
+        // חוזרים אליו. מ-09/2026 זו קפיצה מיידית *מאחורי* החלון שנפתח באותו פריים (הרקע
+        // נפתח כהה במלואו — _uxDimHandoff — כך שהקפיצה לא נראית). עד אז: גלילה חלקה דרך כל
+        // הדשבורד (~0.5 שנ' של תוכן שטס — "ריצוד") ורק אחרי ~1.3 שנ' החלון נפתח.
         var row = document.getElementById("lux-plan-row");
         var vh = window.innerHeight || document.documentElement.clientHeight;
         var r = row ? row.getBoundingClientRect() : null;
         if (row && (r.top < 0 || r.bottom > vh)) {
-          row.scrollIntoView({ behavior: "smooth", block: "center" });
-          var lastY = -1, ticks = 0;
-          var iv = setInterval(function () {
-            ticks++;
-            var y = window.scrollY;
-            if (y === lastY || ticks > 10) {
-              clearInterval(iv);
-              // רשת ביטחון: גלילה שנקטעה (או סביבה בלי אנימציות גלילה) משאירה
-              // את הכרטיס מחוץ למסך — משלימים בקפיצה מיידית לפני הפתיחה
-              var r2 = row.getBoundingClientRect();
-              if (r2.top < 0 || r2.bottom > vh) row.scrollIntoView({ block: "center" });
-              openIt();
-            }
-            lastY = y;
-          }, 160);
-        } else {
-          openIt();
+          row.scrollIntoView({ block: "center" });
+          if (typeof window._uxDimHandoff === "function") window._uxDimHandoff();
         }
+        openIt();
       } },
       { id: "zmanim", icon: "⏰", label: "זמנים", run: function () { var z = document.getElementById("halacha-banner"); if (z) z.scrollIntoView({ behavior: "smooth", block: "center" }); } },
       { id: "settings", icon: "⚙️", label: "הגדרות", run: function () { if (typeof window.toggleSettings === "function") window.toggleSettings(); } },
@@ -2568,13 +2561,28 @@
         window.showToast("📖 הפרק סומן כנקרא (" + readSet().length + "/150)", "success", 2000);
       }
     });
-    // debounce — מריצים את ההעשרה לכל היותר פעם ב-200ms, לא על כל מוטציה
+    // חלון התהילים הפתוח — בלי getElementById: הוא מסיים מיד חלון שבאמצע יציאה, וההצצה
+    // התקופתית כאן הייתה קוטעת את אנימציית הסגירה באמצע
+    function liveModal() {
+      var m = document.querySelector("body > #tehillim-modal");
+      return m && !m.__uxClosing ? m : null;
+    }
+    // פס ההתקדמות וסימוני הזהב נכנסים *לפני הציור הראשון*: בפתיחה (וו של script.js, לפני
+    // מדידת אנימציית הפתיחה) ובהחלפת יום (innerHTML חדש ⇒ המוטציה כאן, באותה משימה). עד
+    // 09/2026 הם חיכו לטיימר של 200ms — הפס נכנס אחרי שהחלון כבר צויר ודחף את כל הרשימה מטה
+    function enhanceNow() {
+      var m = liveModal();
+      if (m && !m.querySelector("#lux-th-progress")) enhance(m);
+    }
+    (window.__uxPreEnter = window.__uxPreEnter || []).push(enhanceNow);
+    // debounce — שאר ההעשרה (כפתורי "סמן שנקרא" בסוף פרק שנטען) לכל היותר פעם ב-200ms
     var pendingEnh = null;
     new MutationObserver(function () {
+      enhanceNow();
       if (pendingEnh) return;
       pendingEnh = setTimeout(function () {
         pendingEnh = null;
-        var modal = document.getElementById("tehillim-modal");
+        var modal = liveModal();
         if (modal) enhance(modal);
       }, 200);
     }).observe(document.body, { childList: true, subtree: true });
@@ -2733,8 +2741,8 @@
       ov.querySelector(".lux-sheet-cancel").addEventListener("click", function () { luxModalClose("lux-names-editor"); });
     }
     function renderBanner() {
-      var modal = document.getElementById("tehillim-modal");
-      if (!modal) return;
+      var modal = document.querySelector("body > #tehillim-modal");
+      if (!modal || modal.__uxClosing) return;
       var old = modal.querySelector("#lux-names-banner");
       var arr = names();
       if (!arr.length) { if (old) old.remove(); return; }
@@ -2748,25 +2756,34 @@
       if (prog) prog.insertAdjacentElement("afterend", el);
       else if (modal.firstElementChild) modal.firstElementChild.insertAdjacentElement("afterend", el);
     }
-    // כפתור בכותרת התהילים + באנר — עם debounce נגד לולאות
+    // כפתור 🙏 בכותרת התהילים + באנר השמות. נכנסים לפני הציור הראשון (בפתיחה ובהחלפת יום)
+    // — עד 09/2026 חיכו לטיימר של 200ms: הכפתור הזיז את כותרת החלון והבאנר דחף את הרשימה
+    // אחרי שהחלון כבר צויר. בדיקה בלבד על כל מוטציה (זול); ההזרקה רק כשהכפתור חסר
+    function namesInject() {
+      var modal = document.querySelector("body > #tehillim-modal");
+      if (!modal || modal.__uxClosing) return;
+      var bmBtn = modal.querySelector("#th-bm-toggle-btn");
+      if (bmBtn && !modal.querySelector("#lux-names-btn")) {
+        var b = document.createElement("button");
+        b.id = "lux-names-btn";
+        b.type = "button";
+        b.title = "שמות לתפילה";
+        b.setAttribute("style", bmBtn.getAttribute("style") || "");
+        b.textContent = "🙏";
+        b.addEventListener("click", openEditor);
+        bmBtn.insertAdjacentElement("beforebegin", b);
+        renderBanner();
+      }
+    }
+    (window.__uxPreEnter = window.__uxPreEnter || []).push(namesInject);
+    // debounce נגד לולאות — עדכון הבאנר אחרי שינויים אחרים
     var pendingNames = null;
     new MutationObserver(function () {
+      namesInject();
       if (pendingNames) return;
       pendingNames = setTimeout(function () {
         pendingNames = null;
-        var modal = document.getElementById("tehillim-modal");
-        if (!modal) return;
-        var bmBtn = modal.querySelector("#th-bm-toggle-btn");
-        if (bmBtn && !modal.querySelector("#lux-names-btn")) {
-          var b = document.createElement("button");
-          b.id = "lux-names-btn";
-          b.type = "button";
-          b.title = "שמות לתפילה";
-          b.setAttribute("style", bmBtn.getAttribute("style") || "");
-          b.textContent = "🙏";
-          b.addEventListener("click", openEditor);
-          bmBtn.insertAdjacentElement("beforebegin", b);
-        }
+        namesInject();
         renderBanner();
       }, 200);
     }).observe(document.body, { childList: true, subtree: true });
@@ -4299,8 +4316,10 @@
       clearInterval(tickT);
       // שעון חי — מתעדכן כל שנייה (שניות רצות + מחוג + קשת ההתקדמות)
       tickT = setInterval(function () {
-        var el = document.getElementById("lux-hc-modal");
-        if (!el) { clearInterval(tickT); return; }
+        // querySelector ולא getElementById — האחרון מסיים מיד חלון שבאמצע סגירה, והטיק הזה
+        // (פעם בשנייה) היה קוטע את אנימציית הסגירה באמצע
+        var el = document.querySelector("body > #lux-hc-modal");
+        if (!el || el.__uxClosing) { clearInterval(tickT); return; }
         render(el);
       }, 1000);
     }
@@ -5734,7 +5753,7 @@
           '<button type="button" class="lux-sel-close" aria-label="סגור">✕</button>' +
           '<div class="lux-pl-head-prog" aria-hidden="true"><div class="lux-pl-head-fill" style="width:' + hdPct + '%;"></div></div>' +
         "</div>" +
-        '<div id="lux-pl-area" class="lux-sel-area holy-text-style"><p style="text-align:center;color:#94a3b8;padding:2rem;">טוען את הלימוד של היום...</p></div>' +
+        '<div id="lux-pl-area" class="lux-sel-area holy-text-style"><div class="ux-ph"><p style="text-align:center;color:#94a3b8;padding:2rem;">טוען את הלימוד של היום...</p></div></div>' +
         '<div class="lux-sel-foot">' +
           '<button type="button" id="lux-pl-fminus" class="lux-sel-fbtn" aria-label="הקטן כתב">−</button>' +
           '<button type="button" id="lux-pl-fplus" class="lux-sel-fbtn" aria-label="הגדל כתב">+</button>' +
@@ -5895,7 +5914,11 @@
         var token = ++loadToken;
         var html = "";
         var idx = from;
-        area.innerHTML = '<p style="text-align:center;color:#94a3b8;padding:2rem;">טוען את הלימוד של היום...</p>';
+        // "טוען..." מופיע רק אם הטעינה באמת נמשכת (.ux-ph — אחרי 0.45 שנ'), והטקסט נכנס ברכות
+        // רק אם ההודעה הספיקה להיראות (_uxSoftIn). עד 09/2026: ההודעה הבהבה לרגע והתחלפה
+        // בבת אחת בטקסט — "נפתח ואז נטען מחדש"
+        area.innerHTML = '<div class="ux-ph"><p style="text-align:center;color:#94a3b8;padding:2rem;">טוען את הלימוד של היום...</p></div>';
+        var ph = typeof window._uxPhMark === "function" ? window._uxPhMark() : null;
         // נושאי הכלים המסומנים ordered משובצים בתוך טקסט היחידה לפי דיבור-המתחיל — אותו מנגנון
         // כמו בקורא "ספרים נוספים" (_buildTextWithInlineComments, script.js); שכבה בלי ordered
         // (טקסט השו"ע כ"פירוש" של המשנה ברורה) מוצגת כבלוק אחרי היחידה. בלוקים ששכבה לא
@@ -5934,6 +5957,7 @@
           if (idx >= to) {
             area.innerHTML = html + '<div class="lux-sel-credit">✦<br>המקור: ספריית Sefaria.org (רישיון פתוח)<br>לימוד פורה! 🙌</div>';
             area.scrollTop = 0;
+            if (typeof window._uxSoftIn === "function") window._uxSoftIn(area.children, ph);
             return;
           }
           var i = idx++;
@@ -6799,6 +6823,8 @@
         if (!m || !m.isConnected || m.classList.contains("hidden") || !isVisible(m)) x.remove();
       });
       document.querySelectorAll(SEL).forEach(function (modal) {
+        // חלון באמצע יציאה (script.js: _uxExit) — לא נוגעים: בלי הזרקת X ובלי ריפוד כותרת בזמן התנועה
+        if (modal.__uxClosing || modal.__uxExitFinish) return;
         if (modal.classList.contains("hidden") || !isVisible(modal)) { modal.__luxUx = null; modal.__luxUxOwn = null; return; }
         // רק שכבות-על אמיתיות (מכסות את רוב המסך) — פופאפים קטנים עם X משלהם לא רלוונטיים
         var cs = getComputedStyle(modal);

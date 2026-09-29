@@ -399,7 +399,7 @@
          ו-preload לגופן הכותרת (העברית של Assistant) — LCP יציב ומהיר. -->
     <link rel="preload" href="/fonts/assistant-hebrew.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="/fonts.css?v=1" />
-    <link rel="stylesheet" href="style.css?v=67" />
+    <link rel="stylesheet" href="style.css?v=71" />
     <!-- בלי ציור ראשון של "חצי הירו": הסקריפט של באנר היום (לפני ה-h1) גורם למפרסר לפנות
          את התור, ו-Chrome צייר את ההירו חלקי — ואז קו הגל שבתחתיתו קפץ למטה (CLS). כאן
          הציור הראשון מחכה עד שכל ההירו נפרסר (עד #main-content — מילישניות בודדות).
@@ -416,8 +416,8 @@
     <!-- הקוד הראשי יורד מוקדם (preload) אך מוזרק ומתבצע רק אחרי הציור הראשון —
          ראו הטוען בסוף ה-body. ה-?v= כאן חייב להיות זהה לזה שבטוען וב-sw.js.
          fetchpriority=low: שלא יתחרו ברוחב-הפס עם ה-CSS החוסם (FCP) — כמו defer. -->
-    <link rel="preload" href="script.js?v=62" as="script" fetchpriority="low" />
-    <link rel="preload" href="lux.js?v=62" as="script" fetchpriority="low" />
+    <link rel="preload" href="script.js?v=63" as="script" fetchpriority="low" />
+    <link rel="preload" href="lux.js?v=63" as="script" fetchpriority="low" />
 
     <!-- OneSignal Web Push SDK -->
     <script>
@@ -1075,38 +1075,40 @@
           class="hidden mt-4 glass-card rounded-[2rem] p-5 flex-col items-center text-sm text-blue-100 gap-4 opacity-0 transition-opacity duration-500 w-full max-w-4xl mx-auto"
           aria-label="זמני הלכה"
         >
-          <div class="flex flex-row items-center justify-center gap-3 flex-wrap">
-            <button
-              id="shnayim-mikra-link"
-              onclick="event.preventDefault()"
-              class="flex items-center justify-center gap-2 font-bold text-white bg-blue-600/40 hover:bg-blue-600/60 transition-colors px-4 py-2 rounded-xl border border-blue-400/30 w-auto group shadow-md"
-            >
-              <span>📜 שנים מקרא ואחד תרגום</span>
-              <span id="shnayim-mikra-text" class="shnayim-parsha-suffix">מחשב...</span>
+          <!-- ארבעת כפתורי הלימוד — אייקון · כותרת · התוכן של היום · חץ. המזהים והפעולות
+               קבועים (script.js ממלא את הטקסטים ומחבר את הלחיצות); העיצוב — style.css "#study-links" -->
+          <div id="study-links" role="group" aria-label="לימוד יומי">
+            <button type="button" id="shnayim-mikra-link" class="study-card sc-sapphire" onclick="event.preventDefault()">
+              <span class="sc-ico" aria-hidden="true">📜</span>
+              <span class="sc-body">
+                <span class="sc-title">שניים מקרא ואחד תרגום</span>
+                <span id="shnayim-mikra-text" class="sc-sub">מחשב...</span>
+              </span>
+              <svg class="sc-go" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" /></svg>
             </button>
-            <button
-              id="chok-israel-btn"
-              onclick="event.preventDefault(); openChokLeIsraelModal();"
-              class="flex items-center justify-center gap-2 font-bold text-white bg-emerald-600/40 hover:bg-emerald-600/60 transition-colors px-4 py-2 rounded-xl border border-emerald-400/30 w-full md:w-auto group shadow-md"
-            >
-              <span>📗 חוק לישראל:</span>
-              <span id="chok-israel-text">מחשב...</span>
+            <button type="button" id="chok-israel-btn" class="study-card sc-emerald" onclick="event.preventDefault(); openChokLeIsraelModal();">
+              <span class="sc-ico" aria-hidden="true">📗</span>
+              <span class="sc-body">
+                <span class="sc-title">חוק לישראל</span>
+                <span id="chok-israel-text" class="sc-sub">מחשב...</span>
+              </span>
+              <svg class="sc-go" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" /></svg>
             </button>
-            <button
-              id="daf-yomi-link"
-              onclick="event.preventDefault()"
-              class="flex items-center justify-center gap-2 font-bold text-white bg-blue-600/40 hover:bg-blue-600/60 transition-colors px-4 py-2 rounded-xl border border-blue-400/30 w-auto group shadow-md"
-            >
-              <span>📖 הדף היומי:</span>
-              <span id="daf-yomi-text">מחשב...</span>
+            <button type="button" id="daf-yomi-link" class="study-card sc-indigo" onclick="event.preventDefault()">
+              <span class="sc-ico" aria-hidden="true">📖</span>
+              <span class="sc-body">
+                <span class="sc-title">הדף היומי</span>
+                <span id="daf-yomi-text" class="sc-sub">מחשב...</span>
+              </span>
+              <svg class="sc-go" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" /></svg>
             </button>
-            <button
-              id="month-torah-btn"
-              onclick="if(window.openMonthTorahModal) window.openMonthTorahModal()"
-              class="flex items-center justify-center gap-2 font-bold text-white bg-purple-600/40 hover:bg-purple-600/60 transition-colors px-4 py-2 rounded-xl border border-purple-400/30 w-auto group shadow-md md:order-3 order-last w-full md:w-auto"
-            >
-              <span>🌙 דבר תורה לחודש</span>
-              <span id="stat-hebrew-month" class="opacity-75 font-normal text-sm"></span>
+            <button type="button" id="month-torah-btn" class="study-card sc-amethyst" onclick="if(window.openMonthTorahModal) window.openMonthTorahModal()">
+              <span class="sc-ico" aria-hidden="true">🌙</span>
+              <span class="sc-body">
+                <span class="sc-title">דבר תורה לחודש</span>
+                <span id="stat-hebrew-month" class="sc-sub"></span>
+              </span>
+              <svg class="sc-go" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" /></svg>
             </button>
           </div>
 
@@ -2790,8 +2792,8 @@
               });
             },
           });
-          addScript("script.js?v=62");
-          addScript("lux.js?v=62");
+          addScript("script.js?v=63");
+          addScript("lux.js?v=63");
         }
         function afterFirstPaint() {
           // rAF אחד (רץ ממש לפני ציור הפריים הראשון) ואז setTimeout(0) — משימה

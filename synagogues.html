@@ -1263,8 +1263,17 @@
         document.body.style.overflow = "hidden";
         if (!_betaPopupOpen) {
           _betaPopupOpen = true;
-          try { history.pushState({ shulBetaPopup: true }, ""); } catch (e) {}
+          try {
+            // חלונית בחירת היישוב נסגרה באותה נגיעה (התג עצמו) — הפופאפ יורש את רשומת
+            // ההיסטוריה שלה, במקום back+push שמתנגשים (ה-back היה סוגר את הפופאפ מיד)
+            if (window.__shulHistHandoff && history.state && history.state.shulCityPick) {
+              history.replaceState({ shulBetaPopup: true }, "");
+            } else {
+              history.pushState({ shulBetaPopup: true }, "");
+            }
+          } catch (e) {}
         }
+        window.__shulHistHandoff = false;
       }
       function _betaPopupHide() {
         const p = document.getElementById("beta-popup");
@@ -1430,14 +1439,58 @@
       // לא דורס אותה — רק "עדכן מיקום".
       let manualLocation = false;
       const _normCityName = (s) => String(s || "").replace(/["'׳״]/g, "").replace(/[\s\-־]+/g, " ").trim();
-      function toggleCityPick(force) {
+      // ── "חזור" ונגיעה מחוץ לחלונית סוגרים אותה (לא יוצאים מהעמוד) ──
+      // אותו דפוס history-safe כמו פופאפ הבטא: פתיחה ע"י המשתמש דוחפת state, popstate
+      // סוגר; סגירה יזומה (בחירת יישוב / נגיעה בחוץ / Esc / הכפתור) צורכת את ה-state
+      // ב-history.back(). פתיחה אוטומטית (כשאיתור המיקום נכשל) — בלי state.
+      let _cityPickHist = false;
+      function _cityPickHistPush() {
+        if (_cityPickHist) return;
+        _cityPickHist = true;
+        // state שנשאר מרענון כשהחלונית הייתה פתוחה — משתמשים בו, בלי רשומה כפולה
+        if (history.state && history.state.shulCityPick) return;
+        try { history.pushState({ shulCityPick: true }, ""); } catch (e) {}
+      }
+      function _cityPickHistPop(handoff) {
+        if (!_cityPickHist) return;
+        _cityPickHist = false;
+        // handoff — הנגיעה שסגרה פותחת חלון אחר (תג הבטא) שיורש את הרשומה (replaceState)
+        if (handoff) { window.__shulHistHandoff = true; return; }
+        if (history.state && history.state.shulCityPick) history.back();
+      }
+      window.addEventListener("popstate", function () {
+        if (!_cityPickHist) return;
+        // עדיין על הרשומה של החלונית (נסגר חלון אחר שנפתח מעליה) — נשארת פתוחה
+        if (history.state && history.state.shulCityPick) return;
+        _cityPickHist = false;
+        toggleCityPick(false);
+      });
+      // נגיעה/לחיצה בכל מקום מחוץ לחלונית — במחשב ובמובייל (pointerdown: גם נגיעה שמתחילה גלילה)
+      document.addEventListener("pointerdown", function (e) {
+        const box = document.getElementById("city-pick");
+        const t = e.target;
+        if (!box || box.style.display === "none" || !t || !t.closest) return;
+        if (t.closest("#city-pick, #btn-city-pick, #beta-popup, #tzaddik-prayers-modal")) return;
+        const input = document.getElementById("city-input");
+        if (input && document.activeElement === input) input.blur(); // סוגר גם את המקלדת במובייל
+        // קישור (יציאה מהעמוד) — בלי back שיתנגש בניווט; תג הבטא — יורש את הרשומה
+        if (t.closest("a[href]")) { _cityPickHist = false; toggleCityPick(false); return; }
+        toggleCityPick(false, t.closest("#beta-pill") ? "handoff" : undefined);
+      }, true);
+      function toggleCityPick(force, how) {
         const box = document.getElementById("city-pick");
         const btn = document.getElementById("btn-city-pick");
         if (!box) return;
-        const open = typeof force === "boolean" ? force : box.style.display === "none";
+        const wasOpen = box.style.display !== "none";
+        const open = typeof force === "boolean" ? force : !wasOpen;
         box.style.display = open ? "" : "none";
         if (btn) btn.setAttribute("aria-expanded", open ? "true" : "false");
-        if (!open) { closeCitySuggest(); return; }
+        if (!open) {
+          closeCitySuggest();
+          _cityPickHistPop(how === "handoff");
+          return;
+        }
+        if (!wasOpen && typeof force !== "boolean") _cityPickHistPush();
         loadPlaces("cities"); // טעינה מוקדמת — ההצעות מוכנות כשמתחילים להקליד
         if (typeof force !== "boolean") {
           setTimeout(() => { try { document.getElementById("city-input").focus(); } catch (e) {} }, 60);
@@ -1564,6 +1617,7 @@
           else if (e.key === "ArrowUp") { e.preventDefault(); if (open) setCityActive(_cityActive - 1); }
           else if (e.key === "Enter" && open && _cityActive >= 0 && _cityItems[_cityActive]) { e.preventDefault(); chooseCity(_cityItems[_cityActive]); }
           else if (e.key === "Escape" && open) { e.preventDefault(); closeCitySuggest(); }
+          else if (e.key === "Escape") { e.preventDefault(); input.blur(); toggleCityPick(false); }
         });
         if (clr) clr.addEventListener("click", () => { input.value = ""; clr.hidden = true; input.focus(); renderCitySuggest(); });
       })();

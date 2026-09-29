@@ -1,4 +1,4 @@
-const STATIC_CACHE = "moadim-static-v98";
+const STATIC_CACHE = "moadim-static-v99";
 // מטמון ריצה: תשובות API וקבצים חיצוניים (ספריא, hebcal, פונטים, ספריות CDN)
 // נשמרים אחרי הצפייה הראשונה — כך האתר, התפילות והספרים עובדים גם בלי אינטרנט.
 const RUNTIME_CACHE = "moadim-runtime-v1";
@@ -16,9 +16,9 @@ const STATIC_ASSETS = [
   // חשוב: ה-?v= כאן חייב להיות זהה לזה שב-index.html — כך ההתקנה נענית
   // מ-HTTP cache (בלי הורדה כפולה של ~3MB) והבקשות מהדף פוגעות במטמון
   // בדיוק; סטייה עתידית מכוסה ע"י ה-fallback עם ignoreSearch.
-  "/script.js?v=62",
-  "/lux.js?v=62",
-  "/style.css?v=67",
+  "/script.js?v=63",
+  "/lux.js?v=63",
+  "/style.css?v=71",
   "/tailwind.css?v=2",
   "/fonts.css?v=1",
   "/fonts/assistant-hebrew.woff2",
@@ -118,9 +118,43 @@ function placesResponse(request, url) {
 // איטית מזה, עונים מהעותק השמור והבקשה לרשת ממשיכה ברקע ומעדכנת את המטמון
 // לפתיחה הבאה (כך גם גרסה חדשה של האתר נקלטת בביקור הבא, בלי להיתקע על ישנה).
 // בלי עותק שמור — מחכים לרשת כרגיל. אופליין מוצהר (navigator.onLine) — מיד מהמטמון.
-const NAV_NET_WINDOW_MS = 2500; // דף ה-HTML (ניווט)
-const CODE_NET_WINDOW_MS = 1200; // סקריפטים/עיצוב (ממוסמכים ב-?v=)
+// "הרשת ענתה" = התשובה הגיעה במלואה (bodyReady), לא רק הכותרות: ברשת חלשה הכותרות
+// מגיעות תוך שבריר שנייה והגוף זורם עשרות שניות — מרוץ על הכותרות השאיר את הדף
+// "נטען" בלי סוף למרות שעותק זהה חיכה במטמון (תוקן 29/09/2026).
+const NAV_NET_WINDOW_MS = 1500; // דף ה-HTML (ניווט) — כולל נכסי הקוד שהוא מפנה אליהם
+const CODE_NET_WINDOW_MS = 1200; // סקריפטים/עיצוב שאינם ממוסמכים (tailwind.css)
 const RUNTIME_NET_WINDOW_MS = 4000; // hebcal/ספריא/קבצים חיצוניים ובקשות GET אחרות
+
+// התשובה אחרי שכל הגוף ירד (עותק tee — הגוף של התשובה עצמה נשאר קריא ומגיע מיד).
+// opaque (no-cors) — אין גוף קריא, מוכנה עם הכותרות.
+function bodyReady(response) {
+  if (!response || response.type === "opaque") return Promise.resolve(response);
+  return response.clone().arrayBuffer().then(() => response);
+}
+
+// נכס קוד ממוסמך — אותה כתובת = אותו תוכן לתמיד: ?v= או גרסה בשם הקובץ
+// (kosher-zmanim-0.9.0.min.js, vendor/leaflet-1.9.4). tailwind.css נבנה מחדש בכל
+// דיפלוי תחת ?v=2 קבוע — ולכן אינו ממוסמך באמת.
+const MUTABLE_VERSIONED = ["/tailwind.css"];
+function isVersionedAsset(url) {
+  if (MUTABLE_VERSIONED.includes(url.pathname)) return false;
+  return url.searchParams.has("v") || /\d+\.\d+\.\d+/.test(url.pathname);
+}
+
+// נכסי הקוד הממוסמכים (?v=) שדף HTML מפנה אליהם
+function versionedRefs(html) {
+  const refs = new Set();
+  const re = /["'(]\/?([\w.\-/]+\.(?:js|css)\?v=[\w.-]+)["')]/g;
+  let m;
+  while ((m = re.exec(html))) refs.add("/" + m[1]);
+  return [...refs];
+}
+function fetchCodeToCache(ref) {
+  return fetch(ref, { cache: "no-cache" }).then((response) => {
+    if (!response || !response.ok) throw response;
+    return caches.open(STATIC_CACHE).then((cache) => cache.put(ref, response));
+  });
+}
 // אחרי שחלון פקע (= הרשת איטית עכשיו) — במשך דקה כל מה שיש לו עותק שמור (דף, קוד,
 // נתונים) נענה מיד, בלי לחכות שוב לחלון (מעבר בין דפים/רענון ברשת חלשה); העדכון
 // מהרשת ממשיך ברקע כרגיל (בנכסי קוד ממוסמכים — אין צורך בו, ראו למטה)
@@ -187,17 +221,35 @@ function cacheShellIfConsistent(key, response) {
   return response
     .clone()
     .text()
-    .then((html) => {
-      const refs = new Set();
-      const re = /["'(]\/?([\w.\-/]+\.(?:js|css)\?v=[\w.-]+)["')]/g;
-      let m;
-      while ((m = re.exec(html))) refs.add("/" + m[1]);
-      return Promise.all([...refs].map((ref) => caches.match(ref))).then((hits) => {
+    .then((html) =>
+      Promise.all(versionedRefs(html).map((ref) => caches.match(ref))).then((hits) => {
         if (hits.some((hit) => !hit)) return;
         return caches.open(STATIC_CACHE).then((cache) => cache.put(key, response));
-      });
-    })
+      }),
+    )
     .catch(() => {});
+}
+
+// הדף מהרשת "מוכן" (כשיש עותק שמור להתחרות בו): ה-HTML ירד במלואו, וכל נכסי
+// הקוד שלו במטמון — או שירדו עכשיו (גרסה חדשה). אז הוא נשמר כעותק ומוצג; ברשת
+// איטית העותק השמור מוצג מיד כשהחלון פוקע, וההורדה ממשיכה ברקע ומכינה את הגרסה
+// החדשה (עקבית: דף + קוד) לפתיחה הבאה. 5xx — נדחית (העותק השמור עדיף); 404 מוצג.
+function networkShellReady(network, key) {
+  return network.then((response) => {
+    if (!response || response.status >= 500) throw response;
+    if (!response.ok) return response;
+    const forCache = response.clone();
+    return response
+      .clone()
+      .text()
+      .then((html) =>
+        Promise.all(
+          versionedRefs(html).map((ref) => caches.match(ref).then((hit) => hit || fetchCodeToCache(ref))),
+        ),
+      )
+      .then(() => caches.open(STATIC_CACHE).then((cache) => cache.put(key, forCache)))
+      .then(() => response);
+  });
 }
 
 function offlinePage() {
@@ -263,7 +315,7 @@ self.addEventListener("fetch", (event) => {
         .then((cached) => {
           if (!cached) return network.catch(() => Response.error());
           return raceNetworkWithCached(
-            network.then((r) => (r && (r.ok || r.type === "opaque") ? r : Promise.reject(r))),
+            network.then((r) => (r && (r.ok || r.type === "opaque") ? bodyReady(r) : Promise.reject(r))),
             cached,
             RUNTIME_NET_WINDOW_MS,
             null,
@@ -280,31 +332,28 @@ self.addEventListener("fetch", (event) => {
   }
 
   if (request.mode === "navigate") {
-    // ניווט: רשת תחילה בחלון של 2.5 שניות. רשת איטית/נפולה — הדף השמור מוצג מיד,
-    // והתשובה מהרשת (כשתגיע) מעדכנת את העותק לפתיחה הבאה.
+    // ניווט: הדף מהרשת מנצח רק אם הגיע במלואו (עם הקוד שלו) בתוך 1.5 שניות; רשת
+    // איטית/נפולה — הדף השמור מוצג, והרשת ממשיכה ברקע ומעדכנת לפתיחה הבאה.
     const key = navCacheKey(url);
-    let stored = Promise.resolve();
-    const network = fetch(request).then((response) => {
-      // רק תשובה תקינה נשמרת כעותק האופליין של הדף — 404/5xx לא דורסים עותק טוב
-      if (response && response.ok) {
-        stored = cacheShellIfConsistent(key, response.clone());
-      }
-      return response;
-    });
-    event.waitUntil(network.then(() => stored, () => {}));
+    let release;
+    event.waitUntil(new Promise((resolve) => (release = resolve)));
+    const network = fetch(request);
     event.respondWith(
       caches
         .match(key)
         .catch(() => null)
         .then((cached) => {
           if (cached) {
-            return raceNetworkWithCached(
-              // שגיאת שרת (5xx) — עדיף העותק השמור; 404 אמיתי מוצג כמו שהוא
-              network.then((r) => (r && r.status < 500 ? r : Promise.reject(r))),
-              cached,
-              NAV_NET_WINDOW_MS,
-            );
+            const ready = networkShellReady(network, key);
+            ready.then(release, release);
+            return raceNetworkWithCached(ready, cached, NAV_NET_WINDOW_MS);
           }
+          // אין עותק שמור (ביקור ראשון): רשת כרגיל. רק תשובה תקינה נשמרת כעותק
+          // האופליין, ורק אם הקוד שלה כבר במטמון — 404/5xx לא דורסים עותק טוב
+          network
+            .then((r) => (r && r.ok ? cacheShellIfConsistent(key, r.clone()) : null))
+            .catch(() => {})
+            .then(release);
           return network.catch(() =>
             caches
               .match("/index.html")
@@ -313,6 +362,10 @@ self.addEventListener("fetch", (event) => {
               // "Failed to convert value to 'Response'" — מחזירים דף שגיאה מסודר
               .then((fallback) => fallback || offlinePage()),
           );
+        })
+        .catch((err) => {
+          release();
+          throw err;
         }),
     );
     return;
@@ -348,7 +401,7 @@ self.addEventListener("fetch", (event) => {
         .then((cached) => {
           if (!cached) return network.catch(() => Response.error());
           return raceNetworkWithCached(
-            network.then((r) => (r && r.ok ? r : Promise.reject(r))),
+            network.then((r) => (r && r.ok ? bodyReady(r) : Promise.reject(r))),
             cached,
             RUNTIME_NET_WINDOW_MS,
           );
@@ -357,13 +410,37 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Network-first for scripts & styles: users always get the newest code
-  // when online (fixes "stuck on old version for weeks"); cache is only a
-  // fallback for offline. Other static assets (images/fonts) stay cache-first.
+  // סקריפטים ועיצוב: ממוסמכים (?v=) — מהמטמון מיד; לא ממוסמכים (tailwind.css) —
+  // רשת בחלון קצר עם גיבוי מטמון. שאר הנכסים (תמונות/גופנים) — מהמטמון תחילה.
+  // גרסה חדשה של האתר תמיד מגיעה עם ?v= חדש, כך שאין "תקיעה על גרסה ישנה".
   const isCodeAsset =
     request.destination === "script" ||
     request.destination === "style" ||
     request.destination === "worker";
+
+  if (isCodeAsset && isVersionedAsset(url)) {
+    // נכס ממוסמך (?v= / גרסה בשם הקובץ) — אותה כתובת = אותו תוכן, לכן כשיש עותק
+    // במטמון עונים ממנו מיד, בלי רשת בכלל (script.js ≈ 900KB דחוס: ברשת חלשה המרוץ
+    // הישן נתן לרשת לנצח על הכותרות, והדף המתין לגוף עשרות שניות). גרסה חדשה = ?v=
+    // חדש = כתובת חדשה → מהרשת, ונשמרת. אחרי דיפלוי ה-SW החדש (STATIC_CACHE חדש)
+    // מוריד את כל הנכסים מחדש בהתקנה, והמטמון הישן נמחק בהפעלה.
+    event.respondWith(
+      caches.match(request).then((cached) => {
+        if (cached) return cached;
+        return fetch(request, { cache: "no-cache" }).then(
+          (response) => {
+            if (response && response.ok) {
+              const copy = response.clone();
+              event.waitUntil(caches.open(STATIC_CACHE).then((cache) => cache.put(request, copy)).catch(() => {}));
+            }
+            return response;
+          },
+          () => caches.match(request, { ignoreSearch: true }).then((alt) => alt || Response.error()),
+        );
+      }),
+    );
+    return;
+  }
 
   if (isCodeAsset) {
     // cache:"no-cache" forces revalidation against the server even when an
@@ -413,7 +490,7 @@ self.addEventListener("fetch", (event) => {
             );
           }
           return raceNetworkWithCached(
-            network.then((r) => (r && r.ok ? r : Promise.reject(r))),
+            network.then((r) => (r && r.ok ? bodyReady(r) : Promise.reject(r))),
             cached,
             CODE_NET_WINDOW_MS,
             () => ctrl && ctrl.abort(),

@@ -400,9 +400,11 @@
       return _marksCache;
     }
     function saveAll(m) { _marksCache = m; jset(KEY, m); }
-    // מזהה יציב לפסקה — תחילת הטקסט המנורמל (שורד רינדור מחדש של המודאל)
+    // מזהה יציב לפסקה — תחילת הטקסט המנורמל (שורד רינדור מחדש של המודאל).
+    // טקסט הבלוק בלבד, בלי פירושים משובצים (.chok-cm-blk בדף היומי) — כך הדלקה/כיבוי
+    // של רש"י ותוספות לא משנים את המזהה ולא את מיקום התו השמור
     function sig(el) {
-      var t = (el.textContent || "").replace(/\s+/g, " ").trim();
+      var t = textNodes(el).map(function (n) { return n.data; }).join("").replace(/\s+/g, " ").trim();
       if (t.length < 8) return null;
       return t.slice(0, 90);
     }
@@ -413,8 +415,9 @@
       "#lux-sel-area", "#lux-tr-area", "#prayer-modal-body", "#lux-pl-area",
       "#prayer-modal .modal-body"
     ];
-    // [id^='bih-h-'] — הלכות הבן איש חי מרונדרות כ-div ולא כפסקאות
-    var BLOCK_SEL = "p, .lux-sel-para, .shmikra-verse, li, .lux-mline, [id^='bih-h-']";
+    // [id^='bih-h-'] — הלכות הבן איש חי מרונדרות כ-div ולא כפסקאות;
+    // .daf-line — קטעי הדף היומי (span בתצוגת בלוק)
+    var BLOCK_SEL = "p, .lux-sel-para, .shmikra-verse, li, .lux-mline, [id^='bih-h-'], .daf-line";
     // תפילות מ-PRAYER_DB מוצגות כטקסט עם <br> בלי פסקאות —
     // עוטפים כל שורה ב-span כדי שאפשר יהיה לסמן אותה
     function wrapLines(host) {
@@ -455,8 +458,13 @@
     var _hl = HL_OK ? new Highlight() : null;
     if (HL_OK) { try { CSS.highlights.set("lux-mark", _hl); } catch (e) { HL_OK = false; } }
     var _lineState = {}; // areaKey → { block, off, w, fs, range }
+    // צמתי הטקסט של הבלוק — בלי תת-עץ של פירוש משובץ (שורה מודגשת לא "נשפכת" לתוך בלוק הפירוש)
+    var CM_FILTER = { acceptNode: function (n) {
+      if (n.nodeType !== 1) return NodeFilter.FILTER_ACCEPT;
+      return n.classList && n.classList.contains("chok-cm-blk") ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_SKIP;
+    } };
     function textNodes(block) {
-      var out = [], w = document.createTreeWalker(block, NodeFilter.SHOW_TEXT, null);
+      var out = [], w = document.createTreeWalker(block, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, CM_FILTER);
       var n; while ((n = w.nextNode())) out.push(n);
       return out;
     }
@@ -470,8 +478,20 @@
       var last = nodes[nodes.length - 1];
       return last ? { node: last, offset: last.data.length } : null;
     }
+    // התו off בצומת שלו (קפדני: האינדקס שבגבול בין צמתים שייך לצומת הבא, לא "סוף הקודם") —
+    // כך סוף שורה שנגמרת לפני בלוק פירוש משובץ לא גולש אל תוך הבלוק ואל הצומת שאחריו
+    function charPos(nodes, off) {
+      var acc = 0;
+      for (var i = 0; i < nodes.length; i++) {
+        var len = nodes[i].data.length;
+        if (off < acc + len) return { node: nodes[i], offset: Math.max(0, off - acc) };
+        acc += len;
+      }
+      var last = nodes[nodes.length - 1];
+      return last ? { node: last, offset: last.data.length } : null;
+    }
     function topAt(nodes, off) {
-      var p = posAt(nodes, off); if (!p) return null;
+      var p = charPos(nodes, off); if (!p) return null;
       var r = document.createRange(); r.setStart(p.node, p.offset); r.setEnd(p.node, p.offset);
       var rects = r.getClientRects(); var rc = rects.length ? rects[0] : r.getBoundingClientRect();
       return rc && (rc.height || rc.top) ? rc : null;
@@ -494,9 +514,10 @@
       while (lo < hi) { var m2 = (lo + hi) >> 1; if (below(m2)) hi = m2; else lo = m2 + 1; }
       var end = lo;
       if (end <= start) return null;
-      var a = posAt(nodes, start), b = posAt(nodes, end);
+      // סוף הטווח — מיד אחרי התו האחרון של השורה, בצומת שלו
+      var a = charPos(nodes, start), b = charPos(nodes, end - 1);
       if (!a || !b) return null;
-      var range = document.createRange(); range.setStart(a.node, a.offset); range.setEnd(b.node, b.offset);
+      var range = document.createRange(); range.setStart(a.node, a.offset); range.setEnd(b.node, Math.min(b.node.data.length, b.offset + 1));
       return { start: start, end: end, range: range, y: y };
     }
     // אינדקס התו שנלחץ בתוך הפסקה
@@ -536,14 +557,12 @@
     document.addEventListener("click", function (e) {
       if (!enabled()) return;
       if (!e.target.closest) return;
-      // לא מסמנים בלחיצה על כפתורים/קישורים/פירושים מוטמעים
-      if (e.target.closest("button, a, input, select, textarea, label, [onclick], [class*='chok-rashi'], .daf-line")) return;
+      // לא מסמנים בלחיצה על כפתורים/קישורים/פירושים מוטמעים (גם שולי בלוק הפירוש עצמו)
+      if (e.target.closest("button, a, input, select, textarea, label, [onclick], [class*='chok-rashi'], .chok-cm-blk")) return;
       var block = e.target.closest(BLOCK_SEL);
       if (!block) return;
       var ar = areaOf(block);
       if (!ar) return;
-      // בדף יומי יש מנגנון סימון ייעודי משלו
-      if (ar.key === "#sefaria-modal-content" && ar.host.querySelector(".daf-line")) return;
       var s = sig(block);
       if (!s) return;
       var marks = loadAll();
@@ -638,6 +657,8 @@
       });
     }
     setInterval(restore, 1200);
+    // קוראים שבונים את התוכן מחדש (הדף היומי) — ציור מיידי של השורה השמורה
+    window._luxMarkRestore = function () { try { restore(); } catch (e) {} };
 
     /* ── כפתור 🖍️ בכותרת כל קורא — מראה/מכבה את המרקר בלי לצאת להגדרות ──
        מצב המרקר — נקודת אמת אחת: localStorage + מתג ההגדרות + כפתורי הקוראים + הסימונים ב-DOM */
@@ -666,10 +687,6 @@
       if (!el || !el.isConnected || el.offsetParent === null) return false;
       try { return getComputedStyle(el).display !== "none"; } catch (e) { return true; }
     }
-    function removeBtns(scope, area) {
-      if (!scope) return;
-      scope.querySelectorAll('.lux-mk-btn[data-lux-mk="' + area + '"]').forEach(function (b) { b.remove(); });
-    }
     // רישום כותרות הקוראים. resolve() מחזיר {row, ref, where[, style]} או null כשהתצוגה לא פתוחה.
     // dark=true → גרסה בהירה של הכפתור על כותרת כהה (.lux-sel-head).
     // המסמך RTL: הילד הראשון בשורת flex יושב בקצה הימני, האחרון בקצה השמאלי.
@@ -680,8 +697,8 @@
       { area: "#sefaria-modal-content", resolve: function () {
           var m = document.getElementById("sefaria-modal");
           if (!m || m.classList.contains("hidden")) return null;
-          var c = document.getElementById("sefaria-modal-content");
-          if (c && c.querySelector(".daf-line")) { removeBtns(m, "#sefaria-modal-content"); return null; }   // דף יומי — מרקר ייעודי משלו
+          // כולל הדף היומי — אותו מרקר כמו בשאר הספרים (עד 09/2026 היה לו מרקר ייעודי
+          // והכפתור הוסר כשהדף נטען: "מופיע לשנייה ונעלם")
           var x = m.querySelector('button[onclick="closeSefariaModal()"]');
           return x && x.parentElement ? { row: x.parentElement, ref: x.parentElement, where: "afterbegin", style: "margin-left:0.5rem;" } : null;
         } },

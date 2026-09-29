@@ -613,23 +613,6 @@
         }
       }
 
-      /* ── Mobile: shnayim-mikra & daf-yomi same size ── */
-      @media (max-width: 767px) {
-        #halacha-banner .flex-row {
-          flex-direction: column;
-          align-items: stretch;
-          gap: 0.5rem;
-        }
-        #shnayim-mikra-link,
-        #daf-yomi-link {
-          width: 100%;
-          box-sizing: border-box;
-        }
-        #shnayim-mikra-link .shnayim-parsha-suffix {
-          display: none;
-        }
-      }
-
       /* ── Footer credits ── */
       footer a:hover {
         background: linear-gradient(135deg, rgba(37,99,235,0.08), rgba(139,92,246,0.08));
@@ -947,12 +930,6 @@
 .lv-prayer-times .lv-notes p { font-size: 0.9em; }
 .lv-fold summary { cursor: pointer; font-size: 0.78em; font-weight: 800; color: #6d28d9; list-style-position: inside; }
 .lv-fold[open] summary { margin-bottom: 0.3rem; }
-/* ── דף יומי: סימון שורה במרקר (צהוב בהיר) ── */
-.daf-line-marked {
-  background: linear-gradient(to bottom, transparent 8%, rgba(254, 240, 138, 0.55) 8%, rgba(254, 240, 138, 0.55) 88%, transparent 88%);
-  border-radius: 4px;
-  box-shadow: 0 0 0 3px rgba(254, 240, 138, 0.2);
-}
 /* ── מרקר אוניברסלי — סימון שורה בכל הספרים והתפילות ── */
 /* iOS: אזורי הקריאה מקבלים מאזין click ישיר (תיקון המרקר בספארי, lux.js) —
    בלי זה ספארי מהבהב הדגשה אפורה על כל נגיעה בטקסט */
@@ -1232,40 +1209,6 @@ details.group summary .text-blue-500 {
 /* ── קישורי הכרטיסיות בדשבורד — זהב ── */
 #dashboard-state > div > div:last-child {
   color: rgba(242, 217, 138, 0.92) !important;
-}
-
-/* ── כפתורי הלכה (שנים מקרא / חוק לישראל / דף יומי / דבר תורה) ── */
-#shnayim-mikra-link,
-#daf-yomi-link {
-  background: linear-gradient(150deg, #2451b8 0%, #16307a 100%) !important;
-  border-color: rgba(147, 197, 253, 0.45) !important;
-  box-shadow: 0 5px 18px rgba(22, 48, 122, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.18) !important;
-}
-#chok-israel-btn {
-  background: linear-gradient(150deg, #0d9265 0%, #065f46 100%) !important;
-  border-color: rgba(110, 231, 183, 0.45) !important;
-  box-shadow: 0 5px 18px rgba(6, 95, 70, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.18) !important;
-}
-#month-torah-btn {
-  background: linear-gradient(150deg, #8b34c9 0%, #5b21a6 100%) !important;
-  border-color: rgba(216, 180, 254, 0.45) !important;
-  box-shadow: 0 5px 18px rgba(91, 33, 166, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.18) !important;
-}
-#shnayim-mikra-link:hover,
-#daf-yomi-link:hover,
-#chok-israel-btn:hover,
-#month-torah-btn:hover {
-  border-color: rgba(242, 217, 138, 0.75) !important;
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.4), 0 0 20px rgba(232, 193, 90, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.22) !important;
-  transform: translateY(-2px);
-  filter: brightness(1.08);
-}
-#shnayim-mikra-link,
-#daf-yomi-link,
-#chok-israel-btn,
-#month-torah-btn {
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
-  border-radius: 999px !important;
 }
 
 /* ── כרטיסי זמני היום ── */
@@ -7252,21 +7195,6 @@ body:not(.lux-erev) #hero-section h1 span[data-i18n-key="app_title_2"] { animati
   box-shadow: 0 0 18px rgba(232, 193, 90, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
-/* ── ארבעת כפתורי הלימוד (שניים מקרא / חוק / דף יומי / דבר תורה) ── */
-#shnayim-mikra-link, #chok-israel-btn, #daf-yomi-link, #month-torah-btn {
-  position: relative;
-  border-radius: 1rem !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 6px 16px rgba(0, 0, 0, 0.22) !important;
-  transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.22s ease, background-color 0.22s ease !important;
-}
-#shnayim-mikra-link:hover, #chok-israel-btn:hover, #daf-yomi-link:hover, #month-torah-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 10px 24px rgba(0, 0, 0, 0.3) !important;
-}
-#shnayim-mikra-link:active, #chok-israel-btn:active, #daf-yomi-link:active, #month-torah-btn:active {
-  transform: translateY(0) scale(0.98);
-}
-
 /* ── כפתורי התפילות בדף הראשי: מסגרת חמה יותר ואייקון חי ── */
 body:not(.lux-erev) .prayer-btn {
   border-color: rgba(232, 193, 90, 0.20);
@@ -8885,3 +8813,126 @@ html.dark .prayer-next-cta { box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45); }
 .toc-nav-btn { display: inline-flex; align-items: center; justify-content: center; line-height: 1; padding: 0; }
 /* כותרות משנה בתוך דבר התורה של ההילולה (דברי תורה / סיפורים / ציטוטים) */
 .hil-torah .hil-torah-h { font-weight: 900; font-size: 0.9rem; color: #f2d98a; margin: 0.1rem 0 0.45rem; letter-spacing: 0.01em; }
+
+/* ══════════════════════════════════════════════════════════════
+   ארבעת כפתורי הלימוד בדף הראשי (#study-links) — 29/09/2026
+   "אבני חן" (נבחר מתוך 3 כיוונים): כרטיסי צבע מבריקים — ספיר, אזמרגד, אינדיגו,
+   אמטיסט — עם אייקון גדול כסימן מים ותגית לתוכן היום. 2×2 בנייד, 4 בשורה במחשב.
+   מבנה: .study-card > .sc-ico · .sc-body (.sc-title + .sc-sub) · svg.sc-go
+   הטקסט הדינמי (.sc-sub) ממולא ע"י script.js לפי המזהים הקיימים.
+   ══════════════════════════════════════════════════════════════ */
+#study-links {
+  width: 100%;
+  max-width: 56rem;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+@media (min-width: 768px) {
+  #study-links { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.85rem; }
+}
+#study-links .study-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-width: 0;
+  min-height: 7.4rem;
+  margin: 0;
+  padding: 0.95rem;
+  font: inherit;
+  text-align: right;
+  color: #fff;
+  cursor: pointer;
+  isolation: isolate;
+  -webkit-tap-highlight-color: transparent;
+  border-radius: 1.25rem;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: var(--sc-jewel);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), inset 0 -12px 24px rgba(0, 0, 0, 0.18), 0 12px 26px rgba(var(--sc-rgb), 0.28);
+  transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease, filter 0.25s ease;
+}
+/* אבן החן של כל לימוד (הגרדיאנט נפתח בהיר למעלה ומתכהה מתחת לטקסט — ניגודיות) */
+#study-links .sc-sapphire { --sc-rgb: 59, 130, 246; --sc-jewel: linear-gradient(150deg, #4f86f7 0%, #2152c4 45%, #142f7a 100%); }
+#study-links .sc-emerald { --sc-rgb: 16, 185, 129; --sc-jewel: linear-gradient(150deg, #34d399 0%, #0e9f6e 42%, #065f46 100%); }
+#study-links .sc-indigo { --sc-rgb: 99, 102, 241; --sc-jewel: linear-gradient(150deg, #818cf8 0%, #4f46e5 45%, #312e81 100%); }
+#study-links .sc-amethyst { --sc-rgb: 168, 85, 247; --sc-jewel: linear-gradient(150deg, #c084fc 0%, #9333ea 45%, #581c87 100%); }
+/* ברק זכוכית עליון */
+#study-links .study-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(155deg, rgba(255, 255, 255, 0.26) 0%, rgba(255, 255, 255, 0.06) 34%, rgba(255, 255, 255, 0) 52%);
+  pointer-events: none;
+}
+/* האייקון — סימן מים גדול ומוטה בפינה */
+#study-links .sc-ico {
+  position: absolute;
+  left: -0.35rem;
+  bottom: -0.65rem;
+  z-index: -1;
+  font-size: 3.8rem;
+  line-height: 1;
+  opacity: 0.3;
+  transform: rotate(-14deg);
+  pointer-events: none;
+}
+#study-links .sc-body { display: flex; flex-direction: column; align-items: flex-start; gap: 0.45rem; min-width: 0; max-width: 100%; }
+#study-links .sc-title {
+  display: block;
+  font-size: 1.02rem;
+  font-weight: 800;
+  line-height: 1.25;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+/* תגית התוכן של היום (פרשה / דף / חודש) */
+#study-links .sc-sub {
+  display: block;
+  max-width: 100%;
+  font-size: 0.76rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.17);
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  padding: 0.16rem 0.62rem;
+  border-radius: 999px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#study-links .sc-sub:empty { display: none; }
+/* החץ — שורה משלו בראש הכרטיס (בצד שמאל), כך שכותרת ארוכה לא מגיעה אליו בשום רוחב */
+#study-links .sc-go {
+  order: -1;
+  align-self: flex-end;
+  margin: -0.15rem 0 0 -0.15rem;
+  width: 1.6rem;
+  height: 1.6rem;
+  padding: 0.36rem;
+  box-sizing: border-box;
+  border-radius: 50%;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.18);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 0.25s ease;
+}
+@media (hover: hover) {
+  #study-links .study-card:hover { transform: translateY(-3px); filter: brightness(1.07) saturate(1.05); }
+  #study-links .study-card:hover .sc-go { transform: translateX(-3px); }
+}
+#study-links .study-card:active { transform: scale(0.98); }
+#study-links .study-card:focus-visible { outline: 2px solid rgba(242, 217, 138, 0.9); outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) {
+  #study-links .study-card, #study-links .sc-go { transition: none !important; }
+}

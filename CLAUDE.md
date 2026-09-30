@@ -83,6 +83,9 @@ grep -oE '(script|lux|style)\.(js|css)\?v=[0-9]+' index.html sw.js | sort | uniq
 - **בלי פעימות `box-shadow` בנייד**, `will-change: opacity` קבוע על כרטיסים.
 - **שדות `source:` בסיפורי הבעש"ט** מוסתרים מהתצוגה בכוונה — לא למחוק ולא להחזיר.
 - **סדר `TAN_BOOKS`/`TAL_BOOKS`** ב-`lux.js` קפוא (סימניות ובחירות מרובות תלויות באינדקס).
+- **מסך הפתיחה** (`#lux-splash` ב-`index.html`): מגן הדוד מצויר משש צלעות HTML (`.lsb`) שגדלות ב-`transform` — אנימציית קומפוזיטור. לא לחזור ל-SVG עם `stroke-dashoffset` (רץ על ה-main thread, נתקע וקופץ בזמן טעינת `script.js` = "הבהוב" בטלפון). המסך נעלם רק אחרי `window.__appReady` (סוף `lux.js` + 350ms), מינימום 1.5s מהפריים הראשון, רשת ביטחון 5s.
+- **לוח ברכות הנהנין**: `content-visibility: auto` על `.bb-item` ושורת חיפוש דביקה אטומה בלי `backdrop-filter` (`.bb-search-bar`) — בלעדיהם הפתיחה פורסת ומציירת ~160 כרטיסים בבת אחת והטלפון מהבהב. הקפיצה לפרק (`_bbJump`) מחשבת את היעד מחדש בכל פריים בגלל זה.
+- **זמן סיום בגלילה אוטומטית**: המנוע משדר `autoscroll-change` (התחלה/עצירה/מהירות); `lux.js` מציג לשונית `.lux-progress-eta` שתלויה מפס ההתקדמות — הפס עצמו לא גדל.
 - **מנוע הגלילה האוטומטית** (`_toggleAutoScroll` ב-`script.js`, יחיד לכל הקוראים): מיקום וירטואלי עשרוני (`state.pos`) + השלמת תת-פיקסל ב-`transform` על מיכל הגלילה (`applySub`). כרומיום מעגל `scrollTop` לפיקסל המסך הקרוב — בלי המיקום הווירטואלי המהירות מנופחת ודרגות מתמזגות, ובלי ההשלמה הכתב רועד. ערכי `SPEEDS` נקבעו ע"י המשתמש — לא לשנות בלי בקשה.
 
 ## מלכודות ידועות
@@ -104,6 +107,8 @@ grep -oE '(script|lux|style)\.(js|css)\?v=[0-9]+' index.html sw.js | sort | uniq
 grep -nE '^// ✦' script.js          # כותרות פיצ'רים ראשיות
 grep -nE '^(//|/\*) *═{6,}' script.js   # בלוקי הסבר ארוכים (עם ההיסטוריה של הבאג)
 ```
+
+טקסטים ארוכים מוטמעים (`USHPIZIN_DATA`, `CHANUKAH_DATA`, `CHANUKAT_HABAYIT_DATA`, `ZOHAR_BRIT_DATA`) נוצרו בסקריפטי המרה ממקור (ויקיטקסט/ספריא) — לא להקליד ידנית. ספרים שכל אחד קורא בהם חלק (חנוכת הבית, זוהר ברית): `autoToc:true` + `content` כ-getter (כך החיפוש הכללי סורק אותם), כותרות h2 לחלקים ו-h3 לפרקים.
 
 עוגנים שימושיים: `safeCacheSetItem` / `_sefariaJson` (תחילת הקובץ), `PRAYER_DB`, `computeHolidayWindow`, `normalizeEventName`, `_closePopupViaBack`, `openPrayerNavPopup`, `_SN_LOCAL_TEXTS`, `initStars`. ב-`lux.js` הכול בתוך IIFE אחת; לחפש לפי שם הפיצ'ר בעברית בהערה.
 

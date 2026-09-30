@@ -1889,7 +1889,8 @@ body:has(#compass-modal:not(.hidden)) > .lux-ux { display: none !important; }
     radial-gradient(ellipse 120% 70% at 50% -10%, rgba(232, 193, 90, 0.08) 0%, transparent 55%),
     linear-gradient(160deg, #050b1a 0%, #0c1530 55%, #16233f 100%);
   opacity: 1;
-  transition: opacity 0.7s ease;
+  transition: opacity 0.6s ease;
+  will-change: opacity;
   cursor: pointer;
 }
 #lux-splash.lux-splash-out {
@@ -1901,8 +1902,9 @@ body:has(#compass-modal:not(.hidden)) > .lux-ux { display: none !important; }
   padding: 1rem;
 }
 .lux-splash-star {
+  position: relative;
   width: clamp(72px, 18vw, 110px);
-  height: auto;
+  height: clamp(72px, 18vw, 110px);
   margin: 0 auto 1.1rem;
   display: block;
   /* הזוהר סביב הכוכב כרקע רדיאלי זול — במקום filter: drop-shadow על הנתיב המונפש,
@@ -1910,18 +1912,28 @@ body:has(#compass-modal:not(.hidden)) > .lux-ux { display: none !important; }
   background: radial-gradient(circle at 50% 50%, rgba(224, 183, 79, 0.26) 0%, rgba(224, 183, 79, 0.1) 38%, transparent 66%);
   border-radius: 50%;
 }
-.lux-splash-path {
-  stroke: #e0b74f;
-  stroke-dasharray: 720;
-  stroke-dashoffset: 720;
-  animation: lux-draw 1.1s ease forwards;
+/* שש הצלעות של מגן הדוד (אותה גאומטריה כמו ה-SVG הקודם: viewBox 512, קו 26, פינות עגולות).
+   כל צלע היא פס עם קצוות עגולים שנמתח מהקודקוד ב-transform: scaleX — אנימציית
+   קומפוזיטור, רצה חלק גם כשה-main thread עסוק בטעינת הקוד (ה-stroke-dashoffset הקודם
+   נתקע וקפץ). הזמנים משחזרים את עקומת ה-ease של 1.1 שנ' על כל משולש (הצלע האחרונה מאטה),
+   והמשולש השני מתחיל 0.25 שנ' אחרי הראשון — כמו קודם */
+.lsb {
+  position: absolute;
+  height: 5.078%;
+  border-radius: 999px;
+  background: #e0b74f;
+  transform-origin: 5.07% 50%;
+  will-change: transform;
 }
-.lux-splash-path2 {
-  animation-delay: 0.25s;
-}
-@keyframes lux-draw {
-  to { stroke-dashoffset: 0; }
-}
+.lsb1 { left: 47.461%; top: 19.336%; width: 50.138%; animation: lux-lsb-dn 0.238s linear 0s both; }
+.lsb2 { left: 69.922%; top: 58.398%; width: 50%; animation: lux-lsb-bk 0.19s linear 0.238s both; }
+.lsb3 { left: 25%; top: 58.398%; width: 50.138%; animation: lux-lsb-up 0.672s cubic-bezier(0.25, 0.6, 0.4, 1) 0.428s both; }
+.lsb4 { left: 47.461%; top: 75.586%; width: 50.138%; animation: lux-lsb-up 0.238s linear 0.25s both; }
+.lsb5 { left: 69.922%; top: 36.523%; width: 50%; animation: lux-lsb-bk 0.19s linear 0.488s both; }
+.lsb6 { left: 25%; top: 36.523%; width: 50.138%; animation: lux-lsb-dn 0.672s cubic-bezier(0.25, 0.6, 0.4, 1) 0.678s both; }
+@keyframes lux-lsb-dn { from { transform: rotate(60.1deg) scaleX(0); } to { transform: rotate(60.1deg) scaleX(1); } }
+@keyframes lux-lsb-up { from { transform: rotate(-60.1deg) scaleX(0); } to { transform: rotate(-60.1deg) scaleX(1); } }
+@keyframes lux-lsb-bk { from { transform: rotate(180deg) scaleX(0); } to { transform: rotate(180deg) scaleX(1); } }
 .lux-splash-title {
   color: #fdf3d0;
   font-family: var(--lux-serif);
@@ -1946,7 +1958,7 @@ body:has(#compass-modal:not(.hidden)) > .lux-ux { display: none !important; }
   to { opacity: 1; transform: translateY(0); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .lux-splash-path { animation-duration: 0.01s; }
+  .lsb { animation-duration: 0.01s !important; animation-delay: 0s !important; }
   .lux-splash-title, .lux-splash-sub { animation-duration: 0.01s; animation-delay: 0s; }
 }
 
@@ -3655,6 +3667,43 @@ body.lux-shabbat #shabbat-countdown-bar {
 @media (max-width: 640px) {
   .lux-progress { height: 7px; }
 }
+/* זמן סיום משוער בגלילה אוטומטית — לשונית זהב שתלויה מהפס (הפס עצמו לא משתנה).
+   במרכז: בכל הקוראים זה האזור הפנוי מעל הכותרת, בין ה-X לכפתורים.
+   ניגודיות: חום כהה ‎#3a2605‎ על זהב ‎#e0b74f‎ ≈ 7.9:1 — קריא גם על רקע בהיר וגם בכהה */
+.lux-progress-eta {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28em;
+  min-width: 4.6em;
+  justify-content: center;
+  padding: 2px 10px 3px;
+  font: 800 11px/1 "Assistant", system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  color: #3a2605;
+  direction: ltr;
+  white-space: nowrap;
+  background: linear-gradient(180deg, #d9ad48 0%, #e7c268 55%, #f2d98a 100%);
+  border-radius: 0 0 9px 9px;
+  box-shadow: 0 2px 6px rgba(120, 80, 10, 0.35), inset 0 -1px 0 rgba(255, 255, 255, 0.35);
+  transform: translate(-50%, -115%);
+  opacity: 0;
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.2s ease;
+}
+.lux-progress-eta.on {
+  transform: translate(-50%, 0);
+  opacity: 1;
+}
+.lux-progress-eta i {
+  font-style: normal;
+  font-size: 0.95em;
+}
+@media (max-width: 640px) {
+  .lux-progress-eta { font-size: 11.5px; padding: 3px 10px 3px; }
+}
 
 /* ── מסגרת "דף לימוד" עדינה — קבועה במובייל ── */
 @media (max-width: 640px) {
@@ -4799,6 +4848,180 @@ html.dark .lux-se-txt small { color: #94a3b8; }
   background: rgba(232, 193, 90, 0.12);
 }
 .ush-src, .ush-rep { font-size: 0.62em; color: #64748b; }
+/* סדר קצר / סדר ארוך (10/2026): שני כפתורי מעבר בראש הדף, כותרת-רצועה לכל סדר, והפרדה
+   מעוטרת ביניהם. גדלים ב-px — לא גדלים עם כתב הקורא (כמו כותרת האושפיזא) */
+.ush-seg {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin: 0.1rem auto 0.9rem;
+  direction: rtl;
+}
+.ush-seg-btn {
+  flex: 0 1 168px;
+  padding: 9px 12px;
+  border-radius: 999px;
+  border: 1.5px solid rgba(22, 163, 74, 0.45);
+  background: #fff;
+  color: #15803d;
+  font: 800 15px/1.2 Assistant, system-ui, sans-serif;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+}
+.ush-seg-btn.on {
+  background: linear-gradient(135deg, #16a34a, #15803d);
+  border-color: #15803d;
+  color: #fff;
+  box-shadow: 0 3px 10px rgba(22, 163, 74, 0.28);
+}
+.ush-seg-btn:active { transform: scale(0.97); }
+.ush-sec {
+  display: block;
+  margin: 0.4rem 0 0.4rem;
+  padding: 7px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(22, 163, 74, 0.3);
+  background: linear-gradient(135deg, rgba(22, 163, 74, 0.11), rgba(232, 193, 90, 0.12));
+  color: #166534;
+  font: 900 19px/1.5 Assistant, system-ui, sans-serif;
+  text-align: center;
+}
+.ush-sec-long {
+  border-color: rgba(201, 153, 58, 0.45);
+  background: linear-gradient(135deg, rgba(201, 153, 58, 0.16), rgba(232, 193, 90, 0.07));
+  color: #8a5a12;
+}
+.ush-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 2.4rem 0 1.4rem;
+  color: #c9993a;
+  font: 700 13px/1 Assistant, system-ui, sans-serif;
+  letter-spacing: 0.35em;
+}
+.ush-divider::before,
+.ush-divider::after {
+  content: "";
+  flex: 1;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(to left, rgba(201, 153, 58, 0), #c9993a);
+}
+.ush-divider::after { background: linear-gradient(to right, rgba(201, 153, 58, 0), #c9993a); }
+/* ── סדרים המחולקים לחלקים בין הקרואים: חנוכת הבית (.sd-chb), זוהר ברית (.sd-zb) — 10/2026 ──
+   window._buildChanukatHabayitHtml / _buildZoharBritHtml. הטקסט עצמו ב-.ush-p (פונט התפילות);
+   גוון לפי הספר במשתנים. כותרות-רצועה ב-px — לא גדלות עם כתב הקורא */
+.sd-book { display: block; text-align: right; }
+.sd-chb { --sd: #b45309; --sd-d: #92400e; --sd-bg: rgba(180, 83, 9, 0.08); --sd-bd: rgba(180, 83, 9, 0.3); }
+.sd-zb { --sd: #0e7490; --sd-d: #155e75; --sd-bg: rgba(14, 116, 144, 0.08); --sd-bd: rgba(14, 116, 144, 0.3); }
+.sd-hero {
+  display: block;
+  text-align: center;
+  margin: 0 0 0.9rem;
+  padding: 14px 14px 12px;
+  border-radius: 18px;
+  border: 1px solid var(--sd-bd);
+  background: linear-gradient(135deg, var(--sd-bg), rgba(232, 193, 90, 0.12));
+  line-height: 1.5;
+}
+.sd-hero-ic { display: block; font-size: 30px; line-height: 1.2; }
+.sd-hero-t { display: block; font: 900 26px/1.35 'Frank Ruhl Libre', serif; color: var(--sd-d); }
+.sd-hero-s { display: block; margin-top: 2px; font: 700 13px/1.6 Assistant, system-ui, sans-serif; color: #64748b; }
+.sd-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 10px; }
+.sd-chips > span {
+  padding: 3px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--sd-bd);
+  background: rgba(255, 255, 255, 0.75);
+  font: 800 12.5px/1.5 Assistant, system-ui, sans-serif;
+  color: var(--sd-d);
+  white-space: nowrap;
+}
+.sd-sec, .sd-part {
+  display: block;
+  margin: 1.8rem 0 0.6rem;
+  padding: 8px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--sd-bd);
+  background: var(--sd-bg);
+  color: var(--sd-d);
+  font: 900 19px/1.5 Assistant, system-ui, sans-serif;
+  text-align: center;
+}
+.sd-part {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 9px 12px 8px;
+  background: linear-gradient(135deg, var(--sd-bg), rgba(232, 193, 90, 0.1));
+  box-shadow: inset 0 -2px 0 var(--sd-bd);
+}
+.sd-part-n {
+  padding: 1px 14px;
+  border-radius: 999px;
+  background: var(--sd);
+  color: #fff;
+  font-size: 16px;
+  line-height: 1.7;
+}
+.sd-part-s { font-size: 14.5px; font-weight: 800; line-height: 1.5; color: var(--sd-d); }
+.sd-sep { display: none; }
+.sd-father { border-color: rgba(201, 153, 58, 0.5); background: linear-gradient(135deg, rgba(201, 153, 58, 0.16), rgba(232, 193, 90, 0.06)); color: #8a5a12; }
+.sd-h {
+  display: block;
+  margin: 1.4rem 0 0.35rem;
+  font-size: 1.02em;
+  font-weight: 900;
+  color: var(--sd);
+  text-align: center;
+  line-height: 1.6;
+}
+.sd-h::after {
+  content: "";
+  display: block;
+  width: 56px;
+  height: 2px;
+  margin: 4px auto 0;
+  border-radius: 2px;
+  background: linear-gradient(90deg, rgba(201, 153, 58, 0), #c9993a, rgba(201, 153, 58, 0));
+}
+.sd-lbl {
+  display: table;
+  margin: 0.95rem auto 0.3rem;
+  padding: 1px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--sd-bd);
+  background: var(--sd-bg);
+  color: var(--sd-d);
+  font: 800 13px/1.7 Assistant, system-ui, sans-serif;
+}
+.sd-c { text-align: center; }
+.sd-book .ush-p small { font-size: 0.6em; font-weight: 600; color: #64748b; }
+.sd-book .ush-p small.pg { font-size: 0.55em; font-weight: 800; color: #b08a3e; white-space: nowrap; }
+.sd-book b.big { font-size: 1.12em; color: var(--sd-d); }
+/* פסקאות הזוהר ארוכות — ריווח קצת גדול יותר ביניהן */
+.sd-z { margin-bottom: 1rem; }
+html.dark .sd-chb { --sd: #fbbf24; --sd-d: #fcd34d; --sd-bg: rgba(251, 191, 36, 0.1); --sd-bd: rgba(251, 191, 36, 0.3); }
+html.dark .sd-zb { --sd: #22d3ee; --sd-d: #a5f3fc; --sd-bg: rgba(34, 211, 238, 0.09); --sd-bd: rgba(34, 211, 238, 0.3); }
+html.dark .sd-part-n { color: #0f172a; }
+html.dark .sd-chips > span { background: rgba(15, 23, 42, 0.6); }
+html.dark .sd-hero-s, html.dark .sd-book .ush-p small { color: #94a3b8; }
+html.dark .sd-father { color: #f2d98a; border-color: rgba(242, 217, 138, 0.35); }
+html.dark .sd-book .ush-p small.pg { color: #e0b74f; }
+/* הבזק הגעה (כפתורי המעבר / תוכן העניינים) — טבעת זהב; לא הבזק הרקע הכללי (.sn-hc-jump),
+   שמסתיים ב-transparent ו"קופץ" בחזרה לרקע המדורג של הרצועה */
+.ush-sec.sn-hc-jump, .sd-sec.sn-hc-jump, .sd-part.sn-hc-jump { animation: ush-sec-flash 1.2s ease-out; }
+@keyframes ush-sec-flash {
+  0% { box-shadow: 0 0 0 4px rgba(232, 193, 90, 0.65); }
+  100% { box-shadow: 0 0 0 0 rgba(232, 193, 90, 0); }
+}
+html.dark .ush-seg-btn { background: #0f172a; color: #86efac; border-color: rgba(134, 239, 172, 0.4); }
+html.dark .ush-seg-btn.on { background: linear-gradient(135deg, #16a34a, #15803d); color: #fff; border-color: #16a34a; }
+html.dark .ush-sec { color: #86efac; border-color: rgba(134, 239, 172, 0.3); background: linear-gradient(135deg, rgba(22, 163, 74, 0.16), rgba(232, 193, 90, 0.08)); }
+html.dark .ush-sec-long { color: #f2d98a; border-color: rgba(242, 217, 138, 0.35); background: linear-gradient(135deg, rgba(201, 153, 58, 0.2), rgba(232, 193, 90, 0.06)); }
 html.dark .ush-h, html.dark .ush-hero-name { color: #86efac; }
 html.dark .ch-hero .ush-hero-name, html.dark .ush-h.ch-h, html.dark .ch-det > summary { color: #93c5fd; }
 html.dark .ush-note, html.dark .ush-hero-lbl, html.dark .ush-hero-sub, html.dark .ush-src, html.dark .ush-rep { color: #94a3b8; }
@@ -9017,6 +9240,18 @@ html.dark .prayer-next-cta { box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45); }
 .bb-jump:active { transform: scale(0.95); }
 @keyframes bb-cat-flash { 0% { background: rgba(242, 217, 138, 0.6); } 100% { background: transparent; } }
 .bb-cat-flash { animation: bb-cat-flash 1.5s ease-out; border-radius: 0.5rem; }
+/* ~160 כרטיסי מאכל: רק הקרובים למסך נפרסים ומצוירים. עד 10/2026 כל הלוח נפרס בבת אחת
+   בפתיחה (עיצוב טקסט עברי מנוקד — ~0.5 שנ' בטלפון) וצויר כשכבה ענקית, והטלפון "הבהב"
+   כמה פעמים עד שכל האריחים צוירו. auto = אחרי הציור הראשון נזכר הגובה האמיתי */
+#sn-reader-content .bb-item {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 7em;
+}
+.bb-search-bar { background: #faf9f6; }
+html.dark .bb-search-bar {
+  background: #0f172a;
+  border-bottom-color: rgba(251, 191, 36, 0.3) !important;
+}
 
 /* ── כפתור תוכן העניינים ☰ — אחיד בכל הקוראים (כמו בשחרית/מנחה/ערבית) ── */
 .toc-nav-btn { display: inline-flex; align-items: center; justify-content: center; line-height: 1; padding: 0; }

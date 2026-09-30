@@ -366,15 +366,47 @@
     "moad-torah-modal", "hilulot-modal", "lux-selichot-reader", "lux-track-reader"
   ];
 
+  // ── זמן סיום משוער בגלילה אוטומטית — "לשונית" זהב קטנה שתלויה מפס ההתקדמות ──
+  // הפס עצמו לא גדל (5px / 7px בנייד); הלשונית יורדת ממנו רק בזמן גלילה אוטומטית
+  // ומראה ספירה לאחור עד סוף הגליל לפי המהירות הנוכחית (_AUTO_SCROLL_SPEEDS, px/s).
+  // מתעדכנת בכל אירוע גלילה של הגליל, ומיד בהתחלה/עצירה/שינוי מהירות (autoscroll-change).
+  function etaFmt(sec) {
+    var h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
+    return (h ? h + ":" + (m < 10 ? "0" : "") : "") + m + ":" + (s < 10 ? "0" : "") + s;
+  }
+  function etaUpdate(modal) {
+    var eta = modal._luxEta;
+    if (!eta) return;
+    var st = window._autoScrollState, sp = window._AUTO_SCROLL_SPEEDS;
+    var tg = st && st.rafId ? st.target : null;
+    if (!tg || !modal.contains(tg) || !tg.isConnected) {
+      if (eta._on) { eta._on = false; eta.classList.remove("on"); }
+      return;
+    }
+    var rem = Math.max(0, tg.scrollHeight - tg.clientHeight - tg.scrollTop);
+    var pps = (sp && sp[st.speed]) || 17;
+    var txt = etaFmt(Math.ceil(rem / pps));
+    if (eta._t !== txt) { eta._t = txt; eta.lastChild.textContent = txt; }
+    if (!eta._on) { eta._on = true; eta.classList.add("on"); }
+  }
+  document.addEventListener("autoscroll-change", function () {
+    READER_IDS.forEach(function (id) {
+      var m = document.getElementById(id);
+      if (m && m._luxEta) etaUpdate(m);
+    });
+  });
+
   function enhanceReader(modal) {
     if (!modal || modal._luxDone) return;
     modal._luxDone = true;
     // פס התקדמות
     var bar = document.createElement("div");
     bar.className = "lux-progress";
-    bar.innerHTML = "<div class='lux-progress-fill'></div>";
+    bar.innerHTML = "<div class='lux-progress-fill'></div>" +
+      "<span class='lux-progress-eta' aria-hidden='true'><i>⏳</i><b></b></span>";
     modal.appendChild(bar);
     var fill = bar.firstChild;
+    modal._luxEta = bar.lastChild;
     modal.addEventListener("scroll", function (e) {
       var t = e.target;
       if (!t || !t.scrollHeight) return;
@@ -385,6 +417,7 @@
       // ריפוי-עצמי: אם תוכן המודאל צויר מחדש (innerHTML) והפס נמחק — מחזירים אותו
       if (!modal.contains(bar)) { modal.appendChild(bar); fill = bar.firstChild; }
       fill.style.width = Math.min(100, (t.scrollTop / max) * 100) + "%";
+      if (modal._luxEta._on || (window._autoScrollState && window._autoScrollState.rafId)) etaUpdate(modal);
     }, true);
     // סרגל הגופן מקבל קלאס אחיד — משמש לגלישת שורות במובייל ולחישובי גובה
     var label = modal.querySelector(".font-btn-group") ||
@@ -7479,4 +7512,8 @@
       }
     }).observe(document.body, { childList: true });
   });
+
+  // מסך הפתיחה (index.html) נעלם רק אחרי הדגל הזה — כשהדף מתחתיו כבר בנוי. lux.js הוא
+  // הקוד האחרון שנטען; ה-350ms נותנים לכרטיסי הדשבורד לסיים את כניסתם (fadeSlideUp).
+  setTimeout(function () { window.__appReady = true; }, 350);
 })();

@@ -22403,7 +22403,9 @@ window.openDonationModal = function() {
     pos: null,          // מיקום גלילה "וירטואלי" עשרוני (null = להתיישר ל-scrollTop בפריים הבא)
     lastTop: 0,         // scrollTop כפי שהדפדפן החזיר אחרי הכתיבה האחרונה שלנו
     speed: 1,           // מהירות נוכחית (אחת מ-LEVELS) — מאופסת ל-1x בכל פתיחה חדשה
-    lastTargetKey: null // מזהה הסלקטור האחרון — לזיהוי "פתיחה חדשה"
+    lastTargetKey: null, // מזהה הסלקטור האחרון — לזיהוי "פתיחה חדשה"
+    subEl: null,        // המיכל שעליו מוחלת השלמת התת-פיקסל (applySub)
+    subPrev: null       // [transform, will-change] הקודמים שלו — מוחזרים בעצירה
   };
 
   function setPlayIcon(btn) {
@@ -22426,12 +22428,38 @@ window.openDonationModal = function() {
     } catch(e) {}
   }
 
+  // השלמת תת-פיקסל: scrollTop זז רק בפיקסלי מסך שלמים, אז צעד של למשל 1.75 פיקסלי מסך
+  // לפריים (3x בטלפון) יוצא 2,2,2,1 — והכתב "רועד". את השארית (עד חצי פיקסל מסך) משלימים
+  // ב-transform על מיכל הגלילה עצמו: התנועה הנראית חלקה ובמהירות המדויקת. מוחל רק בזמן
+  // ריצה; בעצירה transform ו-will-change חוזרים לערכם הקודם (clearSub).
+  function applySub(el, frac) {
+    if (el === document.body || el === document.documentElement) return;
+    if (state.subEl !== el) {
+      clearSub();
+      state.subEl = el;
+      state.subPrev = [el.style.transform, el.style.willChange];
+      el.style.willChange = 'transform';
+    }
+    el.style.transform = 'translate3d(0,' + (-frac).toFixed(3) + 'px,0)';
+  }
+  function clearSub() {
+    var el = state.subEl, prev = state.subPrev;
+    state.subEl = null;
+    state.subPrev = null;
+    if (!el) return;
+    try {
+      el.style.transform = prev[0];
+      el.style.willChange = prev[1];
+    } catch(e) {}
+  }
+
   // עצירה מלאה: ביטול האנימציה, החזרת אייקון הכפתור, וניקוי המצב
   function stopAuto() {
     if (state.rafId) {
       try { cancelAnimationFrame(state.rafId); } catch(e) {}
       state.rafId = null;
     }
+    clearSub();
     setPlayIcon(state.btn);
     state.target = null;
     state.btn = null;
@@ -22511,6 +22539,12 @@ window.openDonationModal = function() {
       stopAuto();
       return;
     }
+
+    // השארית התת-פיקסלית → transform (applySub). פער של פיקסל ומעלה = הדפדפן לא הזיז
+    // (למשל באמצע נגיעה) — לא צוברים מרחק שיקפוץ אחר כך; מתיישרים ובלי הזזה.
+    var frac = state.pos - state.lastTop;
+    if (!(frac > -1 && frac < 1)) { state.pos = state.lastTop; frac = 0; }
+    applySub(tgt, frac);
 
     state.rafId = requestAnimationFrame(step);
   }

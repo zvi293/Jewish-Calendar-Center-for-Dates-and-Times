@@ -22384,8 +22384,10 @@ window.openDonationModal = function() {
 (function(){
   'use strict';
 
-  // 3 מהירויות בפיקסלים לשנייה. הוקטנו מעט לקצב קריאה משוחרר יותר.
-  var SPEEDS = { 1: 17, 2: 30, 3: 40 };
+  // 6 מהירויות בפיקסלים לשנייה (09/2026). כפתור המהירות עובר לפי הסדר ב-LEVELS
+  // ואחרי 3x חוזר ל-0.5x; כל פתיחה חדשה מתחילה ב-1x.
+  var LEVELS = [0.5, 1, 1.5, 2, 2.5, 3];
+  var SPEEDS = { 0.5: 9, 1: 17, 1.5: 25, 2: 30, 2.5: 40, 3: 50 };
 
   var ICON_PLAY  = '▶';
   var ICON_PAUSE = '⏸';
@@ -22398,8 +22400,9 @@ window.openDonationModal = function() {
     target: null,       // האלמנט שגולל בפועל
     btn: null,          // כפתור ה-▶/⏸ של הסשן הנוכחי
     lastT: 0,           // חותמת זמן של הפריים הקודם
-    acc: 0,             // צבירה תת-פיקסלית למניעת קפיצות
-    speed: 1,           // מהירות נוכחית (1/2/3) — מאופסת לכל פתיחה חדשה
+    pos: null,          // מיקום גלילה "וירטואלי" עשרוני (null = להתיישר ל-scrollTop בפריים הבא)
+    lastTop: 0,         // scrollTop כפי שהדפדפן החזיר אחרי הכתיבה האחרונה שלנו
+    speed: 1,           // מהירות נוכחית (אחת מ-LEVELS) — מאופסת ל-1x בכל פתיחה חדשה
     lastTargetKey: null // מזהה הסלקטור האחרון — לזיהוי "פתיחה חדשה"
   };
 
@@ -22433,7 +22436,7 @@ window.openDonationModal = function() {
     state.target = null;
     state.btn = null;
     state.lastT = 0;
-    state.acc = 0;
+    state.pos = null;
   }
 
   // מציאת אלמנט גלילתי אמיתי: מטפס במעלה ה-DOM ומחפש אב עם overflow גלילתי
@@ -22491,21 +22494,19 @@ window.openDonationModal = function() {
     if (dt > 0.25) dt = 0.016;
 
     var pxPerSec = SPEEDS[state.speed] || SPEEDS[1];
-    // עדכון שברי כל פריים (במקום לחכות לפיקסל שלם) — מונע רעידה במהירויות נמוכות.
-    // דפדפנים מודרניים תומכים ב-scrollTop שברי על מסכים בעלי DPI גבוה.
-    state.acc += pxPerSec * dt;
-    if (state.acc > 0) {
-      var prevTop = state.target.scrollTop;
-      var wanted = prevTop + state.acc;
-      try { state.target.scrollTop = wanted; } catch(e) {}
-      // זכור שארית: אם הדפדפן עיגל לפיקסל שלם, השארית עוברת לפריים הבא ולא נאבדת
-      var residual = wanted - state.target.scrollTop;
-      // הגנה מערכי קיצון (עיגול הפוך/קיצוני)
-      state.acc = (residual >= 0 && residual < 2) ? residual : 0;
-    }
+    var tgt = state.target;
+    // מיקום וירטואלי עשרוני: הדפדפן מעגל את scrollTop לפיקסל המסך *הקרוב* (גם כלפי מעלה).
+    // בעבר נצברה "שארית" מול scrollTop וכל עיגול כלפי מעלה אבד — 1x רץ בפועל 30px/s במקום 17,
+    // ובמסך 120Hz גם 2x ו-3x התמזגו ל-60px/s. עכשיו צוברים על מיקום משלנו ומציבים אותו:
+    // העיגול לא מצטבר והמהירות מדויקת בכל מסך. אם scrollTop זז מבחוץ (גרירה, תוכן עניינים,
+    // עיגון גלילה) — מתיישרים למיקום בפועל וממשיכים משם.
+    var cur = tgt.scrollTop;
+    if (state.pos === null || Math.abs(cur - state.lastTop) > 0.1) state.pos = cur;
+    state.pos += pxPerSec * dt;
+    try { tgt.scrollTop = state.pos; } catch(e) {}
+    state.lastTop = tgt.scrollTop;
 
     // הגענו לסוף? עצור וחזור ל-▶
-    var tgt = state.target;
     if (tgt.scrollTop + tgt.clientHeight >= tgt.scrollHeight - 1) {
       stopAuto();
       return;
@@ -22560,14 +22561,14 @@ window.openDonationModal = function() {
     state.target = scrollEl;
     state.btn = btn || null;
     state.lastT = 0;
-    state.acc = 0;
+    state.pos = null;
     setPauseIcon(btn);
     state.rafId = requestAnimationFrame(step);
     if (window._btnToastOn) window._btnToastOn("גלילה אוטומטית");
   };
 
   window._cycleAutoScrollSpeed = function(/*btn*/) {
-    state.speed = state.speed >= 3 ? 1 : state.speed + 1;
+    state.speed = LEVELS[(LEVELS.indexOf(state.speed) + 1) % LEVELS.length];
     syncSpeedDisplays();
     if (window._btnToastVal) window._btnToastVal("מהירות גלילה: " + state.speed + "x");
   };

@@ -4081,6 +4081,9 @@ html.dark .lux-sel-foot { background: #111c33; border-top-color: rgba(255, 255, 
   border: 1px solid rgba(16, 185, 129, 0.3);
   cursor: pointer;
 }
+/* כפתור מהירות הגלילה בכל הקוראים: רוחב קבוע שמכיל גם "0.5x"/"1.5x"/"2.5x" — אחרת הכפתור
+   מתרחב ב-8px בכל החלפה והסרגל כולו זז. !important גובר על min-width:2.4rem שב-style הפנימי */
+.auto-scroll-speed-btn { min-width: 3rem !important; }
 /* כפתורי גופן בתחתית הקורא — ליד הגלילה האוטומטית */
 .lux-sel-fbtn {
   width: 40px;

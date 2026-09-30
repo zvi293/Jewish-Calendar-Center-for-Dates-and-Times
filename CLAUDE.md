@@ -17,6 +17,7 @@
 - שינוי עיצוב כלל-אתרי — קודם סקיצה/אישור על קטע אחד. עיצוב מחדש מלא נדחה בעבר.
 - הודעות קומיט בעברית, שורה אחת תיאורית (ראו `git log`), עם טריילר Co-Authored-By.
 - ייתכן סשן נוסף שעורך את הריפו במקביל — לפני עריכה לוודא ש-`git status`/mtime יציבים.
+- **פרויקט האנגלית (i18n)**: התוכנית המאושרת, ההכרעות והמצב הנוכחי נמצאים ב-`docs/i18n-plan.md`. כל סשן שנוגע בזה מתחיל מקריאתו ומסיים בעדכון סעיף "מצב נוכחי" שבו. לא להתחיל שלב 0 לפני שהמשתמש אומר במפורש.
 
 ## מפת קבצים
 
@@ -29,6 +30,7 @@
 | `tailwind.css` / `tailwind.input.css` / `tailwind.config.js` | נבנה בבילד. **לא לערוך את `tailwind.css` ידנית.** |
 | `fonts.css`, `fonts/` | גופנים באחסון עצמי (Assistant, Frank Ruhl Libre). |
 | `sw.js` | Service Worker. `STATIC_CACHE = "moadim-static-vNNN"`, רשימת `STATIC_ASSETS` עם `?v=`. |
+| `docs/i18n-plan.md` | תוכנית פרויקט האנגלית + "מצב נוכחי" (מסמך העבודה בין סשנים). חסום מהגשה ב-netlify.toml. |
 | `synagogues.html` | דף בתי כנסת/מקוואות/ציונים. Leaflet מ-`vendor/`, מאגר מקומי `places/*.json`, ואז Overpass ברקע. |
 | `widget.html` | ווידג'טים למסך הבית (noindex). |
 | `credits.html`, `privacy.html`, `terms.html`, `404.html` | דפים סטטיים. |

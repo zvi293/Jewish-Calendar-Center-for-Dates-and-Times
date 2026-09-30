@@ -2133,7 +2133,7 @@ function _uxExit(el, done) {
   const xs = [];
   document.querySelectorAll("body > .lux-ux").forEach((x) => { if (x.__luxFor === el) xs.push(x); });
   const anims = [];
-  let release = null, main = null;
+  let release = null, main = null, ovPrev = null;
   let fin = false, cancelled = false;
   const finish = () => {
     if (fin) return;
@@ -2148,6 +2148,7 @@ function _uxExit(el, done) {
     try { done(xs, cancelled); } catch (e) {}
     // מודאל סטטי שהוסתר (או נפתח שוב): מחזירים את מצבו הרגיל — מוסתר כבר, אז בלי קפיצה
     anims.forEach((a) => { try { a.cancel(); } catch (e) {} });
+    if (ovPrev) { el.style.overflowX = ovPrev[0]; el.style.overflowY = ovPrev[1]; }
     [el].concat(xs).forEach((n) => { n.style.pointerEvents = ""; });
     if (release) release();
     _syncModalOpenClass();
@@ -2191,6 +2192,16 @@ function _uxExit(el, done) {
       // הרקע המוחשך מתבהר יחד עם הנפילה, בקצב אחיד — עקומת ease-out "הדליקה" את הדף כבר
       // בפריים הראשון, כשהכרטיס עוד בקושי זז (נראה כשני שלבים: אור ואז נפילה)
       const cs = getComputedStyle(el);
+      // (09/2026) שכבה שהיא בעצמה אזור גלילה (overflow-y:auto על הרקע — המצפן, חלון ההילולות):
+      // הכרטיס שצונח אל מתחת לתחתית מגדיל את אזור הגלילה בכל פריים, והשכבה "נהיית נגללת"
+      // באמצע התנועה — בטלפון הרקע כולו מצויר מחדש בכל פריים וזה נראה כהבהוב של המסך. בזמן
+      // היציאה — בלי גלילה (hidden שומר את scrollTop; הכרטיס פשוט נחתך בתחתית המסך, כמו ממילא).
+      // רק כשאין פס גלילה שתופס רוחב (בטלפון — אף פעם): אחרת במחשב הכרטיס היה זז הצידה
+      if (/auto|scroll/.test(cs.overflowY + " " + cs.overflowX) && el.offsetWidth - el.clientWidth <= 0) {
+        ovPrev = [el.style.overflowX, el.style.overflowY];
+        el.style.overflowX = "hidden";
+        el.style.overflowY = "hidden";
+      }
       if (_uxAlpha(cs.backgroundColor) > 0.02 && (cs.backgroundImage || "none") === "none") {
         const f1 = { backgroundColor: cs.backgroundColor.replace(/rgba?\(([^,\s]+)[,\s]+([^,\s]+)[,\s]+([^,\s)]+).*\)/, "rgba($1, $2, $3, 0)") };
         const bf = cs.backdropFilter;

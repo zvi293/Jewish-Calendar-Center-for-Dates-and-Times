@@ -133,9 +133,24 @@
       if (typeof window.openPrayer === "function")
         window.openPrayer("kiddush-levana", "ברכת לבנה", "Kiddush Levana");
     }
+    // (09/2026) הפופאפ רשום בהיסטוריה כמו כל חלון: "חזור" בטלפון סוגר אותו. עד עכשיו הוא לא
+    // נרשם — ו"חזור" יצא מהאפליקציה כולה. כל סגירה עוברת דרך ההיסטוריה (_popupHistoryClose ⇒
+    // history.back ⇒ popstate ⇒ closeMoonPop), ומעבר לברכת הלבנה נפתח רק *אחרי* שהרשומה של
+    // הפופאפ ירדה — אחרת נשארת רשומה יתומה שחזור נוסף היה נוחת עליה
+    var moonGoAfterClose = false;
+    function closeMoonPop() {
+      var p = document.getElementById("lux-moon-pop");
+      if (p) { clearTimeout(p.__luxMoonT); p.remove(); }
+      if (moonGoAfterClose) { moonGoAfterClose = false; setTimeout(goLevana, 0); }
+    }
+    function requestMoonClose(thenGo) {
+      moonGoAfterClose = !!thenGo;
+      if (typeof window._popupHistoryClose === "function") window._popupHistoryClose("lux-moon-pop");
+      else closeMoonPop();
+    }
     btn.addEventListener("click", function () {
       var old = document.getElementById("lux-moon-pop");
-      if (old) { old.remove(); return; }
+      if (old) { requestMoonClose(false); return; }
       var m = moonNow();
       // יום למולד ומצב ברכת הלבנה — לפי המולד המסורתי (script.js), כמו כרטיס הדשבורד
       var mDay = (typeof window._levanaMoladDay === "function" && window._levanaMoladDay()) || m.day;
@@ -157,11 +172,13 @@
         "</div>";
       if (lvTxt) pop.querySelector(".lux-moon-pop-lv").textContent = lvTxt;
       document.body.appendChild(pop);
-      var timer = setTimeout(function () { pop.remove(); goLevana(); }, 4600);
-      function closeOnly() { clearTimeout(timer); pop.remove(); }
-      pop.querySelector(".lux-moon-pop-go").addEventListener("click", function () { closeOnly(); goLevana(); });
-      pop.querySelector(".lux-moon-pop-x").addEventListener("click", closeOnly);
-      pop.addEventListener("click", function (e) { if (e.target === pop) closeOnly(); });
+      moonGoAfterClose = false;
+      if (window._popupHideHandlers) window._popupHideHandlers["lux-moon-pop"] = closeMoonPop;
+      if (typeof window.pushModalState === "function") window.pushModalState("lux-moon-pop");
+      pop.__luxMoonT = setTimeout(function () { requestMoonClose(true); }, 4600);
+      pop.querySelector(".lux-moon-pop-go").addEventListener("click", function () { requestMoonClose(true); });
+      pop.querySelector(".lux-moon-pop-x").addEventListener("click", function () { requestMoonClose(false); });
+      pop.addEventListener("click", function (e) { if (e.target === pop) requestMoonClose(false); });
     });
     hero.appendChild(btn);
   });

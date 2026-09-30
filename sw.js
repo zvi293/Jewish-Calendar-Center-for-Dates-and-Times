@@ -17,7 +17,7 @@ const STATIC_ASSETS = [
   // מ-HTTP cache (בלי הורדה כפולה של ~3MB) והבקשות מהדף פוגעות במטמון
   // בדיוק; סטייה עתידית מכוסה ע"י ה-fallback עם ignoreSearch.
   "/script.js?v=69",
-  "/lux.js?v=67",
+  "/lux.js?v=68",
   "/style.css?v=80",
   "/tailwind.css?v=2",
   "/fonts.css?v=1",

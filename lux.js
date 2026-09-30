@@ -1826,7 +1826,13 @@
     ind.id = "lux-ptr";
     ind.innerHTML = '<svg viewBox="0 0 512 512" fill="none"><path d="M256 112L371 312H141Z" stroke="#f2d98a" stroke-width="34" stroke-linejoin="round"/><path d="M256 400L371 200H141Z" stroke="#f2d98a" stroke-width="34" stroke-linejoin="round"/></svg>';
     document.body.appendChild(ind);
-    var startY = null, pulling = false, THRESH = 95;
+    var startY = null, startT = 0, pulling = false, THRESH = 110;
+    // (09/2026, סבב 6) רענון רק ממשיכה מכוונת בדף שכבר "נח" בראש — לא מהמשך של גלילה מהירה
+    // למעלה. עד עכשיו: מי שגלל מהר מלמטה למעלה, והחלקה נוספת התחילה ברגע שהדף הגיע לראש,
+    // קיבל טעינה מחדש של כל האתר ("כל המסך מהבהב, הכרטיסים נעלמים וחוזרים"). עכשיו: אין
+    // רענון אם הדף זז בחצי השנייה שלפני המגע, וההחלקה צריכה להיות משיכה (לא הטלה מהירה)
+    var lastScrollAt = 0;
+    window.addEventListener("scroll", function () { lastScrollAt = performance.now(); }, { passive: true });
     // האם מותר למשוך-לרענון מנקודת המגע הזו?
     // חשוב: כשמודאל פתוח script.js נועל את הגוף (position:fixed) ואז
     // window.scrollY תמיד 0 — לכן חובה לבדוק את מצב הגוף ואת נתיב המגע.
@@ -1853,8 +1859,9 @@
       return true;
     }
     document.addEventListener("touchstart", function (e) {
-      if (ptrAllowed(e.target)) {
+      if (performance.now() - lastScrollAt > 600 && ptrAllowed(e.target)) {
         startY = e.touches[0].clientY;
+        startT = performance.now();
         pulling = true;
       } else pulling = false;
     }, { passive: true });
@@ -1868,7 +1875,9 @@
     document.addEventListener("touchend", function (e) {
       if (!pulling || startY === null) return;
       var dy = e.changedTouches[0].clientY - startY;
-      if (dy > THRESH && window.scrollY <= 0) {
+      // הטלה מהירה (פחות מ-0.3 שנ' מהמגע לעזיבה) היא גלילה, לא משיכה — רענון רק ממשיכה מכוונת
+      var pullOk = performance.now() - startT > 300;
+      if (dy > THRESH && pullOk && window.scrollY <= 0) {
         ind.style.top = "28px";
         ind.classList.add("lux-ptr-spin");
         if (navigator.vibrate) { try { navigator.vibrate(12); } catch (_) {} }
@@ -1974,7 +1983,9 @@
         el.id = "lux-streak";
         host.insertAdjacentElement("beforebegin", el);
       }
-      el.innerHTML = "🔥 רצף לימוד: <b>" + s.count + " ימים</b>";
+      // כתיבה רק בשינוי — רץ גם בכל חזרה לאפליקציה; innerHTML זהה = ציור מחדש מיותר באותו רגע
+      var html = "🔥 רצף לימוד: <b>" + s.count + " ימים</b>";
+      if (el.innerHTML !== html) el.innerHTML = html;
       el.title = "נכנסת ללימוד (תהילים / דף יומי / חוק לישראל) " + s.count + " ימים ברצף";
     }
     // מעקב: תהילים, ספרים, ודף יומי/חוק לישראל
@@ -4123,6 +4134,12 @@
     // ── בנייה סטטית של פני השעון — נבנית פעם אחת, לא כל שנייה ──
     // (בנייה מחדש כל שנייה מאתחלת את אנימציות ה-SVG וגורמת לריצוד בנייד)
     var faceSig = null, infoSig = null;
+    // טלפון/טאבלט (09/2026, סבב 6): בלי אנימציות SMIL (24 כוכבים מנצנצים + פעימת עיגול המחוג) —
+    // הן מציירות מחדש את השעון בכל פריים (נמדד: ~64 ציורים בשנייה כל עוד החלון פתוח), וזה מה
+    // שהפך את פתיחת השעון ל"מרצדת" בטלפון. הכוכבים נשארים, בבהירות קבועה; המחוג, הקשת והשעון
+    // הדיגיטלי ממשיכים להתעדכן כל שנייה. הטבעת המסתובבת — סטטית בנייד (style.css)
+    var HC_LITE = false;
+    try { HC_LITE = window.matchMedia("(max-width: 768px), (pointer: coarse)").matches; } catch (e) {}
     function buildFace(svg, c, marks) {
       var CX = 170, CY = 170, TWO = 2 * Math.PI;
       var isDay = c.isDay;
@@ -4153,8 +4170,12 @@
             ]);
           }
         }
-        NIGHT_STARS.forEach(function (s) {
-          parts.push('<circle cx="' + s[0].toFixed(1) + '" cy="' + s[1].toFixed(1) + '" r="' + s[2] + '" fill="#dbe7ff"><animate attributeName="opacity" values="0.12;0.9;0.12" dur="' + s[3] + 's" repeatCount="indefinite"/></circle>');
+        NIGHT_STARS.forEach(function (s, si) {
+          var at = '<circle cx="' + s[0].toFixed(1) + '" cy="' + s[1].toFixed(1) + '" r="' + s[2] + '" fill="#dbe7ff"';
+          // בנייד — בהירות קבועה ומגוונת (בלי ניצנוץ שמצייר מחדש בכל פריים)
+          parts.push(HC_LITE
+            ? at + ' opacity="' + (0.3 + ((si * 37) % 50) / 100).toFixed(2) + '"/>'
+            : at + '><animate attributeName="opacity" values="0.12;0.9;0.12" dur="' + s[3] + 's" repeatCount="indefinite"/></circle>');
         });
       } else {
         for (var ray = 0; ray < 24; ray++) {
@@ -4210,7 +4231,8 @@
       });
       // המחוג — עם שמש/ירח בקצהו (המיקום מתעדכן כל שנייה ב-updateDynamic)
       parts.push('<line id="lux-hcd-hand" x1="170" y1="170" x2="170" y2="74" class="lux-hc-hand" filter="url(#lux-hcg)"/>');
-      parts.push('<circle id="lux-hcd-end" cx="170" cy="58" r="13" fill="' + (isDay ? "#fff6d8" : "#101a35") + '" stroke="#c9993a" stroke-width="2"><animate attributeName="r" values="12;14;12" dur="2.4s" repeatCount="indefinite"/></circle>');
+      parts.push('<circle id="lux-hcd-end" cx="170" cy="58" r="13" fill="' + (isDay ? "#fff6d8" : "#101a35") + '" stroke="#c9993a" stroke-width="2"' +
+        (HC_LITE ? "/>" : '><animate attributeName="r" values="12;14;12" dur="2.4s" repeatCount="indefinite"/></circle>'));
       parts.push('<text id="lux-hcd-emoji" x="170" y="63" text-anchor="middle" font-size="14">' + (isDay ? "☀️" : "🌙") + "</text>");
       // מרכז: שעון דיגיטלי חי
       parts.push('<circle cx="170" cy="170" r="37" fill="' + (isDay ? "rgba(255,252,240,0.92)" : "rgba(6,12,29,0.88)") + '" stroke="rgba(201,153,58,0.7)" stroke-width="1.6"/>');

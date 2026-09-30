@@ -1822,9 +1822,9 @@ function _revealModalNoFreeze(m, alsoUnscale) {
 // התנגנה מחדש בכל פעם שילד חדש נכנס לשכבה — מעבר פריט בדבר התורה, בנייה מחדש של רשימה,
 // חזרה מהקורא לרשימת הפרקים — וזה נראה בדיוק כמו "החלון נטען מחדש/רענון". עכשיו: אנימציה
 // אחת (WAAPI) שמתחילה ברגע הפתיחה עצמו ולא חוזרת, גם כשהתוכן מתחלף.
-// · התוכן מלא ולא שקוף מהפריים הראשון — תנועה בלבד (translate/scale רצים על ה-GPU; אנימציה
+// · התוכן מלא ולא שקוף מהפריים הראשון — תנועה בלבד (translate רץ על ה-GPU; אנימציה
 //   קפואה משאירה לכל היותר תוכן מוזז בכמה פיקסלים, לעולם לא חלון שקוף/"לא נטען").
-// · חלון-כרטיס (רקע מוחשך + כרטיס אטום): הכרטיס עולה וגדל בעדינות, והרקע מתכהה ברכות באותו
+// · חלון-כרטיס (רקע מוחשך + כרטיס אטום): הכרטיס עולה בעדינות, והרקע מתכהה ברכות באותו
 //   זמן — במקום "מכה" של מסך כהה בבת אחת ואז תזוזה (שני אירועים = "קפיצה"). מעל כרטיס שקוף-
 //   למחצה הרקע לא מונפש: שם הדף הצבעוני היה נראה מבעד לטקסט (הריצוד של גרסה 1).
 // · מסך מלא (ספרים, קוראים, תפילות): הרקע במקומו, רק התוכן עולה — בלי scale (טקסט במסך מלא
@@ -1984,7 +1984,16 @@ function _uxEnter(layer) {
   if (!L.full) {
     // רק הכרטיס (וילדים בסדר גודל שלו) — כפתור X צדדי שמעוגן לפינת המסך נשאר במקומו
     const moving = L.kids.filter((k, i) => L.rects[i].width * L.rects[i].height >= L.area * 0.25);
-    _uxAnimate(moving, [{ translate: "0 20px", scale: "0.95" }, { translate: "0 0", scale: "1" }], 340, anims);
+    // (09/2026, סבב 6) הכרטיס מקבל שכבה משלו מהפריים הראשון ועד שהחלון נסגר, והתנועה בלי
+    // scale: עם scale הטלפון מצייר את הטקסט בקנה-מידה משתנה ובסוף התנועה מצייר הכול מחדש
+    // בקנה-מידה הסופי; ובלי שכבה קבועה — בסוף הכניסה הכרטיס "יורד" מהשכבה שלו ובתחילת
+    // היציאה "עולה" אליה, ובכל מעבר כזה כל תוכנו (SVG השעון, כרטיסי האשף, 30 הנרות של לוח
+    // ההילולות) מצויר מחדש. בטלפון זה נראה כ"החלון נעלם וחוזר" ו"הטקסט מתחלף". will-change:
+    // opacity ולא transform — transform היה הופך את הכרטיס לבסיס של position:fixed שבתוכו.
+    // 24px = מספר שלם של פיקסלי מסך בכל יחס-צפיפות נפוץ (2.625/2.75/3/3.5) — בסוף התנועה אין
+    // שבר-פיקסל שמחייב ציור מחדש
+    moving.forEach((k) => { if (!k.style.willChange) k.style.willChange = "opacity"; });
+    _uxAnimate(moving, [{ translate: "0 24px" }, { translate: "0 0" }], 320, anims);
     const cs = getComputedStyle(layer);
     const a = _uxAlpha(cs.backgroundColor);
     if (a > 0.04 && a < 0.995 && (cs.backgroundImage || "none") === "none") {
@@ -2011,7 +2020,7 @@ function _uxEnter(layer) {
     _uxAnimate(targets, [{ translate: "0 16px" }, { translate: "0 0" }], 300, anims);
   }
   _uxHoldInner(layer, 360);
-  _uxGuard(anims, 340);
+  _uxGuard(anims, 320);
   // נרשם בסוף — המדידה עצמה יכולה לקחת מאות ms (פריסה ראשונה של ספר ענק), ו-_uxEnterView
   // שרץ מיד אחרינו באותה משימה חייב לזהות שזו אותה פתיחה (אחרת התוכן היה מונפש פעמיים)
   layer.__uxEnterT = performance.now();
@@ -8341,6 +8350,15 @@ initApp();
     ctx.restore();
   }
   let _starsFrameNo = 0;
+  // (09/2026, סבב 6) הכוכבים "קופאים" בזמן גלילה ובחצי השנייה שאחרי חזרה לאפליקציה: אלה
+  // בדיוק הרגעים שבהם הטלפון מצייר מחדש את כל הדף (גלילה מהירה למעלה אל ההירו / חזרה
+  // מ"יישומים אחרונים" אחרי שהמערכת שחררה את הזיכרון הגרפי) — ציור הקנבס באותו זמן מתחרה
+  // על ה-GPU ומשאיר אזורים ריקים לרגע. הכוכבים נעים לאט מאוד — עצירה קצרה לא נראית.
+  let _starsHoldUntil = 0;
+  window.addEventListener("scroll", () => { _starsHoldUntil = performance.now() + 180; }, { passive: true });
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) _starsHoldUntil = performance.now() + 600;
+  });
   function draw() {
     _starsFrameNo++;
     if (_starsReduced) {
@@ -8356,6 +8374,7 @@ initApp();
     if (
       !document.hidden &&
       _starsOnScreen &&
+      (_starsReduced || performance.now() >= _starsHoldUntil) &&
       !document.documentElement.classList.contains("lux-modal-open")
     ) {
       ctx.clearRect(0, 0, W, H);
@@ -29521,7 +29540,8 @@ document.addEventListener("keydown", (e) => {
     if (!el) return;
     try {
       var m = stripNikud(new Intl.DateTimeFormat("he-IL-u-ca-hebrew", { month: "long" }).format(new Date())).trim();
-      if (m) el.textContent = "חודש " + m;
+      // כתיבה רק בשינוי — רץ גם בכל חזרה לאפליקציה, ושינוי DOM מיותר באותו רגע = ציור מחדש
+      if (m && el.textContent !== "חודש " + m) el.textContent = "חודש " + m;
     } catch (e) {}
   }
   _fillMonthTorahBtn();
@@ -35241,6 +35261,18 @@ function closeSefarimNosafimModal() {
   if (!document.fonts || !document.fonts.forEach) return;
   const go = () => {
     try { document.fonts.forEach((f) => { if (f.status === "unloaded") f.load().catch(() => {}); }); } catch (e) {}
+    // וגם האימוג'י שבחלונות: בפעם הראשונה שתו כזה מוצג, הדפדפן מחפש לו גופן-מערכת (נמדד: ~60ms
+    // בפתיחה הראשונה של השעון ההלכתי, על חשבון הזמן שבין הנגיעה להופעת החלון). מדידה אחת
+    // מוסתרת עכשיו, בזמן סרק — והחיפוש כבר שמור כשהחלון נפתח
+    try {
+      const w = document.createElement("div");
+      w.setAttribute("aria-hidden", "true");
+      w.style.cssText = "position:absolute;left:-9999px;top:0;visibility:hidden;pointer-events:none;font-size:16px;white-space:nowrap;";
+      w.textContent = "☀️🌙🕰️📋⏳🎯📕📖🕯️📅🧭✨🍎🙏📌📑🔖🔍🖍️🌅🌆🌃🌄⭐🔥📜📘🌹🕍🎡⚖️⏰⚙️🔄🌿🕎🎉🌟🕊️📤🖨️💡🗓️⏱️✓✕←";
+      document.body.appendChild(w);
+      void w.getBoundingClientRect().width;
+      w.remove();
+    } catch (e) {}
   };
   const idle = (f) => (window.requestIdleCallback ? window.requestIdleCallback(f, { timeout: 4000 }) : setTimeout(f, 1500));
   if (document.readyState === "complete") idle(go);

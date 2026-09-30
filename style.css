@@ -9271,6 +9271,9 @@ details[open] > :not(summary) {
     color: rgb(254, 243, 199);
   }
   .lux-sr-ring { animation-name: lux-sr-pulse-t; }
+  /* השעון ההלכתי: הטבעת המקווקוות מסתובבת בשכבה משלה — וכל מה שמצויר אחריה בשעון הופך
+     לשכבה נוספת שמצוירת מחדש יחד איתה. בנייד — טבעת סטטית (ראו HC_LITE ב-lux.js) */
+  .lux-hc-spin { animation: none !important; }
 }
 @keyframes lux-sr-pulse-t {
   0%, 100% { transform: scale(1); }

@@ -896,18 +896,47 @@
           if (Array.isArray(plans) && plans.length && plans[0] && plans[0].id && typeof window.luxOpenPlanReader === "function") window.luxOpenPlanReader(plans[0].id);
           else if (typeof window.luxOpenPlanWizard === "function") window.luxOpenPlanWizard();
         };
-        // בקשת משתמש 02/09/2026: הדף מגיע לכרטיס "סדר הלימוד האישי שלי" — כך שבסגירה
-        // חוזרים אליו. מ-09/2026 זו קפיצה מיידית *מאחורי* החלון שנפתח באותו פריים (הרקע
-        // נפתח כהה במלואו — _uxDimHandoff — כך שהקפיצה לא נראית). עד אז: גלילה חלקה דרך כל
-        // הדשבורד (~0.5 שנ' של תוכן שטס — "ריצוד") ורק אחרי ~1.3 שנ' החלון נפתח.
+        // בקשת משתמש (02/09/2026, וחזרה על הבקשה 30/09): קודם גוללים בעדינות לכרטיס "סדר
+        // הלימוד האישי שלי" בדף, ורק כשהגלילה נגמרה — פותחים. כך המשתמש רואה לאן הגיע, ובסגירה
+        // הוא חוזר לכרטיס. אם הכרטיס כבר על המסך (או שטרם הוזרק) — פותחים מיד.
+        // פותחים רק אחרי שהגלילה נעצרה: פתיחה באמצע גלילה חלקה נועלת את הדף במיקום ביניים,
+        // והסגירה החזירה לאמצע הדרך. סוף הגלילה: אירוע scrollend (כרום 114+), ובדפדפן בלי
+        // האירוע — שלושה פריימים רצופים בלי תזוזה אחרי שהגלילה התחילה; רשת ביטחון 1.6 שנ'.
+        // (עד 30/09 בדיקה כל 160ms — עד שליש שנייה של המתנה מיותרת אחרי שהגלילה כבר נעצרה.)
         var row = document.getElementById("lux-plan-row");
         var vh = window.innerHeight || document.documentElement.clientHeight;
         var r = row ? row.getBoundingClientRect() : null;
-        if (row && (r.top < 0 || r.bottom > vh)) {
-          row.scrollIntoView({ block: "center" });
-          if (typeof window._uxDimHandoff === "function") window._uxDimHandoff();
-        }
-        openIt();
+        if (!row || (r.top >= 0 && r.bottom <= vh)) { openIt(); return; }
+        // לחיצה נוספת בזמן הגלילה — לא מתחילים שוב (פתיחה כפולה הייתה סוגרת את החלון)
+        if (window.__luxPlanNavPending) return;
+        window.__luxPlanNavPending = true;
+        var done = false, moved = false, still = 0, lastY = window.scrollY, safety = 0;
+        var finish = function () {
+          if (done) return;
+          done = true;
+          window.__luxPlanNavPending = false;
+          window.removeEventListener("scrollend", finish);
+          clearTimeout(safety);
+          // גלילה שנקטעה (נגיעה באמצע) — משלימים בקפיצה לפני הפתיחה
+          var r2 = row.getBoundingClientRect();
+          if (r2.top < 0 || r2.bottom > vh) row.scrollIntoView({ block: "center" });
+          openIt();
+        };
+        window.addEventListener("scrollend", finish);
+        // היעד (הכרטיס במרכז המסך) — כשהדף הגיע אליו פותחים מיד: scrollend מגיע רק אחרי
+        // "זנב" של תזוזות תת-פיקסל (~150ms שבהם העין כבר רואה דף עומד)
+        var maxY = Math.max(0, document.documentElement.scrollHeight - vh);
+        var target = Math.min(maxY, Math.max(0, window.scrollY + r.top + r.height / 2 - vh / 2));
+        (function poll() {
+          if (done) return;
+          var y = window.scrollY;
+          if (y !== lastY) { moved = true; still = 0; } else if (moved) still++;
+          lastY = y;
+          if (still >= 3 || (moved && Math.abs(y - target) <= 1)) { finish(); return; }
+          requestAnimationFrame(poll);
+        })();
+        safety = setTimeout(finish, 1600);
+        row.scrollIntoView({ behavior: "smooth", block: "center" });
       } },
       { id: "zmanim", icon: "⏰", label: "זמנים", run: function () { var z = document.getElementById("halacha-banner"); if (z) z.scrollIntoView({ behavior: "smooth", block: "center" }); } },
       { id: "settings", icon: "⚙️", label: "הגדרות", run: function () { if (typeof window.toggleSettings === "function") window.toggleSettings(); } },

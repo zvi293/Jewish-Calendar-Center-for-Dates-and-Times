@@ -399,6 +399,14 @@ let _modalScrollLockCount = 0;
 function lockBodyScroll() {
   _modalScrollLockCount++;
   if (_modalScrollLockCount === 1) {
+    // (09/2026) מיקום הגלילה ביציאה מחלון — בידי האתר, לא הדפדפן. הנעילה מאפסת את scrollY
+    // ודוחפים רשומת היסטוריה; ביציאה (X / חזור) unlockBodyScroll מחזיר בדיוק למקום. במצב
+    // "auto" הדפדפן, *אחרי* ה-popstate, "משחזר" לרשומה את מיקום הגלילה ששמר לה — ואם שמר
+    // אותו אחרי שהנעילה כבר איפסה את הגלילה (תלוי תזמון; בטלפון כמעט תמיד) זה 0: כל יציאה
+    // מחלון/ספר/מצפן זרקה לראש הדף. manual = רק הקוד שלנו מזיז את הגלילה. נקבע כאן (ולא
+    // בטעינה) כי זה חל על הרשומה הנוכחית: בטעינה זה היה קוטע את השחזור הרגיל של הדפדפן
+    // בחזרה מדף אחר (נמדד: חזרה 860px נמוך מהמקום). בעזיבה לדף אחר — חזרה ל-auto (pagehide)
+    try { if ("scrollRestoration" in history && history.scrollRestoration !== "manual") history.scrollRestoration = "manual"; } catch (e) {}
     // חובה לקרוא את מיקום הגלילה לפני position:fixed — ההצבה מאפסת את window.scrollY,
     // וקריאה אחריה שמרה תמיד 0: הרקע קפץ לראש הדף בפתיחה והסגירה החזירה לראש במקום למקום האמיתי
     const y = window.scrollY;
@@ -759,6 +767,13 @@ window.addEventListener("popstate", function (e) {
     }
   }
 });
+// בעזיבה לדף אחר (בתי כנסת וכד') — שחזור הגלילה של הדפדפן חוזר ל-"auto", כדי שחזרה לדף
+// הזה תחזיר את המשתמש למקומו כרגיל (ראו lockBodyScroll: בזמן חלונות זה "manual")
+try {
+  if ("scrollRestoration" in history) {
+    window.addEventListener("pagehide", () => { try { history.scrollRestoration = "auto"; } catch (e) {} });
+  }
+} catch (e) {}
 // ערך בסיס בהיסטוריה בטעינה: מבטיח שכפתור חזור תמיד יישאר בתוך האפליקציה
 history.replaceState({ page: "home" }, "");
 history.pushState({ page: "app" }, "");

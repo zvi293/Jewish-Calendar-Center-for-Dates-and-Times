@@ -405,8 +405,12 @@
     bar.innerHTML = "<div class='lux-progress-fill'></div>" +
       "<span class='lux-progress-eta' aria-hidden='true'><i>⏳</i><b></b></span>";
     modal.appendChild(bar);
-    var fill = bar.firstChild;
+    var fill = bar.firstChild, lastPct = -1, lastEta = 0;
     modal._luxEta = bar.lastChild;
+    // רץ בכל פריים של גלילה (גם אוטומטית) — חסכוני: קודם כל הקריאות, ורק אחריהן כתיבה;
+    // רוחב הפס נכתב רק כשהשתנה בעשירית אחוז לפחות (בספר ארוך פיקסל גלילה ≈ 0.006 פיקסל
+    // של פס — כתיבה בכל פריים חייבה פריסה וציור מחדש סתם), וזמן הסיום מתעדכן עד 4 פעמים
+    // בשנייה (התצוגה בשניות שלמות). בלי זה — כ-3.5ms לפריים במעבד מואט, פריימים נופלים = רעד
     modal.addEventListener("scroll", function (e) {
       var t = e.target;
       if (!t || !t.scrollHeight) return;
@@ -414,10 +418,12 @@
       if (t === modal && modal.scrollHeight <= modal.clientHeight + 4) return;
       var max = t.scrollHeight - t.clientHeight;
       if (max < 40) return;
+      var pct = Math.min(100, (t.scrollTop / max) * 100);
+      var now = Date.now(), etaOn = modal._luxEta._on || (window._autoScrollState && window._autoScrollState.rafId);
+      if (etaOn && now - lastEta > 250) { lastEta = now; etaUpdate(modal); }
       // ריפוי-עצמי: אם תוכן המודאל צויר מחדש (innerHTML) והפס נמחק — מחזירים אותו
-      if (!modal.contains(bar)) { modal.appendChild(bar); fill = bar.firstChild; }
-      fill.style.width = Math.min(100, (t.scrollTop / max) * 100) + "%";
-      if (modal._luxEta._on || (window._autoScrollState && window._autoScrollState.rafId)) etaUpdate(modal);
+      if (!modal.contains(bar)) { modal.appendChild(bar); fill = bar.firstChild; lastPct = -1; }
+      if (Math.abs(pct - lastPct) >= 0.1 || ((pct >= 99.95 || pct <= 0.05) && lastPct !== pct)) { lastPct = pct; fill.style.width = pct + "%"; }
     }, true);
     // סרגל הגופן מקבל קלאס אחיד — משמש לגלישת שורות במובייל ולחישובי גובה
     var label = modal.querySelector(".font-btn-group") ||

@@ -9461,7 +9461,7 @@ window._buildSederMotzashFullHtml = function () {
     (story ? (
       h2("📖 סיפור מהבעל שם טוב") +
       card('<span style="display:block;font-size:0.9em;color:#b45309;font-weight:800;margin-bottom:0.5rem;">✨ ' + story.title + "</span>" +
-        '<span style="display:block;font-size:0.92em;line-height:2;text-align:right;">' + story.text + "</span>") +
+        '<span style="display:block;font-size:0.92em;line-height:2;text-align:center;">' + story.text + "</span>") +
       '<span style="display:block;text-align:center;margin:0.4rem 0 1rem;"><button type="button" onclick="if(window._snOpenBook){window._snOpenBook(\'seder-motzash\');setTimeout(function(){var c=document.getElementById(\'sn-reader-content\');if(!c)return;var hs=c.querySelectorAll(\'h2\');if(hs.length)c.scrollTop=Math.max(0,hs[hs.length-1].offsetTop-90);},250);}" style="padding:0.5rem 1.3rem;border-radius:999px;border:1.5px solid rgba(180,83,9,0.4);background:rgba(180,83,9,0.08);color:#b45309;font-size:0.72em;font-weight:800;cursor:pointer;">🔄 סיפור אחר</button></span>'
     ) : "")
   );
@@ -10561,7 +10561,7 @@ var CHANUKAT_HABAYIT_DATA = {
  ]
 };
 
-// ── זוהר ברית — לימוד ליל הברית ("ברית יצחק") (10/2026) ──
+// ── זוהר הברית — לימוד ליל הברית ("ברית יצחק") (10/2026) ──
 // מקור: ספריא — Zohar, Lech Lecha 30:1–35:92 (Vocalized Zohar, Israel 2013, כמו קורא הזוהר באתר),
 // בחלוקה המקובלת לעשרה קוראים; ואבי הבן — הקדמת הזוהר (Zohar, Introduction 27, דף יג ע"א).
 // סוגריים (הפניות, נוסחאות) → <small>; [דף] = עמודי דפוס וילנא. נוצר בסקריפט המרה — לא להקליד ידנית.
@@ -10747,7 +10747,7 @@ var ZOHAR_BRIT_DATA = {
  ]
 };
 
-// ── בונה משותף לסדרים המחולקים לחלקים בין הקרואים (חנוכת הבית, זוהר ברית) ──
+// ── בונה משותף לסדרים המחולקים לחלקים בין הקרואים (חנוכת הבית, זוהר הברית) ──
 // h2 = רצועת חלק / פרק ראשי (תוכן העניינים של הקורא נפתח מיד בכניסה — autoToc בספר),
 // h3 = פרק בתוך חלק. מחלקות sd-* ב-style.css (גוון לפי הספר: .sd-chb / .sd-zb), והטקסט
 // עצמו ב-.ush-p — הפונט הקבוע של התפילות באתר (פרנק ריל מודגש)
@@ -10798,7 +10798,7 @@ window._buildZoharBritHtml = function () {
   var zp = function (t) { return '<span class="ush-p sd-z">' + t + "</span>"; };
   var note = function (t) { return '<span class="ush-note">' + t + "</span>"; };
   var out = ['<div class="sd-book sd-zb">'];
-  out.push(_sdHero("📜", "זוהר ברית", "לימוד ליל הברית — „ברית יצחק״ · זוהר הקדוש, פרשת לך לך",
+  out.push(_sdHero("📜", "זוהר הברית", "לימוד ליל הברית — „ברית יצחק״ · זוהר הקדוש, פרשת לך לך",
     ["📖 עשרה חלקים", "🕊️ אבי הבן", "🙏 סיום וקדיש"]));
   // לפני הלימוד — הנוסח הקבוע של "לשם יחוד" ו"ויהי נועם" (תהלים צ, יז)
   out.push('<h2 class="sd-sec">🕯️ לפני הלימוד</h2>');
@@ -23150,8 +23150,7 @@ window.openDonationModal = function() {
     lastTop: 0,         // scrollTop כפי שהדפדפן החזיר אחרי הכתיבה האחרונה שלנו
     speed: 1,           // מהירות נוכחית (אחת מ-LEVELS) — מאופסת ל-1x בכל פתיחה חדשה
     lastTargetKey: null, // מזהה הסלקטור האחרון — לזיהוי "פתיחה חדשה"
-    subEl: null,        // המיכל שעליו מוחלת השלמת התת-פיקסל (applySub)
-    subPrev: null       // [transform, will-change] הקודמים שלו — מוחזרים בעצירה
+    subOn: []           // התוכן שעליו מוחלת השלמת התת-פיקסל כרגע (applySub): [אלמנט, transform, will-change קודמים]
   };
 
   function setPlayIcon(btn) {
@@ -23182,27 +23181,73 @@ window.openDonationModal = function() {
 
   // השלמת תת-פיקסל: scrollTop זז רק בפיקסלי מסך שלמים, אז צעד של למשל 1.75 פיקסלי מסך
   // לפריים (3x בטלפון) יוצא 2,2,2,1 — והכתב "רועד". את השארית (עד חצי פיקסל מסך) משלימים
-  // ב-transform על מיכל הגלילה עצמו: התנועה הנראית חלקה ובמהירות המדויקת. מוחל רק בזמן
-  // ריצה; בעצירה transform ו-will-change חוזרים לערכם הקודם (clearSub).
-  function applySub(el, frac) {
-    if (el === document.body || el === document.documentElement) return;
-    if (state.subEl !== el) {
-      clearSub();
-      state.subEl = el;
-      state.subPrev = [el.style.transform, el.style.willChange];
-      el.style.willChange = 'transform';
+  // ב-transform על *התוכן שבתוך* מיכל הגלילה — לא על המיכל עצמו (10/2026):
+  //  • transform על המיכל (הגרסה הקודמת) הזיז את קופסת המיכל: קו הזהב העליון של "דף הלימוד",
+  //    הרקע וקצוות החיתוך רעדו חצי פיקסל בכל פריים ("הדף רועד"). ובטלפון הטקסט בכלל לא הוחלק —
+  //    הדפדפן מיישר את היסט הגלילה לפיקסל מסך שלם *כולל* הזזה של אב, וההשלמה התבטלה.
+  //    נמדד בפיקסלים מצולמים ב-DPR 2.625: טקסט 2,1,2,2 וקו הגבול זז; עם ההזזה על התוכן —
+  //    1.75 אחיד בכל פריים וקו הגבול קבוע. (המאפיין translate לא מחליק — הדפדפן מעגל אותו.)
+  //  • רק מה שבתצוגה (± גובה מסך) מקבל שכבה — בפועל ילד אחד או כמה, לא מאות.
+  //  • אלמנט דביק/קבוע לא זז, וגם לא אבותיו — יורדים לילדיהם: אחרת שורת החיפוש בלוח הברכות
+  //    וכותרות הפרשה בבן איש חי היו רועדות. בעצירה הכול חוזר לערכו הקודם (clearSub).
+  var _subKind = new WeakMap(); // אלמנט → 0 רגיל | 1 לא נוגעים (דביק/קבוע/מוחלט/transform משלו) | 2 מכיל דביק/קבוע
+  function subKind(k) {
+    var v = _subKind.get(k);
+    if (v === undefined) {
+      v = 0;
+      try {
+        var cs = window.getComputedStyle(k), p = cs.position;
+        if (p === 'sticky' || p === 'fixed' || p === 'absolute' || cs.transform !== 'none') v = 1;
+        else if (k.querySelector('.bb-search-bar, [style*="sticky"], [style*="fixed"]')) v = 2;
+      } catch(e) { v = 1; }
+      _subKind.set(k, v);
     }
-    el.style.transform = 'translate3d(0,' + (-frac).toFixed(3) + 'px,0)';
+    return v;
+  }
+  function subCollect(box, lo, hi, out, depth) {
+    var kids = box.children, n = kids.length, i = 0;
+    if (n > 48) {
+      // רשימה ארוכה (למשל ~170 כרטיסים בלוח הברכות) — חיפוש בינארי לילד הראשון שבתצוגה
+      // (זרימה רגילה: הילדים מסודרים מלמעלה למטה), במקום מדידת כולם בכל פריים
+      var a = 0, b = n - 1;
+      while (a < b) { var mid = (a + b) >> 1; if (kids[mid].getBoundingClientRect().bottom < lo) a = mid + 1; else b = mid; }
+      i = a;
+    }
+    for (; i < n; i++) {
+      var k = kids[i], kind = subKind(k);
+      if (kind === 1) continue;
+      var r = k.getBoundingClientRect();
+      if (!r.width && !r.height) continue;   // מוסתר (למשל כרטיס שסונן בחיפוש)
+      if (r.top > hi) break;                 // מכאן והלאה הכול מתחת לתצוגה
+      if (r.bottom < lo) continue;
+      if (kind === 2) { if (depth < 4) subCollect(k, lo, hi, out, depth + 1); continue; }
+      out.push(k);
+    }
+  }
+  function subRestore(rec) {
+    try { rec[0].style.transform = rec[1]; rec[0].style.willChange = rec[2]; } catch(e) {}
+  }
+  function applySub(el, frac) {
+    var prev = state.subOn, next = [], keep = [];
+    if (el !== document.body && el !== document.documentElement) {
+      var cr = el.getBoundingClientRect(), h = cr.height || window.innerHeight;
+      subCollect(el, cr.top - h, cr.bottom + h, next, 0);
+    }
+    var tf = 'translate3d(0,' + (-frac).toFixed(3) + 'px,0)';
+    for (var i = 0; i < next.length; i++) {
+      var k = next[i], rec = null;
+      for (var j = 0; j < prev.length; j++) if (prev[j] && prev[j][0] === k) { rec = prev[j]; prev[j] = null; break; }
+      if (!rec) { rec = [k, k.style.transform, k.style.willChange, '']; k.style.willChange = 'transform'; }
+      if (rec[3] !== tf) { k.style.transform = tf; rec[3] = tf; }
+      keep.push(rec);
+    }
+    for (var m = 0; m < prev.length; m++) if (prev[m]) subRestore(prev[m]);
+    state.subOn = keep;
   }
   function clearSub() {
-    var el = state.subEl, prev = state.subPrev;
-    state.subEl = null;
-    state.subPrev = null;
-    if (!el) return;
-    try {
-      el.style.transform = prev[0];
-      el.style.willChange = prev[1];
-    } catch(e) {}
+    var a = state.subOn;
+    state.subOn = [];
+    for (var i = 0; i < a.length; i++) subRestore(a[i]);
   }
 
   // עצירה מלאה: ביטול האנימציה, החזרת אייקון הכפתור, וניקוי המצב
@@ -23349,6 +23394,7 @@ window.openDonationModal = function() {
     state.btn = btn || null;
     state.lastT = 0;
     state.pos = null;
+    _subKind = new WeakMap(); // סיווג טרי לכל הפעלה — התוכן עשוי להשתנות בין הפעלות
     setPauseIcon(btn);
     state.rafId = requestAnimationFrame(step);
     notifyChange();
@@ -32728,20 +32774,20 @@ function openSefarimNosafimPage(_pageMode) {
         return (this._baseTpl || "").replace("[[NUSACH]]", nh).replace("[[CORE]]", c);
       }
     },
-    // זוהר ברית — לימוד ליל הברית ("ברית יצחק"), בחלוקה המקובלת לעשרה קוראים ואבי הבן (10/2026).
+    // זוהר הברית — לימוד ליל הברית ("ברית יצחק"), בחלוקה המקובלת לעשרה קוראים ואבי הבן (10/2026).
     // התוכן נבנה ב-window._buildZoharBritHtml (ZOHAR_BRIT_DATA); תוכן העניינים נפתח מיד בכניסה
     // (autoToc) — כל קורא בוחר את החלק שלו, ואפשר לסגור ולגלול לבד. content כ-getter (ולא
     // פונקציה) — כך החיפוש הכללי מקבל טקסט ומוצא גם בתוך הזוהר
-    { id:"zohar-brit", he:"זוהר ברית", subtitle:"לימוד ליל הברית (ברית יצחק) — עשרה חלקים ואבי הבן",
+    { id:"zohar-brit", he:"זוהר הברית", subtitle:"לימוד ליל הברית (ברית יצחק) — עשרה חלקים ואבי הבן",
       cat:"tefilot", color:"#0e7490", icon:"📜", autoToc:true,
       credit:"הזוהר הקדוש, פרשת לך לך (דפים צ–צו) והקדמת הזוהר (דף יג ע\"א) — הטקסט המנוקד מ-Sefaria.org (Vocalized Zohar)",
       creditUrl:"https://www.sefaria.org/Zohar%2C_Lech_Lecha.30",
       type:"hardcoded",
-      intro:"📜 <b>זוהר ברית</b> — בליל שלפני הברית נוהגים להתאסף וללמוד בזוהר הקדוש את מאמרי הברית שבפרשת לך לך — כמסופר שם על רבי אבא, שבליל הברית עסקו החברים בתורה כל הלילה. הלימוד מחולק לעשרה חלקים — חלק לכל קורא — ובסוף אבי הבן קורא את מאמר מצוות המילה מהקדמת הזוהר. בחרו את החלק שלכם בתוכן העניינים.",
+      intro:"📜 <b>זוהר הברית</b> — בליל שלפני הברית נוהגים להתאסף וללמוד בזוהר הקדוש את מאמרי הברית שבפרשת לך לך — כמסופר שם על רבי אבא, שבליל הברית עסקו החברים בתורה כל הלילה. הלימוד מחולק לעשרה חלקים — חלק לכל קורא — ובסוף אבי הבן קורא את מאמר מצוות המילה מהקדמת הזוהר. בחרו את החלק שלכם בתוכן העניינים.",
       get content() { return (typeof window._buildZoharBritHtml === "function") ? window._buildZoharBritHtml() : ""; }
     },
     // סדר חנוכת הבית המלא, כפי שסידר החיד"א (10/2026) — window._buildChanukatHabayitHtml
-    // (CHANUKAT_HABAYIT_DATA); כמו זוהר ברית: עשרה חלקים ותוכן עניינים שנפתח בכניסה
+    // (CHANUKAT_HABAYIT_DATA); כמו זוהר הברית: עשרה חלקים ותוכן עניינים שנפתח בכניסה
     { id:"chanukat-habayit", he:"חנוכת הבית", subtitle:"הסדר המלא כפי שסידר החיד\"א — עשרה חלקים לקרואים",
       cat:"tefilot", color:"#b45309", icon:"🏠", autoToc:true,
       credit:"סדר חנוכת הבית כפי שסידר רבנו החיד\"א בספרו תורת השלמים — הטקסט מוויקיטקסט (CC-BY-SA)",
@@ -33091,7 +33137,8 @@ function openSefarimNosafimPage(_pageMode) {
       type:"hardcoded",
       // ההסבר הצהוב מוצג פעם אחת בלבד — בכרטיס הקומפקטי (sn-intro-card), כמו בשאר ספרי ה-hardcoded
       intro:"• קַבָּלָה בְּיַד חֲכָמִים שֶׁכָּל הָאוֹמֵר פָּרָשַׁת הַמָּן בְּכָל יוֹם מֻבְטָח לוֹ שֶׁלֹּא יָבֹא לְחֶסְרוֹן מְזוֹנוֹת <span style=\"font-size:0.85em;color:#92400e;\">(רבינו בחיי בשלח)</span>.<br>• וְעוֹד כִּי פָּרָשַׁת הַמָּן כֻּלָּהּ מְסֻגֶּלֶת לְהַצְלָחָה וְעֹשֶׁר <span style=\"font-size:0.85em;color:#92400e;\">(מדרש תלפיות ענף הבדלה)</span>.<br>• וְיִקְרָא פָּרָשַׁת הַמָּן בְּנַחַת וּבִטְעָמִים וְיִתְפַּלֵּל שֶׁיַּזְמִין פַּרְנָסָה לְכָל כְּלַל יִשְׂרָאֵל וּפַרְנָסַת בְּנֵי בֵיתוֹ בִּכְלָלָם <span style=\"font-size:0.85em;color:#92400e;\">(סדר היום)</span>.",
-      content:"<div style=\"text-align:right;direction:rtl;line-height:2.2;color:#1e293b;\">"+
+      // ממורכז כמו שאר הספרים (מצב הלימוד הקבוע, 10/2026) — הפסוקים והתפילות
+      content:"<div style=\"text-align:center;direction:rtl;line-height:2.2;color:#1e293b;\">"+
         "<h2 style=\"text-align:center;color:#92400e;font-size:1.25em;font-weight:900;margin:1.5rem 0 0.9rem;border-bottom:2px solid #d97706;padding-bottom:0.5rem;\">תפילה לפני פרשת המן</h2>"+
         "<p style=\"margin:0 0 1.4rem;\">יְהִי רָצוֹן מִלְּפָנֶיךָ יְיָ אֱלֹהֵינוּ וֵאלֹהֵי אֲבוֹתֵינוּ, שֶׁתַּזְמִין פַּרְנָסָה לְכָל עַמְּךָ בֵּית יִשְׂרָאֵל, וּפַרְנָסָתִי וּפַרְנָסַת אַנְשֵׁי בֵיתִי בִּכְלָלָם, בְּנַחַת וְלֹא בְצַעַר בְּכָבוֹד וְלֹא בְבִזּוּי בְּהֶתֵּר וְלֹא בְאִסּוּר, כְּדֵי שֶׁנּוּכַל לַעֲבוֹד עֲבוֹדָתֶךָ וְלִלְמוֹד תּוֹרָתֶךָ, כְּמוֹ שֶׁזַּנְתָּ לַאֲבוֹתֵינוּ מָן בַּמִּדְבָּר בְּאֶרֶץ צִיָּה וַעֲרָבָה:</p>"+
         "<h2 style=\"text-align:center;color:#92400e;font-size:1.25em;font-weight:900;margin:1.5rem 0 0.9rem;border-bottom:2px solid #d97706;padding-bottom:0.5rem;\">פרשת המן (שמות פרק טז)</h2>"+

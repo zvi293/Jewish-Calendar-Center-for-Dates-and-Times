@@ -346,7 +346,7 @@
     return FT;
   }
   // מצב המועד ברגע נתון (זמן הלכתי). כניסה: רבע שעה עד עלות השחר — ובעלות כבר מלא;
-  // יציאה: 25 דקות אחרי הצאת (שלושת הכוכבים כבר נדלקו); בין יום ליום — מעבר רך סביב השקיעה
+  // יציאה: 10 דקות מהצאת, יחד עם כניסת רקע מוצאי שבת (שלושת הכוכבים נדלקים); בין יום ליום — מעבר רך סביב השקיעה
   var Fz = { on: 0, lv: 0, grade: 0, glow: 0, win: 0, winV: 0, men: 0, subdue: 0, wake: 0, rays: 0, parts: 0, deco: 0, th: "", decoK: "", shadC: [0, 0, 0], high: [0, 0, 0], glowC: [0, 0, 0] };
   function segW(s, t) { return smooth(s.from - 15 * MIN, s.from + 10 * MIN, t) * (1 - smooth(s.to, s.to + 25 * MIN, t)); }
   function festFrame(t, alt) {
@@ -365,7 +365,8 @@
     for (i = 0; i < S.length; i++) {
       s = S[i];
       if (s.kind !== "holy" || t < s.from - 15 * MIN || t > s.to + 25 * MIN) continue;
-      w = segW(s, t);
+      // יציאה מהירה בצאת (10 דק') — רקע מוצאי שבת נכנס מאותו רגע ומתחלף איתה
+      w = smooth(s.from - 15 * MIN, s.from + 10 * MIN, t) * (1 - smooth(s.to, s.to + 10 * MIN, t));
       // פורים ביום שישי — פורים עד השקיעה ואז שבת
       if (purW > 0) w *= 1 - purW * (1 - smooth(s.inner - 20 * MIN, s.inner + 10 * MIN, t));
       if (w <= 0) continue;
@@ -384,13 +385,15 @@
     // מוצאי שבת/חג: מצאת ועד עלות השחר (מתחלף ברכות עם השבת שיוצאת; מפנה מקום לט' באב ולליל פורים)
     for (i = 0; i < S.length; i++) {
       s = S[i];
-      if (s.kind !== "after" || t < s.from - 5 * MIN || t > s.to) continue;
-      w = smooth(s.from - 5 * MIN, s.from + 20 * MIN, t) * (1 - smooth(s.to - 25 * MIN, s.to, t)) * (1 - purW) * (1 - subW);
+      // מתחיל בדיוק בצאת ההלכתית של האתר (כמו כפתור "סדר מוצאי שבת וחג") ומתמלא תוך 10 דקות
+      if (s.kind !== "after" || t < s.from || t > s.to) continue;
+      w = smooth(s.from, s.from + 10 * MIN, t) * (1 - smooth(s.to - 25 * MIN, s.to, t)) * (1 - purW) * (1 - subW);
       if (w <= 0) continue;
       aftW = Math.max(aftW, w);
       aftGlow = Math.max(aftGlow, w * (.35 + .6 * (1 - smooth(s.from, s.from + 45 * MIN, t))));   // להבת ההבדלה בצאת, ואז גחלים חמות
       acc.push([s.th, w, 1]); pres = Math.max(pres, w);
     }
+    pres = Math.max(pres, Math.min(1, blkOn + aftW)); // שבת שיוצאת + מוצאי שבת שנכנס — בלי "שקע" באמצע המעבר
     F.wake = aftW;
     for (i = 0; i < S.length; i++) {
       s = S[i];

@@ -6973,14 +6973,16 @@
      יום כיפור → "גמר חתימה טובה"; ראש השנה → "שנה טובה ומתוקה".
      (10/2026) בעל האתר: "כל העיצוב של שבתות וחגים מתחיל מעלות השחר" — המצב נכנס
      בעלות השחר של ערב השבת/החג (זמן האתר), לא 3 שעות לפני ההדלקה, ונמשך עד צאת היום
-     הקדוש האחרון (+40 דק' — כפתור "סדר מוצאי שבת"). החלון מחושב מהלוח העברי (Intl) ומזמני
+     הקדוש האחרון (צאת ההלכתית של האתר — משם רקע מוצאי שבת וכפתור "סדר מוצאי שבת וחג" הקיים
+     ב-script.js, שמופיע מאותו רגע). מתחת לגריד "עוד תפילות וספרים" פותח את כל כפתורי הגריד
+     הרגיל שחסרים בגריד השבת (בלי כפילויות). החלון מחושב מהלוח העברי (Intl) ומזמני
      האתר (_prayerZman) — עד אז SHABBAT_CANDLES_TIME קפץ בשבת עצמה לשישי הבא והמצב נעלם
      בכל טעינה ביום השבת. כמו ב-sky.js: שבת ויום טוב צמודים = בלוק אחד. הנרות — קנבס בסגנון
      הדמו (פמוטים, להבה חיה, נר נשמה ביום כיפור), דולקים כל הזמן ונשרפים לאט אחרי ההדלקה.
      בדיקה ידנית: ?erev=shabbat / ?erev=chag / ?erev=both בכתובת (?erev=0 מבטל). */
   safe("erevShabbatMode", function () {
     var AFTER_MS = 25.5 * 3600000;     // גיבוי (בלי זמני האתר): עד אחרי ההבדלה
-    var END_EXTRA = 40 * 60000;        // אחרי צאת השבת/החג — עוד 40 דק' (סדר מוצאי שבת)
+    var END_EXTRA = 0;                 // נגמר בדיוק בצאת השבת/החג ההלכתית — משם רקע מוצאי שבת וכפתור "סדר מוצאי שבת וחג"
     var MOB = false, RED = false;
     try { MOB = matchMedia("(max-width: 768px), (pointer: coarse)").matches; RED = matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) {}
     var force = null;
@@ -7053,7 +7055,7 @@
             kind: hasS ? "shabbat" : "chag", both: hasS && !!yt,
             candles: cand || new Date(start.getTime() + 13 * 3600000), entered: cand ? now >= cand : false,
             holEvent: null, holName: yt ? YT_NAME[yt] : "", ytKey: yt,
-            enterStr: hhmm(cand), exitStr: hhmm(end), after: now > end
+            enterStr: hhmm(cand), exitStr: hhmm(end)
           };
         }
         i = j;
@@ -7291,8 +7293,43 @@
       birkot: function () { if (typeof openBirkotBoardPage === "function") openBirkotBoardPage(); },
       almichya: function () { openPrayer("al-hamichya", "ברכת מעין שלוש", "Al HaMichya"); },
       sefarim: function () { if (typeof openSefarimNosafimPage === "function") openSefarimNosafimPage(); },
-      motzei: function () { if (typeof openMotzeiShabbatModal === "function") openMotzeiShabbatModal(); }
+      motzei: function () { if (typeof openMotzeiShabbatModal === "function") openMotzeiShabbatModal(); },
+      more: function () { moreOpen = !moreOpen; renderMore(); }
     };
+    // ── "עוד תפילות וספרים" (10/2026, בקשת בעל האתר): מתחת לגריד השבת — כל כפתורי הגריד הרגיל
+    //    (שורה עליונה + "תפילות נוספות") שחסרים בגריד הזה, בלי כפילויות. הכפתורים משוכפלים מהגריד
+    //    הרגיל עצמו (אותו onclick, אותו עיצוב), ולכן כל שינוי עתידי שם מופיע גם כאן. ──
+    var moreOpen = false;
+    var EREV_KEY = { hamazon: "birkat-hamazon", mincha: "mincha", shema: "shema", tehillim: "openTehillimPage", birkot: "openBirkotBoardPage", almichya: "al-hamichya", sefarim: "openSefarimNosafimPage", motzei: "openMotzeiShabbatModal" };
+    function btnKey(b) {
+      var oc = b.getAttribute("onclick") || "", m = oc.match(/openPrayer\(\s*'([^']+)'/);
+      if (m) return m[1];
+      m = oc.match(/^\s*([\w$.]+)\s*\(/);
+      return m ? m[1] : (b.textContent || "").trim();
+    }
+    function renderMore() {
+      var grid = document.getElementById("lux-erev-grid");
+      if (!grid) return;
+      var btn = grid.querySelector(".lux-erev-more"), box = grid.querySelector(".lux-erev-more-grid");
+      if (!btn || !box) return;
+      btn.setAttribute("aria-expanded", moreOpen ? "true" : "false");
+      var lbl = btn.querySelector(".lux-erev-more-lbl");
+      if (lbl) lbl.textContent = moreOpen ? "פחות" : "עוד תפילות וספרים";
+      if (!moreOpen) { box.classList.add("hidden"); box.innerHTML = ""; return; }
+      var have = {}, out = [];
+      grid.querySelectorAll("[data-erev]").forEach(function (b) { var k = EREV_KEY[b.getAttribute("data-erev")]; if (k) have[k] = 1; });
+      document.querySelectorAll("#prayer-grid-wrap > :not(#lux-erev-grid) .prayer-btn").forEach(function (b) {
+        var k = btnKey(b);
+        if (have[k]) return;
+        have[k] = 1;
+        var c = b.cloneNode(true);
+        c.removeAttribute("id");
+        c.classList.remove("hidden");
+        out.push(c.outerHTML);
+      });
+      box.innerHTML = out.join("");
+      box.classList.remove("hidden");
+    }
     function gridHtml(st) {
       var b = [];
       if (st.kind === "shabbat" || st.both) {
@@ -7323,7 +7360,12 @@
           (st.both ? "🕯️ לכבוד שבת קודש ו" + esc(dispHolName(st)) :
            st.kind === "shabbat" ? "🕯️ לכבוד שבת קודש" : "🕯️ לכבוד " + esc(dispHolName(st))) +
         "</div>" +
-        '<div class="grid grid-cols-3 gap-2">' + b.join("") + "</div>";
+        '<div class="grid grid-cols-3 gap-2">' + b.join("") + "</div>" +
+        '<div class="lux-erev-more-wrap"><button type="button" class="lux-erev-more" data-erev="more" aria-expanded="false" aria-controls="lux-erev-more-grid">' +
+          '<span class="lux-erev-more-lbl">עוד תפילות וספרים</span>' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4" d="M19 9l-7 7-7-7"/></svg>' +
+        "</button></div>" +
+        '<div id="lux-erev-more-grid" class="lux-erev-more-grid grid grid-cols-3 gap-2 hidden"></div>';
     }
     // החלק הדינמי של הפאנל (כותרת, פרשה, זמנים) — מוחלף לבדו כשהנתונים מתעדכנים,
     // כדי שהעיטורים המונפשים (אבק, נרות, הילה) לא ייבנו מחדש ולא ירצדו
@@ -7350,11 +7392,6 @@
         gk === "yk" ? "גמר חתימה טובה 🕊️" :
         gk === "rh" ? "שנה טובה ומתוקה 🕊️" :
         "מועדים לשמחה 🕊️";
-      // 40 הדקות שאחרי הצאת (מוצאי שבת/חג) — ברכת המוצאי במקום "שבת שלום"
-      if (st.after) {
-        title = isS || st.both ? "שבוע טוב" : gk === "yk" ? "גמר חתימה טובה" : "מועדים לשמחה";
-        entered = isS || st.both ? "שבוע טוב ומבורך ✨" : "";
-      }
       return '<div class="lux-erev-title">' + title + "</div>" +
         '<div class="lux-erev-orn" aria-hidden="true"><span>✡</span></div>' +
         (sub ? '<div class="lux-erev-sub">' + esc(sub) + "</div>" : "") +
@@ -7412,7 +7449,7 @@
         if (dd) dd.textContent = "00:47:12";
         if (tt) tt.textContent = st.both ? "כניסת שבת וחג" : st.kind === "chag" ? "כניסת החג" : "כניסת שבת";
       }
-      var key = [st.kind, st.both ? 1 : 0, st.entered ? 1 : 0, st.after ? 1 : 0, parshaName(), dispHolName(st), st.enterStr, st.exitStr, window.SHABBAT_CANDLES_STR, window.SHABBAT_HAVDALAH_STR, window.HOLIDAY_CANDLES_STR, window.HOLIDAY_HAVDALAH_STR].join("|");
+      var key = [st.kind, st.both ? 1 : 0, st.entered ? 1 : 0, parshaName(), dispHolName(st), st.enterStr, st.exitStr, window.SHABBAT_CANDLES_STR, window.SHABBAT_HAVDALAH_STR, window.HOLIDAY_CANDLES_STR, window.HOLIDAY_HAVDALAH_STR].join("|");
       if (panel && grid && key === lastKey) { cvMount(panel, st); return; }
       lastKey = key;
       if (!panel) {
@@ -7441,6 +7478,7 @@
         });
       }
       grid.innerHTML = gridHtml(st);
+      if (moreOpen) renderMore(); // רענון הנתונים לא סוגר את "עוד תפילות וספרים" שנפתח
     }
     setTimeout(apply, 1500);
     setInterval(apply, 30000);

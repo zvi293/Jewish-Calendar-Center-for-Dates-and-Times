@@ -9847,3 +9847,24 @@ html.lux-sky.lux-sky-nogl[data-fest="av9"] body::after { background: rgba(15, 23
 .lux-erev-candles { gap: 0; margin: -0.35rem 0 0.5rem; }
 .lux-erev-cv { display: block; width: min(260px, 70vw); aspect-ratio: 260 / 140; height: auto; }
 html.lux-sky.lux-sky-nogl[data-fest="motzei"] body::after { --fest-shad: 30, 41, 120; }
+/* "עוד תפילות וספרים" מתחת לגריד השבת (lux.js §45) — כל כפתורי הגריד הרגיל שחסרים בו */
+.lux-erev-more-wrap { display: flex; justify-content: center; margin-top: 0.75rem; }
+.lux-erev-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 1.15rem;
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: 0.8rem;
+  color: #f2d98a;
+  background: rgba(232, 193, 90, 0.1);
+  border: 1px solid rgba(242, 217, 138, 0.45);
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+.lux-erev-more svg { width: 0.8rem; height: 0.8rem; transition: transform 0.25s ease; }
+.lux-erev-more[aria-expanded="true"] svg { transform: rotate(180deg); }
+@media (hover: hover) { .lux-erev-more:hover { background: rgba(232, 193, 90, 0.2); border-color: rgba(242, 217, 138, 0.8); } }
+.lux-erev-more-grid { margin-top: 0.75rem; }
+html.lux-sky[data-sky="day"] .lux-erev-more { color: #7a4f0e; background: var(--skyc-gloss), var(--skyc-tint); border-color: rgba(161, 118, 42, 0.7); }

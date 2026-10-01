@@ -7725,6 +7725,262 @@
     }).observe(document.body, { childList: true });
   });
 
+  /* ── ניווט בחיצי המקלדת (10/2026) — טלפונים עם מקלדת (Qin F22 Pro) וגם בלי מסך מגע ──
+     "שגם בטלפונים שהמסך שלהם לא מגע זה יעבוד עם החצים". במכשיר בלי עכבר: החיצים מזיזים
+     מסגרת זהב בין הכפתורים לפי המיקום במסך, OK/Enter לוחץ, וכשאין כפתור בכיוון — הדף או
+     החלון נגללים (כך קוראים ספר בחיצים). מקש "חזור" של אנדרואיד סוגר חלונות כרגיל (history).
+     במחשב עם עכבר (pointer: fine) החיצים נשארים לגלילה הרגילה — הקוד לא מתערב.
+     שכבה פעילה = החלון העליון הפתוח (ילד fixed של body שמכסה חלק ניכר מהמסך), אחרת הדף.
+     "תוכן" = מה שבתוך הגלילה הראשית של השכבה; "כרום" = סרגלים קבועים (הסרגל העליון, הניווט
+     התחתון, סרגל הכלים של קורא) — מגיעים אליהם רק כשאין לאן לגלול, אחרת חץ למטה בספר היה
+     קופץ לסרגל הכלים במקום לגלול את הטקסט. כרטיס שיש בתוכו כפתורים — מנווטים לכפתורים עצמם. */
+  safe("keypadNav", function () {
+    var fine = window.matchMedia ? window.matchMedia("(pointer: fine)") : null;
+    var de = document.documentElement;
+    var NATIVE = "a[href], button, input:not([type=hidden]), select, textarea, summary, [onclick], " +
+      "[role=button], [role=tab], [role=link], [role=switch], [role=checkbox], [role=menuitem], [role=option], label[for]";
+    var SEL = NATIVE + ", [tabindex]";
+    var DIRS = { ArrowUp: "u", ArrowDown: "d", ArrowLeft: "l", ArrowRight: "r" };
+    var SKIP_IDS = { "lux-topbar": 1, "lux-bottom-nav": 1, "toast-container": 1, "lux-sky": 1, "pwa-install-banner": 1,
+      "fab-top": 1, "scroll-top-btn": 1, "lux-ptr": 1, "lux-splash": 1 };
+    var lastIn = typeof WeakMap === "function" ? new WeakMap() : null, lastRoot = null;
+    var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    function setMode(onOff) { de.classList.toggle("lux-keynav", onOff); }
+    document.addEventListener("pointerdown", function () { setMode(false); }, true);
+    document.addEventListener("touchstart", function () { setMode(false); }, { capture: true, passive: true });
+
+    function activeRoot() {
+      var best = null, bz = -1e9, kids = document.body.children, area = innerWidth * innerHeight;
+      for (var i = 0; i < kids.length; i++) {
+        var el = kids[i];
+        if ((el.id && SKIP_IDS[el.id]) || /^(SCRIPT|STYLE|LINK|TEMPLATE|NOSCRIPT)$/.test(el.tagName)) continue;
+        if (el.__uxClosing || el.__uxExitFinish) continue;
+        var cs = getComputedStyle(el);
+        if (cs.position !== "fixed" || cs.display === "none" || cs.visibility === "hidden" || +cs.opacity < 0.05 || cs.pointerEvents === "none") continue;
+        var r = el.getBoundingClientRect();
+        if (r.width * r.height < area * 0.18) continue;
+        var z = parseInt(cs.zIndex, 10);
+        if (isNaN(z)) z = 0;
+        if (z >= bz) { bz = z; best = el; }
+      }
+      return best || document.body;
+    }
+    function fixedAnc(el, stop) {
+      for (var n = el; n && n !== stop && n !== document.body; n = n.parentElement) {
+        var p = getComputedStyle(n).position;
+        if (p === "fixed" || p === "sticky") return n;
+      }
+      return null;
+    }
+    function canScrollY(n) {
+      var cs = getComputedStyle(n);
+      return (cs.overflowY === "auto" || cs.overflowY === "scroll") && n.scrollHeight > n.clientHeight + 2;
+    }
+    function mainScroller(root) {
+      if (root === document.body) return document.scrollingElement || de;
+      var best = canScrollY(root) ? root : null, ba = best ? root.clientWidth * root.clientHeight : 0;
+      var all = root.querySelectorAll("*");
+      for (var i = 0; i < all.length; i++) {
+        var n = all[i];
+        if (n.clientHeight < 80 || n.clientWidth * n.clientHeight <= ba) continue;
+        if (canScrollY(n)) { best = n; ba = n.clientWidth * n.clientHeight; }
+      }
+      return best;
+    }
+    function isContent(el, root, sc) {
+      if (!sc) return false;
+      if (sc === document.scrollingElement || sc === de) return !fixedAnc(el, null);
+      if (!sc.contains(el)) return false;
+      var f = fixedAnc(el, sc);
+      return !f || f === sc;
+    }
+    // הכפתור לא מכוסה (סרגל קבוע / שכבה אחרת מעליו) — בודקים את מרכזו ושתי נקודות בצדדים
+    function unhidden(el, r) {
+      var vw = innerWidth, vh = innerHeight, cy = Math.min(Math.max(r.top + r.height / 2, 1), vh - 1);
+      var xs = [r.left + r.width / 2, r.left + r.width * 0.25, r.left + r.width * 0.75];
+      for (var i = 0; i < xs.length; i++) {
+        var h = document.elementFromPoint(Math.min(Math.max(xs[i], 1), vw - 1), cy);
+        if (h && (h === el || el.contains(h))) return true;
+      }
+      return false;
+    }
+    function collect(root) {
+      var out = [], vw = innerWidth, vh = innerHeight;
+      var all = root.querySelectorAll("*");
+      for (var i = 0; i < all.length; i++) {
+        var el = all[i];
+        if (el.namespaceURI === "http://www.w3.org/2000/svg" && el.tagName !== "svg") continue;
+        var r = el.getBoundingClientRect();
+        if (r.width < 8 || r.height < 8 || r.bottom <= 2 || r.top >= vh - 2 || r.right <= 2 || r.left >= vw - 2) continue;
+        var ok = el.matches(SEL) && !el.disabled;
+        if (ok && el.getAttribute("tabindex") === "-1" && !el.__luxKn && !el.matches(NATIVE)) ok = false;
+        if (!ok) {
+          // לחיצים שנבנו ב-addEventListener מזוהים לפי סמן היד; ילד שיורש אותו מההורה הוא חלק מהכפתור
+          if (getComputedStyle(el).cursor !== "pointer") continue;
+          var p = el.parentElement;
+          if (p && getComputedStyle(p).cursor === "pointer") continue;
+        }
+        if (el.closest("[inert], [aria-hidden='true'], .sr-only")) continue;
+        if (el.checkVisibility && !el.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true })) continue;
+        if (!unhidden(el, r)) continue;
+        out.push(el);
+      }
+      // כרטיס שיש בתוכו כפתורים — מנווטים לכפתורים עצמם, לא לכרטיס
+      return out.filter(function (el) {
+        for (var j = 0; j < out.length; j++) if (out[j] !== el && el.contains(out[j])) return false;
+        return true;
+      });
+    }
+    function gap(a1, a2, b1, b2) { return b2 < a1 ? a1 - b2 : b1 > a2 ? b1 - a2 : 0; }
+    function pick(cur, cands, dir) {
+      var a = cur.getBoundingClientRect(), acx = a.left + a.width / 2, acy = a.top + a.height / 2;
+      var best = null, bs = Infinity;
+      for (var i = 0; i < cands.length; i++) {
+        var c = cands[i];
+        if (c === cur || c.contains(cur) || cur.contains(c)) continue;
+        var b = c.getBoundingClientRect(), bcx = b.left + b.width / 2, bcy = b.top + b.height / 2, main, cross, off;
+        if (dir === "d") { if (bcy <= acy + 1 || b.bottom <= a.bottom + 1) continue; main = Math.max(0, b.top - a.bottom); cross = gap(a.left, a.right, b.left, b.right); off = Math.abs(bcx - acx); }
+        else if (dir === "u") { if (bcy >= acy - 1 || b.top >= a.top - 1) continue; main = Math.max(0, a.top - b.bottom); cross = gap(a.left, a.right, b.left, b.right); off = Math.abs(bcx - acx); }
+        else if (dir === "r") { if (bcx <= acx + 1 || b.right <= a.right + 1) continue; main = Math.max(0, b.left - a.right); cross = gap(a.top, a.bottom, b.top, b.bottom); off = Math.abs(bcy - acy); }
+        else { if (bcx >= acx - 1 || b.left >= a.left - 1) continue; main = Math.max(0, a.left - b.right); cross = gap(a.top, a.bottom, b.top, b.bottom); off = Math.abs(bcy - acy); }
+        // ימינה/שמאלה — רק באותה "שורה" (חפיפה אנכית, עם מרווח של חצי גובה); אחרת סוף השורה
+        // היה קופץ לכפתור רחוק בסרגל העליון
+        if ((dir === "l" || dir === "r") && cross > Math.max(a.height, b.height) * 0.5) continue;
+        var s = main + cross * 2.5 + off * 0.2;
+        if (s < bs) { bs = s; best = c; }
+      }
+      return best;
+    }
+    // סדר קריאה: מלמעלה למטה, ובאותה שורה — מימין לשמאל
+    function firstOf(list) {
+      var best = null, bt = 0, br = 0;
+      for (var i = 0; i < list.length; i++) {
+        var r = list[i].getBoundingClientRect();
+        if (!best || r.top < bt - 8 || (Math.abs(r.top - bt) <= 8 && r.right > br)) { best = list[i]; bt = r.top; br = r.right; }
+      }
+      return best;
+    }
+    function focusEl(el, root) {
+      if (!el.matches(SEL) || el.getAttribute("tabindex") === "-1") { if (!el.hasAttribute("tabindex")) el.setAttribute("tabindex", "-1"); el.__luxKn = 1; }
+      try { el.focus({ preventScroll: true }); } catch (e) { el.focus(); }
+      try { el.scrollIntoView({ block: "nearest", inline: "nearest" }); } catch (e) {}
+      if (lastIn) lastIn.set(root, el);
+    }
+    function hScroller(el, stop) {
+      for (var n = el.parentElement; n && n !== stop && n !== document.body; n = n.parentElement) {
+        var cs = getComputedStyle(n);
+        if ((cs.overflowX === "auto" || cs.overflowX === "scroll") && n.scrollWidth > n.clientWidth + 2) return n;
+      }
+      return null;
+    }
+    function scrollStep(sc, dir, cur, root) {
+      if (dir === "l" || dir === "r") {
+        var hs = cur && hScroller(cur, root);
+        if (!hs) return false;
+        var bx = hs.scrollLeft;
+        hs.scrollBy({ left: (dir === "l" ? -1 : 1) * hs.clientWidth * 0.6, behavior: "auto" });
+        return Math.abs(hs.scrollLeft - bx) > 1;
+      }
+      if (!sc) return false;
+      var doc = sc === document.scrollingElement || sc === de;
+      var top = doc ? window.scrollY : sc.scrollTop;
+      var max = (doc ? de.scrollHeight - innerHeight : sc.scrollHeight - sc.clientHeight);
+      if ((dir === "d" && top >= max - 2) || (dir === "u" && top <= 1)) return false;
+      var h = doc ? innerHeight : sc.clientHeight, dy = (dir === "d" ? 1 : -1) * Math.max(60, h * 0.6);
+      (doc ? window : sc).scrollBy({ top: dy, behavior: reduce ? "auto" : "smooth" });
+      return true;
+    }
+    // הכפתור התחתון ביותר בכרום (סרגל הכלים / הניווט התחתון), ובשורה — הימני
+    function lowestOf(list) {
+      var best = null, bb = 0, br = 0;
+      for (var i = 0; i < list.length; i++) {
+        var r = list[i].getBoundingClientRect();
+        if (!best || r.bottom > bb + 8 || (Math.abs(r.bottom - bb) <= 8 && r.right > br)) { best = list[i]; bb = r.bottom; br = r.right; }
+      }
+      return best;
+    }
+    function move(dir) {
+      var root = activeRoot();
+      var sc = mainScroller(root);
+      var cands = collect(root);
+      var cur = document.activeElement;
+      var back = root !== lastRoot;
+      lastRoot = root;
+      if (!cur || cur === document.body || cur === de || !root.contains(cur) || cands.indexOf(cur) < 0) {
+        // חזרה לשכבה (אחרי סגירת חלון) — ממשיכים מהכפתור האחרון שנבחר בה
+        var prev = back && lastIn && lastIn.get(root);
+        if (prev && prev.isConnected && cands.indexOf(prev) >= 0) { focusEl(prev, root); return; }
+        // הכפתור שפתח את החלון נשאר מאחוריו — משחררים אותו (אחרת OK היה לוחץ עליו שוב)
+        if (cur && cur !== document.body && cur !== de) { try { cur.blur(); } catch (e) {} }
+        cur = null;
+      }
+      var content = [], chrome = [];
+      for (var i = 0; i < cands.length; i++) (isContent(cands[i], root, sc) ? content : chrome).push(cands[i]);
+      var f;
+      if (!cur) {
+        // בלי בחירה: ימינה/שמאלה — לסרגל הכלים התחתון (בקורא: מהירות, גודל כתב...);
+        // למעלה/למטה — הכפתור הראשון בתוכן, ואם אין — גלילה (קריאה), ורק בקצה — הכרום
+        if (dir === "l" || dir === "r") f = lowestOf(chrome) || firstOf(content);
+        else f = firstOf(content);
+        if (f) { focusEl(f, root); return; }
+        if (scrollStep(sc, dir, null, root)) return;
+        f = firstOf(chrome);
+        if (f) focusEl(f, root);
+        return;
+      }
+      var inContent = content.indexOf(cur) >= 0;
+      var next = pick(cur, inContent ? content : cands, dir);
+      // מהכרום למעלה/למטה כשבכיוון יש רק עוד כרום (למשל מסרגל הכלים של קורא אל הכותרת) — חוזרים
+      // לגלילת הטקסט במקום לקפוץ על פניו
+      if (!inContent && next && content.indexOf(next) < 0 && (dir === "u" || dir === "d")) {
+        try { cur.blur(); } catch (e) {}
+        if (scrollStep(sc, dir, null, root)) return;
+        try { cur.focus({ preventScroll: true }); } catch (e) {}
+      }
+      if (next) { focusEl(next, root); return; }
+      if (scrollStep(sc, dir, cur, root)) return;
+      if (inContent) { next = pick(cur, chrome, dir); if (next) focusEl(next, root); }
+    }
+    function activate(el, e) {
+      var tag = el.tagName, type = (el.type || "").toLowerCase();
+      if (tag === "TEXTAREA" || el.isContentEditable) return;
+      if (tag === "INPUT" && !/^(checkbox|radio|button|submit|reset|range|color|file)$/.test(type)) return;
+      if (tag === "SELECT") { e.preventDefault(); try { el.showPicker(); } catch (x) { el.click(); } return; }
+      if (tag === "INPUT" && (type === "checkbox" || type === "radio")) { e.preventDefault(); el.click(); return; }
+      if (tag === "BUTTON" || (tag === "A" && el.hasAttribute("href")) || tag === "SUMMARY" || tag === "INPUT") return;
+      e.preventDefault();
+      el.click();
+    }
+    window.addEventListener("keydown", function (e) {
+      if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || e.isComposing) return;
+      if (fine && fine.matches) return;
+      var t = document.activeElement;
+      if (e.key === "Enter") {
+        if (!de.classList.contains("lux-keynav") || !t || t === document.body || t === de) return;
+        // כפתור שנשאר מאחורי חלון פתוח — לא לוחצים עליו (גם לא בלחיצה המקורית של הדפדפן)
+        if (!activeRoot().contains(t)) { e.preventDefault(); try { t.blur(); } catch (x) {} return; }
+        activate(t, e);
+        return;
+      }
+      var dir = DIRS[e.key];
+      if (!dir) return;
+      if (t && t !== document.body) {
+        var tag = t.tagName, type = (t.type || "").toLowerCase();
+        var textual = tag === "TEXTAREA" || t.isContentEditable || (tag === "INPUT" && !/^(checkbox|radio|button|submit|reset|range|color|file)$/.test(type));
+        // בשדה טקסט ימינה/שמאלה מזיזים את הסמן; בתיבת טקסט רב-שורתית גם למעלה/למטה, עד הקצה
+        if (textual && (dir === "l" || dir === "r")) return;
+        if (tag === "TEXTAREA" && ((dir === "u" && t.selectionStart > 0) || (dir === "d" && t.selectionEnd < t.value.length))) return;
+        if (tag === "INPUT" && type === "range" && (dir === "l" || dir === "r")) return;
+      }
+      // חלון דבר התורה למועד מחליף פריטים בימינה/שמאלה בעצמו
+      if ((dir === "l" || dir === "r") && document.getElementById("moad-torah-modal")) return;
+      e.preventDefault();
+      setMode(true);
+      move(dir);
+    });
+  });
+
   // מסך הפתיחה (index.html) נעלם רק אחרי הדגל הזה — כשהדף מתחתיו כבר בנוי. lux.js הוא
   // הקוד האחרון שנטען; ה-350ms נותנים לכרטיסי הדשבורד לסיים את כניסתם (fadeSlideUp).
   setTimeout(function () { window.__appReady = true; }, 350);

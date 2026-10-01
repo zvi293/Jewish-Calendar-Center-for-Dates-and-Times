@@ -382,11 +382,13 @@
           linear-gradient(160deg, #050b1a 0%, #0c1530 45%, #16233f 100%);
       }
 
-      /* ── Font size scaling ── */
-      html.fs-1 { font-size: 108% !important; }
-      html.fs-2 { font-size: 116% !important; }
-      html.fs-3 { font-size: 130% !important; }
-      html.fs-4 { font-size: 150% !important; }
+      /* ── Font size scaling ──
+         --lux-fs = הסקאלה בפועל (נדחסת במסכים צרים — ראו הסקריפט בראש index.html);
+         הערך שאחרי הפסיק הוא ברירת המחדל אם הסקריפט לא רץ */
+      html.fs-1 { font-size: calc(var(--lux-fs, 1.08) * 100%) !important; }
+      html.fs-2 { font-size: calc(var(--lux-fs, 1.16) * 100%) !important; }
+      html.fs-3 { font-size: calc(var(--lux-fs, 1.3) * 100%) !important; }
+      html.fs-4 { font-size: calc(var(--lux-fs, 1.5) * 100%) !important; }
       /* Prevent card overflow on larger font */
       html.fs-1 .zman-card, html.fs-2 .zman-card,
       html.fs-3 .zman-card, html.fs-4 .zman-card { overflow: hidden; }
@@ -9475,6 +9477,8 @@ details[open] > :not(summary) {
    ~40% מה-main thread ו-~160ms/s של GPU (בלעדיהן: כמעט אפס). בטלפון זה מתחרה בכל גלילה
    ופתיחת חלון ⇒ "כרטיסים נעלמים וחוזרים" בגלילה מהירה, והבהובים. בנייד — זוהר קבוע;
    טבעת הסטוריז פועמת ב-transform בלבד (על ה-GPU, בלי ציור). אל תחזירו.
+   (10/2026: ההבהוב של תג הפרימיום ושל "תפילות נוספות ⌄" חזר לבקשת המשתמש — בקומפוזיטור,
+   על פסאודו-אלמנטים; ראו "ההבהוב חוזר לנייד" בסוף הקובץ. האנימציות כאן נשארות כבויות.)
    ═══════════════════════════════════════════════════════ */
 @media (max-width: 768px), (pointer: coarse) {
   #lux-moon,
@@ -9871,3 +9875,183 @@ html.lux-sky.lux-sky-nogl[data-fest="motzei"] body::after { --fest-shad: 30, 41,
 .lux-erev-more-grid { margin-top: 0.75rem; }
 html.lux-sky[data-sky="day"] .lux-erev-more { color: #7a4f0e; background: var(--skyc-gloss), var(--skyc-tint); border-color: rgba(161, 118, 42, 0.7); }
 html.lux-sky.lux-sky-nogl[data-fest="lag"] body::after { --fest-shad: 30, 58, 138; }
+
+
+/* ═══════════════════════════════════════════════════════
+   ✦ כיתוב גדול ומסכים צרים (10/2026) — "בגודל הכי גדול האתר לא מסודר ואלמנטים דורסים
+   אחד את השני", וההתאמה לטלפון Qin F22 Pro (מסך 320×480, מקלדת מספרים).
+   הסקריפט בראש index.html מספק: --lux-fs (הסקאלה בפועל, נדחסת במסכים צרים),
+   --lux-cz (זום-נגדי לכרום הצף) ו-html.lux-ew-N (רוחב אפקטיבי ≤ N — רוחב המסך חלקי הסקאלה).
+   כלל לכל רכיב: מה שלא נכנס — נשבר לשורה נוספת, לא נחתך ולא גולש.
+   ═══════════════════════════════════════════════════════ */
+
+/* הכרום הצף גדל עד תקרה (130%, במסך נמוך 112%) — אייקונים ותוויות קצרות; בלי התקרה הסרגל
+   העליון גלש מהרוחב (כפתור התרומה נחתך) והניווט התחתון תפס שליש מסך */
+#lux-topbar,
+#lux-bottom-nav,
+#fab-top,
+#scroll-top-btn { zoom: var(--lux-cz, 1); }
+
+/* הסרגל העליון ברוחב צר: כפתור התרומה — לב בלבד (כמו ארבעת הכפתורים העגולים שלידו) */
+html.lux-ew-340 #lux-topbar { padding-left: 0.6rem; padding-right: 0.6rem; }
+html.lux-ew-340 #lux-topbar .nav-donate-btn { padding: 0.55rem 0.7rem; gap: 0; }
+html.lux-ew-340 #lux-topbar .nav-donate-btn > span:not(:first-child) { display: none; }
+
+/* כותרת "הלוח היהודי" — לא גדלה מעבר לרוחב שבין הכפתורים העגולים שבצדדיה (בכיתוב ענק
+   היא נכנסה מתחת לגלגל השנה, וב-320px נשברה לשתי שורות שעלו זו על זו) */
+#hero-section h1 { font-size: min(3rem, 15vw); }
+@media (min-width: 768px) { #hero-section h1 { font-size: min(4.5rem, 9vw); } }
+
+/* באנר יום מיוחד / יארצייט בהירו — בנתיב שבין הכפתורים העגולים שבצדדים (ירח/גלגל השנה
+   משמאל, בתי כנסת מימין). ב-320px (וגם בכיתוב גדול) הבאנר עבר מתחת לגלגל השנה, וה-✕ שלו
+   נבלע מתחתיו — אי אפשר היה לסגור אותו */
+#lux-day-banner,
+#lux-yz-banner { max-width: min(94%, calc(100vw - 2 * (1.1rem + 50px))); }
+
+/* "זמני היום" — שורת הכפתורים (שעון הלכתי · שתף · הדפס) נשברת לשתי שורות במקום לגלוש */
+#halacha-banner h2[data-i18n-key="zmanim"] .lux-zmanim-tools { flex-wrap: wrap; row-gap: 0.4rem; }
+#lux-next-zman { overflow-wrap: anywhere; }
+html.lux-ew-340 #lux-next-zman { white-space: normal !important; text-overflow: clip !important; overflow: visible !important; }
+
+/* כרטיס "שבת קרובה" בדשבורד: כשהתווית והשעה לא נכנסות בשורה אחת — השעה יורדת שורה
+   (עד עכשיו היא נחתכה בשולי הכרטיס) */
+.dashboard-shabbat-line { flex-wrap: wrap; row-gap: 0; }
+
+/* כרטיסי המועדים ברשימה: שם המועד נשבר לשורה שנייה במקום "קידוש לב...", ושורת הפעולות
+   (הספירה · סנכרן · דבר תורה) נשברת וממורכזת — עד עכשיו הכפתור השלישי נחתך בשולי הכרטיס */
+html.lux-ew-340 .event-card h3.truncate,
+html.lux-ew-340 .event-card .ev-name-btn { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
+html.lux-ew-340 .event-card > div:last-child { flex-wrap: wrap; justify-content: center; row-gap: 0.5rem; }
+/* ברוחב צר מאוד — בלי ריבוע האייקון (קישוט; הפס הצבעוני בשולי הכרטיס מסמן את הסוג), כך
+   שהפירוט (זמני חג, חלון ברכת הלבנה והספירה) מקבל את כל רוחב הכרטיס ולא עמודה צרה */
+html.lux-ew-300 .event-card > div:first-child > div[aria-hidden="true"]:first-child { display: none; }
+
+/* לוח השנה החודשי: 7 עמודות שוות שלא נמתחות לפי המילה הארוכה בתא (בכיתוב ענק טור השבת
+   נדחק אל מחוץ לכרטיס ונחתך); מילה ארוכה נשברת בתוך התא */
+.cal-grid { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+#cal-days-grid > div { min-width: 0; overflow: hidden; }
+#cal-days-grid > div > div:last-child > div { overflow-wrap: anywhere; }
+/* ברוחב אפקטיבי צר (כיתוב ענק בטלפון): המספר מעל התאריך העברי, והאירועים — פסים צבעוניים
+   (טקסט של 45px נשבר אות-אות לאורך התא); לחיצה על היום פותחת את הפירוט המלא */
+html.lux-ew-300 #cal-days-grid > div > div:first-child { flex-direction: column-reverse; align-items: center; gap: 0; padding: 0; }
+html.lux-ew-300 #cal-days-grid > div > div:last-child > div { font-size: 0 !important; line-height: 0; height: 0.32rem; min-height: 0.32rem; padding: 0; border-radius: 999px; }
+
+/* השעון ההלכתי — רשימת הזמנים: שם ארוך נשבר לשתי שורות במקום להיחתך מתחת לשעה */
+html.lux-ew-360 .lux-hc-zrow { flex-wrap: wrap; row-gap: 0.2rem; }
+html.lux-ew-360 .lux-hc-zname { white-space: normal; overflow: visible; text-overflow: clip; flex: 1 1 8rem; }
+
+/* יצירת קשר — כתובת המייל לא יוצאת משולי החלון */
+#contact-modal a[href^="mailto:"] { max-width: 100%; }
+#contact-modal a[href^="mailto:"] > span:last-child { min-width: 0; overflow-wrap: anywhere; }
+
+/* פס הספירה לשבת — מרווחים קטנים יותר ושבירה במקום גלישה */
+html.lux-ew-340 #shabbat-countdown-bar { padding: 0.6rem 1rem; gap: 0.5rem; flex-wrap: wrap; row-gap: 0.15rem; }
+
+/* כרטיסי הלימוד (אבני החן): תגית התוכן (פרשה/דף/חודש) נשברת לשתי שורות במקום "פרשת ב..." */
+html.lux-ew-340 #study-links .study-card { grid-template-columns: minmax(0, 1fr); grid-template-areas: "title" "sub"; padding: 0.75rem 0.7rem 0.7rem; }
+html.lux-ew-340 #study-links .sc-go { display: none; }
+html.lux-ew-340 #study-links .sc-title { font-size: 0.9rem; }
+html.lux-ew-340 #study-links .sc-sub { white-space: normal; text-overflow: clip; border-radius: 0.75rem; overflow-wrap: anywhere; }
+
+/* מקבילות "רוחב אפקטיבי" לכללי המסכים הצרים הקיימים — חלות גם בטלפון רחב עם כיתוב גדול */
+html.lux-ew-360 .lv-timer { gap: 0.15rem; }
+html.lux-ew-360 .lv-n { font-size: 0.92rem; }
+html.lux-ew-360 .lv-u { font-size: 0.5rem; }
+html.lux-ew-420 .lux-mk-btn { width: 34px; height: 34px; font-size: 0.92rem; }
+html.lux-ew-420 .prayer-cmp-btn { width: 34px; height: 34px; font-size: 0.95rem; }
+html.lux-ew-360 #prayer-header-actions { gap: 0.3rem !important; }
+html.lux-ew-360 #prayer-modal > div:first-child h2 { font-size: 1.12rem !important; }
+html.lux-ew-380 .lux-ne-grid { grid-template-columns: repeat(2, 1fr); }
+html.lux-ew-380 .lux-ach-grid { grid-template-columns: repeat(2, 1fr); }
+html.lux-ew-400 .rf-btn { width: 34px; height: 34px; font-size: 1.05rem; }
+
+
+/* באנר "הוסף את הלוח למסך הבית" (רק בכרום, לפני התקנה) — במסך צר הוא היה מגדל של 145px
+   באמצע המסך (הכותרת נשברה מילה-מילה ליד האייקון והכפתורים). בלי האייקון ובמרווחים קטנים */
+html.lux-ew-380 #pwa-install-banner { max-width: calc(100vw - 1.5rem) !important; }
+html.lux-ew-380 #pwa-install-banner > div { padding: 0.65rem 0.8rem !important; gap: 0.55rem !important; border-radius: 1.1rem !important; }
+html.lux-ew-380 #pwa-install-banner > div > div:first-child { display: none !important; }
+html.lux-ew-380 #pwa-install-banner > div > div p:first-child { font-size: 0.85rem !important; }
+html.lux-ew-380 #pwa-install-banner > div > div p + p { font-size: 0.7rem !important; }
+
+/* ניווט בחיצי המקלדת (lux.js keypadNav — טלפוני מקלדת כמו Qin F22 Pro, גם בלי מסך מגע):
+   מסגרת זהב עם טבעת כהה פנימית סביב הכפתור הנבחר — בפנים (offset שלילי + inset), כך שלעולם
+   לא נחתכת ע"י הורה עם overflow:hidden ונראית על כל רקע (גם על כפתור זהב). רק במצב מקשים;
+   נגיעה במסך מכבה אותו. scroll-margin — הכפתור לא נעצר מתחת לסרגל העליון או לניווט התחתון. */
+html.lux-keynav :focus:not(html):not(body) {
+  outline: 3px solid #fbbf24 !important;
+  outline-offset: -3px !important;
+  box-shadow: inset 0 0 0 5px rgba(12, 21, 48, 0.72) !important;
+  scroll-margin: 5.5rem 0.5rem 6rem;
+}
+html.lux-keynav input:focus,
+html.lux-keynav select:focus,
+html.lux-keynav textarea:focus { box-shadow: inset 0 0 0 5px rgba(251, 191, 36, 0.25) !important; }
+
+
+/* ═══════════════════════════════════════════════════════
+   ✦ ההבהוב חוזר לנייד (10/2026, בקשה מפורשת) — תג "לבניית אתר פרימיום משלכם" (זוהר כל 4.5 שנ')
+   וכפתור "תפילות נוספות ⌄" שפותח את הגריד. ב-09/2026 (סבב 6) הפעימות כובו בנייד כי הן
+   הנפישו box-shadow/צבעים = ציור מחדש בכל פריים (~40% מה-main thread בסרק). כאן אותו מראה,
+   אבל הזוהר מצויר פעם אחת על פסאודו-אלמנט ורק ה-opacity/transform שלו מונפשים — עבודה של
+   הקומפוזיטור בלבד, בלי ציור ובלי main thread. האנימציות של האלמנטים עצמם נשארות כבויות
+   בנייד (הבלוק "מובייל (09/2026, סבב 6)"), ו-_pauseBgAnimations משהה גם את אלה בחלון פתוח.
+   ═══════════════════════════════════════════════════════ */
+@media (max-width: 768px), (pointer: coarse) {
+  .lux-premium-badge,
+  #prayer-more-btn.chevron-cta-pulse { position: relative; z-index: 0; }
+  /* התג: אותו זוהר שיא כמו במחשב (זהב + כחול), דולק ונכבה פעם ב-4.5 שנ' */
+  .lux-premium-badge::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    pointer-events: none;
+    box-shadow: 0 0 30px rgba(232, 193, 90, 0.62), 0 0 56px rgba(59, 130, 246, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+    opacity: 0;
+    will-change: opacity;
+    animation: lux-premium-glow 4.5s ease-in-out infinite;
+  }
+  /* "תפילות נוספות": טבעת זהב שמתרחבת ונמוגה + הבהרת הרקע והמסגרת, כמו במחשב (2.2 שנ') */
+  #prayer-more-btn.chevron-cta-pulse::before,
+  #prayer-more-btn.chevron-cta-pulse::after {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    z-index: -1;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0;
+  }
+  #prayer-more-btn.chevron-cta-pulse::before {
+    box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.6);
+    will-change: transform, opacity;
+    animation: lux-chev-ring 2.2s ease-in-out infinite;
+  }
+  #prayer-more-btn.chevron-cta-pulse::after {
+    background: rgba(251, 191, 36, 0.12);
+    box-shadow: inset 0 0 0 1px rgba(251, 191, 36, 0.35);
+    will-change: opacity;
+    animation: lux-chev-glow 2.2s ease-in-out infinite;
+  }
+}
+@keyframes lux-premium-glow {
+  0%, 78%, 100% { opacity: 0; }
+  86% { opacity: 1; }
+}
+/* כמו טבעת ה-box-shadow המקורית: נפתחת החוצה ונמוגה, ואז חוזרת פנימה */
+@keyframes lux-chev-ring {
+  0%, 100% { opacity: 0; transform: scale(1); }
+  20%, 80% { opacity: 0.75; transform: scale(1.03, 1.12); }
+  50% { opacity: 0; transform: scale(1.1, 1.45); }
+}
+@keyframes lux-chev-glow {
+  0%, 100% { opacity: 0; }
+  50% { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lux-premium-badge::after,
+  #prayer-more-btn.chevron-cta-pulse::before,
+  #prayer-more-btn.chevron-cta-pulse::after { animation: none !important; opacity: 0 !important; }
+}

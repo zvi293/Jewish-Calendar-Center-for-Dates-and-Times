@@ -45,6 +45,43 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, viewport-fit=cover"
     />
+    <script>
+      // גודל הכיתוב מההגדרות — לפני הציור הראשון (עד 10/2026 הוחל רק כש-script.js נטען, והדף כולו
+      // קפץ). כל הדף בנוי ב-rem, אז הגדלת גופן הבסיס מגדילה הכול — ובטלפון צר הדף "מתכווץ" לרוחב
+      // אפקטיבי זעיר (390px ב-150% = 260px) ורכיבים נדרסו. לכן:
+      //   --lux-fs  הסקאלה בפועל: במסכים צרים הטווח נדחס, כך שגם "ענק מאוד" משאיר רוחב אפקטיבי
+      //             של 240px לפחות (טלפון 320px כמו Qin F22 Pro: עד 133% במקום 150%). מ-360px — הטווח המלא.
+      //   --lux-cz  זום-נגדי לכרום הצף (סרגל עליון, ניווט תחתון, כפתורים עגולים): גדל עד 130%
+      //             (במסך נמוך עד 112%) — אחרת הוא גולש מהרוחב ותופס חצי מסך.
+      //   lux-ew-N  רוחב אפקטיבי (רוחב המסך חלקי הסקאלה) ≤ N — מקבילה ל-@media (max-width:Npx)
+      //             שחלה גם בטלפון רחב עם כיתוב גדול (בלי הגדלה — זהה ל-media query על רוחב המסך).
+      // script.js (applyFontSize) קורא שוב ל-__luxFsFit בכל שינוי בהגדרות.
+      (function () {
+        var S = [1, 1.08, 1.16, 1.3, 1.5], EW = [300, 340, 360, 380, 400, 420], last = "";
+        function fit() {
+          var de = document.documentElement, lv = 0, i;
+          for (i = 1; i <= 4; i++) if (de.classList.contains("fs-" + i)) lv = i;
+          var w = de.clientWidth || window.innerWidth || 360;
+          var sh = screen.height || 800;
+          var k = Math.min(1, Math.max(0, (w / 240 - 1) / 0.5));
+          var s = 1 + (S[lv] - 1) * k;
+          var cz = Math.min(1, (sh >= 700 && w >= 360 ? 1.3 : 1.12) / s);
+          var ew = w / s, key = s.toFixed(3) + "|" + cz.toFixed(3) + "|" + Math.round(ew);
+          if (key === last) return;
+          last = key;
+          de.style.setProperty("--lux-fs", s.toFixed(3));
+          de.style.setProperty("--lux-cz", cz.toFixed(3));
+          for (i = 0; i < EW.length; i++) de.classList.toggle("lux-ew-" + EW[i], ew <= EW[i]);
+        }
+        try {
+          var lv = parseInt(localStorage.getItem("moadim_fontsize") || "0", 10);
+          if (lv >= 1 && lv <= 4) document.documentElement.classList.add("fs-" + lv);
+        } catch (e) {}
+        window.__luxFsFit = fit;
+        try { fit(); } catch (e) {}
+        window.addEventListener("resize", function () { try { fit(); } catch (e) {} });
+      })();
+    </script>
     <title>לוח שנה עברי לועזי תשפ"ז 2027 | זמני שבת, מועדים וזמני הלכה</title>
     <meta
       name="description"
@@ -412,7 +449,7 @@
          הכותרת "קפצה" באמצע מסך הפתיחה בטלפון. -->
     <link rel="preload" href="/fonts/frank-ruhl-libre-hebrew.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="/fonts.css?v=1" />
-    <link rel="stylesheet" href="style.css?v=103" />
+    <link rel="stylesheet" href="style.css?v=104" />
     <!-- בלי ציור ראשון של "חצי הירו": הסקריפט של באנר היום (לפני ה-h1) גורם למפרסר לפנות
          את התור, ו-Chrome צייר את ההירו חלקי — ואז קו הגל שבתחתיתו קפץ למטה (CLS). כאן
          הציור הראשון מחכה עד שכל ההירו נפרסר (עד #main-content — מילישניות בודדות).
@@ -429,8 +466,8 @@
     <!-- הקוד הראשי יורד מוקדם (preload) אך מוזרק ומתבצע רק אחרי הציור הראשון —
          ראו הטוען בסוף ה-body. ה-?v= כאן חייב להיות זהה לזה שבטוען וב-sw.js.
          fetchpriority=low: שלא יתחרו ברוחב-הפס עם ה-CSS החוסם (FCP) — כמו defer. -->
-    <link rel="preload" href="script.js?v=90" as="script" fetchpriority="low" />
-    <link rel="preload" href="lux.js?v=77" as="script" fetchpriority="low" />
+    <link rel="preload" href="script.js?v=91" as="script" fetchpriority="low" />
+    <link rel="preload" href="lux.js?v=78" as="script" fetchpriority="low" />
 
     <!-- OneSignal Web Push SDK -->
     <script>
@@ -595,6 +632,7 @@
       })();
     </script>
     <div
+      id="lux-topbar"
       class="fixed top-0 left-0 right-0 z-50 px-4 py-3 flex justify-between items-center pointer-events-none"
       style="padding-top:max(0.75rem, env(safe-area-inset-top, 0px));"
       role="toolbar"
@@ -2841,8 +2879,8 @@
           // כבר מצוירים מתחת למסך הפתיחה ואנימציית הכניסה מתוזמנת לדהייתו. בהיר/כהה לא טוענים אותו.
           // אותו ?v= כמו ב-_luxSkyEnsure (script.js) וב-sw.js.
           if (document.documentElement.classList.contains("lux-sky")) addScript("sky.js?v=7", { id: "lux-sky-js" });
-          addScript("script.js?v=90");
-          addScript("lux.js?v=77");
+          addScript("script.js?v=91");
+          addScript("lux.js?v=78");
         }
         function afterFirstPaint() {
           // rAF אחד (רץ ממש לפני ציור הפריים הראשון) ואז setTimeout(0) — משימה

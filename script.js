@@ -6476,6 +6476,7 @@ function toggleSettings() {
   const m = document.getElementById("settings-modal");
   if (m.classList.contains("hidden")) {
     updateNotifStatusUI();
+    _fsLockReset(); // עיגון מהפעם הקודמת (שינוי גודל הכיתוב) — הכרטיס חוזר למרכז
     // חשיפה בלי מעבר opacity (ראו _revealModalNoFreeze) — הדהייה באה מאנימציית הפתיחה האחידה
     _revealModalNoFreeze(m);
     m.children[0].classList.remove("scale-95");
@@ -6561,12 +6562,119 @@ function applyFontSize(level) {
   if (level === 2) document.documentElement.classList.add("fs-2");
   if (level === 3) document.documentElement.classList.add("fs-3");
   if (level === 4) document.documentElement.classList.add("fs-4");
+  // הסקאלה בפועל, הזום-הנגדי של הכרום והרוחב האפקטיבי (lux-ew-N) — ראו הסקריפט בראש index.html
+  try { if (window.__luxFsFit) window.__luxFsFit(); } catch (e) {}
 }
 function previewFontSize(val) {
+  _fsLockBegin();
   applyFontSize(parseInt(val));
   const lbl = document.getElementById("font-size-label");
   if (lbl) lbl.textContent = FS_LABELS[parseInt(val)] || "רגיל";
+  _fsLockKeep();
 }
+
+// ── פאנל ההגדרות נעול בזמן שינוי גודל הכיתוב (10/2026) ─────────────────────
+// "בכל פעם שאני מגדיל או מקטין הפאנל עולה ויורד ... אני רוצה שבזמן שאני מקטין או מגדיל
+// הוא יהיה נעול ולא יברח לי". כל הדף בנוי ב-rem: שינוי הגודל מגדיל את כל מה שמעל הסליידר,
+// והכרטיס הממורכז גדל לשני הכיוונים — הסליידר בורח מתחת לאצבע. מתחילת הנגיעה ועד 1.5 שנ'
+// אחרי השינוי האחרון הסליידר נשאר בדיוק באותו גובה במסך: הכרטיס מעוגן למקומו (במקום ממורכז),
+// וכל תזוזה מקוזזת — קודם בגלילה הפנימית של הכרטיס, ואם אין לאן לגלול — בהזזת הכרטיס עצמו.
+// ResizeObserver תופס גם שינויים מאוחרים (שמירה ורינדור מחדש) לפני הציור. העיגון נשאר עד
+// סגירת הפאנל — אחרת הכרטיס היה קופץ חזרה למרכז בסוף הגרירה.
+const _fsLock = { y: null, cy: null, until: 0, ro: null, t: 0 };
+function _fsLockParts() {
+  const sl = document.getElementById("settings-font-size");
+  const m = document.getElementById("settings-modal");
+  if (!sl || !m || m.classList.contains("hidden")) return null;
+  const card = sl.closest("#settings-modal > div");
+  return card ? { sl, m, card } : null;
+}
+// הגובה המרבי המקורי של הכרטיס (90vh) — וכשהכרטיס זז למטה, לא מעבר לתחתית המסך
+function _fsLockMaxH(m, card) {
+  const cs = getComputedStyle(m);
+  const top = parseFloat(cs.paddingTop) + (parseFloat(card.style.marginTop) || 0);
+  const room = window.innerHeight - top - parseFloat(cs.paddingBottom);
+  card.style.maxHeight = Math.max(160, Math.min(card.__fsMaxH0 || room, room)) + "px";
+}
+function _fsLockBegin() {
+  const p = _fsLockParts();
+  if (!p) return;
+  const { sl, m, card } = p;
+  if (!card.__fsPinned) {
+    card.__fsPinned = true;
+    // offsetTop/offsetHeight — המיקום והגובה בפריסה (בלי ה-transform של הכרטיס), כך שהעיגון
+    // עצמו לא מזיז כלום: אותו מקום, אותו גובה מרבי
+    const top = card.offsetTop - parseFloat(getComputedStyle(m).paddingTop);
+    card.__fsMaxH0 = parseFloat(getComputedStyle(card).maxHeight) || card.offsetHeight;
+    m.style.alignItems = "flex-start";
+    card.style.marginTop = Math.max(0, top) + "px";
+    card.style.overflowAnchor = "none";
+    _fsLockMaxH(m, card);
+  }
+  if (_fsLock.y == null) {
+    _fsLock.y = sl.getBoundingClientRect().top;
+    _fsLock.cy = card.getBoundingClientRect().top;
+  }
+  _fsLock.until = performance.now() + 1500;
+  if (!_fsLock.ro && window.ResizeObserver) {
+    _fsLock.ro = new ResizeObserver(() => _fsLockKeep());
+    for (const ch of card.children) _fsLock.ro.observe(ch);
+  }
+  clearTimeout(_fsLock.t);
+  _fsLock.t = setTimeout(_fsLockEnd, 1600);
+}
+function _fsLockKeep() {
+  if (_fsLock.y == null) return;
+  const p = _fsLockParts();
+  if (!p || performance.now() > _fsLock.until) { _fsLockEnd(); return; }
+  const { sl, m, card } = p;
+  const moveCard = (d) => {
+    const mt = parseFloat(card.style.marginTop) || 0;
+    const nmt = Math.max(0, mt - d);
+    if (Math.abs(nmt - mt) < 0.5) return false;
+    card.style.marginTop = nmt + "px";
+    _fsLockMaxH(m, card);
+    return true;
+  };
+  // שולי השכבה (p-4) גדלים עם הכיתוב — שפת הכרטיס העליונה נשארת במקומה
+  const dc = card.getBoundingClientRect().top - _fsLock.cy;
+  if (Math.abs(dc) >= 0.5) moveCard(dc);
+  for (let i = 0; i < 5; i++) {
+    const d = sl.getBoundingClientRect().top - _fsLock.y;
+    if (Math.abs(d) < 0.5) break;
+    const st = card.scrollTop;
+    card.scrollTop = st + d;
+    if (Math.abs(card.scrollTop - st) >= 0.5) continue;
+    // אין לאן לגלול (ראש/סוף הכרטיס) — מזיזים את הכרטיס עצמו, בגבולות המסך
+    if (!moveCard(d)) break;
+    _fsLock.cy = card.getBoundingClientRect().top;
+  }
+}
+function _fsLockEnd() {
+  clearTimeout(_fsLock.t);
+  _fsLock.y = _fsLock.cy = null;
+  if (_fsLock.ro) { _fsLock.ro.disconnect(); _fsLock.ro = null; }
+}
+// בפתיחה הבאה של ההגדרות — הכרטיס חוזר למרכז
+function _fsLockReset() {
+  _fsLockEnd();
+  const m = document.getElementById("settings-modal");
+  const card = m && document.getElementById("settings-font-size") && document.getElementById("settings-font-size").closest("#settings-modal > div");
+  if (!m || !card || !card.__fsPinned) return;
+  card.__fsPinned = false;
+  m.style.alignItems = "";
+  card.style.marginTop = "";
+  card.style.maxHeight = "";
+  card.style.overflowAnchor = "";
+}
+(function _fsLockWire() {
+  const sl = document.getElementById("settings-font-size");
+  if (!sl) return;
+  // הנגיעה עצמה מעגנת — עוד לפני שהערך השתנה (גרירה מתחילה בנגיעה)
+  sl.addEventListener("pointerdown", _fsLockBegin, { passive: true });
+  sl.addEventListener("change", () => setTimeout(_fsLockKeep, 0));
+  window.addEventListener("resize", () => { if (_fsLock.y == null) return; _fsLockEnd(); });
+})();
 
 function getBearing(lat1, lon1, lat2, lon2) {
   const toRad = (deg) => (deg * Math.PI) / 180;

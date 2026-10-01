@@ -9868,3 +9868,4 @@ html.lux-sky.lux-sky-nogl[data-fest="motzei"] body::after { --fest-shad: 30, 41,
 @media (hover: hover) { .lux-erev-more:hover { background: rgba(232, 193, 90, 0.2); border-color: rgba(242, 217, 138, 0.8); } }
 .lux-erev-more-grid { margin-top: 0.75rem; }
 html.lux-sky[data-sky="day"] .lux-erev-more { color: #7a4f0e; background: var(--skyc-gloss), var(--skyc-tint); border-color: rgba(161, 118, 42, 0.7); }
+html.lux-sky.lux-sky-nogl[data-fest="lag"] body::after { --fest-shad: 154, 52, 18; }

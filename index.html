@@ -412,7 +412,7 @@
          הכותרת "קפצה" באמצע מסך הפתיחה בטלפון. -->
     <link rel="preload" href="/fonts/frank-ruhl-libre-hebrew.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="/fonts.css?v=1" />
-    <link rel="stylesheet" href="style.css?v=101" />
+    <link rel="stylesheet" href="style.css?v=102" />
     <!-- בלי ציור ראשון של "חצי הירו": הסקריפט של באנר היום (לפני ה-h1) גורם למפרסר לפנות
          את התור, ו-Chrome צייר את ההירו חלקי — ואז קו הגל שבתחתיתו קפץ למטה (CLS). כאן
          הציור הראשון מחכה עד שכל ההירו נפרסר (עד #main-content — מילישניות בודדות).
@@ -429,7 +429,7 @@
     <!-- הקוד הראשי יורד מוקדם (preload) אך מוזרק ומתבצע רק אחרי הציור הראשון —
          ראו הטוען בסוף ה-body. ה-?v= כאן חייב להיות זהה לזה שבטוען וב-sw.js.
          fetchpriority=low: שלא יתחרו ברוחב-הפס עם ה-CSS החוסם (FCP) — כמו defer. -->
-    <link rel="preload" href="script.js?v=88" as="script" fetchpriority="low" />
+    <link rel="preload" href="script.js?v=89" as="script" fetchpriority="low" />
     <link rel="preload" href="lux.js?v=77" as="script" fetchpriority="low" />
 
     <!-- OneSignal Web Push SDK -->
@@ -2840,8 +2840,8 @@
           // "שמיים חיים" (ברירת המחדל, 10/2026): sky.js קטן ועצמאי ונטען לפני script.js — כך השמיים
           // כבר מצוירים מתחת למסך הפתיחה ואנימציית הכניסה מתוזמנת לדהייתו. בהיר/כהה לא טוענים אותו.
           // אותו ?v= כמו ב-_luxSkyEnsure (script.js) וב-sw.js.
-          if (document.documentElement.classList.contains("lux-sky")) addScript("sky.js?v=5", { id: "lux-sky-js" });
-          addScript("script.js?v=88");
+          if (document.documentElement.classList.contains("lux-sky")) addScript("sky.js?v=6", { id: "lux-sky-js" });
+          addScript("script.js?v=89");
           addScript("lux.js?v=77");
         }
         function afterFirstPaint() {

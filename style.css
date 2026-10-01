@@ -2508,31 +2508,7 @@ html.lux-js #resultsGrid .event-card.lux-in {
   }
 }
 
-/* ── תמה מלכותית — זהב על בורדו-לילה ── */
-html.lux-royal .gradient-bg {
-  background:
-    radial-gradient(ellipse 120% 70% at 50% -10%, rgba(232, 193, 90, 0.10) 0%, transparent 55%),
-    radial-gradient(ellipse 90% 60% at 85% 100%, rgba(120, 30, 80, 0.30) 0%, transparent 60%),
-    linear-gradient(160deg, #12050e 0%, #250b1e 45%, #3a1230 100%) !important;
-}
-html.lux-royal body {
-  background-color: #150910 !important;
-}
-html.lux-royal .glass-card {
-  border-color: rgba(232, 193, 90, 0.35);
-}
-html.lux-royal #omer-container {
-  background: linear-gradient(135deg, #3a1230 0%, #250b1e 55%, #4a1638 100%) !important;
-}
-html.lux-royal #lux-bottom-nav {
-  background: rgba(26, 8, 20, 0.85);
-}
-html.lux-royal .wave-divider path {
-  fill: #150910 !important;
-}
-html.lux-royal .chip.active {
-  box-shadow: 0 4px 20px rgba(201, 153, 58, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.45);
-}
+/* (10/2026) ערכת "זהב מלכותי" הוסרה מהאתר — במקומה "שמיים חיים" (sky.js; הבלוק בסוף הקובץ) */
 
 /* ── לוח השנה — היום כתכשיט ── */
 @keyframes lux-today-pulse {
@@ -9529,3 +9505,200 @@ details[open] > :not(summary) {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.07); }
 }
+
+
+/* ═══════════════════════════════════════════════════════
+   ✦ שמיים חיים (10/2026) — ערכת ברירת המחדל: שמיים אמיתיים ב-WebGL (sky.js) מאחורי כל הדף
+   html.lux-sky בא עם רכיבי העיצוב הבהיר — בלי html.dark (בקשה מפורשת של בעל האתר 01/10); חלונות/פופאפים יותאמו בשלב הבא.
+   הקנבס #lux-sky קבוע ב-z-index שלילי: נצבע מיד אחרי רקע ה-html ולפני כל התוכן — לכן רקע ה-body
+   חייב להיות שקוף, וכל רקע אחר של הדף (גרדיאנט ההירו, הגוון לפי שעה, קנבס הכוכבים של ההירו,
+   האורבים, הגל, ערב שבת/שבת/מועדים) כבוי כאן. רקע אחד בלבד בכל רגע — לא להוסיף רקעים מעל.
+   sky.js מספק ל-CSS: html[data-sky=night|dawn|day|dusk], --sky-zen/--sky-hor ("r,g,b"),
+   --sky-glass (אטימות זכוכית 0.36 בלילה → 0.64 ביום), --sky-day (0..1), והאירוע "lux-sky".
+   ═══════════════════════════════════════════════════════ */
+html.lux-sky { background: #050b1a; }
+html.lux-sky body,
+html.lux-sky body.lux-erev,
+html.lux-sky body.lux-erev.lux-erev-chag,
+html.lux-sky body.lux-shabbat { background-color: transparent !important; background-image: none !important; }
+#lux-sky {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100vh;
+  height: 100lvh;
+  z-index: -1;
+  pointer-events: none;
+  display: block;
+  opacity: 0;
+  transition: opacity 0.9s ease;
+}
+#lux-sky.lux-sky-on { opacity: 1; }
+html:not(.lux-sky) #lux-sky { display: none; }
+html.lux-sky body .gradient-bg,
+html.lux-sky body.lux-erev .gradient-bg,
+html.lux-sky body.lux-erev.lux-erev-chag .gradient-bg,
+html.lux-sky body.lux-shabbat .gradient-bg,
+html.lux-sky body[class*="lux-season-"] .gradient-bg { background: transparent !important; }
+html.lux-sky .gradient-bg::after { display: none !important; }
+html.lux-sky .lux-hero-orb,
+html.lux-sky #stars-canvas,
+html.lux-sky .lux-shooting-star,
+html.lux-sky .wave-divider { display: none !important; }
+html.lux-sky body.lux-season-av9 #hero-section { filter: none; }
+/* כרטיסי זכוכית: בסיס כהה שמתעבה ביום — על רקיע בהיר טקסט לבן לא נקרא אחרת */
+html.lux-sky .glass-card,
+html.lux-sky body.lux-shabbat .glass-card,
+html.lux-sky #dashboard-state > div.glass-card {
+  background:
+    linear-gradient(165deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%),
+    rgba(8, 14, 36, var(--sky-glass, 0.45));
+}
+/* עיגול הבחירה בהגדרות */
+#theme-circle-sky { background: linear-gradient(160deg, #1f4fa8 0%, #0c1530 48%, #e8884f 100%); }
+/* בלי WebGL (html.lux-sky-nogl): גרדיאנט קבוע לפי שלב היום */
+html.lux-sky.lux-sky-nogl body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(180deg, #050b1a 0%, #0c1530 55%, #16233f 100%);
+  transition: background 1.2s ease;
+}
+html.lux-sky.lux-sky-nogl[data-sky="dawn"] body::before { background: linear-gradient(180deg, #16275a 0%, #4a4f8c 55%, #e8a07c 100%); }
+html.lux-sky.lux-sky-nogl[data-sky="day"] body::before { background: linear-gradient(180deg, #1f5fc0 0%, #4f93df 60%, #a9cdef 100%); }
+html.lux-sky.lux-sky-nogl[data-sky="dusk"] body::before { background: linear-gradient(180deg, #1a1a4a 0%, #6b3a7a 55%, #ff9a5c 100%); }
+
+
+/* ═══════════════════════════════════════════════════════
+   ✦ שמיים חיים — התאמת הדף הראשי לרקע (01/10/2026, שלב ב', גרסה 5: זכוכית צלולה + טקסט מסתגל)
+   היסטוריה: 1 זכוכית כהה אטומה — "לא רואים את הכיתוב"; 2–4 לבן 78%/52%/28% — "לבן חלבי מדי",
+   ולוחית פנימית לטקסט — "המסגרת הזאת נראית מזעזעת". עכשיו: הכרטיס כמעט שקוף (גוון קל בלבד +
+   טשטוש במחשב, מסגרת זהב דקה) והקריאות באה מהטקסט עצמו, שמתחלף לפי השמיים (sky.js כותב
+   html[data-sky]): בלילה/דמדומים אותיות בהירות עם צל כהה, ביום אותיות כהות עם הילה בהירה.
+   כפתורים/תגיות/תיבת הלבנה שומרים על הרקע המקורי שלהם (קריאים בכל שעה). כרטיסי הלימוד
+   (אבני החן) בגרדיאנט המקורי; הדשבורד ובאנר ההלכה (.glass-card) כמו במקור. רק תחת html.lux-sky,
+   רק main/footer; חלונות ופופאפים לשלב הבא.
+   ═══════════════════════════════════════════════════════ */
+html.lux-sky {
+  --skyc-tint: rgba(255, 255, 255, 0.2);
+  --skyc-gloss: linear-gradient(160deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.03) 48%, rgba(255, 255, 255, 0) 100%);
+  --skyc-edge: rgba(201, 153, 58, 0.45);
+  --skyc-shadow: 0 14px 40px -14px rgba(5, 11, 26, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  --skyc-halo: none; /* ביום בלי הילה: זוהר/הרמה סביב אותיות כהות נראו כהכפלה מטושטשת */
+  --skyc-ink: #0f172a; --skyc-ink2: #334155; --skyc-ink3: #475569;
+  --skyc-field: rgba(255, 255, 255, 0.55); --skyc-field-edge: rgba(201, 153, 58, 0.3);
+}
+/* לילה / דמדומים: גוון כחול-לילה קל ואותיות בהירות */
+html.lux-sky:not([data-sky="day"]) {
+  --skyc-tint: rgba(12, 18, 44, 0.24);
+  --skyc-gloss: linear-gradient(160deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.02) 48%, rgba(255, 255, 255, 0) 100%);
+  --skyc-shadow: 0 14px 40px -14px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  --skyc-halo: 0 1px 2px rgba(0, 0, 0, 0.6), 0 0 12px rgba(0, 0, 0, 0.45);
+  --skyc-ink: #f6f7fb; --skyc-ink2: rgba(226, 232, 240, 0.88); --skyc-ink3: rgba(203, 213, 225, 0.72);
+  --skyc-field: rgba(255, 255, 255, 0.12); --skyc-field-edge: rgba(255, 255, 255, 0.26);
+}
+/* ── משטחים: זכוכית צלולה ── */
+html.lux-sky main > nav[class~="bg-white"],
+html.lux-sky main .event-card,
+html.lux-sky #lux-pearl,
+html.lux-sky .lux-track-card,
+html.lux-sky .lux-plan-empty,
+html.lux-sky .lux-plan-card,
+html.lux-sky #lux-shana-entry {
+  background: var(--skyc-gloss), var(--skyc-tint) !important;
+  border-color: var(--skyc-edge) !important;
+  box-shadow: var(--skyc-shadow);
+  color: var(--skyc-ink);
+  text-shadow: var(--skyc-halo);
+  transition: background 0.9s ease, color 0.9s ease, box-shadow 0.3s ease;
+}
+html.lux-sky .lux-seas-card {
+  background: linear-gradient(135deg, rgba(16, 26, 53, 0.55) 0%, rgba(28, 43, 79, 0.45) 55%, rgba(20, 33, 63, 0.55) 100%) !important;
+  box-shadow: 0 12px 36px rgba(5, 11, 26, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+@media (hover: hover) and (min-width: 769px) {
+  html.lux-sky main > nav[class~="bg-white"],
+  html.lux-sky main .event-card,
+  html.lux-sky #lux-pearl,
+  html.lux-sky .lux-track-card,
+  html.lux-sky .lux-plan-empty,
+  html.lux-sky .lux-plan-card,
+  html.lux-sky #lux-shana-entry,
+  html.lux-sky .lux-seas-card {
+    backdrop-filter: blur(18px) saturate(1.35);
+    -webkit-backdrop-filter: blur(18px) saturate(1.35);
+  }
+}
+/* כרטיסי האירועים: גוון עדין לפי סוג (הפס הצבעוני בצד נשאר) */
+html.lux-sky main .event-card { --ev-rgb: 148, 163, 184; }
+html.lux-sky main .event-card.card-major { --ev-rgb: 96, 165, 250; }
+html.lux-sky main .event-card.card-fast { --ev-rgb: 251, 113, 133; }
+html.lux-sky main .event-card.card-moon { --ev-rgb: 192, 132, 252; }
+html.lux-sky main .event-card.card-rosh-chodesh { --ev-rgb: 52, 211, 153; }
+html.lux-sky main .event-card {
+  background: var(--skyc-gloss), linear-gradient(135deg, rgba(var(--ev-rgb), 0.16) 0%, rgba(var(--ev-rgb), 0.04) 55%, rgba(255, 255, 255, 0) 100%), var(--skyc-tint) !important;
+}
+@media (hover: hover) {
+  html.lux-sky main .event-card:hover { box-shadow: 0 26px 60px -16px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(201, 153, 58, 0.55); }
+}
+/* ── טקסט בתוך הזכוכית: צבעי Tailwind לפי טוקן מדויק → צבעי השלב (יום/לילה) ── */
+html.lux-sky main :is(.event-card, nav[class~="bg-white"], #lux-pearl, .lux-track-card, .lux-plan-empty, #lux-shana-entry) :is([class~="text-slate-900"], [class~="text-slate-800"], [class~="text-slate-700"]) { color: var(--skyc-ink) !important; }
+html.lux-sky main :is(.event-card, nav[class~="bg-white"], #lux-pearl, .lux-track-card, .lux-plan-empty, #lux-shana-entry) :is([class~="text-slate-600"], [class~="text-slate-500"]) { color: var(--skyc-ink2) !important; }
+html.lux-sky main :is(.event-card, nav[class~="bg-white"]) [class~="text-slate-400"] { color: var(--skyc-ink3) !important; }
+html.lux-sky main .event-card .ev-name-btn { color: inherit; }
+/* כפתור "סנכרן ליומן" שומר על גלולה בהירה (bg-white/70) — הטקסט בו נשאר כהה גם בלילה */
+html.lux-sky main .event-card button[class~="text-slate-400"] { color: #475569 !important; }
+/* הלימוד היומי שלי */
+html.lux-sky .lux-tc-ref { color: var(--skyc-ink3); }
+html.lux-sky:not([data-sky="day"]) .lux-tc-name { color: #ffffff; }
+html.lux-sky:not([data-sky="day"]) .lux-tc-badge:not(.lux-tc-done) { color: #f2d98a; background: rgba(232, 193, 90, 0.14); border-color: rgba(232, 193, 90, 0.4); }
+/* סדר לימוד אישי */
+html.lux-sky .lux-plan-empty { border: 2px dashed rgba(201, 153, 58, 0.55) !important; color: var(--skyc-ink); }
+html.lux-sky .lux-plan-empty small { color: var(--skyc-ink2); }
+/* הפנינה היומית */
+html.lux-sky #lux-pearl .lux-pearl-text { color: var(--skyc-ink); }
+html.lux-sky #lux-pearl .lux-pearl-src { color: #8a5a12; }
+html.lux-sky:not([data-sky="day"]) #lux-pearl .lux-pearl-src { color: #f2d98a; }
+/* כרטיס ברכה לחג */
+html.lux-sky #lux-shana-entry { border: 1.5px dashed rgba(201, 153, 58, 0.65) !important; }
+html.lux-sky .lux-se-txt b { color: #8a5a12; }
+html.lux-sky:not([data-sky="day"]) .lux-se-txt b { color: #f2d98a; }
+html.lux-sky .lux-se-txt small { color: var(--skyc-ink2); }
+html.lux-sky .lux-se-go { color: #a1762a; }
+html.lux-sky:not([data-sky="day"]) .lux-se-go { color: #f2d98a; }
+/* תיבת החיפוש והשבבים */
+html.lux-sky #mainSearch { background: var(--skyc-field) !important; color: var(--skyc-ink) !important; border-color: var(--skyc-field-edge) !important; box-shadow: none; }
+html.lux-sky #mainSearch::placeholder { color: var(--skyc-ink3); }
+html.lux-sky #mainSearch:focus { border-color: rgba(232, 193, 90, 0.6) !important; box-shadow: 0 0 0 3px rgba(232, 193, 90, 0.18); }
+html.lux-sky main .chip:not(.active) { background: var(--skyc-field) !important; color: var(--skyc-ink2) !important; border-color: var(--skyc-field-edge) !important; }
+@media (hover: hover) { html.lux-sky main .chip:hover:not(.active) { color: #f2d98a !important; border-color: rgba(232, 193, 90, 0.55) !important; } }
+/* כפתורים/תגיות/תיבת הלבנה/תיבת האייקון — רקע משלהם, בלי הילה; קריאים בכל שעה */
+html.lux-sky main :is(.event-card button, .event-card .ev-countdown, .lux-tc-badge, .chip, #mainSearch, .lux-plan-plus, .lux-seas-card, .lv-details) { text-shadow: none; }
+html.lux-sky .lv-details { background: rgba(255, 255, 255, 0.84) !important; border-color: rgba(201, 153, 58, 0.3) !important; color: #1e293b; margin-top: 0.8rem; }
+html.lux-sky main .event-card .w-14 { background: rgba(255, 255, 255, 0.82) !important; }
+html.lux-sky:not([data-sky="day"]) main .event-card .w-14 { background: rgba(255, 255, 255, 0.14) !important; border-color: rgba(255, 255, 255, 0.3) !important; }
+/* הפוטר: קישורים עגולים */
+html.lux-sky footer a[class~="bg-white"] { background: var(--skyc-field) !important; border-color: var(--skyc-field-edge) !important; color: var(--skyc-ink2) !important; }
+html.lux-sky footer [class~="border-slate-200"] { border-color: rgba(232, 193, 90, 0.22) !important; }
+
+/* ── גרסה 5א: כותרות ביום, בלוק ה-SEO והפוטר בלילה (בעל האתר: "ביום לא רואים את הכתב", "בלילה לא רואים
+   את הכתב שבתחתית האתר"). הכותרות הזהובות (.lux-tracks-title) מופיעות ישירות על השמיים — ביום זהב כהה עם
+   הילה בהירה, בלילה זהב בהיר עם צל. בלוק ה-SEO (#seo-about) והפוטר יושבים על השמיים בלי כרטיס — בלילה
+   כל האפורים של Tailwind שם הופכים לבהירים (לפי טוקן מדויק) עם צל כהה, ביום נשארים כהים עם הילה בהירה. */
+html.lux-sky main .lux-tracks-title { color: #7a4f0e; text-shadow: none; }
+html.lux-sky:not([data-sky="day"]) main .lux-tracks-title { color: #f2d98a; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6), 0 0 12px rgba(0, 0, 0, 0.45); }
+/* כרטיסי הלימוד היומי ביום: תיאור ותג חזקים יותר על זכוכית מעל שמיים בהירים */
+html.lux-sky[data-sky="day"] .lux-tc-ref { color: #334155; }
+html.lux-sky[data-sky="day"] .lux-tc-badge:not(.lux-tc-done) { color: #7a4f0e; background: rgba(255, 255, 255, 0.55); border-color: rgba(161, 118, 42, 0.5); }
+/* בלוק ה-SEO והפוטר */
+html.lux-sky :is(#seo-about, footer) { text-shadow: none; } /* ביום: בלי הילה בכלל — גם הרמה של פיקסל נראתה כהכפלה של האותיות המודגשות */
+html.lux-sky:not([data-sky="day"]) :is(#seo-about, footer) { text-shadow: 0 1px 2px rgba(0, 0, 0, 0.65), 0 0 12px rgba(0, 0, 0, 0.45); }
+html.lux-sky:not([data-sky="day"]) :is(#seo-about, footer) :is([class~="text-slate-800"], [class~="text-slate-700"], [class~="text-slate-600"], summary) { color: #eef2f7 !important; }
+html.lux-sky:not([data-sky="day"]) :is(#seo-about, footer) [class~="text-slate-500"] { color: rgba(226, 232, 240, 0.85) !important; }
+html.lux-sky:not([data-sky="day"]) :is(#seo-about, footer) [class~="text-slate-400"] { color: rgba(203, 213, 225, 0.75) !important; }
+html.lux-sky:not([data-sky="day"]) :is(#seo-about, footer) :is([class~="text-blue-500"], [class~="text-blue-600"], a) { color: #bfdbfe !important; }
+html.lux-sky:not([data-sky="day"]) :is(#seo-about, footer) :is([class~="border-slate-100"], [class~="border-slate-200"]) { border-color: rgba(255, 255, 255, 0.22) !important; }
+html.lux-sky:not([data-sky="day"]) #seo-about :is(table, th, td) { color: #eef2f7; border-color: rgba(255, 255, 255, 0.22); }
+html.lux-sky:not([data-sky="day"]) footer a[class~="bg-white"] { color: #eef2f7 !important; }

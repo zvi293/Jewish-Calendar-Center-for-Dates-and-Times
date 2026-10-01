@@ -792,11 +792,12 @@ let ZMANIM_METHOD = localStorage.getItem("moadim_method") || "MGA";
 let GPS_COORDS = JSON.parse(localStorage.getItem("moadim_gps")) || null;
 let compassListener = null;
 let CALENDAR_DISPLAY_DATE = new Date();
-let CURRENT_THEME = ["light", "dark"].includes(
+// (10/2026) "sky" = שמיים חיים (sky.js) — ברירת המחדל; "light"/"dark" — בחירה מפורשת בהגדרות
+let CURRENT_THEME = ["light", "dark", "sky"].includes(
   localStorage.getItem("moadim_theme"),
 )
   ? localStorage.getItem("moadim_theme")
-  : "light";
+  : "sky";
 // האפליקציה בעברית בלבד — בורר השפות הוסר לבקשת בעל האתר
 let CURRENT_LANG = "he";
 try { localStorage.setItem("moadim_lang", "he"); } catch (e) {}
@@ -1014,14 +1015,35 @@ function applyTheme(theme) {
     : null;
   const wavePath = document.querySelector(".wave-divider path");
   const themeMetaTag = document.querySelector('meta[name="theme-color"]');
-  const nextTheme = theme === "dark" ? "dark" : "light";
+  // (10/2026) "sky" = שמיים חיים (sky.js): רכיבי העיצוב הבהיר (בלי dark — בקשה מפורשת של בעל האתר 01/10)
+  // + קנבס WebGL מאחורי כל הדף.
+  // style.css (הבלוק "שמיים חיים") מכבה בערכה הזו את גרדיאנט ההירו, קנבס הכוכבים, האורבים
+  // והגל — רקע אחד בלבד. ביציאה ממנה המנוע נעצר והקנבס מוסר. הגל מקבל מילוי שקוף גם כאן
+  // כי ה-inline style שלו נכתב בערכות האחרות.
+  const nextTheme = theme === "dark" ? "dark" : theme === "light" ? "light" : "sky";
 
   CURRENT_THEME = nextTheme;
   localStorage.setItem("moadim_theme", nextTheme);
   html.classList.remove("dark");
   html.classList.remove("theme-blue");
+  html.classList.remove("lux-sky");
+  // המחלקה light (רקע הקרם של העיצוב הבהיר ב-style.css) — רק בבהיר; סקריפט הפתיחה מסיר אותה לכהה/שמיים
+  html.classList.toggle("light", nextTheme !== "dark");
+  if (nextTheme !== "sky" && window.__luxSky) {
+    try { window.__luxSky.stop(); } catch (e) {}
+  }
 
-  if (nextTheme === "dark") {
+  if (nextTheme === "sky") {
+    html.classList.add("lux-sky");
+    if (header) {
+      header.classList.remove("bg-ocean-readable");
+      header.classList.add("gradient-bg");
+    }
+    if (glowWrap) glowWrap.style.opacity = "0";
+    if (wavePath) wavePath.style.fill = "transparent";
+    if (themeMetaTag) themeMetaTag.content = "#050b1a";
+    _luxSkyEnsure();
+  } else if (nextTheme === "dark") {
     html.classList.add("dark");
     if (header) {
       header.classList.remove("bg-ocean-readable");
@@ -1042,7 +1064,7 @@ function applyTheme(theme) {
   }
 
   // Highlight the active theme circle in the settings panel
-  ["light", "dark"].forEach((t) => {
+  ["sky", "light", "dark"].forEach((t) => {
     const el = document.getElementById("theme-circle-" + t);
     if (!el) return;
     if (t === nextTheme) {
@@ -1051,6 +1073,22 @@ function applyTheme(theme) {
       el.classList.remove("theme-circle-active");
     }
   });
+}
+
+// טעינת/הפעלת מנוע השמיים לפי דרישה (מעבר לערכת השמיים מההגדרות). בטעינת דף רגילה index.html
+// כבר טוען את sky.js לפני script.js כשהערכה פעילה, ו-sky.js מפעיל את עצמו. אותו ?v= כמו
+// ב-index.html וב-sw.js — להעלות בשלושתם יחד.
+function _luxSkyEnsure() {
+  if (window.__luxSky) {
+    try { window.__luxSky.start(); } catch (e) {}
+    return;
+  }
+  if (document.getElementById("lux-sky-js")) return;
+  const s = document.createElement("script");
+  s.id = "lux-sky-js";
+  s.src = "sky.js?v=3";
+  s.async = true;
+  document.body.appendChild(s);
 }
 
 function initApp() {
@@ -8438,6 +8476,7 @@ initApp();
   let _shoot = null;
   window.__luxCanvasShoot = function () {
     if (!W || !H || _starsReduced) return false;
+    if (document.documentElement.classList.contains("lux-sky")) return false; // המטאורים ב-sky.js
     if (_shoot) return true; // יריה קודמת עדיין באוויר
     const ang = (200 * Math.PI) / 180; // אותו כיוון כמו rotate(200deg) בגרסת ה-DOM
     _shoot = {
@@ -8494,11 +8533,13 @@ initApp();
     // מדלגים גם כשפופאפ פתוח (html.lux-modal-open): ציור מאחורי שכבת backdrop-filter
     // מכריח re-blur של כל המסך בכל פריים — זה היה מקור הריצוד בנייד.
     // וגם כשה-hero נגלל אל מחוץ למסך — אין טעם לצייר את מה שלא רואים.
+    // שמיים חיים (sky.js, 10/2026): הקנבס הזה מוסתר ב-CSS — לא מציירים (רקע אחד בלבד)
     if (
       !document.hidden &&
       _starsOnScreen &&
       (_starsReduced || performance.now() >= _starsHoldUntil) &&
-      !document.documentElement.classList.contains("lux-modal-open")
+      !document.documentElement.classList.contains("lux-modal-open") &&
+      !document.documentElement.classList.contains("lux-sky")
     ) {
       ctx.clearRect(0, 0, W, H);
       t += 0.016 * _STARS_STEP;
@@ -11918,6 +11959,8 @@ function buildZmanimOpinionsPayload(key) {
 
 renderZmanimGrid = function (zData) {
   window._lastZData = zData;
+  // שמיים חיים (sky.js) מעגנים את ציר הזמן של הרקע לזמני היום של האתר — מודיעים שחושבו/התעדכנו
+  try { window.dispatchEvent(new CustomEvent("lux-zmanim")); } catch (e) {}
   const normalized = normalizeZmanim(zData);
   window._lastNormalizedZmanim = normalized;
 

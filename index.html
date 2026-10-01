@@ -3,15 +3,24 @@
   <head>
     <meta charset="UTF-8" />
     <script>
-      // מצב כהה/מלכותי לפני הצגת הדף — מונע הבזק של התמה הבהירה (FOUC)
-      // עד שסקריפט האתר הגדול נטען. applyTheme() רץ אחר-כך באופן אידמפוטנטי.
+      // ערכת העיצוב לפני הציור הראשון — מונע הבזק של התמה הבהירה (FOUC) עד שסקריפט האתר
+      // הגדול נטען. applyTheme() רץ אחר-כך באופן אידמפוטנטי.
+      // (10/2026) "שמיים חיים" (sky.js) היא ברירת המחדל: מעבר חד-פעמי לכולם (moadim_theme_v2) —
+      // גם למי שנשמר אצלו "בהיר" אוטומטית, כי האתר כתב את ברירת המחדל הישנה לזיכרון בכל
+      // ביקור. מי שבוחר אחר כך בהיר/כהה בהגדרות — הבחירה נשמרת. ערכת "זהב מלכותי" הוסרה.
       try {
-        if (localStorage.getItem("moadim_theme") === "dark") {
+        var th = localStorage.getItem("moadim_theme");
+        if (localStorage.getItem("moadim_theme_v2") !== "1") {
+          th = "sky";
+          localStorage.setItem("moadim_theme", "sky");
+          localStorage.setItem("moadim_theme_v2", "1");
+        }
+        if (th === "dark") {
           document.documentElement.classList.remove("light");
           document.documentElement.classList.add("dark");
-        }
-        if (localStorage.getItem("lux_royal") === "1") {
-          document.documentElement.classList.add("lux-royal");
+        } else if (th !== "light") {
+          // שמיים חיים = רכיבי העיצוב הבהיר (המחלקה light נשארת) + הקנבס. לא מצב כהה (בקשה מפורשת 01/10)
+          document.documentElement.classList.add("lux-sky");
         }
       } catch (e) {}
     </script>
@@ -403,7 +412,7 @@
          הכותרת "קפצה" באמצע מסך הפתיחה בטלפון. -->
     <link rel="preload" href="/fonts/frank-ruhl-libre-hebrew.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="/fonts.css?v=1" />
-    <link rel="stylesheet" href="style.css?v=85" />
+    <link rel="stylesheet" href="style.css?v=98" />
     <!-- בלי ציור ראשון של "חצי הירו": הסקריפט של באנר היום (לפני ה-h1) גורם למפרסר לפנות
          את התור, ו-Chrome צייר את ההירו חלקי — ואז קו הגל שבתחתיתו קפץ למטה (CLS). כאן
          הציור הראשון מחכה עד שכל ההירו נפרסר (עד #main-content — מילישניות בודדות).
@@ -420,8 +429,8 @@
     <!-- הקוד הראשי יורד מוקדם (preload) אך מוזרק ומתבצע רק אחרי הציור הראשון —
          ראו הטוען בסוף ה-body. ה-?v= כאן חייב להיות זהה לזה שבטוען וב-sw.js.
          fetchpriority=low: שלא יתחרו ברוחב-הפס עם ה-CSS החוסם (FCP) — כמו defer. -->
-    <link rel="preload" href="script.js?v=83" as="script" fetchpriority="low" />
-    <link rel="preload" href="lux.js?v=73" as="script" fetchpriority="low" />
+    <link rel="preload" href="script.js?v=85" as="script" fetchpriority="low" />
+    <link rel="preload" href="lux.js?v=75" as="script" fetchpriority="low" />
 
     <!-- OneSignal Web Push SDK -->
     <script>
@@ -2365,6 +2374,16 @@
             <div class="flex items-center justify-center gap-4 py-2">
               <button
                 type="button"
+                id="theme-circle-sky"
+                onclick="applyTheme('sky')"
+                class="theme-circle w-12 h-12 rounded-full border-2 border-slate-300 dark:border-slate-600 transition-all flex items-center justify-center shadow-md hover:scale-110"
+                title="שמיים חיים — הרקע משתנה לפי זמני היום"
+                aria-label="שמיים חיים — הרקע משתנה לפי זמני היום"
+              >
+                <span style="font-size:1.25rem;line-height:1;filter:drop-shadow(0 0 4px rgba(255,220,140,0.85));" aria-hidden="true">🌅</span>
+              </button>
+              <button
+                type="button"
                 id="theme-circle-light"
                 onclick="applyTheme('light')"
                 class="theme-circle w-12 h-12 rounded-full border-2 border-slate-300 dark:border-slate-600 transition-all flex items-center justify-center shadow-md hover:scale-110"
@@ -2797,6 +2816,7 @@
           var s = document.createElement("script");
           s.src = src;
           s.async = false;
+          if (opts && opts.id) s.id = opts.id;
           if (opts && opts.sri) { s.integrity = opts.sri; s.crossOrigin = "anonymous"; }
           if (opts && opts.onerror) s.onerror = opts.onerror;
           document.body.appendChild(s);
@@ -2817,8 +2837,12 @@
               });
             },
           });
-          addScript("script.js?v=83");
-          addScript("lux.js?v=73");
+          // "שמיים חיים" (ברירת המחדל, 10/2026): sky.js קטן ועצמאי ונטען לפני script.js — כך השמיים
+          // כבר מצוירים מתחת למסך הפתיחה ואנימציית הכניסה מתוזמנת לדהייתו. בהיר/כהה לא טוענים אותו.
+          // אותו ?v= כמו ב-_luxSkyEnsure (script.js) וב-sw.js.
+          if (document.documentElement.classList.contains("lux-sky")) addScript("sky.js?v=3", { id: "lux-sky-js" });
+          addScript("script.js?v=85");
+          addScript("lux.js?v=75");
         }
         function afterFirstPaint() {
           // rAF אחד (רץ ממש לפני ציור הפריים הראשון) ואז setTimeout(0) — משימה

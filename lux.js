@@ -66,6 +66,8 @@
     var star = null;
     function shoot() {
       if (!hero.classList.contains("gradient-bg")) return schedule();
+      // שמיים חיים (sky.js): המטאורים מצוירים בשמיים עצמם — בלי כוכב נופל של ההירו
+      if (document.documentElement.classList.contains("lux-sky")) return schedule();
       // מאחורי פופאפ/טאב מוסתר הכוכב רק מייצר repaint מתחת לשכבה — מדלגים
       if (document.hidden || document.documentElement.classList.contains("lux-modal-open")) return schedule();
       if (!heroOnScreen) return schedule();
@@ -862,53 +864,17 @@
     setTimeout(syncReaderBtns, 0);
   });
 
-  /* ── 8. תמה רביעית: "זהב מלכותי" ──────────────────────────────── */
-  safe("royalTheme", function () {
-    // תמת ה"ים" הוסרה מהאתר — משתמשים שנשארו עליה מועברים לבהיר
+  /* ── 8. (הוסר 10/2026) ערכת "זהב מלכותי" — במקומה "שמיים חיים" (sky.js, ברירת המחדל) ── */
+  safe("removedThemes", function () {
+    // ניקוי שאריות של ערכות שהוסרו: "ים" (2025) ו"זהב מלכותי" (10/2026). ערכת ברירת המחדל
+    // והמעבר החד-פעמי אליה נקבעים בסקריפט הראשוני של index.html (moadim_theme_v2).
     try {
+      localStorage.removeItem("lux_royal");
       if (localStorage.getItem("moadim_theme") === "blue" && typeof window.applyTheme === "function") {
-        window.applyTheme("light");
+        window.applyTheme("sky");
       }
     } catch (e) {}
-    var row = document.getElementById("theme-circle-dark");
-    if (!row || !row.parentElement) return;
-    var btn = document.createElement("button");
-    btn.type = "button";
-    btn.id = "theme-circle-royal";
-    btn.className = "theme-circle w-12 h-12 rounded-full border-2 border-slate-300 dark:border-slate-600 transition-all flex items-center justify-center shadow-md hover:scale-110";
-    btn.style.background = "linear-gradient(135deg,#3d1230,#1a0812)";
-    btn.title = "עיצוב זהב מלכותי";
-    btn.setAttribute("aria-label", "עיצוב זהב מלכותי");
-    btn.innerHTML = "<span style='font-size:1.15rem;filter:drop-shadow(0 0 4px rgba(232,193,90,0.7));'>👑</span>";
-    row.parentElement.appendChild(btn);
-
-    function setRoyal(on) {
-      document.documentElement.classList.toggle("lux-royal", on);
-      btn.classList.toggle("theme-circle-active", on);
-      try { localStorage.setItem("lux_royal", on ? "1" : "0"); } catch (_) {}
-      if (on && typeof window.applyTheme === "function") {
-        window.applyTheme("dark");
-        // הטבעת הפעילה שייכת לכתר, לא לעיגול הכהה
-        var dark = document.getElementById("theme-circle-dark");
-        if (dark) dark.classList.remove("theme-circle-active");
-        btn.classList.add("theme-circle-active");
-      }
-    }
-    btn.addEventListener("click", function () {
-      setRoyal(!document.documentElement.classList.contains("lux-royal"));
-    });
-    // בחירת תמה רגילה מבטלת את המצב המלכותי
-    ["light", "dark"].forEach(function (t) {
-      var el = document.getElementById("theme-circle-" + t);
-      if (el) el.addEventListener("click", function () {
-        document.documentElement.classList.remove("lux-royal");
-        btn.classList.remove("theme-circle-active");
-        try { localStorage.setItem("lux_royal", "0"); } catch (_) {}
-      });
-    });
-    try {
-      if (localStorage.getItem("lux_royal") === "1") setRoyal(true);
-    } catch (_) {}
+    document.documentElement.classList.remove("lux-royal");
   });
 
   /* ── 9. דפדוף חודשים בלוח השנה ────────────────────────────────── */

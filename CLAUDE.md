@@ -5,6 +5,7 @@
 ## מה זה
 
 - אתר PWA סטטי בעברית (RTL): לוח עברי-לועזי, זמני הלכה (KosherZmanim), תפילות בשלושה נוסחים, ספרייה תורנית מספריא, הדף היומי, תהילים, בתי כנסת/מקוואות/ציונים.
+- **ערכות עיצוב (10/2026)**: "שמיים חיים" (`sky.js`, ברירת המחדל לכולם — מעבר חד-פעמי `moadim_theme_v2`), "בהיר", "כהה". ערכת "זהב מלכותי" **נמחקה** (`lux_royal`/`lux-royal` לא קיימים יותר — לא להחזיר).
 - Vanilla JS + CSS, **בלי פריימוורק ובלי bundler בפיתוח**. הקבצים בריפו הם המקור הקריא; המיזעור קורה רק בבילד של Netlify.
 - ייצור: `https://jewishcalendar.co.il` (Netlify). ריפו: `zvi293/Jewish-Calendar-Center-for-Dates-and-Times`, ענף `main`.
 - הדומיין הישן `jewishcalendar.netlify.app` נשאר חי **בלי 301** (הפניה ב-JS בלבד) — 301 שובר את ה-scope של PWA מותקנים.
@@ -27,6 +28,7 @@
 | `index.html` | דף הבית — כל האתר בדף אחד. טוען `script.js` ו-`lux.js` דינמית אחרי ה-paint הראשון (`addScript(...)`). |
 | `script.js` (~4MB) | הלוגיקה הראשית: מטמון API, זמנים, `PRAYER_DB`, קוראי ספרים, הילולות, מוצ"ש, סדר לימוד, טקסטים מוטמעים (`_SN_LOCAL_TEXTS`). |
 | `lux.js` (~500KB) | שכבת חוויה "רויאל" **תוספתית**: כל פיצ'ר עטוף `safe()`/try-catch, לא משנה לוגיקה ב-`script.js`. |
+| `sky.js` (~45KB) | **"שמיים חיים"** — רקע האתר כשמיים ב-WebGL לפי השעון ההלכתי (ראו "ארכיטקטורה"). עצמאי לגמרי; נטען ב-`index.html` **לפני** `script.js` רק כש-`html.lux-sky` פעיל, ולפי דרישה מ-`_luxSkyEnsure` (`script.js`) כשבוחרים את הערכה בהגדרות. ממשק: `window.__luxSky` (`start/stop/setTime/state`). |
 | `style.css` | העיצוב. בסוף הקובץ בלוק `html.dark` שדורס צבעים — לעדכן כשמשנים תבניות innerHTML של קוראים. |
 | `tailwind.css` / `tailwind.input.css` / `tailwind.config.js` | נבנה בבילד. **לא לערוך את `tailwind.css` ידנית.** |
 | `fonts.css`, `fonts/` | גופנים באחסון עצמי (Assistant, Frank Ruhl Libre). |
@@ -46,24 +48,28 @@
 
 ## חוק הזהב: גרסאות ומטמון
 
-**כל שינוי ב-`script.js` / `lux.js` / `style.css` מחייב `?v=` חדש — גם לבדיקה מקומית**, אחרת ה-SW מגיש קוד ישן והשינוי "לא נראה".
+**כל שינוי ב-`script.js` / `lux.js` / `sky.js` / `style.css` מחייב `?v=` חדש — גם לבדיקה מקומית**, אחרת ה-SW מגיש קוד ישן והשינוי "לא נראה".
 
-1. `index.html`: `script.js` ו-`lux.js` מופיעים פעמיים כל אחד (`<link rel=preload>` + `addScript(...)`), `style.css` פעם אחת (`<link rel=stylesheet>`). להעלות בכל המופעים.
-2. `sw.js`: אותו `?v=` ב-`STATIC_ASSETS` (חייב להיות זהה ל-`index.html`), ולהעלות את `STATIC_CACHE` ב-1.
-3. `tailwind.css?v=2` קבוע (revalidate בכל בקשה) ו-`fonts.css?v=1` — לא נוגעים.
+1. `index.html`: `script.js` ו-`lux.js` מופיעים פעמיים כל אחד (`<link rel=preload>` + `addScript(...)`), `style.css` פעם אחת (`<link rel=stylesheet>`), `sky.js` פעם אחת (`addScript("sky.js?v=N", { id: "lux-sky-js" })`). להעלות בכל המופעים.
+2. `script.js`: `sky.js?v=N` גם ב-`_luxSkyEnsure` (טעינה לפי דרישה) — אותו מספר כמו ב-`index.html`.
+3. `sw.js`: אותו `?v=` ב-`STATIC_ASSETS` (חייב להיות זהה ל-`index.html`), ולהעלות את `STATIC_CACHE` ב-1.
+4. `tailwind.css?v=2` קבוע (revalidate בכל בקשה) ו-`fonts.css?v=1` — לא נוגעים.
 
 בדיקה מהירה של המצב הנוכחי:
 
 ```bash
-grep -oE '(script|lux|style)\.(js|css)\?v=[0-9]+' index.html sw.js | sort | uniq -c; grep -n 'STATIC_CACHE = ' sw.js
+grep -oE '(script|lux|sky|style)\.(js|css)\?v=[0-9]+' index.html sw.js script.js | sort | uniq -c; grep -n 'STATIC_CACHE = ' sw.js
 ```
+
+בבדיקה מקומית בלי להעלות `?v=` (איטרציות על אותו קובץ): לבטל את ה-SW ולמחוק מטמונים לפני רענון — `navigator.serviceWorker.getRegistrations()` → `unregister()`, `caches.keys()` → `caches.delete()`. לפני פרסום — `?v=` חדש בכל מקרה.
 
 ## הרצה ובדיקה
 
 - אין צעד בילד בפיתוח. `preview_start {name: "site"}` → `http://localhost:8123`.
 - **לא להריץ `npm run build` מקומית** — `minify.mjs` דורס את `script.js`/`lux.js`/`style.css` במקום, ו-`build-places.mjs` פונה לרשת. הבילד שייך ל-Netlify בלבד. אם רץ בטעות — `git checkout -- script.js lux.js style.css tailwind.css` ולמחוק את `*.src.js` ו-`*.map` שנוצרו.
 - אימות אחרי push: לפתוח את האתר החי ולוודא שה-`?v=` החדש נטען (Network) וש-SW חדש הותקן.
-- דגלי URL לדמו: `?erev=` (מצב ערב שבת), `?omer=` (טבעת העומר), `?season=` (מצבי רוח עונתיים).
+- דגלי URL לדמו: `?erev=` (מצב ערב שבת), `?omer=` (טבעת העומר), `?season=` (מצבי רוח עונתיים), `?sky=HH:MM` (השמיים בשעה קבועה) ו-`?sky=play` (יממה שלמה ב-60 שניות).
+- בדפדפן המובנה של Claude הקנבס מצייר פריימים רק בזמן צילום מסך: צילום ראשון "מעיר" את הדף, השני (אחרי ~2 שניות) הוא האמיתי. מדידת fps דרך `requestAnimationFrame` שם לא אמינה — להשתמש ב-`__luxSky.state().frameCpuMs` (עלות CPU לפריים) ובצילומי פריימים חיצוניים.
 - בקשות hebcal חייבות לכלול `mf=on` ו-`i=on` (חוה"מ, תעניות ולוח ארץ-ישראל) — לא להסיר פרמטרים מה-URL.
 
 ## ארכיטקטורה בקצרה
@@ -74,10 +80,12 @@ grep -oE '(script|lux|style)\.(js|css)\?v=[0-9]+' index.html sw.js | sort | uniq
 - **localStorage**: קידומות `moadim_*` (הגדרות/עיר/נוסח/התראות), `lux_*` (שכבת lux), `sn-*` (קוראי ספרים: סימניות, נושאי כלים), `daf_show*`, `pwa_install*`. כתיבה דרך `safeCacheSetItem` (מפנה מטמון ישן כשמלא).
 - **חלונות (modals/popups)**: דפוס history-safe — `pushState` בפתיחה, סגירה דרך `popstate` (`_closePopupViaBack`). נעילת גלילה עם `history.scrollRestoration = "manual"` בנעילה ו-`auto` ב-`pagehide`.
 - **ספריא**: refs בלי padding (pad=0), נרמול גרשיים/גרש (״ ׳) לפני הבקשה, טקסט ספריא ≠ NFC.
+- **שמיים חיים (`sky.js`, 10/2026)**: `html.lux-sky` עם רכיבי העיצוב הבהיר — **בלי** `html.dark` (בקשה מפורשת 01/10: "זה לא אמור להיות על דארק מוד"). קנבס WebGL אחד `#lux-sky` קבוע ב-`z-index:-1` מאחורי כל הדף; רקע ה-`body` שקוף וכל רקע אחר (גרדיאנט ההירו, הגוון לפי שעה, `#stars-canvas`, האורבים, הגל, ערב שבת/שבת/מועדים) כבוי ב-CSS (הבלוק בסוף `style.css`) — **רקע אחד בלבד בכל רגע**. ציר הזמן של השמיים מעוגן לזמני האתר (`_prayerZman`: עלות, הנץ, חצות, שקיעה, צאת 7.083°, חצות הלילה) במתיחה ליניארית (warp) של הזמן האסטרונומי — האור הראשון בעלות של האתר, השמש עולה בהנץ, שלושה כוכבים נדלקים בצאת; `script.js` משדר `lux-zmanim` אחרי חישוב הזמנים (`_lastZData`). אנימציית כניסה בכל טעינה: שלושה זמנים אחורה עד עכשיו, מתוזמנת לדהיית מסך הפתיחה. ל-CSS: `html[data-sky=night|dawn|day|dusk]`, `--sky-zen`/`--sky-hor` (rgb), `--sky-glass`, `--sky-day`, אירוע `lux-sky`. מיקום: `moadim_city_coords`/`moadim_gps`. **הדף הראשי מותאם לשמיים** (בלוק "התאמת הדף הראשי" בסוף `style.css`, תחת `html.lux-sky` בלבד): כרטיסי האירועים, החיפוש, הפנינה, הלימוד היומי, סדר הלימוד וכרטיס הברכה לחג = **זכוכית צלולה + טקסט מסתגל** (`--skyc-tint`: ביום לבן 20%, בלילה/דמדומים כחול-לילה 24%; טשטוש 18px במחשב; מסגרת זהב; ברק קל). הקריאות באה מהטקסט שמתחלף לפי `html[data-sky]` (sky.js): **בלילה אותיות בהירות עם צל כהה, ביום אותיות כהות עם הילה בהירה** (משתני `--skyc-ink/ink2/ink3/halo/field` מוחלפים תחת `html.lux-sky:not([data-sky="day"])`). כפתורים/תגיות/תיבת הלבנה שומרים על הרקע המקורי שלהם (קריאים בכל שעה; כפתור "סנכרן ליומן" נשאר כהה על גלולה בהירה). גם מה שיושב ישירות על השמיים בלי כרטיס מתחלף יום/לילה: כותרות הסעיפים (`.lux-tracks-title`: ביום זהב כהה + הילה בהירה, בלילה זהב בהיר + צל), בלוק ה-SEO (`#seo-about`) והפוטר (בלילה כל האפורים → בהירים). **נדחו:** זכוכית כהה אטומה ("לא רואים את הכיתוב"), לבן 78%/52%/28% ("לבן חלבי מדי"), לוחית פנימית לטקסט ("המסגרת הזאת נראית מזעזעת"), כרטיסי לימוד "דהויים" — אבני החן בגרדיאנט המקורי. הדשבורד ובאנר ההלכה (`.glass-card`) נשארים זכוכית כהה כמו במקור. **חלונות/פופאפים (מחוץ ל-main) עדיין לא הותאמו** — השלב הבא. בדיקה: `skyinv.mjs`/`skyshot.mjs` (ראו זיכרון).
 
 ## מנגנוני הגנה — אסור להסיר
 
 - **Scroll-lock watchdog** (קיפאון גלילה) ו-**ה-X האוניברסלי** ב-`lux.js` (הסורק שמזהה ✕ בראש פאנל ובודק חפיפה עם כפתורים לפני שהוא מזיז אותו).
+- **שמיים חיים — ביצועים** (`sky.js`): רזולוציית רינדור 0.8 בטלפון / 0.9 במחשב (עד 1920px) עם הורדה אוטומטית כשהפריימים איטיים, 30fps בטלפון, עצירה מלאה תחת `html.lux-modal-open` ובלשונית מוסתרת (MutationObserver על מחלקות ה-html), קומפילציית שיידרים במקביל (`KHR_parallel_shader_compile`), `failIfMajorPerformanceCaveat` + דרישת highp (בלי GPU אמיתי → `html.lux-sky-nogl` וגרדיאנט CSS לפי `data-sky`), תאורה/LUT מחושבות רק כשהשמש זזה, `prefers-reduced-motion` = פריים סטטי לדקה. קנבס הכוכבים של ההירו (`initStars`) והכוכב הנופל של `lux.js` לא מציירים במצב שמיים. לא להוסיף רקע/שכבה מצוירת מעל הקנבס.
 - **Frozen-transition reveal watchdog** (`getAnimations()` force-reveal) — בלעדיו אלמנטים "נעלמים עד רענון".
 - **`_revealModalNoFreeze`** — מודאלים בלי מעבר opacity ("לא נטען").
 - **כוכב נופל בנייד רק על canvas** (`__luxCanvasShoot`) — לעולם לא אלמנט DOM/WAAPI בנייד (גרם לריצוד).

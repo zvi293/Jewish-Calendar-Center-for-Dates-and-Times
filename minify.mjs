@@ -19,7 +19,7 @@
 import { transform } from "esbuild";
 import { readFileSync, writeFileSync } from "node:fs";
 
-for (const f of ["script.js", "lux.js"]) {
+for (const f of ["script.js", "lux.js", "sky.js"]) {
   try {
     const url = new URL("./" + f, import.meta.url);
     const src = readFileSync(url, "utf8");

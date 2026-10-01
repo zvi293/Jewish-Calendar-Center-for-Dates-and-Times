@@ -1951,10 +1951,15 @@ function _uxDimEl(layer) {
 function _uxMakeDim(layer, cs) {
   try {
     const bg = cs.backgroundColor;
-    const dim = document.createElement("div");
+    // <i> ולא <div>, ומצורף *אחרון* בשכבה ולא ראשון: כללי CSS של כרטיסים (`#settings-modal > div`,
+    // `#sefaria-modal > div:first-child`), קוד שניגש ל-children[0]/firstElementChild/querySelector("div")
+    // וסורק ה-X האוניברסלי (lux.js: firstElementChild = הפאנל) — כולם היו תופסים את שכבת ההכהיה
+    // במקום הכרטיס (01/10: X כפול בגלגל השנה, רקע בהיר בספריא). z-index שלילי מצייר מתחת לכולם
+    // בלי קשר למיקום ב-DOM
+    const dim = document.createElement("i");
     dim.className = "ux-dim";
     dim.setAttribute("aria-hidden", "true");
-    dim.style.cssText = "position:absolute;inset:0;pointer-events:none;z-index:-1;will-change:opacity;background-color:" + bg + ";";
+    dim.style.cssText = "display:block;position:absolute;inset:0;pointer-events:none;z-index:-1;will-change:opacity;background-color:" + bg + ";";
     const bf = cs.backdropFilter;
     const hasBf = !!bf && bf !== "none";
     if (hasBf) {
@@ -1967,7 +1972,7 @@ function _uxMakeDim(layer, cs) {
     // z-index שלילי מצייר מעל רקע השכבה ומתחת לכל ילדיה — בתוך stacking context של השכבה עצמה
     layer.style.isolation = "isolate";
     layer.style.backgroundColor = "transparent";
-    layer.insertBefore(dim, layer.firstChild);
+    layer.appendChild(dim);
     // כלל !important על רקע השכבה (אם קיים) מנצח את ה-inline — חוזרים למסלול הישן
     if (_uxAlpha(getComputedStyle(layer).backgroundColor) > 0.02) {
       dim.remove();

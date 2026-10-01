@@ -9702,3 +9702,37 @@ html.lux-sky:not([data-sky="day"]) :is(#seo-about, footer) :is([class~="text-blu
 html.lux-sky:not([data-sky="day"]) :is(#seo-about, footer) :is([class~="border-slate-100"], [class~="border-slate-200"]) { border-color: rgba(255, 255, 255, 0.22) !important; }
 html.lux-sky:not([data-sky="day"]) #seo-about :is(table, th, td) { color: #eef2f7; border-color: rgba(255, 255, 255, 0.22); }
 html.lux-sky:not([data-sky="day"]) footer a[class~="bg-white"] { color: #eef2f7 !important; }
+
+/* ── גריד התפילות בהירו (תפילת הדרך → ספרים נוספים), 01/10/2026 לבקשת בעל האתר ──
+   (1) פס זהב עדין קבוע סביב כל כרטיס — בכל הערכות ובכל שעה (עד כה המסגרת הייתה זהב 20%, בקושי נראית).
+   (2) בשמיים חיים ביום הכתב הלבן-שקוף נבלע ברקיע הבהיר ("לא רואים אותם מספיק טוב") — ביום הכתב כהה
+       ומודגש, כמו שאר הדף הראשי (--skyc-ink), ובלי text-shadow (הילה סביב אותיות כהות = הכפלה מטושטשת).
+       שני הכרטיסים המודגשים (תפילות/ספרים נוספים) — זהב כהה ביום במקום צהוב בהיר. כפתורי ערב שבת
+       (.lux-erev-btn) יושבים על הפאנל הכהה שלהם — לא נוגעים בכתב שלהם. */
+body .prayer-btn,
+body:not(.lux-erev) .prayer-btn { border: 1px solid rgba(212, 175, 55, 0.55); }
+@media (hover: hover) {
+  body .prayer-btn:hover,
+  body:not(.lux-erev) .prayer-btn:hover { border-color: rgba(242, 217, 138, 0.85); }
+}
+html.lux-sky[data-sky="day"] .prayer-btn:not(.lux-erev-btn) .prayer-label {
+  color: var(--skyc-ink, #0f172a);
+  font-weight: 800;
+  text-shadow: none;
+}
+html.lux-sky[data-sky="day"] .prayer-btn.prayer-cta-highlight:not(.lux-erev-btn) .prayer-label { color: #7a4f0e !important; }
+/* ביום הכרטיס עצמו באותה זכוכית צלולה של כרטיסי הדף הראשי (לבן 20% + ברק — הרמה שאושרה) ומסגרת זהב כהה יותר:
+   בלי זה הכתב הכהה נבלע כשהגריד המורחב יורד אל רצועת הנוף הכהה בתחתית השמיים (בטלפון תמיד). */
+html.lux-sky[data-sky="day"] body .prayer-btn:not(.lux-erev-btn) {
+  background: var(--skyc-gloss), var(--skyc-tint);
+  border-color: rgba(161, 118, 42, 0.75);
+}
+html.lux-sky[data-sky="day"] body .prayer-btn.prayer-cta-highlight:not(.lux-erev-btn) {
+  background: var(--skyc-gloss), linear-gradient(170deg, rgba(251, 191, 36, 0.2) 0%, rgba(251, 191, 36, 0.06) 100%), var(--skyc-tint);
+}
+@media (hover: hover) {
+  html.lux-sky[data-sky="day"] body .prayer-btn:not(.lux-erev-btn):hover {
+    background: var(--skyc-gloss), rgba(255, 255, 255, 0.32);
+    border-color: rgba(161, 118, 42, 0.95);
+  }
+}

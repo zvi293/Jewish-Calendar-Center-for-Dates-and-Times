@@ -1850,7 +1850,7 @@ const _UX_LAYER_SEL =
   "body > #lux-track-reader, body > #lux-selichot-reader, body > #lux-print-sheet, body > #lux-tour-overlay, " +
   "body > #lux-search-panel, body > #chapter-nav-popup, body > #cal-month-year-picker, body > #lux-stories";
 // פס ההתקדמות וה-X נשארים במקומם — X שזז "קופץ" מול העין
-const _UX_SKIP = ".lux-progress, .lux-ux, script, style, template, link";
+const _UX_SKIP = ".lux-progress, .lux-ux, .ux-dim, script, style, template, link";
 // האטה רכה: בלי "זינוק" גדול בפריים הראשון (שנראה כריצוד), ובלי זנב ארוך שנראה כתקיעה
 const _UX_EASE = "cubic-bezier(0.22, 1, 0.36, 1)";
 function _uxLater(f) {
@@ -1913,6 +1913,68 @@ function _uxGuard(anims, dur) {
   setTimeout(() => {
     anims.forEach((a) => { try { if (a.playState !== "finished") a.finish(); } catch (e) {} });
   }, dur + 800);
+}
+// (10/2026) תוכן כבד — ספר של עשרות מסכים (סגולות ותפילות, ציוני צדיקים, זוהר הברית, חנוכת
+// הבית, לוח ברכות הנהנין): אנימציית translate על מיכל הטקסט מקדמת אותו לשכבת קומפוזיטור לרגע
+// ומורידה אותו ממנה בסוף התנועה — ובטלפון כל מעבר כזה הוא רסטר מחדש של כל האריחים הנראים,
+// שלא מספיק להסתיים בזמן: אריחים ריקים לפריים-שניים ("המסך מהבהב לשנייה וחוזר להיות רגיל" —
+// בדיוק בששת הספרים הגדולים באתר, ולא בקצרים). תצוגה כזו מופיעה שלמה ובלי תנועה מהפריים
+// הראשון, כמו לפני סבבי האנימציה (29/09). תוכן קצר ממשיך להיכנס בעדינות.
+function _uxHeavy(targets) {
+  const vh = window.innerHeight || 800;
+  for (let i = 0; i < targets.length; i++) {
+    const t = targets[i];
+    try {
+      if (t.scrollHeight > vh * 6) return true;
+      if (t.getElementsByTagName("*").length > 1500) return true;
+    } catch (e) {}
+  }
+  return false;
+}
+// פתיחה מיידית (בלי תנועה ובלי הכהיה הדרגתית) של השכבה הבאה (לפי id) שנפתחת במשימה הנוכחית —
+// לחלונית שנפתחת יחד עם תצוגה חדשה באותו פריים (תוכן העניינים האוטומטי של ספר): הכול מופיע
+// שלם בבת אחת, בלי פריים בהיר של הדף לפני ההחשכה
+let _uxInstantId = null;
+window._uxInstantNext = function (id) {
+  _uxInstantId = id || "*";
+  setTimeout(() => { _uxInstantId = null; }, 0);
+};
+// שכבת ההכהיה של חלון-כרטיס: ילד נפרד (.ux-dim) שמתמלא/מתרוקן ב-opacity — אנימציה בקומפוזיטור.
+// עד 10/2026 הונפש background-color של השכבה עצמה: אנימציה על ה-main thread שציירה מחדש את כל
+// המסך בכל פריים (נמדד: ~20 משימות רסטר לכל 100ms) — בטלפון זה נראה כהבהוב בפתיחה ובסגירה
+function _uxDimEl(layer) {
+  try { return layer.querySelector(":scope > .ux-dim"); } catch (e) { return null; }
+}
+function _uxMakeDim(layer, cs) {
+  try {
+    const bg = cs.backgroundColor;
+    const dim = document.createElement("div");
+    dim.className = "ux-dim";
+    dim.setAttribute("aria-hidden", "true");
+    dim.style.cssText = "position:absolute;inset:0;pointer-events:none;z-index:-1;will-change:opacity;background-color:" + bg + ";";
+    const bf = cs.backdropFilter;
+    const hasBf = !!bf && bf !== "none";
+    if (hasBf) {
+      dim.style.backdropFilter = bf;
+      dim.style.webkitBackdropFilter = bf;
+      layer.style.backdropFilter = "none";
+      layer.style.webkitBackdropFilter = "none";
+    }
+    dim.__uxBg = bg;
+    // z-index שלילי מצייר מעל רקע השכבה ומתחת לכל ילדיה — בתוך stacking context של השכבה עצמה
+    layer.style.isolation = "isolate";
+    layer.style.backgroundColor = "transparent";
+    layer.insertBefore(dim, layer.firstChild);
+    // כלל !important על רקע השכבה (אם קיים) מנצח את ה-inline — חוזרים למסלול הישן
+    if (_uxAlpha(getComputedStyle(layer).backgroundColor) > 0.02) {
+      dim.remove();
+      layer.style.backgroundColor = "";
+      layer.style.isolation = "";
+      if (hasBf) { layer.style.backdropFilter = ""; layer.style.webkitBackdropFilter = ""; }
+      return null;
+    }
+    return dim;
+  } catch (e) { return null; }
 }
 // מיון שכבה: הילדים הנראים ומלבניהם, הפאנל (הילד הגדול), והאם התוכן ממלא את המסך. המלבן
 // המאחד של כל התוכן: חלון-קורא בנוי מכמה ילדים (כותרת + טקסט + סרגל גופן) שיחד ממלאים את
@@ -1988,6 +2050,18 @@ function _uxEnter(layer) {
   // חלון שבאמצע יציאה — מסיימים מיד: הכניסה החדשה היא התנועה היחידה על המסך
   _uxFinishExits(layer);
   _uxPreEnter();
+  if (_uxInstantId && (_uxInstantId === "*" || layer.id === _uxInstantId)) {
+    // פתיחה מיידית (window._uxInstantNext): שלם ואטום מהפריים הראשון, בלי תנועה. ההכהיה — על
+    // שכבת .ux-dim סטטית, כדי שהסגירה תתרוקן בקומפוזיטור כמו בכל חלון-כרטיס
+    _uxInstantId = null;
+    layer.__uxEnterT = performance.now();
+    try {
+      const cs0 = getComputedStyle(layer);
+      const a0 = _uxAlpha(cs0.backgroundColor);
+      if (a0 > 0.04 && a0 < 0.995 && (cs0.backgroundImage || "none") === "none") { layer.__uxDim = true; _uxMakeDim(layer, cs0); }
+    } catch (e) {}
+    return;
+  }
   if (!layer.animate || _uxNoMotion()) { layer.__uxEnterT = performance.now(); return; }
   // סורק ה-X האוניברסלי (lux.js) מודד מיקומים כדי לפנות מקום ל-X — מריצים אותו לפני
   // שהתוכן זז, אחרת הוא מודד את התוכן באמצע התנועה ומתקן אחר כך (קפיצה של הכותרת)
@@ -2010,16 +2084,24 @@ function _uxEnter(layer) {
     moving.forEach((k) => { if (!k.style.willChange) k.style.willChange = "opacity"; });
     _uxAnimate(moving, [{ translate: "0 24px" }, { translate: "0 0" }], 320, anims);
     const cs = getComputedStyle(layer);
-    const a = _uxAlpha(cs.backgroundColor);
-    if (a > 0.04 && a < 0.995 && (cs.backgroundImage || "none") === "none") {
+    let dim = _uxDimEl(layer);
+    const a = _uxAlpha(dim ? dim.__uxBg : cs.backgroundColor);
+    if (a > 0.04 && a < 0.995 && (dim || (cs.backgroundImage || "none") === "none")) {
       layer.__uxDim = true;
-      if (_uxOpaque(L.panel) && !_uxDimHandoffOn) {
-        const f0 = { backgroundColor: cs.backgroundColor.replace(/rgba?\(([^,\s]+)[,\s]+([^,\s]+)[,\s]+([^,\s)]+).*\)/, "rgba($1, $2, $3, 0)") };
-        const f1 = { backgroundColor: cs.backgroundColor };
-        // טשטוש הרקע (מחשב בלבד — בנייד אין טשטוש) מתעצם יחד עם ההכהיה
-        const bf = cs.backdropFilter;
-        if (bf && /^blur\([^)]*\)$/.test(bf)) { f0.backdropFilter = "blur(0px)"; f1.backdropFilter = bf; }
-        try { anims.push(layer.animate([f0, f1], { duration: 240, easing: "cubic-bezier(0.33, 1, 0.68, 1)" })); } catch (e) {}
+      if (_uxOpaque(L.panel)) {
+        // ההכהיה על ילד נפרד (.ux-dim, קומפוזיטור) — נוצר גם ב"העברת חושך" (בלי אנימציה), כדי
+        // שהסגירה תתרוקן באותה שכבה ולא תצייר מחדש את המסך. הטשטוש (מחשב בלבד) עובר אליו
+        if (!dim) dim = _uxMakeDim(layer, cs);
+        if (dim && !_uxDimHandoffOn) {
+          try { anims.push(dim.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 240, easing: "cubic-bezier(0.33, 1, 0.68, 1)" })); } catch (e) {}
+        } else if (!dim && !_uxDimHandoffOn) {
+          // מסלול ישן (רקע עם !important): אנימציית רקע על השכבה עצמה
+          const f0 = { backgroundColor: cs.backgroundColor.replace(/rgba?\(([^,\s]+)[,\s]+([^,\s]+)[,\s]+([^,\s)]+).*\)/, "rgba($1, $2, $3, 0)") };
+          const f1 = { backgroundColor: cs.backgroundColor };
+          const bf = cs.backdropFilter;
+          if (bf && /^blur\([^)]*\)$/.test(bf)) { f0.backdropFilter = "blur(0px)"; f1.backdropFilter = bf; }
+          try { anims.push(layer.animate([f0, f1], { duration: 240, easing: "cubic-bezier(0.33, 1, 0.68, 1)" })); } catch (e) {}
+        }
       }
     }
   } else {
@@ -2032,6 +2114,7 @@ function _uxEnter(layer) {
       if (inner && inner.length) inner.forEach((c) => targets.push(c));
       else targets.push(k);
     });
+    if (_uxHeavy(targets)) { layer.__uxEnterT = performance.now(); return; }
     _uxAnimate(targets, [{ translate: "0 16px" }, { translate: "0 0" }], 300, anims);
   }
   _uxHoldInner(layer, 360);
@@ -2051,8 +2134,10 @@ function _uxEnterView(view) {
     // החלון עצמו נפתח עכשיו (באותה משימה) — אנימציית הפתיחה שלו כבר מטפלת בתצוגה הזו
     if (!layer || !layer.__uxShown || layer.__uxClosing) return;
     if (performance.now() - (layer.__uxEnterT || 0) < 150) return;
+    const kids = _uxKids(view);
+    if (_uxHeavy(kids)) return;
     try { if (window.__luxUxTickSync) window.__luxUxTickSync(); } catch (e) {}
-    const anims = _uxAnimate(_uxKids(view), [{ translate: "0 14px" }, { translate: "0 0" }], 280, []);
+    const anims = _uxAnimate(kids, [{ translate: "0 14px" }, { translate: "0 0" }], 280, []);
     _uxGuard(anims, 280);
   });
 }
@@ -2202,7 +2287,11 @@ function _uxExit(el, done) {
         el.style.overflowX = "hidden";
         el.style.overflowY = "hidden";
       }
-      if (_uxAlpha(cs.backgroundColor) > 0.02 && (cs.backgroundImage || "none") === "none") {
+      const dimEl = _uxDimEl(el);
+      if (dimEl) {
+        // שכבת ההכהיה הנפרדת (.ux-dim) מתרוקנת ב-opacity — בקומפוזיטור, בלי ציור מחדש של המסך
+        anims.push(dimEl.animate([{ opacity: 0 }], { duration: 230, easing: "linear", fill: "forwards" }));
+      } else if (_uxAlpha(cs.backgroundColor) > 0.02 && (cs.backgroundImage || "none") === "none") {
         const f1 = { backgroundColor: cs.backgroundColor.replace(/rgba?\(([^,\s]+)[,\s]+([^,\s]+)[,\s]+([^,\s)]+).*\)/, "rgba($1, $2, $3, 0)") };
         const bf = cs.backdropFilter;
         if (bf && /^blur\([^)]*\)$/.test(bf)) f1.backdropFilter = "blur(0px)";
@@ -35142,14 +35231,14 @@ function openSefarimNosafimPage(_pageMode) {
     if (hlW && hlW.length) {
       setTimeout(function() { window._snHighlightAndScrollToMatch(content, hlW); }, 100);
     }
-    // ספר עם autoToc (סגולות ותפילות): תוכן העניינים נפתח מיד בכניסה —
-    // אפשר לסגור ולדפדף ידנית, והכפתור נשאר במקומו לפתיחה חוזרת
-    if (book.autoToc && tocBtn && !skipAutoToc && !(hlW && hlW.length)) {
-      setTimeout(function() {
-        if (_bk !== book || document.getElementById("chapter-nav-popup")) return;
-        if (_activeModals[_activeModals.length - 1] !== "sn-reader-pane") return;
-        tocBtn.click();
-      }, 160);
+    // ספר עם autoToc (סגולות ותפילות, ציוני צדיקים, זוהר הברית, חנוכת הבית): תוכן העניינים נפתח
+    // מיד בכניסה — אפשר לסגור ולדפדף ידנית, והכפתור נשאר במקומו לפתיחה חוזרת.
+    // (10/2026) באותה משימה ובאותו פריים כמו הקורא, בלי תנועה ועם הכהיה מלאה מהפריים הראשון:
+    // עד עכשיו נפתח 160ms אחרי הקורא — הדף הבהיר הבהב לרגע לפני שהוחשך, וההחשכה ההדרגתית
+    // ציירה מחדש את כל המסך בכל פריים ("המסך מהבהב לשנייה וחוזר להיות רגיל" בטלפון)
+    if (book.autoToc && tocBtn && !skipAutoToc && !(hlW && hlW.length) && !document.getElementById("chapter-nav-popup")) {
+      try { if (typeof window._uxInstantNext === "function") window._uxInstantNext("chapter-nav-popup"); } catch (eIn) {}
+      tocBtn.click();
     }
   }
 

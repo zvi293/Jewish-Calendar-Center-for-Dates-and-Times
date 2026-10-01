@@ -9739,8 +9739,8 @@ html.lux-sky[data-sky="day"] body .prayer-btn.prayer-cta-highlight:not(.lux-erev
 
 /* ═══════════════════════════════════════════════════════
    ✦ שמיים חיים — שבתות וחגים (01/10/2026)
-   (1) מצב ערב שבת/חג (lux.js §45): הפאנל, הספירה לאחור וכפתורי "לכבוד שבת" — באותו מקום, תוכן ותזמון
-       (3 שעות לפני ההדלקה); רק המראה מותאם לשמיים. ביום (רקיע בהיר) — זכוכית צלולה כמו כרטיסי הדף
+   (1) מצב ערב שבת/חג (lux.js §45): הפאנל, הספירה לאחור וכפתורי "לכבוד שבת" — באותו מקום ותוכן,
+       מעלות השחר של ערב השבת/החג ועד הצאת; המראה מותאם לשמיים. ביום (רקיע בהיר) — זכוכית צלולה כמו כרטיסי הדף
        שאושרו (לבן 20% + ברק) וכתב כהה / זהב כהה בלי הילה; בלילה ובדמדומים — העיצוב המקורי (כתב
        בהיר וזהב זוהר) על גוון כחול-לילה קל. גם הספירה הרגילה לכניסת שבת (לפני מצב הערב) קריאה ביום.
    (2) בלי WebGL (html.lux-sky-nogl): הגרדיאנט לפי שלב היום מקבל את גוון המועד (sky.js כותב data-fest).
@@ -9835,12 +9835,14 @@ html.lux-sky.lux-sky-nogl[data-fest] body::after {
     radial-gradient(ellipse 120% 60% at 50% 108%, rgba(255, 170, 70, 0.28) 0%, transparent 62%),
     linear-gradient(180deg, rgba(var(--fest-shad, 76, 29, 149), 0.32) 0%, rgba(var(--fest-shad, 76, 29, 149), 0.08) 60%, transparent 100%);
 }
-html.lux-sky.lux-sky-nogl[data-fest="rh"] body::after { --fest-shad: 127, 29, 29; }
+/* גוון של רקיע (כחול/תכלת/סגול) — לא גוון הנוף: ירוק/אדום בראש הגרדיאנט נראה כמו שמיים חולים */
+html.lux-sky.lux-sky-nogl[data-fest="rh"] body::after { --fest-shad: 55, 48, 163; }
 html.lux-sky.lux-sky-nogl[data-fest="yk"] body::after { --fest-shad: 148, 163, 184; }
 html.lux-sky.lux-sky-nogl[data-fest="sukkot"] body::after,
-html.lux-sky.lux-sky-nogl[data-fest="shavuot"] body::after { --fest-shad: 22, 101, 52; }
-html.lux-sky.lux-sky-nogl:is([data-fest="st"], [data-fest="chanuka"], [data-fest="pesach7"]) body::after { --fest-shad: 30, 64, 175; }
-html.lux-sky.lux-sky-nogl[data-fest="pesach"] body::after { --fest-shad: 157, 23, 77; }
+html.lux-sky.lux-sky-nogl[data-fest="shavuot"] body::after { --fest-shad: 3, 105, 161; }
+html.lux-sky.lux-sky-nogl:is([data-fest="st"], [data-fest="chanuka"]) body::after { --fest-shad: 30, 64, 175; }
+html.lux-sky.lux-sky-nogl[data-fest="pesach7"] body::after { --fest-shad: 14, 116, 144; }
+html.lux-sky.lux-sky-nogl[data-fest="pesach"] body::after { --fest-shad: 91, 33, 182; }
 html.lux-sky.lux-sky-nogl[data-fest-lvl="gentle"] body::after { opacity: 0.5; }
 html.lux-sky.lux-sky-nogl[data-fest="av9"] body::after { background: rgba(15, 23, 42, 0.35); }
 /* נרות השבת בסגנון הדמו — קנבס (lux.js §45), בכל הערכות */
@@ -9868,4 +9870,4 @@ html.lux-sky.lux-sky-nogl[data-fest="motzei"] body::after { --fest-shad: 30, 41,
 @media (hover: hover) { .lux-erev-more:hover { background: rgba(232, 193, 90, 0.2); border-color: rgba(242, 217, 138, 0.8); } }
 .lux-erev-more-grid { margin-top: 0.75rem; }
 html.lux-sky[data-sky="day"] .lux-erev-more { color: #7a4f0e; background: var(--skyc-gloss), var(--skyc-tint); border-color: rgba(161, 118, 42, 0.7); }
-html.lux-sky.lux-sky-nogl[data-fest="lag"] body::after { --fest-shad: 154, 52, 18; }
+html.lux-sky.lux-sky-nogl[data-fest="lag"] body::after { --fest-shad: 30, 58, 138; }

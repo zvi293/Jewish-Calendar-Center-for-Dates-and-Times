@@ -6966,16 +6966,23 @@
     setInterval(tick, 900);
     setTimeout(tick, 1200);
   });
-  /* ── 45. מצב ערב שבת / ערב חג — שלוש שעות לפני הדלקת נרות ──────────────
+  /* ── 45. מצב ערב שבת / ערב חג — מעלות השחר של ערב השבת/החג ──────────────
      הכותרת והרקע מתחלפים לאווירת שבת, וגריד התפילות הרגיל מוחלף בכפתורים
      שרלוונטיים לשבת (שיר השירים, שניים מקרא, פרשה, זמנים...). הספירה לאחור
-     נשארת במקומה. המצב נמשך עד מוצאי שבת/חג (~25.5 שעות מההדלקה).
-     שבת+חג יחד (חג שחל בשבת / חלונות צמודים) → "שבת שלום וחג שמח";
+     נשארת במקומה. שבת+חג יחד (חג שחל בשבת / חלונות צמודים) → "שבת שלום וחג שמח";
      יום כיפור → "גמר חתימה טובה"; ראש השנה → "שנה טובה ומתוקה".
+     (10/2026) בעל האתר: "כל העיצוב של שבתות וחגים מתחיל מעלות השחר" — המצב נכנס
+     בעלות השחר של ערב השבת/החג (זמן האתר), לא 3 שעות לפני ההדלקה, ונמשך עד צאת היום
+     הקדוש האחרון (+40 דק' — כפתור "סדר מוצאי שבת"). החלון מחושב מהלוח העברי (Intl) ומזמני
+     האתר (_prayerZman) — עד אז SHABBAT_CANDLES_TIME קפץ בשבת עצמה לשישי הבא והמצב נעלם
+     בכל טעינה ביום השבת. כמו ב-sky.js: שבת ויום טוב צמודים = בלוק אחד. הנרות — קנבס בסגנון
+     הדמו (פמוטים, להבה חיה, נר נשמה ביום כיפור), דולקים כל הזמן ונשרפים לאט אחרי ההדלקה.
      בדיקה ידנית: ?erev=shabbat / ?erev=chag / ?erev=both בכתובת (?erev=0 מבטל). */
   safe("erevShabbatMode", function () {
-    var LEAD_MS = 3 * 3600000;         // שלוש שעות לפני ההדלקה
-    var AFTER_MS = 25.5 * 3600000;     // עד אחרי ההבדלה
+    var AFTER_MS = 25.5 * 3600000;     // גיבוי (בלי זמני האתר): עד אחרי ההבדלה
+    var END_EXTRA = 40 * 60000;        // אחרי צאת השבת/החג — עוד 40 דק' (סדר מוצאי שבת)
+    var MOB = false, RED = false;
+    try { MOB = matchMedia("(max-width: 768px), (pointer: coarse)").matches; RED = matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) {}
     var force = null;
     try {
       var q = new URLSearchParams(location.search).get("erev");
@@ -7001,17 +7008,76 @@
       }
       return null;
     }
+    // ── חלון השבת/החג מהלוח העברי + זמני האתר (מקור האמת; אותו היגיון כמו sky.js) ──
+    var _hebF = null, _hebM = {};
+    function hebOfDay(d) {
+      var k = isoOf(d);
+      if (_hebM[k] !== undefined) return _hebM[k];
+      var r = null;
+      try {
+        if (!_hebF) _hebF = new Intl.DateTimeFormat("en-u-ca-hebrew", { month: "long", day: "numeric" });
+        var m = "", dd = 0;
+        _hebF.formatToParts(new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12)).forEach(function (p) { if (p.type === "month") m = p.value; else if (p.type === "day") dd = parseInt(p.value, 10); });
+        if (m && dd) r = { m: m, d: dd };
+      } catch (e) {}
+      return (_hebM[k] = r);
+    }
+    // ימים טובים בארץ ישראל (יום אחד, חוץ מראש השנה)
+    var YT_NAME = { rh: "ראש השנה", yk: "יום הכיפורים", sukkot: "סוכות", st: "שמיני עצרת ושמחת תורה", pesach: "פסח", pesach7: "שביעי של פסח", shavuot: "שבועות" };
+    function ytOfDay(h) {
+      if (!h) return null;
+      if (h.m === "Tishri") return h.d === 1 || h.d === 2 ? "rh" : h.d === 10 ? "yk" : h.d === 15 ? "sukkot" : h.d === 22 ? "st" : null;
+      if (h.m === "Nisan") return h.d === 15 ? "pesach" : h.d === 21 ? "pesach7" : null;
+      return h.m === "Sivan" && h.d === 6 ? "shavuot" : null;
+    }
+    function zmanOf(d, key) {
+      try { var t = typeof window._prayerZman === "function" ? window._prayerZman(d, key) : null; return t && !isNaN(t.getTime()) ? t : null; } catch (e) { return null; }
+    }
+    function hhmm(t) { return t ? (t.getHours() < 10 ? "0" : "") + t.getHours() + ":" + (t.getMinutes() < 10 ? "0" : "") + t.getMinutes() : ""; }
+    // הבלוק הקדוש שעכשיו בתוכו: מעלות השחר של הערב ועד צאת היום האחרון (+40 דק'). null = אין / אין זמנים עדיין
+    function holyBlock(now) {
+      var base = new Date(now.getFullYear(), now.getMonth(), now.getDate()), D = [], k;
+      for (k = -3; k <= 2; k++) {
+        var d = new Date(base.getFullYear(), base.getMonth(), base.getDate() + k), yt = ytOfDay(hebOfDay(d));
+        D.push({ d: d, yt: yt, shab: d.getDay() === 6, holy: !!yt || d.getDay() === 6 });
+      }
+      for (var i = 1; i < D.length; i++) {
+        if (!D[i].holy || D[i - 1].holy) continue;
+        var j = i; while (j + 1 < D.length && D[j + 1].holy) j++;
+        var start = zmanOf(D[i - 1].d, "alotHaShachar"), end = zmanOf(D[j].d, "tzeit7083deg");
+        if (!start || !end) return null;
+        if (now >= start && now.getTime() <= end.getTime() + END_EXTRA) {
+          var cand = zmanOf(D[i - 1].d, "candleLighting"), hasS = false, yt = null;
+          for (var q = i; q <= j; q++) { if (D[q].shab) hasS = true; if (D[q].yt && !yt) yt = D[q].yt; }
+          return {
+            kind: hasS ? "shabbat" : "chag", both: hasS && !!yt,
+            candles: cand || new Date(start.getTime() + 13 * 3600000), entered: cand ? now >= cand : false,
+            holEvent: null, holName: yt ? YT_NAME[yt] : "", ytKey: yt,
+            enterStr: hhmm(cand), exitStr: hhmm(end), after: now > end
+          };
+        }
+        i = j;
+      }
+      return { none: true };
+    }
+    // גיבוי כשזמני האתר עוד לא זמינים: עלות השחר של יום ההדלקה (או 13 שעות לפניה)
+    function leadStart(t) {
+      var a = zmanOf(new Date(t.getFullYear(), t.getMonth(), t.getDate()), "alotHaShachar");
+      return a && a < t ? a.getTime() : t.getTime() - 13 * 3600000;
+    }
     // מחזיר {kind:"shabbat"|"chag", candles:Date, entered:bool, both:bool, holEvent} או null.
     // both=true כששבת וחג חלים יחד (חג שחל בשבת, או חלונות שבת+חג צמודים פעילים בו-זמנית).
     function state() {
       var now = new Date();
       if (force) return { kind: force === "chag" ? "chag" : "shabbat", candles: new Date(now.getTime() + 47 * 60000), entered: false, both: force === "both", holEvent: null };
+      var hb = holyBlock(now);
+      if (hb) return hb.none ? null : hb;
       var sc = window.SHABBAT_CANDLES_TIME, hc = window.HOLIDAY_CANDLES_TIME;
       var best = null, saw = { shabbat: null, chag: null };
       function consider(kind, t) {
         if (!(t instanceof Date) || isNaN(t)) return;
         var d = t - now;
-        if (d > LEAD_MS || d < -AFTER_MS) return;
+        if (now.getTime() < leadStart(t) || d < -AFTER_MS) return;
         var cand = { kind: kind, candles: t, entered: d <= 0, both: false, holEvent: null };
         saw[kind] = cand;
         if (!best || Math.abs(d) < Math.abs(best.candles - now)) best = cand;
@@ -7033,9 +7099,132 @@
       return best;
     }
 
-    function candleHtml() {
-      return '<div class="lux-sbs-candle"><div class="lux-sbs-glow"></div><div class="lux-sbs-flame"></div><div class="lux-sbs-wick"></div><div class="lux-sbs-body"></div></div>';
+    // ── נרות השבת (10/2026, בסגנון הדמו): קנבס עם פמוטי כסף (שבת, יום כיפור, פסח) או זהב (ראש השנה,
+    //    סוכות, שמחת תורה, שבועות), נרות שעווה עם טפטוף, להבה חיה (ליבה כחולה, הילה, הבהוב), נר נשמה ביום
+    //    כיפור. דולקים מהרגע שהפאנל מופיע (עלות השחר) ונשרפים לאט אחרי זמן ההדלקה. ציור עד 30fps בטלפון;
+    //    עוצר כשהפאנל מחוץ למסך, כשחלון פתוח (lux-modal-open) או כשהלשונית מוסתרת. ──
+    var CV = { el: null, ctx: null, raf: 0, st: null, last: 0, W: 0, H: 0, dpr: 1, vis: true, io: null, t0: 0 };
+    var GOLD_HOL = { rh: 1, sukkot: 1, st: 1, shavuot: 1 };
+    function cvHash(n) { var s = Math.sin(n * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); }
+    function cvNoise(x) { var i = Math.floor(x), f = x - i, u = f * f * (3 - 2 * f); return cvHash(i) * (1 - u) + cvHash(i + 1) * u; }
+    function cvRR(c, x, y, w, h, r) { c.beginPath(); if (c.roundRect) c.roundRect(x, y, w, h, r); else c.rect(x, y, w, h); }
+    function cvMetal(c, x0, x1, gold) {
+      var g = c.createLinearGradient(x0, 0, x1, 0), stops = gold ? ["#6f4a0e", "#f6dc93", "#b8862f", "#fff1c1", "#7a5410"] : ["#3f4652", "#e7eaee", "#8f97a3", "#f9fafb", "#525a66"];
+      stops.forEach(function (v, i) { g.addColorStop(i / (stops.length - 1), v); });
+      return g;
     }
+    function cvHolder(c, x, base, s, gold) {
+      c.fillStyle = cvMetal(c, x - 24 * s, x + 24 * s, gold);
+      c.beginPath();
+      c.moveTo(x - 23 * s, base); c.quadraticCurveTo(x - 23 * s, base - 5 * s, x - 14 * s, base - 7 * s); c.quadraticCurveTo(x - 5 * s, base - 9 * s, x - 3.2 * s, base - 15 * s);
+      c.lineTo(x - 3.2 * s, base - 22 * s); c.quadraticCurveTo(x - 8 * s, base - 24 * s, x - 3.2 * s, base - 26 * s); c.lineTo(x - 3.2 * s, base - 34 * s);
+      c.quadraticCurveTo(x - 5 * s, base - 37 * s, x - 11 * s, base - 40 * s); c.lineTo(x - 13 * s, base - 43 * s); c.lineTo(x + 13 * s, base - 43 * s); c.lineTo(x + 11 * s, base - 40 * s);
+      c.quadraticCurveTo(x + 5 * s, base - 37 * s, x + 3.2 * s, base - 34 * s); c.lineTo(x + 3.2 * s, base - 26 * s); c.quadraticCurveTo(x + 8 * s, base - 24 * s, x + 3.2 * s, base - 22 * s);
+      c.lineTo(x + 3.2 * s, base - 15 * s); c.quadraticCurveTo(x + 5 * s, base - 9 * s, x + 14 * s, base - 7 * s); c.quadraticCurveTo(x + 23 * s, base - 5 * s, x + 23 * s, base); c.closePath(); c.fill();
+      c.beginPath(); c.ellipse(x, base - 43 * s, 13 * s, 2.6 * s, 0, 0, 6.2832); c.fill();
+      c.strokeStyle = gold ? "rgba(255,244,214,.55)" : "rgba(255,255,255,.55)"; c.lineWidth = s; c.beginPath(); c.ellipse(x, base - 43 * s, 12 * s, 2.2 * s, 0, Math.PI, 6.2832); c.stroke();
+      return base - 43 * s;
+    }
+    function cvCandle(c, x, top, s, hgt, burn, litK) {
+      var w = 12 * s, hh = hgt * s, y0 = top - hh;
+      var g = c.createLinearGradient(x - w / 2, 0, x + w / 2, 0);
+      g.addColorStop(0, "#d9ccb0"); g.addColorStop(.32, "#fffdf7"); g.addColorStop(.7, "#f3e9d4"); g.addColorStop(1, "#c4b494");
+      c.fillStyle = g; cvRR(c, x - w / 2, y0, w, hh, [2 * s, 2 * s, 1, 1]); c.fill();
+      c.fillStyle = "#fffaf0"; c.beginPath(); c.ellipse(x, y0 + s, w / 2 - .4 * s, 1.8 * s, 0, 0, 6.2832); c.fill();
+      if (burn > .15) { c.fillStyle = "rgba(255,252,240,.95)"; cvRR(c, x + w / 2 - 2.6 * s, y0, 2.4 * s, (3 + burn * 10) * s, 1.2 * s); c.fill(); }
+      if (litK > 0) {
+        var gg = c.createRadialGradient(x, y0, 0, x, y0, 9 * s);
+        gg.addColorStop(0, "rgba(255,200,110," + (.55 * Math.min(1, litK)).toFixed(3) + ")"); gg.addColorStop(1, "rgba(255,200,110,0)");
+        c.fillStyle = gg; c.beginPath(); c.arc(x, y0, 9 * s, 0, 6.2832); c.fill();
+      }
+      c.strokeStyle = "#2a2018"; c.lineWidth = 1.4 * s; c.lineCap = "round"; c.beginPath(); c.moveTo(x, y0 + .5 * s); c.quadraticCurveTo(x + .6 * s, y0 - 2.5 * s, x + .2 * s, y0 - 5 * s); c.stroke();
+      if (litK > 0) { c.fillStyle = "rgba(255,120,40," + Math.min(1, litK).toFixed(3) + ")"; c.beginPath(); c.arc(x + .2 * s, y0 - 5 * s, s, 0, 6.2832); c.fill(); }
+      return y0 - 4 * s;
+    }
+    function cvMemorial(c, x, base, s) {
+      var w = 20 * s, h = 30 * s, y0 = base - h;
+      c.fillStyle = "rgba(255,255,255,.1)"; c.fillRect(x - w / 2, y0, w, h);
+      c.fillStyle = "rgba(250,246,236,.92)"; c.fillRect(x - w / 2 + 1.2 * s, y0 + h * .35, w - 2.4 * s, h * .65 - s);
+      c.fillStyle = "rgba(255,190,90,.28)"; c.fillRect(x - w / 2, y0, w, h);
+      c.strokeStyle = "rgba(255,255,255,.45)"; c.lineWidth = s; c.strokeRect(x - w / 2, y0, w, h);
+      c.fillStyle = "rgba(255,255,255,.35)"; c.fillRect(x - w / 2 + 2 * s, y0 + 2 * s, 1.6 * s, h - 4 * s);
+      c.strokeStyle = "#2a2018"; c.lineWidth = 1.2 * s; c.beginPath(); c.moveTo(x, y0 + h * .35); c.lineTo(x, y0 + h * .35 - 3.5 * s); c.stroke();
+      return y0 + h * .35 - 3 * s;
+    }
+    function cvFlame(c, x, y, s, now, seed, k) {
+      if (k <= .01) return;
+      var t = RED ? seed : now / 1000, f1 = cvNoise(t * 3.1 + seed), f2 = cvNoise(t * 5.7 + seed * 1.7), f3 = cvNoise(t * 1.4 + seed * 2.9);
+      var h = s * (25 + 7 * f1) * k, w = s * (6 + 1.4 * f2) * k, sw = (f3 - .5) * s * 4.5 * k;
+      var gx = x + sw * .35, gy = y - h * .45, R = s * (52 + 8 * f1) * k;
+      c.save(); c.globalCompositeOperation = "lighter";
+      var g = c.createRadialGradient(gx, gy, 0, gx, gy, R);
+      g.addColorStop(0, "rgba(255,196,96,.5)"); g.addColorStop(.3, "rgba(255,150,50,.16)"); g.addColorStop(1, "rgba(255,120,30,0)");
+      c.fillStyle = g; c.beginPath(); c.arc(gx, gy, R, 0, 6.2832); c.fill();
+      c.beginPath(); c.moveTo(x, y + s * 1.2);
+      c.bezierCurveTo(x - w, y - h * .1, x - w * .75 + sw * .3, y - h * .6, x + sw, y - h);
+      c.bezierCurveTo(x + w * .75 + sw * .3, y - h * .6, x + w, y - h * .1, x, y + s * 1.2);
+      g = c.createRadialGradient(x + sw * .12, y - h * .26, 0, x + sw * .12, y - h * .3, h * .9);
+      g.addColorStop(0, "rgba(255,255,244,1)"); g.addColorStop(.26, "rgba(255,236,164,.98)"); g.addColorStop(.6, "rgba(255,166,58,.9)"); g.addColorStop(1, "rgba(255,80,20,0)");
+      c.fillStyle = g; c.fill();
+      g = c.createRadialGradient(x, y - h * .06, 0, x, y - h * .06, w * .95);
+      g.addColorStop(0, "rgba(96,140,255,.55)"); g.addColorStop(1, "rgba(96,140,255,0)");
+      c.fillStyle = g; c.beginPath(); c.ellipse(x, y - h * .05, w * .8, Math.max(h * .13, .1), 0, 0, 6.2832); c.fill();
+      c.restore();
+    }
+    // הדלקה בכניסת הפאנל: הלהבה "נתפסת" (easeOutBack), הנר השני אחרי הראשון
+    function cvIgnite(now, delay) {
+      if (RED) return 1;
+      var k = Math.max(0, Math.min(1, (now - CV.t0 - delay) / 650));
+      if (k <= 0) return 0;
+      var c1 = 1.70158, c3 = c1 + 1;
+      return 1 + c3 * Math.pow(k - 1, 3) + c1 * Math.pow(k - 1, 2);
+    }
+    function cvDraw(now) {
+      var c = CV.ctx, W = CV.W, H = CV.H, st = CV.st || {};
+      c.setTransform(CV.dpr, 0, 0, CV.dpr, 0, 0); c.clearRect(0, 0, W, H);
+      var s = H / 140, base = H - 3 * s, gold = !!GOLD_HOL[st.ytKey];
+      // אחרי זמן ההדלקה הנרות מתקצרים לאט (עד ~38% בתוך 5 שעות)
+      var burn = st.candles && !force ? Math.max(0, Math.min(300 / 330, (Date.now() - st.candles.getTime()) / (330 * 60000))) : 0;
+      var xs = [W / 2 - 38 * s, W / 2 + 38 * s], hgt = 46 * (1 - .42 * burn);
+      var ka = cvIgnite(now, 0), kb = cvIgnite(now, 420);
+      var fa = cvCandle(c, xs[0], cvHolder(c, xs[0], base, s, gold), s, hgt, burn, ka);
+      var fb = cvCandle(c, xs[1], cvHolder(c, xs[1], base, s, gold), s, hgt, burn, kb);
+      if (st.ytKey === "yk") cvFlame(c, W / 2, cvMemorial(c, W / 2, base, s), s * .6, now, 4.1, cvIgnite(now, 800));
+      cvFlame(c, xs[0], fa, s, now, 1.3, ka); cvFlame(c, xs[1], fb, s, now, 7.7, kb);
+    }
+    function cvSize() {
+      if (!CV.el) return;
+      var r = CV.el.getBoundingClientRect();
+      if (!r.width || !r.height) return;
+      CV.W = r.width; CV.H = r.height; CV.dpr = Math.min(window.devicePixelRatio || 1, 2);
+      CV.el.width = Math.round(CV.W * CV.dpr); CV.el.height = Math.round(CV.H * CV.dpr);
+    }
+    function cvKick() { if (!CV.raf && CV.el) CV.raf = requestAnimationFrame(cvLoop); }
+    function cvLoop(now) {
+      CV.raf = 0;
+      if (!CV.el || !CV.el.isConnected) { CV.el = null; if (CV.io) { CV.io.disconnect(); CV.io = null; } return; }
+      if (document.hidden || !CV.vis || document.documentElement.classList.contains("lux-modal-open")) return; // cvKick מחדש
+      if (!CV.W) cvSize();
+      if (CV.W && now - CV.last >= (MOB ? 33 : 16)) { CV.last = now; try { cvDraw(now); } catch (e) {} }
+      if (!RED || now - CV.t0 < 1500) CV.raf = requestAnimationFrame(cvLoop);
+    }
+    function cvMount(panel, st) {
+      CV.st = st;
+      var el = panel && panel.querySelector(".lux-erev-cv");
+      if (!el) return;
+      if (CV.el !== el) {
+        CV.el = el; CV.ctx = el.getContext("2d"); CV.t0 = performance.now(); CV.vis = true; CV.W = 0; cvSize();
+        if (CV.io) CV.io.disconnect();
+        if ("IntersectionObserver" in window) {
+          CV.io = new IntersectionObserver(function (es) { CV.vis = !!(es[0] && es[0].isIntersecting); cvKick(); });
+          CV.io.observe(el);
+        }
+      }
+      cvKick();
+    }
+    document.addEventListener("visibilitychange", cvKick);
+    try { new MutationObserver(cvKick).observe(document.documentElement, { attributes: true, attributeFilter: ["class"] }); } catch (e) {}
+    window.addEventListener("resize", function () { if (CV.el) { cvSize(); cvKick(); } });
     function txt(id) { var el = document.getElementById(id); return el ? (el.textContent || "").trim() : ""; }
     function parshaName() {
       var p = (window.SHABBAT_PARASHA_NAME || txt("stat-parasha") || "").replace(/^פרשת\s+/, "").trim();
@@ -7059,6 +7248,7 @@
     // שם החג לתצוגה — כשחג חל בשבת עצמה שם החג מגיע מהאירוע שנמצא ב-state()
     // (צינור נרות-החג מסנן הדלקות של ימי שישי ולכן HOLIDAY_NAME_HE עלול להיות ריק/ישן)
     function dispHolName(st) {
+      if (st && st.holName) return st.holName; // מהלוח העברי (holyBlock)
       // name (המנורמל) עדיף על heb — שדה heb של hebcal כולל לעיתים את מספר השנה
       // ("ראש השנה 5787"); בסוף מוסר גם ספיח-שנה אם נשאר
       var raw = st && st.holEvent ? (st.holEvent.name || st.holEvent.heb || holName()) : holName();
@@ -7140,8 +7330,9 @@
     function panelDynHtml(st) {
       var isS = st.kind === "shabbat";
       var showShabbat = isS || st.both; // בשילוב שבת+חג — זמני השבת הם הקובעים בתצוגה
-      var enter = showShabbat ? (window.SHABBAT_CANDLES_STR || txt("shabbat-enter")) : (window.HOLIDAY_CANDLES_STR || "");
-      var exit = showShabbat ? (window.SHABBAT_HAVDALAH_STR || txt("shabbat-exit")) : (window.HOLIDAY_HAVDALAH_STR || "");
+      // זמני הבלוק הנוכחי (הדלקה בערב, צאת היום האחרון) — גם ביום השבת עצמו, כשהנתונים הכלליים כבר על השבוע הבא
+      var enter = st.enterStr || (showShabbat ? (window.SHABBAT_CANDLES_STR || txt("shabbat-enter")) : (window.HOLIDAY_CANDLES_STR || ""));
+      var exit = st.exitStr || (showShabbat ? (window.SHABBAT_HAVDALAH_STR || txt("shabbat-exit")) : (window.HOLIDAY_HAVDALAH_STR || ""));
       var p = showShabbat && !st.both ? parshaName() : "";
       var hn = dispHolName(st);
       var gk = holGreetKind(st);
@@ -7159,6 +7350,11 @@
         gk === "yk" ? "גמר חתימה טובה 🕊️" :
         gk === "rh" ? "שנה טובה ומתוקה 🕊️" :
         "מועדים לשמחה 🕊️";
+      // 40 הדקות שאחרי הצאת (מוצאי שבת/חג) — ברכת המוצאי במקום "שבת שלום"
+      if (st.after) {
+        title = isS || st.both ? "שבוע טוב" : gk === "yk" ? "גמר חתימה טובה" : "מועדים לשמחה";
+        entered = isS || st.both ? "שבוע טוב ומבורך ✨" : "";
+      }
       return '<div class="lux-erev-title">' + title + "</div>" +
         '<div class="lux-erev-orn" aria-hidden="true"><span>✡</span></div>' +
         (sub ? '<div class="lux-erev-sub">' + esc(sub) + "</div>" : "") +
@@ -7167,7 +7363,7 @@
           (enter && enter !== "--:--" ? '<span>🕯️ הדלקת נרות <b dir="ltr">' + esc(enter) + "</b></span>" : "") +
           (exit && exit !== "--:--" ? '<span>✨ ' + (showShabbat ? "הבדלה" : "צאת החג") + ' <b dir="ltr">' + esc(exit) + "</b></span>" : "") +
         "</div>" +
-        (st.entered ? '<div class="lux-erev-entered">' + entered + "</div>" : "");
+        (st.entered && entered ? '<div class="lux-erev-entered">' + entered + "</div>" : "");
     }
     function panelHtml(st) {
       var dust = "";
@@ -7181,7 +7377,7 @@
         '<span class="lux-erev-corner c1" aria-hidden="true">✦</span><span class="lux-erev-corner c2" aria-hidden="true">✦</span>' +
         '<span class="lux-erev-corner c3" aria-hidden="true">✦</span><span class="lux-erev-corner c4" aria-hidden="true">✦</span>' +
         '<div class="lux-erev-halo" aria-hidden="true"></div>' +
-        '<div class="lux-erev-candles">' + candleHtml() + candleHtml() + "</div>" +
+        '<div class="lux-erev-candles"><canvas class="lux-erev-cv" aria-hidden="true"></canvas></div>' +
         '<div class="lux-erev-dyn">' + panelDynHtml(st) + "</div>";
     }
 
@@ -7216,20 +7412,22 @@
         if (dd) dd.textContent = "00:47:12";
         if (tt) tt.textContent = st.both ? "כניסת שבת וחג" : st.kind === "chag" ? "כניסת החג" : "כניסת שבת";
       }
-      var key = [st.kind, st.both ? 1 : 0, st.entered ? 1 : 0, parshaName(), dispHolName(st), window.SHABBAT_CANDLES_STR, window.SHABBAT_HAVDALAH_STR, window.HOLIDAY_CANDLES_STR, window.HOLIDAY_HAVDALAH_STR].join("|");
-      if (panel && grid && key === lastKey) return;
+      var key = [st.kind, st.both ? 1 : 0, st.entered ? 1 : 0, st.after ? 1 : 0, parshaName(), dispHolName(st), st.enterStr, st.exitStr, window.SHABBAT_CANDLES_STR, window.SHABBAT_HAVDALAH_STR, window.HOLIDAY_CANDLES_STR, window.HOLIDAY_HAVDALAH_STR].join("|");
+      if (panel && grid && key === lastKey) { cvMount(panel, st); return; }
       lastKey = key;
       if (!panel) {
         panel = document.createElement("div");
         panel.id = "lux-erev-panel";
         wrap.insertAdjacentElement("beforebegin", panel);
         panel.innerHTML = panelHtml(st);
+        cvMount(panel, st);
       } else {
         // עדכון נקודתי של הטקסטים בלבד — בנייה מלאה מחדש מאתחלת את כל
         // האנימציות (אבק, הילה, נרות) וגורמת לריצוד בכל הגעת נתון חדש
         var dyn = panel.querySelector(".lux-erev-dyn");
         if (dyn) dyn.innerHTML = panelDynHtml(st);
         else panel.innerHTML = panelHtml(st);
+        cvMount(panel, st);
       }
       if (!grid) {
         grid = document.createElement("div");

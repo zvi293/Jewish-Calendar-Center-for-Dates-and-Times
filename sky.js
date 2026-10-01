@@ -30,11 +30,15 @@
      אמיתי לא מריצים WebGL בתוכנה).
    • בלי WebGL (או בלי highp בשיידר): html.lux-sky-nogl + data-sky —
      גרדיאנט CSS לפי שלב היום (style.css).
-   • ממשק: window.__luxSky = { start, stop, setTime, state }.
-     דגלי URL לדמו (כמו ?erev=): ?sky=HH:MM (שעה קבועה) · ?sky=play (יממה ב-60 שניות).
+   • שבתות וחגים (10/2026): מעלות השחר של ערב השבת/החג ועד צאתם השמיים עצמם
+     לבושים לכבוד המועד — גוון, נרות בחלונות העיר, חלקיקים ועיטור. ראו "שבתות וחגים" למטה.
+   • ממשק: window.__luxSky = { start, stop, setTime, state, fest }.
+     דגלי URL לדמו (כמו ?erev=): ?sky=HH:MM (שעה קבועה) · ?sky=play (יממה ב-60 שניות) ·
+     ?fest=shabbat (וכו' — ראו "שבתות וחגים").
    • ל-CSS של השלב הבא (חלונות/פופאפים): html[data-sky=night|dawn|day|dusk],
      --sky-zen / --sky-hor (צבעי הרקיע הנוכחיים, "r,g,b"), --sky-glass
      (אטימות זכוכית מומלצת 0.36–0.64), --sky-day (0..1), והאירוע "lux-sky".
+     במועד: html[data-fest=shabbat|rh|...|av9] + data-fest-lvl=full|gentle|subdued.
    ══════════════════════════════════════════════════════════════════════ */
 (function () {
   "use strict";
@@ -181,6 +185,263 @@
     return M[Math.max(0, p - 3)];
   }
 
+  /* ══ שבתות וחגים (10/2026) — הרקע עצמו לבוש לכבוד המועד ══════════════════════
+     בעל האתר (01/10): "גם בשבתות וחגים הרקע עצמו ישתנה לפי השבת או החג — מעלות השחר
+     של אותו יום", במלוא העוצמה כבר מעלות השחר. רק הרקע: מצב ערב שבת של lux.js
+     (§45 — הפאנל והכפתורים, 3 שעות לפני ההדלקה) נשאר כמו שהוא.
+     • חלון הזמן: עלות השחר של ערב השבת/החג (זמן האתר) ← צאת השבת/החג (צאת 7.083°,
+       כמו ההבדלה שהאתר מציג). שבת ויום טוב צמודים = בלוק רציף; הנושא מתחלף בשקיעה.
+     • מה משתנה: גוון לכל מועד (צללים/אורות), הילת נרות חמה מהעיר, קרני אור לאורך
+       היום, נרות שנדלקים חלון אחר חלון בזמן ההדלקה של האתר, חלקיקים (אבק זהב,
+       ניצוצות, עלים, פרחים, קונפטי) ועיטור בראש הדף (סכך/דגלונים/זר) שנגלל עם הדף —
+       הכול בתוך קנבס השמיים (שתי קריאות ציור קטנות אחרי השמיים), בלי שכבה מעליו.
+     • חול המועד — אותו נושא בעוצמה עדינה; חנוכה — בכל לילה עוד בתים עם נרות בחלון;
+       פורים — קונפטי מכל הצבעים; ט' באב — שמיים מאופקים, בלי שום חגיגיות.
+     • מוצאי שבת/חג (בקשת בעל האתר) — מצאת השבת/החג ועד עלות השחר: לילה ספירי-כחול, להבת
+       הבדלה חמה מהעיר שדועכת לגחלים, גיצים עולים, ואורות העיר "מתעוררים" לשבוע החדש.
+     • דגל בדיקה: ?fest=shabbat|rh|yk|sukkot|st|pesach|pesach7|shavuot (היום = ערב המועד;
+       &festday=1 — היום הוא המועד עצמו) · ?fest=chol-sukkot|chol-pesach|purim|av9 ·
+       ?fest=motzei&sky=20:30 (היום שבת — מוצאי שבת הלילה) ·
+       ?fest=chanuka&festday=N (היום הוא יום N; בלי festday — ערב חנוכה). עם ?sky=HH:MM.
+     ════════════════════════════════════════════════════════════════════════ */
+  var MIN = 60000;
+  // shad/shadIn — גוון הצללים (לפני/אחרי כניסת המועד), high — האורות, glow — הילת הנרות
+  var FEST = {
+    shabbat: { shad: [.17, .06, .31], shadIn: [.12, .06, .13], high: [1, .8, .52], glow: [1, .62, .24], grade: .5, dust: [1, .84, .47], parts: [["dust", 64], ["spark", 16], ["orb", 6]] },
+    rh: { shad: [.25, .04, .1], shadIn: [.17, .04, .08], high: [1, .8, .45], glow: [1, .55, .2], grade: .5, dust: [1, .78, .38], parts: [["dust", 44], ["ruby", 24], ["spark", 8]] },
+    yk: { shad: [.07, .1, .21], shadIn: [.06, .08, .17], high: [.96, .97, 1], glow: [.86, .9, 1], grade: .42, dust: [.9, .93, 1], parts: [["orb", 26], ["dust", 18]] },
+    sukkot: { shad: [.05, .15, .11], shadIn: [.05, .1, .08], high: [1, .86, .5], glow: [1, .66, .28], grade: .48, dust: [1, .84, .47], parts: [["dust", 36], ["leaf", 14]], deco: "sukkah" },
+    st: { shad: [.05, .11, .34], shadIn: [.04, .08, .25], high: [1, .84, .5], glow: [1, .7, .3], grade: .5, dust: [1, .86, .5], parts: [["confetti", 56], ["dust", 18], ["spark", 8]], deco: "bunting" },
+    pesach: { shad: [.2, .08, .23], shadIn: [.14, .06, .16], high: [1, .86, .78], glow: [1, .7, .55], grade: .45, dust: [1, .8, .67], parts: [["petal", 40], ["dust", 20]] },
+    pesach7: { shad: [.06, .13, .27], shadIn: [.05, .09, .2], high: [1, .88, .76], glow: [1, .72, .5], grade: .45, dust: [.85, .93, 1], parts: [["petal", 26], ["dust", 22], ["orb", 8]] },
+    shavuot: { shad: [.05, .15, .09], shadIn: [.04, .1, .07], high: [1, .93, .62], glow: [.98, .82, .42], grade: .45, dust: [1, .92, .63], parts: [["petal", 34], ["leaf", 8], ["dust", 18]], deco: "garland" },
+    chanuka: { shad: [.06, .09, .28], shadIn: [.05, .07, .2], high: [1, .84, .5], glow: [1, .64, .26], grade: .46, dust: [1, .82, .45], parts: [["dust", 40], ["spark", 18]] },
+    purim: { shad: [.24, .07, .3], shadIn: [.18, .05, .22], high: [1, .85, .55], glow: [1, .6, .35], grade: .46, dust: [1, .85, .5], parts: [["confetti", 64], ["spark", 12]] },
+    // מוצאי שבת/חג (מצאת ועד עלות השחר): לילה ספירי-כחול, להבת הבדלה כתומה מהעיר, גיצים עולים
+    // כמו מנר ההבדלה, ניצוצות, ואורות העיר "מתעוררים" לשבוע החדש
+    motzei: { shad: [.05, .08, .28], shadIn: [.05, .08, .28], high: [1, .82, .58], glow: [1, .5, .22], grade: .44, dust: [1, .62, .3], parts: [["ember", 42], ["spark", 14], ["orb", 5]] }
+  };
+  var FEST_DEMO = null;
+  // תאריך עברי של יום אזרחי (חצות מקומית) — Intl, בלי רשת
+  var HEBF = null, hebMemo = {};
+  function hebOf(d0) {
+    if (hebMemo[d0] !== undefined) return hebMemo[d0];
+    var r = null;
+    try {
+      if (!HEBF) HEBF = new Intl.DateTimeFormat("en-u-ca-hebrew", { month: "long", day: "numeric" });
+      var m = "", d = 0;
+      HEBF.formatToParts(new Date(d0 + 43200000)).forEach(function (p) { if (p.type === "month") m = p.value; else if (p.type === "day") d = parseInt(p.value, 10); });
+      if (m && d) r = { m: m, d: d };
+    } catch (e) {}
+    return (hebMemo[d0] = r);
+  }
+  // ימים טובים בארץ ישראל (יום אחד, חוץ מראש השנה)
+  function ytOf(h) {
+    if (!h) return null;
+    if (h.m === "Tishri") return h.d === 1 || h.d === 2 ? "rh" : h.d === 10 ? "yk" : h.d === 15 ? "sukkot" : h.d === 22 ? "st" : null;
+    if (h.m === "Nisan") return h.d === 15 ? "pesach" : h.d === 21 ? "pesach7" : null;
+    return h.m === "Sivan" && h.d === 6 ? "shavuot" : null;
+  }
+  function dayFlags(d0) {
+    var h = hebOf(d0), wd = new Date(d0 + 43200000).getDay(), yt = ytOf(h);
+    var f = { d0: d0, wd: wd, holy: yt || (wd === 6 ? "shabbat" : null), chol: null, chan: 0, purim: false, av9: false };
+    if (!h) return f;
+    if (!yt && h.m === "Tishri" && h.d >= 16 && h.d <= 21) f.chol = "sukkot";       // כולל הושענא רבה
+    else if (!yt && h.m === "Nisan" && h.d >= 16 && h.d <= 20) f.chol = "pesach";
+    // חנוכה: כ"ה בכסלו ושבעה ימים אחריו (סופרים ימים — כסלו לפעמים חסר)
+    for (var k = 0; k < 8; k++) {
+      var b = hebOf(dayStart(d0 - k * 86400000 + 43200000));
+      if (b && b.m === "Kislev" && b.d === 25) { f.chan = k + 1; break; }
+    }
+    var jlm = false;
+    try { jlm = typeof window.isInJerusalem === "function" && !!window.isInJerusalem(LAT, LNG); } catch (e) {}
+    f.purim = (h.m === "Adar" || h.m === "Adar II") && h.d === (jlm ? 15 : 14);   // ירושלים — שושן פורים
+    f.av9 = h.m === "Av" && ((h.d === 9 && wd !== 6) || (h.d === 10 && wd === 0));  // ט' באב שחל בשבת נדחה
+    return f;
+  }
+  // דגל הבדיקה ?fest= — "היום" מקבל את תפקיד ערב המועד (או המועד עצמו), עם הזמנים האמיתיים של היום
+  function demoFlags(D, iT) {
+    D.forEach(function (f) { f.holy = null; f.chol = null; f.chan = 0; f.purim = false; f.av9 = false; });
+    var k = FEST_DEMO.key, n = FEST_DEMO.day, i;
+    function at(o) { return D[iT + o]; }
+    if (k === "motzei") at(0).holy = "shabbat";   // היום שבת — מוצאי שבת הלילה (עם ?sky=20:30)
+    else if (k === "chol-sukkot" || k === "chol-pesach") { for (i = -1; i <= 1; i++) at(i).chol = k.slice(5); }
+    else if (k === "chanuka") { for (i = 0; i < 8; i++) { var g = at((n ? 1 - n : 1) + i); if (g) g.chan = i + 1; } }
+    else if (k === "purim") at(0).purim = true;
+    else if (k === "av9") at(0).av9 = true;
+    else {
+      var len = k === "rh" ? 2 : 1, first = 1 - Math.min(n, len);
+      for (i = 0; i < len; i++) { var f = at(first + i); if (f) f.holy = k; }
+    }
+  }
+  // זמני יום אזרחי: של האתר (העיר והשיטה שנבחרו), ובלעדיהם אסטרונומיים
+  var zMemo = {};
+  function zOf(d0) {
+    var key = d0 + "|" + LAT + "|" + LNG + "|" + (anchorsSite ? 1 : 0);
+    if (zMemo[key]) return zMemo[key];
+    var A = astroDay(d0);
+    function pick(k, a) { var h = siteZman(d0, k); return h !== null && (a === null || Math.abs(h - a) < 7200000) ? h : a; }
+    var z = { alot: pick("alotHaShachar", A.alot), set: pick("sunset", A.set), tzeit: pick("tzeit7083deg", A.tzeit), candle: null };
+    var c = siteZman(d0, "candleLighting");
+    z.candle = c !== null && z.set !== null && Math.abs(c - z.set) < 5400000 ? c : (z.set !== null ? z.set - 20 * MIN : null);
+    return (zMemo[key] = z);
+  }
+  // ציר המועדים סביב היום: בלוקים של ימים קדושים + ימים "רכים" + לילות חנוכה
+  var FT = null;
+  function festBuild() {
+    var base0 = dayStart(Date.now());
+    var key = base0 + "|" + LAT + "|" + LNG + "|" + (anchorsSite ? 1 : 0) + "|" + (FEST_DEMO ? FEST_DEMO.key + ":" + FEST_DEMO.day : "");
+    if (FT && FT.key === key) return FT;
+    var D = [], segs = [], men = [], i, j, k;
+    for (k = -4; k <= 4; k++) D.push(dayFlags(dayStart(base0 + k * 86400000 + 43200000)));
+    if (FEST_DEMO) demoFlags(D, 4);
+    // 1) שבת/יום טוב — ימים רצופים הם בלוק אחד, מעלות השחר של הערב ועד צאת היום האחרון
+    for (i = 1; i < D.length; i++) {
+      if (!D[i].holy || D[i - 1].holy) continue;
+      j = i; while (j + 1 < D.length && D[j + 1].holy) j++;
+      var ez = zOf(D[i - 1].d0), lz = zOf(D[j].d0);
+      if (ez.alot !== null && lz.tzeit !== null) {
+        var blk = { kind: "holy", from: ez.alot, to: lz.tzeit, inner: ez.set !== null ? ez.set : ez.alot + 12 * 3600000, days: [], candles: [] };
+        for (k = i; k <= j; k++) {
+          var pz = zOf(D[k - 1].d0), th = D[k].holy;
+          if (th === "shabbat" && D[k].chol) th = D[k].chol;            // שבת חול המועד — בנושא החג, במלוא העוצמה
+          blk.days.push({ at: k === i || pz.set === null ? blk.from : pz.set, th: th });
+          // נרות: ערב הבלוק ושבת שאחרי יום טוב — לפני השקיעה; יום טוב שני / שאחרי שבת — אחרי צאת
+          var c = k === i || D[k].wd === 6 ? pz.candle : pz.tzeit;
+          if (c !== null) blk.candles.push(c);
+        }
+        segs.push(blk);
+        // מוצאי השבת/החג: מצאת היום האחרון ועד עלות השחר שלמחרת
+        var nz = j + 1 < D.length ? zOf(D[j + 1].d0) : null;
+        segs.push({ kind: "after", th: "motzei", lv: 1, from: blk.to, to: nz && nz.alot !== null ? nz.alot : blk.to + 9 * 3600000 });
+      }
+      i = j;
+    }
+    // 2) חול המועד (עדין), חנוכה, פורים, ט' באב
+    for (i = 1; i < D.length; i++) {
+      var f = D[i];
+      if (!f.chol && !f.chan && !f.purim && !f.av9) continue; // זמנים מחושבים רק לימים שצריכים אותם
+      var pz2 = zOf(D[i - 1].d0), z2 = zOf(f.d0);
+      if (z2.tzeit === null || pz2.tzeit === null) continue;
+      var eveStart = D[i - 1].wd === 6 || pz2.set === null ? pz2.tzeit : pz2.set; // אחרי שבת — רק בצאתה
+      if (f.chol) segs.push({ kind: "soft", th: f.chol, lv: .5, from: pz2.tzeit, to: z2.tzeit });
+      if (f.chan) {
+        segs.push({ kind: "soft", th: "chanuka", lv: 1, from: f.chan === 1 && pz2.alot !== null ? pz2.alot : pz2.tzeit, to: z2.tzeit });
+        // נר חנוכה בערב שלפני היום: בשקיעה; בערב שבת — לפני נרות שבת; במוצאי שבת — אחרי צאתה
+        var L = D[i - 1].wd === 5 ? (pz2.candle !== null ? pz2.candle - 10 * MIN : null) : eveStart;
+        if (L !== null) men.push({ at: L, n: f.chan });
+      }
+      if (f.purim) segs.push({ kind: "day", th: "purim", lv: 1, from: eveStart, to: z2.tzeit });
+      if (f.av9) segs.push({ kind: "sub", th: "av9", lv: 1, from: eveStart, to: z2.tzeit });
+    }
+    // ימים רצופים באותו נושא (חנוכה, חול המועד) — קטע אחד, בלי "שקע" בצאת שבין יום ליום
+    segs.sort(function (a, b) { return a.from - b.from; });
+    var merged = [];
+    segs.forEach(function (s) {
+      var P = merged[merged.length - 1];
+      if (P && s.kind === "soft" && P.kind === "soft" && P.th === s.th && P.lv === s.lv && s.from <= P.to + MIN) P.to = Math.max(P.to, s.to);
+      else merged.push(s);
+    });
+    FT = { key: key, segs: merged, men: men };
+    return FT;
+  }
+  // מצב המועד ברגע נתון (זמן הלכתי). כניסה: רבע שעה עד עלות השחר — ובעלות כבר מלא;
+  // יציאה: 25 דקות אחרי הצאת (שלושת הכוכבים כבר נדלקו); בין יום ליום — מעבר רך סביב השקיעה
+  var Fz = { on: 0, lv: 0, grade: 0, glow: 0, win: 0, winV: 0, men: 0, subdue: 0, wake: 0, rays: 0, parts: 0, deco: 0, th: "", decoK: "", shadC: [0, 0, 0], high: [0, 0, 0], glowC: [0, 0, 0] };
+  function segW(s, t) { return smooth(s.from - 15 * MIN, s.from + 10 * MIN, t) * (1 - smooth(s.to, s.to + 25 * MIN, t)); }
+  function festFrame(t, alt) {
+    var F = Fz, T = festBuild(), S = T.segs, i, q, s, w, e;
+    F.on = F.lv = F.grade = F.glow = F.win = F.men = F.subdue = F.wake = F.rays = F.parts = F.deco = 0; F.th = ""; F.decoK = "";
+    F.winV = smooth(6 * RAD, -3 * RAD, alt);
+    for (i = 0; i < T.men.length; i++) {
+      var mn = T.men[i];
+      F.men = Math.max(F.men, (mn.n / 8) * smooth(mn.at - 5 * MIN, mn.at + 25 * MIN, t) * (1 - smooth(mn.at + 300 * MIN, mn.at + 420 * MIN, t)));
+    }
+    var acc = [], purW = 0, subW = 0, blkOn = 0, inner = 0, win = 0, pres = 0, aftW = 0, aftGlow = 0;
+    for (i = 0; i < S.length; i++) {
+      if (S[i].kind === "day") purW = Math.max(purW, segW(S[i], t));
+      else if (S[i].kind === "sub") subW = Math.max(subW, segW(S[i], t));
+    }
+    for (i = 0; i < S.length; i++) {
+      s = S[i];
+      if (s.kind !== "holy" || t < s.from - 15 * MIN || t > s.to + 25 * MIN) continue;
+      w = segW(s, t);
+      // פורים ביום שישי — פורים עד השקיעה ואז שבת
+      if (purW > 0) w *= 1 - purW * (1 - smooth(s.inner - 20 * MIN, s.inner + 10 * MIN, t));
+      if (w <= 0) continue;
+      blkOn = Math.max(blkOn, w); pres = Math.max(pres, w);
+      var d = s.days, cur = 0;
+      for (q = 1; q < d.length; q++) if (t >= d[q].at - 20 * MIN) cur = q;
+      var mx = cur ? smooth(d[cur].at - 20 * MIN, d[cur].at + 20 * MIN, t) : 1;
+      if (cur && mx < 1) acc.push([d[cur - 1].th, w * (1 - mx), 1]);
+      acc.push([d[cur].th, w * mx, 1]);
+      inner = Math.max(inner, w * smooth(s.inner - 10 * MIN, s.inner + 30 * MIN, t) * (1 - smooth(s.to - 5 * MIN, s.to + 25 * MIN, t)));
+      for (q = 0; q < s.candles.length; q++) {
+        var c = s.candles[q];
+        win = Math.max(win, w * smooth(c - 5 * MIN, c + 25 * MIN, t) * (1 - smooth(c + 250 * MIN, c + 330 * MIN, t)));
+      }
+    }
+    // מוצאי שבת/חג: מצאת ועד עלות השחר (מתחלף ברכות עם השבת שיוצאת; מפנה מקום לט' באב ולליל פורים)
+    for (i = 0; i < S.length; i++) {
+      s = S[i];
+      if (s.kind !== "after" || t < s.from - 5 * MIN || t > s.to) continue;
+      w = smooth(s.from - 5 * MIN, s.from + 20 * MIN, t) * (1 - smooth(s.to - 25 * MIN, s.to, t)) * (1 - purW) * (1 - subW);
+      if (w <= 0) continue;
+      aftW = Math.max(aftW, w);
+      aftGlow = Math.max(aftGlow, w * (.35 + .6 * (1 - smooth(s.from, s.from + 45 * MIN, t))));   // להבת ההבדלה בצאת, ואז גחלים חמות
+      acc.push([s.th, w, 1]); pres = Math.max(pres, w);
+    }
+    F.wake = aftW;
+    for (i = 0; i < S.length; i++) {
+      s = S[i];
+      if (s.kind === "holy" || s.kind === "after" || t < s.from - 15 * MIN || t > s.to + 25 * MIN) continue;
+      w = segW(s, t) * (1 - blkOn) * (s.kind === "soft" ? 1 - aftW : 1);
+      if (w <= 0) continue;
+      if (s.kind === "sub") F.subdue = Math.max(F.subdue, w);
+      else { acc.push([s.th, w, s.lv]); pres = Math.max(pres, w); }
+    }
+    if (!acc.length) return F;
+    var ws = 0, wl = 0, gr = 0, topW = -1, sh = [0, 0, 0], sI = [0, 0, 0], hi = [0, 0, 0], gc = [0, 0, 0];
+    for (i = 0; i < acc.length; i++) {
+      var a = acc[i], P = FEST[a[0]];
+      if (!P || a[1] <= 0) continue;
+      ws += a[1]; wl += a[1] * a[2]; gr += a[1] * a[2] * P.grade;
+      for (e = 0; e < 3; e++) { sh[e] += a[1] * P.shad[e]; sI[e] += a[1] * P.shadIn[e]; hi[e] += a[1] * P.high[e]; gc[e] += a[1] * P.glow[e]; }
+      if (a[1] * a[2] > topW) { topW = a[1] * a[2]; F.th = a[0]; }
+    }
+    if (ws <= 0) return F;
+    F.on = Math.min(1, pres);   // נוכחות הקטע כולו — גם באמצע מעבר בין שני נושאים באותו בלוק
+    var inn = Math.min(1, inner / Math.max(F.on, 1e-3));
+    for (e = 0; e < 3; e++) { F.shadC[e] = (sh[e] + (sI[e] - sh[e]) * inn) / ws; F.high[e] = hi[e] / ws; F.glowC[e] = gc[e] / ws; }
+    F.lv = wl / ws; F.grade = gr / ws;
+    F.win = win;
+    F.glow = Math.max(F.on * F.lv * (.38 + .62 * Math.max(win, inn * .55)), aftGlow);
+    F.rays = F.on * F.lv * smooth(3 * RAD, 10 * RAD, alt) * (1 - smooth(38 * RAD, 52 * RAD, alt));
+    F.parts = F.on * F.lv;
+    F.decoK = FEST[F.th].deco || "";
+    F.deco = F.decoK ? F.on * (F.lv > .75 ? 1 : .8) : 0;
+    return F;
+  }
+  // אותו גוון ב-JS — לצבעי ה-CSS (--sky-zen/--sky-hor, theme-color) שיתאימו לשמיים
+  function gradeJS(c, F) {
+    if (F.on < .001 && F.subdue < .001) return c;
+    var l = .299 * c[0] + .587 * c[1] + .114 * c[2], s = smooth(0, .8, l), g = F.on * F.grade;
+    var o = c.map(function (v, i) { var tone = F.shadC[i] + (F.high[i] - F.shadC[i]) * s; return v + (tone * (.3 + 1.15 * l) + v * .15 - v) * g; });
+    if (F.subdue > .001) o = o.map(function (v, i) { return (v + (l * [.9, .94, 1.02][i] - v) * F.subdue * .6) * (1 - .14 * F.subdue); });
+    return o;
+  }
+  // data-fest ל-CSS (עם השהיה קלה כדי שלא יהבהב סביב הסף)
+  var festAttr = "";
+  function festDom(F) {
+    var k = F.subdue > .5 ? "av9" : F.on > .5 ? F.th : festAttr && (F.on > .3 || F.subdue > .3) ? festAttr.split("|")[0] : "";
+    var lv = !k ? "" : k === "av9" ? "subdued" : F.lv > .75 ? "full" : "gentle";
+    var v = k ? k + "|" + lv : "";
+    if (v === festAttr) return;
+    festAttr = v;
+    if (k) { html.setAttribute("data-fest", k); html.setAttribute("data-fest-lvl", lv); }
+    else { html.removeAttribute("data-fest"); html.removeAttribute("data-fest-lvl"); }
+  }
+
   /* ── אטמוספרה ב-JS (מראה של השיידר) — לתאורת עננים/נוף ולצבעים ל-CSS ── */
   var RP = 6371e3, RA = 6471e3, HR = 8e3, HM = 1.2e3, G = .758, KR = [5.5e-6, 13e-6, 22.4e-6], KO = [.65e-6, 1.881e-6, .085e-6], KM = 21e-6;
   function rsi(ox, oy, oz, dx, dy, dz, r) { var b = 2 * (dx * ox + dy * oy + dz * oz), c = ox * ox + oy * oy + oz * oz - r * r, q = b * b - 4 * c; if (q < 0) return null; var s = Math.sqrt(q); return [(-b - s) / 2, (-b + s) / 2]; }
@@ -263,6 +524,10 @@
     "uniform vec3 uS3[3];\n" +
     "uniform float uLow,uMoonV,uMoonF,uStars,uNight,uLights,uDay,uTime,uCover,uLST,uLat,uMetA,uScrim,uDim,uRays,uStar3,uMill;\n" +
     "uniform vec4 uMet,uPlane;\n" +
+    // שבתות וחגים: uFest — נוכחות המועד (כפול עוצמה), uGrade — עוצמת הגוון, uGlowA — הילת הנרות,
+    // uWin — התקדמות הדלקת הנרות (0..1), uWinV — נראות הנרות לפי החשכה, uMen — חלק הבתים עם נרות חנוכה
+    "uniform float uFest,uGrade,uGlowA,uWin,uWinV,uMen,uSubdue,uWake;\n" +
+    "uniform vec3 uShadC,uHighC,uGlowC;\n" +
     "#define PI 3.141592653589793\n" +
     "#define TAU 6.283185307179586\n" +
     "#define D2R 0.017453292519943295\n" +
@@ -379,7 +644,7 @@
     "    float pr=dot(p,dv);\n" +
     "    float t=clamp(pr,hd-.16,hd);\n" +
     "    float d=length(p-dv*t);\n" +
-    "    col+=vec3(1.,.95,.85)*smoothstep(2.2*uPix,0.,d)*smoothstep(hd-.16,hd,pr)*uMetA*uStars;\n" +
+    "    col+=mix(vec3(1.,.95,.85),vec3(1.,.84,.52),uFest)*smoothstep(2.2*uPix,0.,d)*smoothstep(hd-.16,hd,pr)*uMetA*uStars;\n" +
     "  }\n" +
     // מטוס לילי — נקודה זעירה שחוצה את השמיים עם פנסים מהבהבים (אדום + סטרוב לבן)
     "  if(uPlane.z>0.){\n" +
@@ -443,7 +708,7 @@
     "    vec2 dq=(uv-uSunUV)*vec2(uRes.x/uRes.y,1.);\n" +
     "    float an=atan(dq.y,dq.x),rr=length(dq);\n" +
     "    float ray=(.5+.5*sin(an*7.+uTime*.09))*(.55+.45*sin(an*17.-uTime*.06))*(.6+.4*sin(an*31.+2.1));\n" +
-    "    col+=uSunD*ray*exp(-rr*2.4)*uRays*.42*(1.-cloudD*.85);\n" +
+    "    col+=uSunD*mix(vec3(1.),uHighC*1.15,uFest)*ray*exp(-rr*2.4)*uRays*.42*(1.-cloudD*.85);\n" +
     "  }\n" +
     // נוף: רכס רחוק באובך, רכס קרוב עם קו הרקיע, קרקע קדמית
     "  float pix=uPix;\n" +
@@ -504,13 +769,23 @@
     "  vec2 sh2=normalize(uSun.xz+vec2(1e-4));\n" +
     "  float back=pow(max(dot(normalize(dir.xz),sh2),0.),6.);\n" +
     "  nearC+=uSunD*smoothstep(2.5*pix,0.,hn-el)*back*.5;\n" +
-    "  if(uLights>.01){\n" +
+    // חלונות העיר; בשבת/חג — נרות שנדלקים בית אחר בית (סף אקראי לכל בית) עם להבה כתומה מרצדת,
+    // ובחנוכה — בכל לילה עוד בתים (uMen). הנרות נראים כבר בדמדומים, עוד לפני שאורות העיר נדלקים.
+    // במוצאי שבת/חג (uWake) העיר "מתעוררת": עוד חלונות נדלקים באור לבן-חם של חשמל
+    "  float candA=max(uWin,uMen)*uWinV;\n" +
+    "  if(uLights>.01||candA>.01){\n" +
     "    vec2 g=vec2(azD*uLc.x,degrees(el)*uLc.y);vec2 gi=floor(g),gf=fract(g)-.5;float r=h12(gi+.7);\n" +
     "    float cl=smoothstep(.38,.62,fbm1(azD*.13+2.));\n" +
     "    float pr=(el>hn-1.8*D2R?.3:.22*exp(-depth*1.2)*(.3+cl))*cityM+.03*(1.-cityM)*cl;\n" +
-    "    if(r<pr){\n" +
-    "      vec3 lc=mix(vec3(1.,.68,.34),vec3(1.,.93,.8),step(pr*.55,r));\n" +
-    "      nearC+=lc*smoothstep(.32,0.,length(gf*vec2(1.,1.3)))*uLights*(.75+.25*sin(uTime*1.7+r*90.));\n" +
+    "    float prE=pr*(1.+.7*uWake);\n" +
+    "    float prC=max(pr*(1.+.5*max(uWin,uMen)),prE);\n" +
+    "    if(r<prC){\n" +
+    "      float spt=smoothstep(.32,0.,length(gf*vec2(1.,1.3)));\n" +
+    "      vec3 lc=mix(vec3(1.,.68,.34),vec3(1.,.93,.8),max(step(pr*.55,r),step(pr,r)));\n" +
+    "      float kk=h12(gi+4.2);\n" +
+    "      float cand=step(r,prC*.8)*max(smoothstep(kk*.8,kk*.8+.2,uWin),step(kk,uMen))*uWinV;\n" +
+    "      float fl=.62+.38*sin(uTime*(6.+r*17.)+r*40.)*sin(uTime*2.3+r*11.);\n" +
+    "      nearC+=lc*spt*uLights*step(r,prE)*(.75+.25*sin(uTime*1.7+r*90.))*(1.-cand)+vec3(1.,.6,.22)*spt*cand*fl*1.3;\n" +
     "    }\n" +
     "  }\n" +
     "  col=mix(col,nearC,mn);\n" +
@@ -540,30 +815,208 @@
     "    }\n" +
     "    col=mix(col,fg,mg);\n" +
     "  }\n" +
+    // שבת/חג: גוון קולנועי (צללים בצבע המועד, אורות זהב), הילת נרות חמה מהעיר וגוון עמוק בפינה העליונה;
+    // ט' באב — שמיים מאופקים (פחות צבע, מעט כהים יותר)
+    "  if(uGrade>.001||uFest>.001){\n" +
+    "    float lg=dot(col,vec3(.299,.587,.114));\n" +
+    "    vec3 tone=mix(uShadC,uHighC,smoothstep(0.,.8,lg));\n" +
+    // ביום הגוון מרוכז באופק ובנוף, והכחול נשמר במרום (בדמו כל הרקיע הפך ל"ספיה" אפורה בצהריים)
+    "    col=mix(col,tone*(.3+1.15*lg)+col*.15,uGrade*mix(1.,.18+.82*hz,uDay));\n" +
+    // ...ובמרום — הכחול נוטה לגוון המועד (בשבת: כחול-סגלגל מלכותי) במקום להתאפר
+    "    vec3 vh=uShadC/max(max(uShadC.r,max(uShadC.g,uShadC.b)),.01);\n" +
+    "    col=mix(col,col*mix(vec3(1.),vh*1.3,.55),uGrade*uDay*(1.-hz)*.7);\n" +
+    "    col+=uHighC*.08*uDay*uFest*(.3+.7*hz);\n" +
+    "    vec2 q1=(uv-vec2(.5,-.08))*vec2(1.,2.1);\n" +
+    "    col+=uGlowC*exp(-dot(q1,q1)*2.4)*uGlowA*.42;\n" +
+    "    vec2 q2=(uv-vec2(.06,1.05))*vec2(1.2,2.),q3=(uv-vec2(.94,1.05))*vec2(1.2,2.);\n" +
+    "    col+=uShadC*(exp(-dot(q2,q2)*3.)+exp(-dot(q3,q3)*3.))*uFest*.38;\n" +
+    "  }\n" +
+    "  if(uSubdue>.001){float lg2=dot(col,vec3(.299,.587,.114));col=mix(col,vec3(lg2)*vec3(.9,.94,1.02),uSubdue*.6)*(1.-.14*uSubdue);}\n" +
     "  col=min(col,vec3(1.));\n" +
-    // קריאות: הכהיה כללית ביום, ויניטה, והחשכה רכה באזור הכותרת (כמו ה-scrim בדמו)
+    // קריאות: הכהיה כללית ביום, ויניטה, והחשכה רכה באזור הכותרת (כמו ה-scrim בדמו; במועד — בגוון המועד)
     "  col*=1.-uDim;\n" +
     "  vec2 vq=uv-.5;col*=1.-.22*dot(vq,vq);\n" +
     "  vec2 sq=(uv-vec2(.5,.8))/vec2(.78,.42);\n" +
-    "  col=mix(col,vec3(.016,.035,.094),smoothstep(.85,0.,length(sq))*uScrim);\n" +
+    "  col=mix(col,mix(vec3(.016,.035,.094),uShadC*.32,uFest*.7),smoothstep(.85,0.,length(sq))*uScrim);\n" +
     "  col+=(h12(gl_FragCoord.xy+fract(uTime*.37)*91.)-.5)/160.;\n" +
     "  gl_FragColor=vec4(col,1.);\n" +
     "}";
 
+  /* ── שבתות וחגים: חלקיקים (נקודות GL, התנועה מחושבת כולה בשיידר — אפס עבודת CPU לחלקיק)
+     ועיטור בראש הדף (טקסטורה שמצוירת פעם אחת ונגללת עם הדף). שניהם על אותו קנבס, אחרי השמיים.
+     סוגים: 0 אבק זהב עולה · 1 ניצוץ (כוכב ארבע קרניים) · 2 בועת אור רכה · 3 רימון · 4 עלה ·
+     5 עלה כותרת · 6 קונפטי. aS — ערכים אקראיים, aC — צבע + סוג. ── */
+  var PART_VS = "attribute vec4 aS;attribute vec4 aC;\n" +
+    "uniform float uT,uAmt,uDay,uPx,uLk;\n" +
+    "varying vec4 vC;varying float vK,vRot,vSq;\n" +
+    "void main(){\n" +
+    "  float k=aC.w;vec4 s=aS;float x=s.x,y=s.y,sz=1.,a=1.,rot=0.,sq=1.;\n" +
+    "  if(k<.5){y=fract(s.y+uT*(.008+.02*s.w));x=s.x+.012*sin(uT*.5+s.z*6.283);sz=(1.4+2.6*s.z*s.z)*uPx;\n" +
+    "    a=(.55+.45*sin(uT*(1.+2.*s.w)+s.z*40.))*smoothstep(0.,.1,y)*smoothstep(1.,.8,y)*(.5+.5*(1.-uDay));}\n" +
+    "  else if(k<1.5){y=.42+.56*s.y;sz=(7.+7.*s.z)*uPx;a=pow(max(0.,sin(uT*(.45+.8*s.w)+s.z*31.)),8.)*(1.-.85*uDay);}\n" +
+    "  else if(k<2.5){y=fract(s.y+uT*(.004+.006*s.w));x=s.x+.02*sin(uT*.3+s.z*6.283);sz=(18.+28.*s.z)*uPx;a=.2*smoothstep(0.,.15,y)*smoothstep(1.,.75,y);}\n" +
+    "  else if(k<3.5){y=fract(s.y+uT*(.01+.022*s.w));x=s.x+.015*sin(uT*.6+s.z*6.283);sz=(2.+2.4*s.z)*uPx;a=.9*smoothstep(0.,.1,y)*smoothstep(1.,.8,y);}\n" +
+    "  else if(k<4.5){y=1.-fract(s.y+uT*(.016+.02*s.w));x=fract(s.x+.05*sin(uT*.9+s.z*6.283)+uT*.004);sz=(11.+7.*s.z)*uPx;\n" +
+    "    rot=uT*(s.w-.5)*2.4+s.z*6.283;sq=cos(uT*(1.+s.w)+s.z*9.);a=.95*smoothstep(0.,.06,y)*smoothstep(1.,.94,y);}\n" +
+    "  else if(k<5.5){y=1.-fract(s.y+uT*(.015+.02*s.w));x=fract(s.x+uT*(.006+.008*s.z)+.03*sin(uT*1.1+s.z*6.283));sz=(9.+6.*s.z)*uPx;\n" +
+    "    rot=uT*(s.w-.5)*3.+s.z*6.283;sq=.55+.45*cos(uT*1.3*(1.+s.w)+s.z*9.);a=.92*smoothstep(0.,.06,y)*smoothstep(1.,.94,y);}\n" +
+    "  else if(k<6.5){y=1.-fract(s.y+uT*(.035+.04*s.w));x=fract(s.x+.025*sin(uT*1.4+s.z*6.283));sz=(7.+5.*s.z)*uPx;\n" +
+    "    rot=uT*(s.w-.5)*7.+s.z*6.283;sq=cos(uT*(2.+3.*s.w)+s.z*9.);a=.95*smoothstep(0.,.05,y)*smoothstep(1.,.95,y);}\n" +
+    // גץ (מוצאי שבת): עולה מהר מהעיר, מתנדנד, מהבהב ודועך לפני שמגיע למעלה — כמו מנר ההבדלה
+    "  else{y=fract(s.y+uT*(.03+.045*s.w));x=s.x+.025*sin(uT*1.7+s.z*6.283)+.01*sin(uT*5.3+s.w*9.);sz=(1.8+2.4*s.z)*uPx;\n" +
+    "    a=(.55+.45*sin(uT*(7.+6.*s.w)+s.z*50.))*smoothstep(0.,.05,y)*(1.-smoothstep(.3+.35*s.z,.62+.3*s.z,y));}\n" +
+    "  vK=k;vRot=rot;vSq=sq;\n" +
+    "  vC=vec4(aC.rgb*(k>3.5?uLk:1.),a*uAmt);\n" +
+    "  gl_Position=vec4(x*2.-1.,y*2.-1.,0.,1.);\n" +
+    "  gl_PointSize=sz;\n" +
+    "}";
+  // אבק/ניצוצות/אור — מתווספים (alpha 0); עלים/קונפטי — ציור רגיל (premultiplied)
+  var PART_FS = "precision mediump float;\n" +
+    "varying vec4 vC;varying float vK,vRot,vSq;\n" +
+    "void main(){\n" +
+    "  vec2 p=gl_PointCoord*2.-1.;\n" +
+    "  float c=cos(vRot),s=sin(vRot);p=vec2(c*p.x-s*p.y,s*p.x+c*p.y);\n" +
+    "  float d=length(p),a=0.,add=1.;vec3 rgb=vC.rgb;\n" +
+    "  if(vK<.5||vK>6.5)a=exp(-d*d*6.)*.45+smoothstep(.34,.05,d);\n" +
+    "  else if(vK<1.5)a=max(1.-abs(p.x)*7.,0.)*max(1.-abs(p.y),0.)+max(1.-abs(p.y)*7.,0.)*max(1.-abs(p.x),0.)+exp(-d*d*14.)*.8;\n" +
+    "  else if(vK<2.5)a=exp(-d*d*3.2)*.55;\n" +
+    "  else if(vK<3.5)a=exp(-d*d*6.)*.35+smoothstep(.32,.04,d);\n" +
+    "  else if(vK<6.5){add=0.;\n" +
+    "    if(vK<4.5){vec2 q=vec2(p.x,p.y/max(abs(vSq),.18));a=smoothstep(1.,.82,length(q*vec2(1.,2.2)));rgb*=.8+.2*step(.07,abs(q.y));}\n" +
+    "    else if(vK<5.5){vec2 q=vec2(p.x,p.y/max(abs(vSq),.25));a=smoothstep(1.,.78,length(q*vec2(1.,1.5)));}\n" +
+    "    else{vec2 q=vec2(p.x,p.y/max(abs(vSq),.12));a=smoothstep(.95,.8,abs(q.x))*smoothstep(.5,.36,abs(q.y));}\n" +
+    "  }\n" +
+    "  a*=vC.a;\n" +
+    "  gl_FragColor=vec4(rgb*a,a*(1.-add));\n" +
+    "}";
+  // עיטור בראש הדף: מלבן ברוחב המסך שנגלל עם הדף; בלילה כהה וכחלחל, פנסי הסוכה זוהרים
+  var DECO_VS = "attribute vec2 p;uniform float uTop,uH,uVH;varying vec2 vUV;\n" +
+    "void main(){vUV=p;float yc=uTop+p.y*uH;gl_Position=vec4(p.x*2.-1.,1.-yc/uVH*2.,0.,1.);}";
+  var DECO_FS = "precision mediump float;\n" +
+    "uniform sampler2D uTex,uGlowT;uniform float uA,uL,uT,uGA;varying vec2 vUV;\n" +
+    "void main(){\n" +
+    "  vec2 uv=vUV;uv.x+=sin(uT*1.3+uv.x*37.)*.0014*uv.y;\n" +
+    "  vec4 c=texture2D(uTex,uv);\n" +
+    "  gl_FragColor=vec4(c.rgb*mix(vec3(.16,.18,.3),vec3(1.),clamp(uL,0.,1.)),c.a)*uA+vec4(texture2D(uGlowT,uv).rgb*uGA,0.);\n" +
+    "}";
+  var PK = { dust: 0, spark: 1, orb: 2, ruby: 3, leaf: 4, petal: 5, confetti: 6, ember: 7 };
+  function partColor(th, kind, i) {
+    var P = FEST[th];
+    if (kind === "dust") return P.dust;
+    if (kind === "ember") return [[1, .55, .2], [1, .72, .32], [1, .42, .16]][i % 3];
+    if (kind === "spark") return [1, .95, .82];
+    if (kind === "orb") return th === "yk" ? [.92, .95, 1] : th === "pesach7" ? [.8, .9, 1] : th === "motzei" ? [.62, .7, 1] : [1, .88, .66];
+    if (kind === "ruby") return [.92, .22, .32];
+    if (kind === "leaf") return i % 2 ? [.28, .47, .19] : [.59, .55, .24];
+    if (kind === "petal") return (th === "shavuot" ? [[1, 1, 1], [.99, .9, .54], [.98, .81, .91]] : [[.98, .81, .91], [1, .96, .97], [.98, .66, .83]])[i % 3];
+    var cf = th === "purim" ? [[.96, .45, .71], [.65, .55, .98], [.2, .83, .6], [.98, .75, .14], [.38, .65, .98]] : [[.23, .51, .96], [1, 1, 1], [.95, .85, .54], [.11, .3, .85], [.88, .72, .31]];
+    return cf[i % cf.length];
+  }
+  // ציור העיטור (פעם אחת לכל מועד/גודל) — סכך עם קורות ונויי סוכה, דגלוני שמחת תורה, זר שבועות
+  function decoCanvas(kind, FW, FH, k) {
+    var hs = kind === "sukkah" ? Math.round(clamp(FH * .16, 80, 150)) : 0;
+    var Hc = kind === "sukkah" ? Math.round(hs * 1.75 + 34) : kind === "garland" ? Math.round(Math.min(60, FH * .07) + 30) : Math.round(Math.min(66, FH * .078) + 34);
+    var c = document.createElement("canvas"); c.width = Math.max(2, Math.round(FW * k)); c.height = Math.max(2, Math.round(Hc * k));
+    var x = c.getContext("2d"), g = null, gx = null, sd = 11, i, xx, yy;
+    x.scale(k, k);
+    function R() { sd = (sd * 16807) % 2147483647; return sd / 2147483647; }
+    function rr(cx, X, Y, w, h, r) { cx.beginPath(); if (cx.roundRect) cx.roundRect(X, Y, w, h, r); else cx.rect(X, Y, w, h); }
+    if (kind === "sukkah") {
+      var n = Math.ceil(FW / 64) + 3;
+      for (i = 0; i < n; i++) {
+        var x0 = (i - 1) * FW / (n - 3) + (R() - .5) * 26, dir = R() < .5 ? -1 : 1, len = hs * (.7 + R() * .6);
+        var ex = x0 + dir * (36 + R() * 70), ey = len, cx1 = x0 + dir * (8 + R() * 24), cy1 = len * .3, col = [[20, 48, 22], [28, 64, 28], [38, 80, 34]][Math.floor(R() * 3)];
+        x.strokeStyle = "rgb(" + col + ")"; x.lineCap = "round";
+        for (var kq = 0; kq <= 24; kq++) {
+          var u = kq / 24, iu = 1 - u;
+          var px = iu * iu * x0 + 2 * iu * u * cx1 + u * u * ex, py = iu * iu * (-10) + 2 * iu * u * cy1 + u * u * ey;
+          var tx = 2 * iu * (cx1 - x0) + 2 * u * (ex - cx1), ty = 2 * iu * (cy1 + 10) + 2 * u * (ey - cy1), tl = Math.hypot(tx, ty) || 1, ux = tx / tl, uy = ty / tl, L = (1 - u * .6) * (24 + R() * 9);
+          for (var sg = -1; sg <= 1; sg += 2) {
+            var lx = px + (-uy * sg + ux * .55) * L, ly = py + (ux * sg + uy * .55) * L + L * .28;
+            x.lineWidth = 2.1 * (1 - u * .5); x.beginPath(); x.moveTo(px, py); x.quadraticCurveTo((px + lx) / 2, (py + ly) / 2 + L * .12, lx, ly); x.stroke();
+          }
+        }
+        x.lineWidth = 2.6; x.strokeStyle = "rgb(" + col.map(function (v) { return v * .8 | 0; }) + ")"; x.beginPath(); x.moveTo(x0, -10); x.quadraticCurveTo(cx1, cy1, ex, ey); x.stroke();
+      }
+      [[hs * .12, 10], [hs * .46, 8]].forEach(function (b) {
+        var gr = x.createLinearGradient(0, b[0] - b[1] / 2, 0, b[0] + b[1] / 2);
+        gr.addColorStop(0, "#5b3d18"); gr.addColorStop(.45, "#c79b5c"); gr.addColorStop(1, "#5f411b");
+        x.fillStyle = gr; x.fillRect(0, b[0] - b[1] / 2, FW, b[1]);
+        x.fillStyle = "rgba(60,38,14,.75)"; for (var nx = R() * 60; nx < FW; nx += 90 + R() * 60) x.fillRect(nx, b[0] - b[1] / 2, 3, b[1]);
+      });
+      // נויי סוכה תלויים (פנסים, רימונים, מגן דוד, אתרוגים); הפנסים זוהרים בלילה (טקסטורה נפרדת)
+      g = document.createElement("canvas"); g.width = c.width; g.height = c.height; gx = g.getContext("2d"); gx.scale(k, k);
+      var xs = FW < 760 ? [.06, .19, .81, .94] : [.05, .13, .22, .78, .87, .95], beamY = hs * .46;
+      xs.forEach(function (f, ii) {
+        var ax = f * FW, ln = hs * (.55 + ((ii * 37) % 10) / 10 * .6), ox = ax, oy = beamY + ln, type = ["lantern", "pom", "star", "etrog", "pom", "lantern"][ii % 6];
+        x.strokeStyle = "rgba(230,220,190,.75)"; x.lineWidth = 1; x.beginPath(); x.moveTo(ax, beamY); x.lineTo(ox, oy); x.stroke();
+        if (type === "lantern") {
+          x.fillStyle = "#b8862f"; x.fillRect(ox - 6, oy, 12, 3); x.fillStyle = "rgba(255,214,140,.95)"; rr(x, ox - 8, oy + 3, 16, 20, 4); x.fill();
+          x.strokeStyle = "#8a5a12"; x.lineWidth = 1.4; x.stroke(); x.fillStyle = "#b8862f"; x.fillRect(ox - 6, oy + 23, 12, 3);
+          var gg = gx.createRadialGradient(ox, oy + 12, 0, ox, oy + 12, 48); gg.addColorStop(0, "rgba(255,190,90,.6)"); gg.addColorStop(1, "rgba(255,190,90,0)");
+          gx.fillStyle = gg; gx.beginPath(); gx.arc(ox, oy + 12, 48, 0, 6.2832); gx.fill();
+        } else if (type === "pom") {
+          var gp = x.createRadialGradient(ox - 3, oy + 9, 1, ox, oy + 11, 11); gp.addColorStop(0, "#f87171"); gp.addColorStop(1, "#7f1d1d");
+          x.fillStyle = gp; x.beginPath(); x.arc(ox, oy + 11, 9, 0, 6.2832); x.fill();
+          x.fillStyle = "#7f1d1d"; x.beginPath(); x.moveTo(ox - 3, oy + 3); x.lineTo(ox - 4, oy - 1); x.lineTo(ox, oy + 2); x.lineTo(ox + 4, oy - 1); x.lineTo(ox + 3, oy + 3); x.fill();
+        } else if (type === "star") {
+          x.strokeStyle = "#e0b74f"; x.lineWidth = 2;
+          for (var r0 = 0; r0 < 2; r0++) { x.beginPath(); for (var kk = 0; kk < 3; kk++) { var an = r0 * Math.PI + kk * 2.0944 - Math.PI / 2, sx = ox + Math.cos(an) * 11, sy = oy + 12 + Math.sin(an) * 11; if (kk) x.lineTo(sx, sy); else x.moveTo(sx, sy); } x.closePath(); x.stroke(); }
+        } else {
+          var ge = x.createRadialGradient(ox - 3, oy + 9, 1, ox, oy + 12, 13); ge.addColorStop(0, "#fef08a"); ge.addColorStop(1, "#ca8a04");
+          x.fillStyle = ge; x.beginPath(); x.ellipse(ox, oy + 12, 8, 11, 0, 0, 6.2832); x.fill();
+        }
+      });
+    } else if (kind === "garland") {
+      var sag = Math.min(60, FH * .07), yAt = function (q) { return 6 + sag * (1 - Math.pow((q - FW / 2) / (FW / 2), 2)); };
+      x.strokeStyle = "#3b6b2f"; x.lineWidth = 3; x.beginPath();
+      for (xx = -10; xx <= FW + 10; xx += 6) { yy = yAt(xx); if (xx === -10) x.moveTo(xx, yy); else x.lineTo(xx, yy); }
+      x.stroke();
+      for (xx = 0, i = 0; xx < FW; xx += 11, i++) {
+        yy = yAt(xx); var sl = Math.atan2(yAt(xx + 1) - yy, 1), sgn = i % 2 ? 1 : -1;
+        x.save(); x.translate(xx, yy); x.rotate(sl + sgn * .75); x.fillStyle = sgn > 0 ? "#4f8a3c" : "#3f7a34"; x.beginPath(); x.ellipse(7, 0, 7, 3.1, 0, 0, 6.2832); x.fill(); x.restore();
+      }
+      var FC = [["#ffffff", "#facc15"], ["#fbcfe8", "#f59e0b"], ["#fde68a", "#d97706"]];
+      for (xx = 24, i = 0; xx < FW; xx += 48, i++) {
+        yy = yAt(xx) + 3; x.fillStyle = FC[i % 3][0];
+        for (var a5 = 0; a5 < 5; a5++) { var an5 = a5 * 1.2566 + i; x.beginPath(); x.ellipse(xx + Math.cos(an5) * 4.6, yy + Math.sin(an5) * 4.6, 4.4, 2.9, an5, 0, 6.2832); x.fill(); }
+        x.fillStyle = FC[i % 3][1]; x.beginPath(); x.arc(xx, yy, 2.4, 0, 6.2832); x.fill();
+      }
+    } else {
+      // דגלוני שמחת תורה — שתי שורות בכחול, לבן וזהב
+      [[8, Math.min(40, FH * .05)], [-6, Math.min(66, FH * .078)]].forEach(function (row, ri) {
+        var y0 = row[0], sg2 = row[1], yA = function (q) { return y0 + sg2 * (1 - Math.pow((q - FW / 2) / (FW / 2), 2)); };
+        x.strokeStyle = "rgba(240,230,200,.85)"; x.lineWidth = 1.3; x.beginPath();
+        for (xx = -10; xx <= FW + 10; xx += 8) { if (xx === -10) x.moveTo(xx, yA(xx)); else x.lineTo(xx, yA(xx)); }
+        x.stroke();
+        for (xx = ri * 17, i = ri; xx < FW; xx += 34, i++) {
+          var x2 = xx + 34 * .78, y1 = yA(xx), y2 = yA(x2), mx = (xx + x2) / 2;
+          x.fillStyle = ["#1d4ed8", "#f8fafc", "#e0b74f"][i % 3]; x.beginPath(); x.moveTo(xx, y1); x.lineTo(x2, y2); x.lineTo(mx, (y1 + y2) / 2 + 24); x.closePath(); x.fill();
+          x.fillStyle = "rgba(0,0,0,.14)"; x.beginPath(); x.moveTo(mx, (y1 + y2) / 2); x.lineTo(x2, y2); x.lineTo(mx, (y1 + y2) / 2 + 24); x.closePath(); x.fill();
+        }
+      });
+    }
+    return { c: c, g: g, h: Hc };
+  }
+
   /* ── WebGL ── */
-  var cv = null, gl = null, ext = null, prog = null, lutProg = null, fb = null, lutTex = null, U = {}, UL = {};
+  var cv = null, gl = null, ext = null, prog = null, lutProg = null, fb = null, lutTex = null, U = {}, UL = {}, triBuf = null;
+  // משאבי המועד (נוצרים רק כשיש מועד — ביום חול לא מקמפלים כלום)
+  var fP = null, fD = null, fUP = {}, fUD = {}, fBuf = null, fN = 0, fKey = "", quadBuf = null, dTex = null, dGlow = null, nullTex = null, dKey = "", dH = 0, fReady = false, festBroken = false;
+  function festReset() { fP = fD = fBuf = quadBuf = dTex = dGlow = nullTex = null; fReady = false; fKey = dKey = ""; fN = 0; }
   var glReady = false, nogl = false, started = false;
   function makeShader(type, src) { var s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); return s; }
-  function makeProg(fs) {
+  function makeProg(fs, vs, attrs) {
     var p = gl.createProgram();
-    gl.attachShader(p, makeShader(gl.VERTEX_SHADER, VS));
+    gl.attachShader(p, makeShader(gl.VERTEX_SHADER, vs || VS));
     gl.attachShader(p, makeShader(gl.FRAGMENT_SHADER, fs));
-    gl.bindAttribLocation(p, 0, "p");
+    (attrs || ["p"]).forEach(function (a, i) { gl.bindAttribLocation(p, i, a); });
     gl.linkProgram(p);
     return p;
   }
   function initGL() {
     try {
+      festReset();
       gl = cv.getContext("webgl", { antialias: false, alpha: false, depth: false, stencil: false, preserveDrawingBuffer: false, powerPreference: mobile ? "low-power" : "high-performance", failIfMajorPerformanceCaveat: true });
       if (!gl) return false;
       var pf = gl.getShaderPrecisionFormat(gl.FRAGMENT_SHADER, gl.HIGH_FLOAT);
@@ -576,7 +1029,7 @@
     } catch (e) { return false; }
   }
   function finishGL() {
-    var b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b);
+    var b = triBuf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
     gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
     lutTex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, lutTex);
@@ -590,10 +1043,103 @@
     if (!ok) return false;
     ["uSun", "uExp"].forEach(function (n) { UL[n] = gl.getUniformLocation(lutProg, n); });
     ["uLUT", "uRes", "uWind", "uLc", "uSunUV", "uYaw", "uPitch", "uSpanX", "uSpanY", "uHorV", "uPix", "uCren", "uSun", "uSunC", "uSunD", "uMoon", "uAmb", "uLand", "uS3",
-      "uLow", "uMoonV", "uMoonF", "uStars", "uNight", "uLights", "uDay", "uTime", "uCover", "uLST", "uLat", "uMetA", "uScrim", "uDim", "uRays", "uStar3", "uMill", "uMet", "uPlane"
+      "uLow", "uMoonV", "uMoonF", "uStars", "uNight", "uLights", "uDay", "uTime", "uCover", "uLST", "uLat", "uMetA", "uScrim", "uDim", "uRays", "uStar3", "uMill", "uMet", "uPlane",
+      "uFest", "uGrade", "uGlowA", "uWin", "uWinV", "uMen", "uSubdue", "uWake", "uShadC", "uHighC", "uGlowC"
     ].forEach(function (n) { U[n] = gl.getUniformLocation(prog, n); });
     lastLut = null;
     return true;
+  }
+  // תוכניות המועד — מקומפלות ברקע בפעם הראשונה שיש מועד, ומשמשות מהפריים שבו הקומפילציה הסתיימה
+  function festGL() {
+    if (fReady) return true;
+    if (festBroken || !gl) return false;
+    try {
+      if (!fP) {
+        fP = makeProg(PART_FS, PART_VS, ["aS", "aC"]);
+        fD = makeProg(DECO_FS, DECO_VS, ["p"]);
+        return false;
+      }
+      if (ext && (!gl.getProgramParameter(fP, ext.COMPLETION_STATUS_KHR) || !gl.getProgramParameter(fD, ext.COMPLETION_STATUS_KHR))) return false;
+      if (!gl.getProgramParameter(fP, gl.LINK_STATUS) || !gl.getProgramParameter(fD, gl.LINK_STATUS)) {
+        try { console.warn("[sky] fest shader link failed:", gl.getProgramInfoLog(fP) || gl.getProgramInfoLog(fD)); } catch (e) {}
+        festBroken = true; return false;
+      }
+      ["uT", "uAmt", "uDay", "uPx", "uLk"].forEach(function (n) { fUP[n] = gl.getUniformLocation(fP, n); });
+      ["uTop", "uH", "uVH", "uTex", "uGlowT", "uA", "uL", "uT", "uGA"].forEach(function (n) { fUD[n] = gl.getUniformLocation(fD, n); });
+      fBuf = gl.createBuffer();
+      quadBuf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, quadBuf);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([0, 0, 1, 0, 0, 1, 1, 1]), gl.STATIC_DRAW);
+      nullTex = texOf(null);
+      gl.bindBuffer(gl.ARRAY_BUFFER, triBuf);
+      fReady = true;
+      return true;
+    } catch (e) { festBroken = true; return false; }
+  }
+  // טקסטורה מקנבס דו-ממדי (premultiplied); בלי קנבס — פיקסל שקוף אחד
+  function texOf(canvas, tex) {
+    tex = tex || gl.createTexture();
+    gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
+    if (canvas) gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, canvas);
+    else gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(4));
+    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.activeTexture(gl.TEXTURE0);
+    return tex;
+  }
+  function buildParts(th) {
+    var P = FEST[th], data = [], mul = mobile ? .6 : 1;
+    (P ? P.parts : []).forEach(function (s) {
+      for (var i = 0, n = Math.round(s[1] * mul); i < n; i++) {
+        var c = partColor(th, s[0], i);
+        data.push(Math.random(), Math.random(), Math.random(), Math.random(), c[0], c[1], c[2], PK[s[0]]);
+      }
+    });
+    gl.bindBuffer(gl.ARRAY_BUFFER, fBuf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data.length ? data : [0, 0, 0, 0, 0, 0, 0, 0]), gl.STATIC_DRAW);
+    fN = data.length / 8; fKey = th;
+  }
+  function buildDeco(kind) {
+    dKey = kind + "|" + RW + "x" + RH;
+    try {
+      var d = decoCanvas(kind, W, H, RW / W);
+      dTex = texOf(d.c, dTex); dGlow = d.g ? texOf(d.g, dGlow) : null; dH = d.h;
+    } catch (e) { dTex = null; }
+  }
+  // אחרי ציור השמיים: עיטור בראש הדף ואז החלקיקים (שילוב premultiplied: ONE, ONE_MINUS_SRC_ALPHA)
+  function festDraw(F, t, day) {
+    if (!festGL()) return;
+    var tt = reduce ? 3 : (t / 1000) % 100000;
+    var L = .24 + .76 * day + .28 * F.glow;
+    gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+    if (F.deco > .01 && F.decoK) {
+      if (dKey !== F.decoK + "|" + RW + "x" + RH) buildDeco(F.decoK);
+      var sy = 0; try { sy = window.scrollY || 0; } catch (e) {}
+      if (dTex && sy < dH + 10) {
+        gl.useProgram(fD);
+        gl.bindBuffer(gl.ARRAY_BUFFER, quadBuf); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+        gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, dTex); gl.uniform1i(fUD.uTex, 1);
+        gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, dGlow || nullTex); gl.uniform1i(fUD.uGlowT, 2);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.uniform1f(fUD.uTop, -sy); gl.uniform1f(fUD.uH, dH); gl.uniform1f(fUD.uVH, H);
+        gl.uniform1f(fUD.uA, F.deco); gl.uniform1f(fUD.uL, L); gl.uniform1f(fUD.uT, tt); gl.uniform1f(fUD.uGA, F.deco * (1 - day) * .9);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      }
+    }
+    if (F.parts > .01 && FEST[F.th] && FEST[F.th].parts.length) {
+      if (fKey !== F.th) buildParts(F.th);
+      if (fN) {
+        gl.useProgram(fP);
+        gl.bindBuffer(gl.ARRAY_BUFFER, fBuf);
+        gl.vertexAttribPointer(0, 4, gl.FLOAT, false, 32, 0);
+        gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1, 4, gl.FLOAT, false, 32, 16);
+        gl.uniform1f(fUP.uT, tt); gl.uniform1f(fUP.uAmt, F.parts); gl.uniform1f(fUP.uDay, day); gl.uniform1f(fUP.uPx, RW / W); gl.uniform1f(fUP.uLk, .45 + .55 * Math.min(1, L));
+        gl.drawArrays(gl.POINTS, 0, fN);
+        gl.disableVertexAttribArray(1);
+      }
+    }
+    gl.disable(gl.BLEND);
+    gl.bindBuffer(gl.ARRAY_BUFFER, triBuf); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
   }
   // הקומפילציה רצה ברקע (KHR_parallel_shader_compile); בודקים בכל פריים אם הסתיימה
   function glPoll() {
@@ -777,6 +1323,9 @@
     // קריאות: הכהיה ביום + scrim באזור הכותרת (לא בלילה — שהכוכבים יישארו חדים)
     var dim = .22 * day, scrim = (.3 + .42 * day) * (1 - night * .92);
     var rays = smooth(-3 * RAD, 2 * RAD, sp.alt) * smooth(14 * RAD, 4 * RAD, sp.alt);
+    // שבת/חג: מצב המועד ברגע הזה (בזמן ההלכתי של השמיים — גם באנימציית הכניסה ובדמו)
+    var F = festFrame(sim, sp.alt);
+    if (F.rays > rays) rays = F.rays;
     var sunUV = [.5 + wrapPi(sp.azS + Math.PI - yaw) / view.spanX, view.horV + (sp.alt - pitch) / view.spanY];
 
     gl.viewport(0, 0, RW, RH); gl.useProgram(prog);
@@ -792,12 +1341,16 @@
     gl.uniform1f(U.uMetA, metA); gl.uniform1f(U.uScrim, scrim); gl.uniform1f(U.uDim, dim); gl.uniform1f(U.uRays, rays); gl.uniform1f(U.uStar3, star3);
     gl.uniform4f(U.uMet, met ? met.az : 0, met ? met.el : 0, met ? met.ang : 0, metP);
     gl.uniform1f(U.uMill, mill); gl.uniform4f(U.uPlane, plAz, plEl, plA, 0);
+    gl.uniform1f(U.uFest, F.on * F.lv); gl.uniform1f(U.uGrade, F.on * F.grade); gl.uniform1f(U.uGlowA, F.glow);
+    gl.uniform1f(U.uWin, F.win); gl.uniform1f(U.uWinV, F.winV); gl.uniform1f(U.uMen, F.men); gl.uniform1f(U.uSubdue, F.subdue); gl.uniform1f(U.uWake, F.wake);
+    gl.uniform3fv(U.uShadC, F.shadC); gl.uniform3fv(U.uHighC, F.high); gl.uniform3fv(U.uGlowC, F.glowC);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
+    if (F.parts > .01 || F.deco > .01) festDraw(F, t, day);
 
     drawn++; if (drawn === 1) firstDrawMs = Math.round(performance.now() - startedAt);
     if (!fadedIn) { fadedIn = true; cv.classList.add("lux-sky-on"); }
     // סנכרון ל-DOM: 4 פעמים בשנייה בזמן תנועה, פעם בשנייה בזמן אמת
-    if (t - lastDomT > (mode === "live" ? 1000 : 250)) { lastDomT = t; syncDom(sp.alt, eve, zen, hs, day); }
+    if (t - lastDomT > (mode === "live" ? 1000 : 250)) { lastDomT = t; syncDom(sp.alt, eve, gradeJS(zen, F), gradeJS(hs, F), day); festDom(F); }
     // רזולוציה אדפטיבית: פריימים איטיים ⇒ מקטינים את משטח הציור
     frames++; acc += dt;
     if (frames === 45) { var avg = acc / frames; frames = 0; acc = 0; if (avg > (mobile ? 40 : 26) && scale > .4) { scale = Math.max(.4, scale - .12); layout(); } }
@@ -834,6 +1387,7 @@
         if (html.dataset.sky !== ph) html.dataset.sky = ph;
         html.style.setProperty("--sky-day", smooth(-6 * RAD, 6 * RAD, sp.alt).toFixed(2));
         html.style.setProperty("--sky-glass", (0.36 + 0.28 * smooth(-6 * RAD, 6 * RAD, sp.alt)).toFixed(2));
+        festDom(festFrame(Date.now(), sp.alt)); // גם בלי WebGL — הגרדיאנט ב-CSS מקבל את גוון המועד
       } catch (e) {}
     }
     upd();
@@ -859,7 +1413,11 @@
     if (started) { tick(); return; }
     readLoc(); buildAnchors(true);
     started = true; fadedIn = false; s3 = null; prevAms = null; tw = null; mode = "live"; startedAt = performance.now(); firstDrawMs = 0; drawn = 0;
-    // דגלי דמו: ?sky=HH:MM · ?sky=play
+    // דגלי דמו: ?sky=HH:MM · ?sky=play · ?fest=shabbat[&festday=1]
+    try {
+      var fq = new URLSearchParams(location.search), fk = fq.get("fest");
+      FEST_DEMO = fk && (FEST[fk] || fk === "av9" || fk === "chol-sukkot" || fk === "chol-pesach") ? { key: fk, day: clamp(parseInt(fq.get("festday"), 10) || 0, 0, 8) } : null;
+    } catch (e) {}
     try {
       var q = new URLSearchParams(location.search).get("sky");
       if (q === "play") play = { t0: dayStart(Date.now()), p0: performance.now() };
@@ -894,8 +1452,10 @@
       if (cv.parentNode) cv.parentNode.removeChild(cv);
     }
     cv = null; gl = null; glReady = false; RW = RH = 0; fadedIn = false; domKey = ""; lastLut = null; lastLight = null;
+    festReset(); festAttr = "";
     html.classList.remove("lux-sky-nogl");
     html.removeAttribute("data-sky");
+    html.removeAttribute("data-fest"); html.removeAttribute("data-fest-lvl");
     ["--sky-zen", "--sky-hor", "--sky-glass", "--sky-day"].forEach(function (p) { html.style.removeProperty(p); });
   }
   // זמני היום של האתר חושבו/התעדכנו (עיר חדשה, GPS) — מעגנים מחדש
@@ -906,7 +1466,13 @@
     stop: stop,
     // setTime(ms) מקבע את השמיים לזמן נתון (דמו/בדיקות); setTime(null) חוזר לזמן אמת
     setTime: function (ms) { fixedMs = ms === null || ms === undefined ? null : +ms; play = null; tw = null; mode = "live"; if (started) startLoop(); },
-    state: function () { return { started: started, running: running, drawn: drawn, firstDrawMs: firstDrawMs, frameCpuMs: Math.round(frameCpuMs * 100) / 100, nogl: nogl, mode: mode, sim: sim, astro: warp(sim), anchors: anchors, milestones: milestones, lat: LAT, lng: LNG, scale: scale, size: [RW, RH] }; }
+    state: function () { return { started: started, running: running, drawn: drawn, firstDrawMs: firstDrawMs, frameCpuMs: Math.round(frameCpuMs * 100) / 100, nogl: nogl, mode: mode, sim: sim, astro: warp(sim), anchors: anchors, milestones: milestones, lat: LAT, lng: LNG, scale: scale, size: [RW, RH] }; },
+    // אבחון שבתות וחגים: המועד הנוכחי והציר שסביב היום
+    fest: function () {
+      var F = Fz, T = FT, r = function (v) { return Math.round(v * 1000) / 1000; };
+      return { th: F.th, on: r(F.on), lv: r(F.lv), grade: r(F.grade), win: r(F.win), men: r(F.men), subdue: r(F.subdue), parts: r(F.parts), deco: F.decoK, attr: festAttr, demo: FEST_DEMO, glReady: fReady, broken: festBroken,
+        segs: T ? T.segs.map(function (s) { return { kind: s.kind, th: s.th || s.days.map(function (d) { return d.th; }).join("+"), from: new Date(s.from).toString().slice(0, 24), to: new Date(s.to).toString().slice(0, 24) }; }) : null };
+    }
   };
   if (html.classList.contains("lux-sky")) start();
 })();

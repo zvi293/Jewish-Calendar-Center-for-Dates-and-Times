@@ -9736,3 +9736,114 @@ html.lux-sky[data-sky="day"] body .prayer-btn.prayer-cta-highlight:not(.lux-erev
     border-color: rgba(161, 118, 42, 0.95);
   }
 }
+
+/* ═══════════════════════════════════════════════════════
+   ✦ שמיים חיים — שבתות וחגים (01/10/2026)
+   (1) מצב ערב שבת/חג (lux.js §45): הפאנל, הספירה לאחור וכפתורי "לכבוד שבת" — באותו מקום, תוכן ותזמון
+       (3 שעות לפני ההדלקה); רק המראה מותאם לשמיים. ביום (רקיע בהיר) — זכוכית צלולה כמו כרטיסי הדף
+       שאושרו (לבן 20% + ברק) וכתב כהה / זהב כהה בלי הילה; בלילה ובדמדומים — העיצוב המקורי (כתב
+       בהיר וזהב זוהר) על גוון כחול-לילה קל. גם הספירה הרגילה לכניסת שבת (לפני מצב הערב) קריאה ביום.
+   (2) בלי WebGL (html.lux-sky-nogl): הגרדיאנט לפי שלב היום מקבל את גוון המועד (sky.js כותב data-fest).
+   ═══════════════════════════════════════════════════════ */
+html.lux-sky[data-sky="day"] #lux-erev-panel {
+  background:
+    var(--skyc-gloss),
+    radial-gradient(ellipse 90% 70% at 50% 118%, rgba(255, 176, 64, 0.18) 0%, transparent 60%),
+    var(--skyc-tint);
+  box-shadow: var(--skyc-shadow), 0 0 60px rgba(251, 191, 36, 0.12);
+}
+html.lux-sky[data-sky="day"] .lux-erev-title {
+  background: linear-gradient(100deg, #7a4f0e 0%, #b07d22 22%, #6b430b 40%, #c08a2a 55%, #7a4f0e 72%, #a36f17 88%, #7a4f0e 100%);
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: #7a4f0e;
+  filter: none;
+}
+html.lux-sky[data-sky="day"] .lux-erev-sub { color: var(--skyc-ink); text-shadow: none; }
+html.lux-sky[data-sky="day"] .lux-erev-tag { color: var(--skyc-ink2); }
+html.lux-sky[data-sky="day"] :is(.lux-erev-orn span, .lux-erev-corner) { color: #a1762a; text-shadow: none; }
+html.lux-sky[data-sky="day"] .lux-erev-orn::before { background: linear-gradient(90deg, transparent, rgba(161, 118, 42, 0.85)); }
+html.lux-sky[data-sky="day"] .lux-erev-orn::after { background: linear-gradient(90deg, rgba(161, 118, 42, 0.85), transparent); }
+html.lux-sky[data-sky="day"] .lux-erev-times span { background: var(--skyc-field); border-color: rgba(161, 118, 42, 0.5); color: var(--skyc-ink); box-shadow: none; }
+html.lux-sky[data-sky="day"] .lux-erev-times b,
+html.lux-sky[data-sky="day"] .lux-erev-entered { color: #7a4f0e; text-shadow: none; }
+/* הספירה לאחור — רגילה ובמצב ערב שבת */
+html.lux-sky[data-sky="day"] #shabbat-countdown-bar,
+html.lux-sky[data-sky="day"] body.lux-erev #shabbat-countdown-wrap {
+  background: var(--skyc-gloss), var(--skyc-tint);
+  border-color: rgba(161, 118, 42, 0.7);
+  box-shadow: var(--skyc-shadow);
+}
+html.lux-sky[data-sky="day"] body.lux-erev #shabbat-countdown-bar { background: none; border-color: transparent; box-shadow: none; }
+html.lux-sky[data-sky="day"] #countdown-display,
+html.lux-sky[data-sky="day"] body.lux-erev #countdown-display { color: #7a4f0e !important; text-shadow: none !important; animation: none; }
+html.lux-sky[data-sky="day"] #countdown-label,
+html.lux-sky[data-sky="day"] #countdown-event-type,
+html.lux-sky[data-sky="day"] body.lux-erev #countdown-label,
+html.lux-sky[data-sky="day"] body.lux-erev #countdown-event-type { color: var(--skyc-ink2) !important; text-shadow: none; }
+/* "לכבוד שבת קודש" וכפתורי הערב */
+html.lux-sky[data-sky="day"] .lux-erev-grid-head { color: #7a4f0e; text-shadow: none; }
+html.lux-sky[data-sky="day"] .lux-erev-grid-head::before { background: linear-gradient(90deg, transparent, rgba(161, 118, 42, 0.8)); }
+html.lux-sky[data-sky="day"] .lux-erev-grid-head::after { background: linear-gradient(90deg, rgba(161, 118, 42, 0.8), transparent); }
+html.lux-sky[data-sky="day"] .lux-erev-btn {
+  background: var(--skyc-gloss), var(--skyc-tint) !important;
+  border-color: rgba(161, 118, 42, 0.65) !important;
+  box-shadow: var(--skyc-shadow) !important;
+}
+html.lux-sky[data-sky="day"] .lux-erev-btn .prayer-label { color: var(--skyc-ink); font-weight: 800; text-shadow: none; }
+html.lux-sky[data-sky="day"] .lux-erev-btn.lux-erev-hot {
+  background: var(--skyc-gloss), linear-gradient(170deg, rgba(251, 191, 36, 0.24) 0%, rgba(168, 85, 247, 0.1) 100%), var(--skyc-tint) !important;
+  border-color: rgba(161, 118, 42, 0.9) !important;
+  animation: none;
+}
+html.lux-sky[data-sky="day"] body.lux-erev-chag .lux-erev-btn.lux-erev-hot {
+  background: var(--skyc-gloss), linear-gradient(170deg, rgba(251, 191, 36, 0.22) 0%, rgba(59, 130, 246, 0.12) 100%), var(--skyc-tint) !important;
+}
+html.lux-sky[data-sky="day"] .lux-erev-btn.lux-erev-hot .prayer-label { color: #7a4f0e; }
+@media (hover: hover) {
+  html.lux-sky[data-sky="day"] .lux-erev-btn:hover {
+    background: var(--skyc-gloss), rgba(255, 255, 255, 0.34) !important;
+    border-color: rgba(161, 118, 42, 0.95) !important;
+  }
+}
+/* לילה ודמדומים: העיצוב המקורי על גוון כחול-לילה קל (אורות העיר והילת הנרות מאירים מלמטה) */
+html.lux-sky:not([data-sky="day"]) #lux-erev-panel {
+  background:
+    radial-gradient(ellipse 90% 70% at 50% 118%, rgba(255, 176, 64, 0.16) 0%, transparent 60%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.02) 55%, rgba(255, 200, 90, 0.05)),
+    rgba(12, 18, 44, 0.24);
+}
+html.lux-sky:not([data-sky="day"]) .lux-erev-btn {
+  background: linear-gradient(170deg, rgba(255, 255, 255, 0.10) 0%, rgba(255, 255, 255, 0.03) 55%, rgba(255, 200, 90, 0.06) 100%), rgba(12, 18, 44, 0.24) !important;
+}
+html.lux-sky:not([data-sky="day"]) .lux-erev-btn.lux-erev-hot {
+  background: linear-gradient(170deg, rgba(255, 205, 92, 0.24) 0%, rgba(168, 85, 247, 0.18) 100%), rgba(12, 18, 44, 0.24) !important;
+}
+html.lux-sky:not([data-sky="day"]) body.lux-erev-chag .lux-erev-btn.lux-erev-hot {
+  background: linear-gradient(170deg, rgba(255, 205, 92, 0.24) 0%, rgba(59, 130, 246, 0.20) 100%), rgba(12, 18, 44, 0.24) !important;
+}
+/* בלי WebGL: גוון המועד על הגרדיאנט (שכבת צבע שקופה מעליו) */
+html.lux-sky.lux-sky-nogl[data-fest] body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 120% 60% at 50% 108%, rgba(255, 170, 70, 0.28) 0%, transparent 62%),
+    linear-gradient(180deg, rgba(var(--fest-shad, 76, 29, 149), 0.32) 0%, rgba(var(--fest-shad, 76, 29, 149), 0.08) 60%, transparent 100%);
+}
+html.lux-sky.lux-sky-nogl[data-fest="rh"] body::after { --fest-shad: 127, 29, 29; }
+html.lux-sky.lux-sky-nogl[data-fest="yk"] body::after { --fest-shad: 148, 163, 184; }
+html.lux-sky.lux-sky-nogl[data-fest="sukkot"] body::after,
+html.lux-sky.lux-sky-nogl[data-fest="shavuot"] body::after { --fest-shad: 22, 101, 52; }
+html.lux-sky.lux-sky-nogl:is([data-fest="st"], [data-fest="chanuka"], [data-fest="pesach7"]) body::after { --fest-shad: 30, 64, 175; }
+html.lux-sky.lux-sky-nogl[data-fest="pesach"] body::after { --fest-shad: 157, 23, 77; }
+html.lux-sky.lux-sky-nogl[data-fest-lvl="gentle"] body::after { opacity: 0.5; }
+html.lux-sky.lux-sky-nogl[data-fest="av9"] body::after { background: rgba(15, 23, 42, 0.35); }
+/* נרות השבת בסגנון הדמו — קנבס (lux.js §45), בכל הערכות */
+.lux-erev-candles { gap: 0; margin: -0.35rem 0 0.5rem; }
+.lux-erev-cv { display: block; width: min(260px, 70vw); aspect-ratio: 260 / 140; height: auto; }
+html.lux-sky.lux-sky-nogl[data-fest="motzei"] body::after { --fest-shad: 30, 41, 120; }

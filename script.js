@@ -31173,10 +31173,10 @@ function openSefarimNosafimPage(_pageMode) {
     // לקטגוריה כדי להישאר ב-_modeBooks — החיפוש בתפילות סורק אותם.
     { id: "tf-kvua",    he: "תיקונים ואמירה קבועה", color: "#b45309", mode: "tefilot",
       order: ["perek-shirah", "bereishit-taman", "tikkun-hayesod", "parashat-haman", "igeret-haramban"] },
-    { id: "tf-segulot", he: "סגולות וציוני צדיקים", color: "#7c3aed", mode: "tefilot",
-      order: ["segulot-tefilot", "seudat-amanim", "tzadikim-il", "tzadikim-chul"] },
     { id: "tf-bayit",   he: "בית ומשפחה",          color: "#be185d", mode: "tefilot",
       order: ["brit-milah", "zohar-brit", "sheva-brachot", "chanukat-habayit", "hafrashat-challah"] },
+    { id: "tf-segulot", he: "סגולות וציוני צדיקים", color: "#7c3aed", mode: "tefilot",
+      order: ["segulot-tefilot", "seudat-amanim", "tzadikim-il", "tzadikim-chul"] },
     { id: "tf-zmanim",  he: "שבת וזמנים",          color: "#6366f1", mode: "tefilot",
       order: ["seder-motzash", "kiddush-levana", "shir-hashirim", "hatarat-nedarim-beit-el"] }
   ];

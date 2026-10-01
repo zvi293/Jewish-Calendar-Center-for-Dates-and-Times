@@ -749,15 +749,16 @@
         font-weight: 800;
       }
 
-      /* ── Pulse for the small chevron "more prayers" button ── */
+      /* ── Pulse for the small chevron "more prayers" button ──
+         (10/2026, בקשת המשתמש) הבהוב אחד כל 4.5 שנ', כמו תג "לבניית אתר פרימיום" — לא נשימה רצופה */
       @keyframes chevron-cta-pulse {
-        0%, 100% {
+        0%, 78%, 100% {
           background-color: rgba(251,191,36,0.12);
           border-color: rgba(251,191,36,0.40);
           color: rgb(254,243,199);
           box-shadow: 0 0 0 0 rgba(251,191,36,0.45);
         }
-        50% {
+        86% {
           background-color: rgba(251,191,36,0.22);
           border-color: rgba(251,191,36,0.65);
           color: rgb(253,224,71);
@@ -765,7 +766,7 @@
         }
       }
       #prayer-more-btn.chevron-cta-pulse {
-        animation: chevron-cta-pulse 2.2s ease-in-out infinite;
+        animation: chevron-cta-pulse 4.5s ease-in-out infinite;
       }
 
 
@@ -10013,7 +10014,8 @@ html.lux-keynav textarea:focus { box-shadow: inset 0 0 0 5px rgba(251, 191, 36, 
     will-change: opacity;
     animation: lux-premium-glow 4.5s ease-in-out infinite;
   }
-  /* "תפילות נוספות": טבעת זהב שמתרחבת ונמוגה + הבהרת הרקע והמסגרת, כמו במחשב (2.2 שנ') */
+  /* "תפילות נוספות": טבעת זהב שמתרחבת ונמוגה + הבהרת הרקע והמסגרת — הבהוב אחד כל 4.5 שנ',
+     באותו קצב ובאותו רגע כמו התג (בקשת המשתמש: "כרגע הוא מהבהב כל הזמן") */
   #prayer-more-btn.chevron-cta-pulse::before,
   #prayer-more-btn.chevron-cta-pulse::after {
     content: "";
@@ -10027,28 +10029,29 @@ html.lux-keynav textarea:focus { box-shadow: inset 0 0 0 5px rgba(251, 191, 36, 
   #prayer-more-btn.chevron-cta-pulse::before {
     box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.6);
     will-change: transform, opacity;
-    animation: lux-chev-ring 2.2s ease-in-out infinite;
+    animation: lux-chev-ring 4.5s ease-in-out infinite;
   }
   #prayer-more-btn.chevron-cta-pulse::after {
     background: rgba(251, 191, 36, 0.12);
     box-shadow: inset 0 0 0 1px rgba(251, 191, 36, 0.35);
     will-change: opacity;
-    animation: lux-chev-glow 2.2s ease-in-out infinite;
+    animation: lux-chev-glow 4.5s ease-in-out infinite;
   }
 }
 @keyframes lux-premium-glow {
   0%, 78%, 100% { opacity: 0; }
   86% { opacity: 1; }
 }
-/* כמו טבעת ה-box-shadow המקורית: נפתחת החוצה ונמוגה, ואז חוזרת פנימה */
+/* כמו טבעת ה-box-shadow המקורית: נפתחת החוצה ונמוגה — פעם אחת בסוף כל מחזור של 4.5 שנ'
+   (שיא ב-86%, יחד עם הזוהר ועם התג), ובשאר הזמן שקופה */
 @keyframes lux-chev-ring {
-  0%, 100% { opacity: 0; transform: scale(1); }
-  20%, 80% { opacity: 0.75; transform: scale(1.03, 1.12); }
-  50% { opacity: 0; transform: scale(1.1, 1.45); }
+  0%, 76%, 100% { opacity: 0; transform: scale(1); }
+  81% { opacity: 0.8; transform: scale(1.03, 1.12); }
+  92% { opacity: 0; transform: scale(1.1, 1.45); }
 }
 @keyframes lux-chev-glow {
-  0%, 100% { opacity: 0; }
-  50% { opacity: 1; }
+  0%, 78%, 100% { opacity: 0; }
+  86% { opacity: 1; }
 }
 @media (prefers-reduced-motion: reduce) {
   .lux-premium-badge::after,

@@ -399,7 +399,7 @@
          ו-preload לגופן הכותרת (העברית של Assistant) — LCP יציב ומהיר. -->
     <link rel="preload" href="/fonts/assistant-hebrew.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="/fonts.css?v=1" />
-    <link rel="stylesheet" href="style.css?v=83" />
+    <link rel="stylesheet" href="style.css?v=84" />
     <!-- בלי ציור ראשון של "חצי הירו": הסקריפט של באנר היום (לפני ה-h1) גורם למפרסר לפנות
          את התור, ו-Chrome צייר את ההירו חלקי — ואז קו הגל שבתחתיתו קפץ למטה (CLS). כאן
          הציור הראשון מחכה עד שכל ההירו נפרסר (עד #main-content — מילישניות בודדות).
@@ -416,7 +416,7 @@
     <!-- הקוד הראשי יורד מוקדם (preload) אך מוזרק ומתבצע רק אחרי הציור הראשון —
          ראו הטוען בסוף ה-body. ה-?v= כאן חייב להיות זהה לזה שבטוען וב-sw.js.
          fetchpriority=low: שלא יתחרו ברוחב-הפס עם ה-CSS החוסם (FCP) — כמו defer. -->
-    <link rel="preload" href="script.js?v=76" as="script" fetchpriority="low" />
+    <link rel="preload" href="script.js?v=77" as="script" fetchpriority="low" />
     <link rel="preload" href="lux.js?v=72" as="script" fetchpriority="low" />
 
     <!-- OneSignal Web Push SDK -->
@@ -1970,7 +1970,7 @@
           ספירת העומר
         </h2>
 
-        <div class="text-right w-full space-y-6">
+        <div class="text-center w-full space-y-6">
           <div>
             <h3 class="text-sm font-bold text-blue-500 mb-2">
               לשם יחוד (לפי הבן איש חי):
@@ -2806,7 +2806,7 @@
               });
             },
           });
-          addScript("script.js?v=76");
+          addScript("script.js?v=77");
           addScript("lux.js?v=72");
         }
         function afterFirstPaint() {

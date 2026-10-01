@@ -8472,7 +8472,7 @@ html.dark #chok-israel-modal.chok-dark-skin .chok-targum b {
 .hil-torah-arrow { display: inline-block; font-size: 0.68rem; }
 .hil-torah {
   direction: rtl;
-  text-align: right;
+  text-align: center;
   margin: 0.35rem 0.35rem 0;
   padding: 0.85rem 1rem;
   border-radius: 0 0 1rem 1rem;

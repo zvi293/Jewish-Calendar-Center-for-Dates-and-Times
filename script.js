@@ -31171,14 +31171,14 @@ function openSefarimNosafimPage(_pageMode) {
     // "תפילות נוספות" — ארבע קטגוריות (10/2026, החלוקה שאישר המשתמש); order = סדר הכרטיסים בתוך הקטגוריה
     // (בלי להזיז את רשומות BOOKS הענקיות). פריטים מוסתרים (אושפיזין, נרות חנוכה, לוח הברכות) משויכים
     // לקטגוריה כדי להישאר ב-_modeBooks — החיפוש בתפילות סורק אותם.
-    { id: "tf-bayit",   he: "בית ומשפחה",          color: "#be185d", mode: "tefilot",
-      order: ["brit-milah", "zohar-brit", "sheva-brachot", "chanukat-habayit", "hafrashat-challah"] },
-    { id: "tf-zmanim",  he: "שבת וזמנים",          color: "#6366f1", mode: "tefilot",
-      order: ["seder-motzash", "kiddush-levana", "shir-hashirim", "hatarat-nedarim-beit-el"] },
     { id: "tf-kvua",    he: "תיקונים ואמירה קבועה", color: "#b45309", mode: "tefilot",
       order: ["perek-shirah", "bereishit-taman", "tikkun-hayesod", "parashat-haman", "igeret-haramban"] },
     { id: "tf-segulot", he: "סגולות וציוני צדיקים", color: "#7c3aed", mode: "tefilot",
-      order: ["segulot-tefilot", "seudat-amanim", "tzadikim-il", "tzadikim-chul"] }
+      order: ["segulot-tefilot", "seudat-amanim", "tzadikim-il", "tzadikim-chul"] },
+    { id: "tf-bayit",   he: "בית ומשפחה",          color: "#be185d", mode: "tefilot",
+      order: ["brit-milah", "zohar-brit", "sheva-brachot", "chanukat-habayit", "hafrashat-challah"] },
+    { id: "tf-zmanim",  he: "שבת וזמנים",          color: "#6366f1", mode: "tefilot",
+      order: ["seder-motzash", "kiddush-levana", "shir-hashirim", "hatarat-nedarim-beit-el"] }
   ];
 
   // ── Mode-filtered helpers — קובעים אילו קטגוריות וספרים שייכים למצב הנוכחי ──

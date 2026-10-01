@@ -9426,8 +9426,17 @@ html.dark .bb-search-bar {
 /* ליריעות lux ולתוכן העניינים (☰ בקוראים) יש אנימציית כניסה משלהן (lux-yw-card-in, עם שקיפות —
    טקסט הקורא נראה מבעד לכרטיס) — הפתיחה האחידה במקומה. במובייל התוכן-עניינים כבר היה בלי */
 body > .lux-sheet-overlay > .lux-sheet,
-body > #chapter-nav-popup > .cnp-card {
+body > #chapter-nav-popup > .cnp-card,
+body > #lux-year-wheel > .lux-yw-inner {
   animation: none;
+}
+/* (10/2026) טלפון: הספרייה (ספרים/תפילות נוספות) אטומה לגמרי — 0.96 נועד למראה זכוכית עם
+   טשטוש במחשב, ובלי הטשטוש (בוטל בנייד) הדף מבצבץ מבעד לרקע ("רואים את המסך שמאחוריו").
+   וגלגל השנה: בלי כניסת scale/rotate ל-SVG — עשרות פילטרים drop-shadow מצוירים מחדש בסוף
+   התנועה בקנה-המידה הסופי (הבהוב); הגלגל עצמו נפתח מיידי בטלפון (lux.js, data-ux-instant). */
+@media (max-width: 768px) {
+  #sn-modal { background: radial-gradient(ellipse 120% 55% at 50% -8%, rgba(30, 41, 90, 0.55) 0%, transparent 60%), rgb(2, 6, 23) !important; }
+  #lux-yw-svg { animation: none; }
 }
 @keyframes ux-pop {
   from { translate: 0 6px; scale: 0.94; }

@@ -1848,7 +1848,10 @@ function _revealModalNoFreeze(m, alsoUnscale) {
 const _UX_LAYER_SEL =
   'body > [id$="-modal"], body > .lux-sheet-overlay, body > #lux-nav-editor, body > #lux-plan-reader, ' +
   "body > #lux-track-reader, body > #lux-selichot-reader, body > #lux-print-sheet, body > #lux-tour-overlay, " +
-  "body > #lux-search-panel, body > #chapter-nav-popup, body > #cal-month-year-picker, body > #lux-stories";
+  "body > #lux-search-panel, body > #chapter-nav-popup, body > #cal-month-year-picker, body > #lux-stories, " +
+  // (10/2026) גלגל השנה — עד עכשיו נפתח באנימציות CSS משלו ונסגר דרך _uxExit בלי שנפתח דרך _uxEnter;
+  // עכשיו גם הפתיחה אחידה (בטלפון מיידית — data-ux-instant ב-lux.js), וההכהיה על .ux-dim גם בסגירה
+  "body > #lux-year-wheel";
 // פס ההתקדמות וה-X נשארים במקומם — X שזז "קופץ" מול העין
 const _UX_SKIP = ".lux-progress, .lux-ux, .ux-dim, script, style, template, link";
 // האטה רכה: בלי "זינוק" גדול בפריים הראשון (שנראה כריצוד), ובלי זנב ארוך שנראה כתקיעה
@@ -2050,7 +2053,7 @@ function _uxEnter(layer) {
   // חלון שבאמצע יציאה — מסיימים מיד: הכניסה החדשה היא התנועה היחידה על המסך
   _uxFinishExits(layer);
   _uxPreEnter();
-  if (_uxInstantId && (_uxInstantId === "*" || layer.id === _uxInstantId)) {
+  if ((_uxInstantId && (_uxInstantId === "*" || layer.id === _uxInstantId)) || (layer.hasAttribute && layer.hasAttribute("data-ux-instant"))) {
     // פתיחה מיידית (window._uxInstantNext): שלם ואטום מהפריים הראשון, בלי תנועה. ההכהיה — על
     // שכבת .ux-dim סטטית, כדי שהסגירה תתרוקן בקומפוזיטור כמו בכל חלון-כרטיס
     _uxInstantId = null;
@@ -35677,7 +35680,12 @@ function openGlobalSmartSearch() {
   if (!document.getElementById("sn-modal")) {
     openSefarimNosafimPage();
   }
-  // המתן ל-DOM להתעדכן ופתח את החיפוש
+  // (10/2026) החיפוש נפתח באותה משימה ובאותו פריים כמו הספרייה — עד עכשיו חיכה 50ms, ובטלפון
+  // רשת הספרים הבהבה לרגע לפני שהוחלפה במסך החיפוש ("הבהוב של המסך" בלחיצה על הזכוכית המגדלת)
+  if (typeof window._snOpenSearch === "function") {
+    window._snOpenSearch();
+    return;
+  }
   setTimeout(function () {
     if (typeof window._snOpenSearch === "function") {
       window._snOpenSearch();

@@ -1396,6 +1396,10 @@
       var overlay = document.createElement("div");
       overlay.id = "lux-year-wheel";
       overlay.__luxOpenedAt = Date.now();
+      // (10/2026) בטלפון הגלגל נפתח שלם מהפריים הראשון, בלי תנועה (script.js: data-ux-instant):
+      // ה-SVG עם עשרות הילות drop-shadow יקר לרסטר, ואנימציה שרצה בזמן שהוא עוד לא צויר הראתה
+      // אריחים ריקים לרגע — "אותו הבהוב" כמו בספרים הגדולים. במחשב הכניסה האחידה נשארת
+      try { if (window.matchMedia("(max-width: 768px)").matches) overlay.setAttribute("data-ux-instant", ""); } catch (eInst) {}
       overlay.innerHTML =
         '<div class="lux-yw-inner">' +
           '<button type="button" class="lux-yw-close" aria-label="סגור">✕</button>' +

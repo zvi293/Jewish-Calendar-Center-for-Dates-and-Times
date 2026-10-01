@@ -68,7 +68,7 @@ grep -oE '(script|lux|sky|style)\.(js|css)\?v=[0-9]+' index.html sw.js script.js
 - אין צעד בילד בפיתוח. `preview_start {name: "site"}` → `http://localhost:8123`.
 - **לא להריץ `npm run build` מקומית** — `minify.mjs` דורס את `script.js`/`lux.js`/`style.css` במקום, ו-`build-places.mjs` פונה לרשת. הבילד שייך ל-Netlify בלבד. אם רץ בטעות — `git checkout -- script.js lux.js style.css tailwind.css` ולמחוק את `*.src.js` ו-`*.map` שנוצרו.
 - אימות אחרי push: לפתוח את האתר החי ולוודא שה-`?v=` החדש נטען (Network) וש-SW חדש הותקן.
-- דגלי URL לדמו: `?erev=` (מצב ערב שבת), `?omer=` (טבעת העומר), `?season=` (מצבי רוח עונתיים), `?sky=HH:MM` (השמיים בשעה קבועה) ו-`?sky=play` (יממה שלמה ב-60 שניות), `?fest=shabbat|rh|yk|sukkot|st|pesach|pesach7|shavuot` (השמיים במועד; היום = ערב המועד, `&festday=1` = המועד עצמו), `?fest=chol-sukkot|chol-pesach|chanuka|purim|av9|motzei` — משתלב עם `?sky=HH:MM`.
+- דגלי URL לדמו: `?erev=` (מצב ערב שבת), `?omer=` (טבעת העומר), `?season=` (מצבי רוח עונתיים), `?sky=HH:MM` (השמיים בשעה קבועה) ו-`?sky=play` (יממה שלמה ב-60 שניות), `?fest=shabbat|rh|yk|sukkot|st|pesach|pesach7|shavuot` (השמיים במועד; היום = ערב המועד, `&festday=1` = המועד עצמו), `?fest=chol-sukkot|chol-pesach|chanuka|purim|av9|motzei` (motzei מציג גם את כפתור "סדר מוצאי שבת וחג") — משתלב עם `?sky=HH:MM`.
 - בדפדפן המובנה של Claude הקנבס מצייר פריימים רק בזמן צילום מסך: צילום ראשון "מעיר" את הדף, השני (אחרי ~2 שניות) הוא האמיתי. מדידת fps דרך `requestAnimationFrame` שם לא אמינה — להשתמש ב-`__luxSky.state().frameCpuMs` (עלות CPU לפריים) ובצילומי פריימים חיצוניים.
 - בקשות hebcal חייבות לכלול `mf=on` ו-`i=on` (חוה"מ, תעניות ולוח ארץ-ישראל) — לא להסיר פרמטרים מה-URL.
 

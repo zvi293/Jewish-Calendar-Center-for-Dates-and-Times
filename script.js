@@ -9014,7 +9014,10 @@ function startShabbatCountdown() {
 // ═══════════════════════════════════════════════════════
 
 // Set to false to enable real calendar-based visibility logic
-const _MOTZEI_DEMO_MODE = false;
+// דגל הבדיקה ?fest=motzei (רקע מוצאי שבת ב-sky.js) מציג גם את הכפתור — כדי שהדמו יראה את מוצאי השבת במלואו
+const _MOTZEI_DEMO_MODE = false || (() => {
+  try { return new URLSearchParams(location.search).get("fest") === "motzei"; } catch (e) { return false; }
+})();
 
 // Tracks whether modal is open — prevents scroll-lock accumulation on tab switches
 let _motzeiShabbatModalOpen = false;

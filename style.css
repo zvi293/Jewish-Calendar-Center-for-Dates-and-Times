@@ -9695,7 +9695,7 @@ html.lux-sky footer [class~="border-slate-200"] { border-color: rgba(232, 193, 9
 html.lux-sky main .lux-tracks-title { color: #7a4f0e; text-shadow: none; }
 html.lux-sky:not([data-sky="day"]) main .lux-tracks-title { color: #f2d98a; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6), 0 0 12px rgba(0, 0, 0, 0.45); }
 /* כרטיסי הלימוד היומי ביום: תיאור ותג חזקים יותר על זכוכית מעל שמיים בהירים */
-html.lux-sky[data-sky="day"] .lux-tc-ref { color: #334155; }
+html.lux-sky[data-sky="day"] .lux-tc-ref { color: var(--skyc-ink, #0f172a); font-weight: 700; } /* 04/10: היה #334155 — "תכהה אותו" */
 html.lux-sky[data-sky="day"] .lux-tc-badge:not(.lux-tc-done) { color: #7a4f0e; background: rgba(255, 255, 255, 0.55); border-color: rgba(161, 118, 42, 0.5); }
 /* בלוק ה-SEO והפוטר */
 html.lux-sky :is(#seo-about, footer) { text-shadow: none; } /* ביום: בלי הילה בכלל — גם הרמה של פיקסל נראתה כהכפלה של האותיות המודגשות */
@@ -9725,7 +9725,8 @@ html.lux-sky[data-sky="day"] .prayer-btn:not(.lux-erev-btn) .prayer-label {
   font-weight: 800;
   text-shadow: none;
 }
-html.lux-sky[data-sky="day"] .prayer-btn.prayer-cta-highlight:not(.lux-erev-btn) .prayer-label { color: #7a4f0e !important; }
+/* 04/10: גם שני המודגשים (תפילות/ספרים נוספים) בשחור ביום — הזהב הכהה עדיין לא נראה מספיק ("שיהיה שחור") */
+html.lux-sky[data-sky="day"] .prayer-btn.prayer-cta-highlight:not(.lux-erev-btn) .prayer-label { color: var(--skyc-ink, #0f172a) !important; }
 /* ביום הכרטיס עצמו באותה זכוכית צלולה של כרטיסי הדף הראשי (לבן 20% + ברק — הרמה שאושרה) ומסגרת זהב כהה יותר:
    בלי זה הכתב הכהה נבלע כשהגריד המורחב יורד אל רצועת הנוף הכהה בתחתית השמיים (בטלפון תמיד). */
 html.lux-sky[data-sky="day"] body .prayer-btn:not(.lux-erev-btn) {
@@ -9741,6 +9742,26 @@ html.lux-sky[data-sky="day"] body .prayer-btn.prayer-cta-highlight:not(.lux-erev
     border-color: rgba(161, 118, 42, 0.95);
   }
 }
+/* 04/10: כפתור "תפילות נוספות ⌄ / פחות" ביום — הכתב הצהוב-בהיר נבלע ברקיע ("לא רואים אותו").
+   כתב שחור מודגש; !important כי אנימציית ההבהוב (chevron-cta-pulse) והבלוק לנייד כותבים color.
+   החץ הוא currentColor ומשתנה איתו. ההבהוב עצמו (טבעת/זוהר) לא נפגע. */
+html.lux-sky[data-sky="day"] #prayer-more-btn {
+  color: var(--skyc-ink, #0f172a) !important;
+  font-weight: 800;
+  text-shadow: none;
+}
+
+/* 04/10: סדר הלימוד האישי ביום — "לא רואים כל כך את הכתב": התיאור האפור והטקסטים בזהב חיוור
+   (סטטיסטיקה, קצב, ימי השבוע, "עוד סדר") כהים יותר ומודגשים יותר על הזכוכית הצלולה. */
+html.lux-sky[data-sky="day"] .lux-plan-empty b { color: var(--skyc-ink, #0f172a); font-weight: 800; }
+html.lux-sky[data-sky="day"] .lux-plan-empty small { color: var(--skyc-ink, #0f172a); font-weight: 700; }
+html.lux-sky[data-sky="day"] .lux-plan-name { color: var(--skyc-ink, #0f172a); }
+html.lux-sky[data-sky="day"] :is(.lux-plan-stats, .lux-plan-pace) { color: #1e293b; font-weight: 800; }
+html.lux-sky[data-sky="day"] .lux-plan-pct { color: #5c3a07; }
+html.lux-sky[data-sky="day"] .lux-plan-day:not(.on) { color: #3d2f0e; border-color: rgba(122, 79, 14, 0.55); }
+html.lux-sky[data-sky="day"] .lux-plan-more { color: #3d2f0e; border-color: rgba(122, 79, 14, 0.6); }
+html.lux-sky[data-sky="day"] .lux-plan-edit { color: #5c3a07; }
+html.lux-sky[data-sky="day"] .lux-plan-del { color: #6b5320; }
 
 /* ═══════════════════════════════════════════════════════
    ✦ שמיים חיים — שבתות וחגים (01/10/2026)

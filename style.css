@@ -7471,13 +7471,13 @@ body:not(.lux-erev) #hero-section h1 span[data-i18n-key="app_title_2"] { animati
   left: -6px;
   font-size: 4.1rem;
   line-height: 1;
-  opacity: 0.07;
+  opacity: 0.2; /* 04/10: היה 0.07 — "כמעט ולא רואים אותם" */
   pointer-events: none;
   transform: rotate(-8deg);
   transition: transform 0.4s ease, opacity 0.4s ease;
 }
 @media (hover: hover) {
-  #dashboard-state > div.glass-card:hover::after { transform: rotate(-2deg) scale(1.08); opacity: 0.12; }
+  #dashboard-state > div.glass-card:hover::after { transform: rotate(-2deg) scale(1.08); opacity: 0.28; }
 }
 /* 1 · התאריך היום — ענבר */
 #dashboard-state > div:nth-child(1)::before { background: linear-gradient(90deg, transparent, #fbbf24, transparent); }
@@ -9686,12 +9686,12 @@ html.lux-sky main .event-card .w-14 { background: rgba(255, 255, 255, 0.82) !imp
 html.lux-sky:not([data-sky="day"]) main .event-card .w-14 { background: rgba(255, 255, 255, 0.14) !important; border-color: rgba(255, 255, 255, 0.3) !important; }
 /* הפוטר: קישורים עגולים */
 html.lux-sky footer a[class~="bg-white"] { background: var(--skyc-field) !important; border-color: var(--skyc-field-edge) !important; color: var(--skyc-ink2) !important; }
-html.lux-sky footer [class~="border-slate-200"] { border-color: rgba(232, 193, 90, 0.22) !important; }
 
 /* ── גרסה 5א: כותרות ביום, בלוק ה-SEO והפוטר בלילה (בעל האתר: "ביום לא רואים את הכתב", "בלילה לא רואים
    את הכתב שבתחתית האתר"). הכותרות הזהובות (.lux-tracks-title) מופיעות ישירות על השמיים — ביום זהב כהה עם
-   הילה בהירה, בלילה זהב בהיר עם צל. בלוק ה-SEO (#seo-about) והפוטר יושבים על השמיים בלי כרטיס — בלילה
-   כל האפורים של Tailwind שם הופכים לבהירים (לפי טוקן מדויק) עם צל כהה, ביום נשארים כהים עם הילה בהירה. */
+   הילה בהירה, בלילה זהב בהיר עם צל. בלוק ה-SEO (#seo-about) והפוטר — מ-04/10 על זכוכית צלולה כמו כרטיסי
+   הדף הראשי (מול הנוף הכהה בתחתית המסך בלי זכוכית לא ראו את הכתב); בלילה כל האפורים של Tailwind שם
+   הופכים לבהירים (לפי טוקן מדויק) עם צל כהה, ביום כהים יותר ובלי צל. */
 html.lux-sky main .lux-tracks-title { color: #7a4f0e; text-shadow: none; }
 html.lux-sky:not([data-sky="day"]) main .lux-tracks-title { color: #f2d98a; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6), 0 0 12px rgba(0, 0, 0, 0.45); }
 /* כרטיסי הלימוד היומי ביום: תיאור ותג חזקים יותר על זכוכית מעל שמיים בהירים */
@@ -9704,9 +9704,53 @@ html.lux-sky:not([data-sky="day"]) :is(#seo-about, footer) :is([class~="text-sla
 html.lux-sky:not([data-sky="day"]) :is(#seo-about, footer) [class~="text-slate-500"] { color: rgba(226, 232, 240, 0.85) !important; }
 html.lux-sky:not([data-sky="day"]) :is(#seo-about, footer) [class~="text-slate-400"] { color: rgba(203, 213, 225, 0.75) !important; }
 html.lux-sky:not([data-sky="day"]) :is(#seo-about, footer) :is([class~="text-blue-500"], [class~="text-blue-600"], a) { color: #bfdbfe !important; }
-html.lux-sky:not([data-sky="day"]) :is(#seo-about, footer) :is([class~="border-slate-100"], [class~="border-slate-200"]) { border-color: rgba(255, 255, 255, 0.22) !important; }
+html.lux-sky:not([data-sky="day"]) #seo-about :is([class~="border-slate-100"], [class~="border-slate-200"]) { border-color: rgba(255, 255, 255, 0.22) !important; }
 html.lux-sky:not([data-sky="day"]) #seo-about :is(table, th, td) { color: #eef2f7; border-color: rgba(255, 255, 255, 0.22); }
 html.lux-sky:not([data-sky="day"]) footer a[class~="bg-white"] { color: #eef2f7 !important; }
+/* 04/10: הבלוק ותוכן הפוטר על זכוכית צלולה כמו כרטיסי הדף הראשי (טשטוש במחשב, מסגרת זהב דקה) — בכל שעה;
+   הגוון מתחלף לבד (--skyc-tint: בלילה כחול-לילה 24%; ביום — למטה). ביום האפורים כהים יותר. */
+html.lux-sky :is(#seo-about, footer > div) {
+  background: var(--skyc-gloss), var(--skyc-tint);
+  border: 1px solid var(--skyc-edge);
+  border-radius: 1.5rem;
+  box-shadow: var(--skyc-shadow);
+}
+html.lux-sky #seo-about { width: min(72rem, calc(100% - 1.5rem)); margin-bottom: 1.5rem; }
+html.lux-sky footer > div { padding: 1.25rem 1rem; }
+@media (hover: hover) and (min-width: 769px) {
+  html.lux-sky :is(#seo-about, footer > div) {
+    backdrop-filter: blur(18px) saturate(1.35);
+    -webkit-backdrop-filter: blur(18px) saturate(1.35);
+  }
+}
+/* ביום הם יושבים מול החלק הכהה ביותר של הנוף (ובטלפון בלי טשטוש) — זכוכית לבנה חזקה יותר מכרטיסי הדף */
+html.lux-sky[data-sky="day"] :is(#seo-about, footer > div) { --skyc-tint: rgba(255, 255, 255, 0.45); }
+html.lux-sky[data-sky="day"] :is(#seo-about, footer) :is([class~="text-slate-700"], [class~="text-slate-600"], [class~="text-slate-500"]) { color: #0f172a !important; }
+html.lux-sky[data-sky="day"] :is(#seo-about, footer) [class~="text-slate-400"] { color: #1e293b !important; }
+html.lux-sky[data-sky="day"] footer :is(p, .footer-credit span) { font-weight: 600; }
+
+/* קרדיט בפוטר: "האתר והאפליקציה נבנו ופותחו על ידי" + לוגו Zstore AI לחיץ (כמו בשאר אתרי Zstore AI).
+   הלוגו כהה על שקוף — יושב על צ'יפ בהיר שקריא מעל כל רקע (יום, לילה, ערכה כהה). */
+.footer-credit {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem 0.65rem;
+}
+.footer-credit-link {
+  display: inline-flex;
+  padding: 0.4rem 0.85rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(201, 153, 58, 0.45);
+  box-shadow: 0 4px 14px rgba(5, 11, 26, 0.18);
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+@media (hover: hover) {
+  .footer-credit-link:hover { transform: translateY(-2px); box-shadow: 0 6px 22px rgba(201, 153, 58, 0.35); }
+}
+.footer-credit-link img { display: block; height: 28px; width: auto; }
 
 /* ── גריד התפילות בהירו (תפילת הדרך → ספרים נוספים), 01/10/2026 לבקשת בעל האתר ──
    (1) פס זהב עדין קבוע סביב כל כרטיס — בכל הערכות ובכל שעה (עד כה המסגרת הייתה זהב 20%, בקושי נראית).

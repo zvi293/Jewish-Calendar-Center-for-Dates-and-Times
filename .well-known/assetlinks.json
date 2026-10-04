@@ -5,7 +5,8 @@
       "namespace": "android_app",
       "package_name": "il.co.jewishcalendar.twa",
       "sha256_cert_fingerprints": [
-        "1B:EA:4E:7E:63:8C:23:F1:26:09:62:62:14:AF:CB:C6:C2:B2:7A:65:3E:07:3F:51:32:84:C2:E8:AB:79:85:99"
+        "1B:EA:4E:7E:63:8C:23:F1:26:09:62:62:14:AF:CB:C6:C2:B2:7A:65:3E:07:3F:51:32:84:C2:E8:AB:79:85:99",
+        "59:27:78:BD:B1:27:03:BB:92:85:5E:96:E0:79:CB:39:6E:9F:A2:01:43:22:7E:72:17:EF:CA:42:A5:24:8E:81"
       ]
     }
   }

@@ -1352,8 +1352,12 @@
   /* ── סנכרון ל-DOM (שלב היום, צבעים ל-CSS, theme-color) — רק כשמשהו השתנה ── */
   var domKey = "";
   function q4(v) { return Math.round(clamp(v, 0, 1) * 63.75) * 4; }
+  function phaseOf(alt, eve) { return alt > 8 * RAD ? "day" : alt > -7 * RAD ? (eve ? "dusk" : "dawn") : "night"; }
+  function phaseAt(ms) { var sp = sunPos(warp(ms)); return phaseOf(sp.alt, sp.azS > 0); }
   function syncDom(alt, eve, zen, hor, day) {
-    var ph = alt > 8 * RAD ? "day" : alt > -7 * RAD ? (eve ? "dusk" : "dawn") : "night";
+    // באנימציית הכניסה השמיים נעים משלושה זמנים אחורה עד עכשיו, אבל שלב היום ב-DOM (צבעי הכתב בדף) נקבע
+    // מיד לפי היעד — אחרת בכל טעינה הכתב מתחלף לעיני המשתמש מבהיר לכהה (04/10). הגוונים (--sky-*) עוקבים אחרי השמיים.
+    var ph = mode === "intro" ? phaseAt(tw ? tw.to : Date.now()) : phaseOf(alt, eve);
     var z = zen.map(q4).join(","), h = hor.map(q4).join(",");
     var glass = (0.36 + 0.28 * day).toFixed(2), dayS = day.toFixed(2);
     var key = ph + "|" + z + "|" + h + "|" + glass + "|" + dayS;
@@ -1533,7 +1537,7 @@
     function upd() {
       try {
         var sp = sunPos(warp(Date.now())), eve = sp.azS > 0;
-        var ph = sp.alt > 8 * RAD ? "day" : sp.alt > -7 * RAD ? (eve ? "dusk" : "dawn") : "night";
+        var ph = phaseOf(sp.alt, eve);
         if (html.dataset.sky !== ph) html.dataset.sky = ph;
         html.style.setProperty("--sky-day", smooth(-6 * RAD, 6 * RAD, sp.alt).toFixed(2));
         html.style.setProperty("--sky-glass", (0.36 + 0.28 * smooth(-6 * RAD, 6 * RAD, sp.alt)).toFixed(2));
@@ -1573,6 +1577,8 @@
       if (q === "play") play = { t0: dayStart(Date.now()), p0: performance.now() };
       else if (q && /^\d{1,2}:\d{2}$/.test(q)) { var hm = q.split(":"); fixedMs = dayStart(Date.now()) + (+hm[0]) * 3600000 + (+hm[1]) * 60000; }
     } catch (e) {}
+    // שלב היום ב-DOM כבר עכשיו, לפני הקומפילציה והפריים הראשון — שהכתב בדף לא יתחיל בצבעי לילה ויתחלף
+    try { html.dataset.sky = phaseAt(fixedMs !== null ? fixedMs : Date.now()); } catch (e) {}
     if (nogl) { html.classList.add("lux-sky-nogl"); noglStart(); return; }
     if (!cv) {
       cv = document.createElement("canvas"); cv.id = "lux-sky"; cv.setAttribute("aria-hidden", "true");

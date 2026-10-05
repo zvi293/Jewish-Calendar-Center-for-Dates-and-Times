@@ -156,15 +156,7 @@ const i18nDict = {
     compass: "מצפן לירושלים",
     settings_language: "שפה",
     language_switch: "החלף שפה",
-    notif_settings_title: "התראות דפדפן (פוש)",
-    notif_enable: "הפעל",
-    notif_shab: "כניסת שבת (חצי שעה לפני)",
-    notif_hol: "כניסת חג (חצי שעה לפני)",
-    notif_fast: "סיום צום (חצי שעה לפני)",
-    notif_omer: "ספירת העומר (בצאת הכוכבים)",
-    notif_levana: "ברכת הלבנה (תחילת/סוף זמן)",
-    notif_daf: "הדף היומי (תזכורת בוקר 08:00)",
-    notif_tefillin: "תזכורת להניח תפילין (08:30)",
+    notif_settings_title: "התראות ספירת העומר",
   },
 };
 
@@ -6017,15 +6009,6 @@ async function fetchFastTimes(name, dateStr, elementId) {
     const win = await computeFastWindow(name, dateStr);
     const startStr = win.start ? formatLocalizedTime(win.start) : "--:--";
     const endStr = win.end ? formatLocalizedTime(win.end) : "--:--";
-    // FAST_END_TIME משמש להתראת סיום צום — נשמר רק כשהצום קרוב/בעיצומו
-    if (
-      win.start &&
-      win.end &&
-      Date.now() >= win.start.getTime() - 24 * 3600 * 1000 &&
-      Date.now() < win.end.getTime()
-    ) {
-      window.FAST_END_TIME = win.end;
-    }
 
     const el = document.getElementById(elementId);
     if (el) {
@@ -6494,17 +6477,6 @@ function toggleSettings() {
     _uxHideModal(m, m.children[0]);
     unlockBodyScroll();
   }
-}
-
-function saveNotifPrefs() {
-  const prefs = {};
-  ["shabbat", "holiday", "fast", "omer", "levana", "daf", "tefillin"].forEach(
-    (id) => {
-      const el = document.getElementById("notif_" + id);
-      if (el) prefs[id] = el.checked;
-    },
-  );
-  localStorage.setItem("moadim_notif_prefs", JSON.stringify(prefs));
 }
 
 function shouldShowHolidayTimes(eventItem) {
@@ -8181,7 +8153,7 @@ function toggleNotificationsMaster() {
     }
     updateNotifStatusUI();
     if (typeof showToast === "function") {
-      showToast("ההתראות בוטלו", "info", 2500);
+      showToast("התראות ספירת העומר בוטלו", "info", 2500);
     }
     return;
   }
@@ -8223,14 +8195,9 @@ function requestNotificationPermission() {
           updateNotifStatusUI();
           if (subscribed && Notification.permission === "granted") {
             if (typeof showToast === "function") {
-              showToast("ההתראות הופעלו בהצלחה!", "success", 3000);
+              showToast("התראות ספירת העומר הופעלו!", "success", 3000);
             }
-            try {
-              new Notification(SITE_NAME, {
-                body: "התראות זמנים הופעלו בהצלחה!",
-                icon: "/icon-192.png",
-              });
-            } catch (e) {}
+            _showLocalNotif(SITE_NAME, "התראות ספירת העומר הופעלו בהצלחה!");
           }
         } catch (err) {
           console.warn("[OneSignal] optIn failed, falling back:", err);
@@ -8249,14 +8216,9 @@ function requestNotificationPermission() {
       updateNotifStatusUI();
       if (permission === "granted") {
         if (typeof showToast === "function") {
-          showToast("ההתראות הופעלו בהצלחה!", "success", 3000);
+          showToast("התראות ספירת העומר הופעלו!", "success", 3000);
         }
-        try {
-          new Notification(SITE_NAME, {
-            body: "התראות זמנים הופעלו בהצלחה!",
-            icon: "/icon-192.png",
-          });
-        } catch (e) {}
+        _showLocalNotif(SITE_NAME, "התראות ספירת העומר הופעלו בהצלחה!");
         // ה-SDK של OneSignal נטען עצל (index.html). ההרשאה כבר ניתנה — משלימים
         // את רישום ה-push ברקע ברגע שה-init של ה-SDK מסתיים (לא נדרשת מחווה).
         try {
@@ -8297,12 +8259,14 @@ window.updateNotifStatusUI = updateNotifStatusUI;
 
 function updateNotifStatusUI() {
   const enabled = isNotifMasterActive();
+  // כפתור ההפעלה בכרטיס ספירת העומר — רק למי שעוד לא הפעיל ושהדפדפן שלו תומך בהתראות
+  const omerBtn = document.getElementById("omer-notif-btn");
+  if (omerBtn) omerBtn.hidden = enabled || !("Notification" in window);
   const btn = document.getElementById("notif-master-toggle");
   const knob = document.getElementById("notif-master-toggle-knob");
   const status = document.getElementById("notif-master-status");
   const control = document.getElementById("notif-master-control");
-  const options = document.getElementById("notif-options");
-  if (!btn || !knob || !status || !control || !options) return;
+  if (!btn || !knob || !status || !control) return;
 
   btn.className =
     "relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500/30";
@@ -8317,183 +8281,56 @@ function updateNotifStatusUI() {
     btn.classList.add("bg-green-500");
     knob.classList.add("translate-x-5");
     status.textContent = getNotifStatusLabel(true);
-    options.classList.remove("opacity-50", "pointer-events-none");
   } else {
     btn.classList.add("bg-slate-300", "dark:bg-slate-600");
     knob.classList.add("translate-x-0.5");
     status.textContent = getNotifStatusLabel(false);
-    options.classList.add("opacity-50", "pointer-events-none");
   }
-
-  const prefs = JSON.parse(localStorage.getItem("moadim_notif_prefs") || "{}");
-  ["shabbat", "holiday", "fast", "omer", "levana", "daf", "tefillin"].forEach(
-    (id) => {
-      const el = document.getElementById("notif_" + id);
-      if (el) {
-        el.checked = prefs[id] !== false;
-        el.disabled = !enabled;
-      }
-    },
-  );
-  return;
 }
 
-// ─── Notification Scheduler (fires every 45s for better accuracy) ─────────
-setInterval(() => {
-  try {
-    if (!("Notification" in window)) return;
-    if (Notification.permission !== "granted") return;
-    if (!getNotifMasterPreference()) return;
+// כפתור "הפעלת התראות" בכרטיס ספירת העומר ובשאלה שבתחילת הספירה (lux.js)
+function enableOmerNotifications() {
+  if (!isNotifMasterActive()) toggleNotificationsMaster();
+}
 
-    const prefs = JSON.parse(
-      localStorage.getItem("moadim_notif_prefs") || "{}",
-    );
-    const now = new Date();
-    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-    const h = now.getHours(),
-      m = now.getMinutes();
-
-    // Helper: fire only once per calendar-day per event ID
-    const fireNotif = (id, title, body, tag) => {
-      const key = `notif_fired_${id}_${todayStr}`;
-      if (localStorage.getItem(key)) return;
-      try {
-        new Notification(title, {
-          body,
-          icon: "/icon-192.png",
-          badge: "/favicon.svg",
-          tag: tag || id,
-          renotify: false,
-          lang: CURRENT_LANG,
-        });
-        localStorage.setItem(key, "1");
-      } catch (e) {
-        console.warn("Notification failed:", e);
-      }
-    };
-
-    // minutes remaining until target (positive = future)
-    const minsUntil = (t) => (t ? (t - now) / 60000 : null);
-    // minutes elapsed since target (positive = past)
-    const minsSince = (t) => (t ? (now - t) / 60000 : null);
-
-    // ── 🕯️ Shabbat candle lighting (30 min warning) ──
-    if (prefs.shabbat !== false && window.SHABBAT_CANDLES_TIME) {
-      const d = minsUntil(window.SHABBAT_CANDLES_TIME);
-      // Window: 32-25 minutes before (generous range for timer drift)
-      if (d !== null && d >= 25 && d <= 32)
-        fireNotif(
-          "shabbat",
-          "🕯️ " + SITE_NAME,
-          "הדלקת נרות שבת בעוד כ-30 דקות!",
-          "shabbat",
-        );
-    }
-
-    // ── 🎊 Holiday candle lighting (30 min warning) ──
-    if (prefs.holiday !== false && window.HOLIDAY_CANDLES_TIME) {
-      const d = minsUntil(window.HOLIDAY_CANDLES_TIME);
-      if (d !== null && d >= 25 && d <= 32)
-        fireNotif(
-          "holiday",
-          "🎊 " + SITE_NAME,
-          "כניסת החג בעוד כ-30 דקות!",
-          "holiday",
-        );
-    }
-
-    // ── ⚖️ Fast ending (30 min warning) ──
-    if (prefs.fast !== false && window.FAST_END_TIME) {
-      const d = minsUntil(window.FAST_END_TIME);
-      if (d !== null && d >= 25 && d <= 32)
-        fireNotif(
-          "fast",
-          "⚖️ " + SITE_NAME,
-          "הצום מסתיים בעוד כ-30 דקות!",
-          "fast",
-        );
-    }
-
-    // ── ✨ Omer count (at nightfall / within 20 min after tzeit) ──
-    if (
-      prefs.omer !== false &&
-      window.TZEIT_TIME &&
-      CURRENT_OMER_DAY > 0 &&
-      CURRENT_OMER_DAY < 49
-    ) {
-      const d = minsSince(window.TZEIT_TIME);
-      if (d !== null && d >= 0 && d <= 20) {
-        const omerBody =
-          `היום ${omerDaysWords[CURRENT_OMER_DAY]} לעומר` +
-          (typeof getOmerSefirotText === "function"
-            ? ` — ${getOmerSefirotText(CURRENT_OMER_DAY)}`
-            : "");
-        fireNotif("omer", "✨ ספירת העומר", omerBody, "omer");
-      }
-    }
-
-    // ── 📖 Daf Yomi (8:00 AM — fires anytime during 8:00-8:09) ──
-    if (prefs.daf !== false && h === 8 && m >= 0 && m <= 9) {
-      const dafEl = document.getElementById("daf-yomi-text");
-      const dafName = dafEl ? dafEl.textContent.trim() : "";
-      if (dafName && !["מחשב...", "Loading...", "Calcul..."].includes(dafName))
-        fireNotif("daf", "📖 הדף היומי", `הדף היומי להיום: ${dafName}`, "daf");
-    }
-
-    // ── 🧿 Tefillin reminder (8:30 AM — fires in 8:28-8:33 window) ──
-    if (prefs.tefillin !== false && h === 8 && m >= 28 && m <= 33)
-      fireNotif(
-        "tefillin",
-        "🧿 תזכורת תפילין",
-        "הגיע הזמן להניח תפילין!",
-        "tefillin",
-      );
-
-    // ── 🌙 Kiddush Levana — בצאת הכוכבים: פתיחת הזמן / יומיים לסיום / הלילה האחרון ──
-    // לפי רגעי המולד המדויקים (_levanaStatus), לא לפי תאריכים משוערים
-    if (prefs.levana !== false && window.TZEIT_TIME && typeof _levanaStatus === "function") {
-      const d = minsSince(window.TZEIT_TIME);
-      if (d !== null && d >= 0 && d <= 20) {
-        const nowMs = now.getTime();
-        const st = _levanaStatus(nowMs);
-        const w = st.w;
-        const hm = (ms) => {
-          const t = new Date(_levanaRound(ms, false));
-          return `${_lvPad(t.getHours())}:${_lvPad(t.getMinutes())}`;
-        };
-        // הלילה הראשון: הזמן נפתח במהלך הלילה הקרוב, או נפתח במהלך היום שעבר
-        if (
-          (st.state === "before" && w.start - nowMs < 12 * 3600000) ||
-          (st.state === "open" && nowMs - w.start < 20 * 3600000)
-        )
-          fireNotif(
-            "levana_start",
-            "🌙 קידוש לבנה",
-            st.state === "before"
-              ? `הלילה, מהשעה ${hm(_levanaRound(w.start, true))}, אפשר לברך ברכת הלבנה`
-              : `מהלילה אפשר לברך ברכת הלבנה — עד ${_levanaWhenText(w.end, false)}`,
-            "levana_start",
-          );
-        if (st.state === "open" && w.end - nowMs < 24 * 3600000)
-          fireNotif(
-            "levana_end",
-            "🌙 קידוש לבנה",
-            `⚠️ הלילה ההזדמנות האחרונה לברך — עד השעה ${hm(w.end)}`,
-            "levana_end",
-          );
-        else if (st.state === "open" && w.end - nowMs < 48 * 3600000)
-          fireNotif(
-            "levana_warn",
-            "🌙 קידוש לבנה",
-            `⏰ נותרו יומיים לברכת הלבנה — עד ${_levanaWhenText(w.end, false)}`,
-            "levana_warn",
-          );
-      }
-    }
-  } catch (err) {
-    console.warn("Notification scheduler error:", err);
+// התראת האישור המקומית ("הופעלו בהצלחה") דרך ה-Service Worker: בכרום לאנדרואיד (וגם
+// באפליקציה) new Notification() זורק "Illegal constructor". תזכורת הספירה עצמה נשלחת
+// כפוש מהשרת בכל ערב (netlify/functions/omer-reminder.mjs) — גם כשהאתר סגור
+function _showLocalNotif(title, body) {
+  const opts = { body, icon: "/icon-192.png", badge: "/favicon.svg", lang: "he" };
+  if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {
+    navigator.serviceWorker.ready
+      .then((reg) => reg.showNotification(title, opts))
+      .catch(() => {});
+    return;
   }
-}, 45000); // Every 45 seconds for better accuracy than 60s
+  try {
+    new Notification(title, opts);
+  } catch (e) {}
+}
+
+// הספירה של התאריך העברי שחל ביום האזרחי d: ט"ז ניסן = 1 … ה' סיון = 49, אחרת 0.
+// הלילה שייך ליום העברי הבא — לכן הספירה של הערב היא זו של מחר האזרחי (_omerTonight).
+function _omerCountOf(d) {
+  try {
+    let m = "", day = 0;
+    new Intl.DateTimeFormat("en-u-ca-hebrew", { month: "long", day: "numeric" })
+      .formatToParts(d)
+      .forEach((p) => {
+        if (p.type === "month") m = p.value;
+        if (p.type === "day") day = parseInt(p.value, 10);
+      });
+    if (m === "Nisan" && day >= 16) return day - 15;
+    if (m === "Iyar") return 15 + day;
+    if (m === "Sivan" && day <= 5) return 44 + day;
+  } catch (e) {}
+  return 0;
+}
+function _omerTonight() {
+  const t = new Date();
+  t.setDate(t.getDate() + 1);
+  return _omerCountOf(t);
+}
 
 initApp();
 
@@ -12923,6 +12760,48 @@ function buildPrayerDbPayload(key, fallbackEntry) {
   };
 }
 
+// תוספת או שינוי בנוסח לפי היום — יעלה ויבוא, משיב הרוח/מוריד הטל, ברך עלינו/ברכנו,
+// על הניסים, עננו, נחם, עשרת ימי תשובה, אתה חוננתנו, וכל שינוי בברכת המזון ובמעין שלוש.
+// באותו גודל כמו שאר הטקסט — רק בצבע אחר (.pr-add ב-style.css). תפילה שלמה (הלל, מוסף) לא נצבעת.
+function prAdd(html) {
+  return '<span class="pr-add">' + html + "</span>";
+}
+
+// תוספת שנבנית בתנאי יומי בתוך שמונה עשרה (if עשי"ת / תענית / חנוכה ופורים / ר"ח וחוה"מ /
+// קיץ-חורף / מוצ"ש): נצבע רק נוסח התפילה — צומת טקסט שרוב המילים בו מנוקדות. תוויות והערות
+// הלכה ("בעשי"ת:", "אם שכח לומר טַל וּמָטָר...") אינן מנוקדות ונשארות כמו שהן.
+const _PR_NIKUD = /[ְ-ׇּׁׂ]/;
+function prMark(html) {
+  const tpl = document.createElement("template");
+  tpl.innerHTML = html;
+  const walker = document.createTreeWalker(tpl.content, NodeFilter.SHOW_TEXT);
+  const nodes = [];
+  while (walker.nextNode()) nodes.push(walker.currentNode);
+  nodes.forEach((n) => {
+    const words = n.data.split(/\s+/).filter((w) => /[א-ת]/.test(w));
+    if (!words.length) return;
+    const voc = words.filter((w) => _PR_NIKUD.test(w)).length;
+    if (voc * 2 < words.length) return;
+    const span = document.createElement("span");
+    span.className = "pr-add";
+    n.parentNode.insertBefore(span, n);
+    span.appendChild(n);
+  });
+  return tpl.innerHTML;
+}
+function pushAdd(arr, ...items) {
+  items.forEach((h) => arr.push(prMark(h)));
+}
+
+// הערה שמוצגת כל השנה בתוך הברכה ("בעשרת ימי תשובה אומרים: ..."): ביום שאומרים אותה —
+// התווית קטנה והנוסח בגודל מלא ובצבע התוספות; בשאר הימים — הערה קטנה כמו קודם
+function prOpt(on, label, text, sep) {
+  sep = sep == null ? " " : sep;
+  return on
+    ? "<small>" + label + "</small>" + sep + prAdd(text)
+    : "<small><small>" + label + "</small>" + sep + text + "</small>";
+}
+
 function buildAlHamichyaPayload() {
   const nusach = CURRENT_NUSACH || "mizrahi";
   const context = resolveSeasonalPrayerContext();
@@ -12955,11 +12834,10 @@ function buildAlHamichyaPayload() {
     parts.push(p("וְעַל תְּנוּבַת הַשָּׂדֶה, וְעַל אֶֽרֶץ חֶמְדָּה טוֹבָה וּרְחָבָה, שֶׁרָצִֽיתָ וְהִנְחַֽלְתָּ לַאֲבוֹתֵֽינוּ, לֶאֱכֹל מִפִּרְיָהּ וְלִשְׂבֹּֽעַ מִטּוּבָהּ. רַחֵם יְהֹוָה אֱלֹהֵֽינוּ עָלֵֽינוּ וְעַל יִשְׂרָאֵל עַמָּךְ, וְעַל יְרוּשָׁלַֽיִם עִירָךְ, וְעַל הַר צִיּוֹן מִשְׁכַּן כְּבוֹדָךְ, וְעַל מִזְבָּחָךְ וְעַל הֵיכָלָךְ. וּבְנֵה יְרוּשָׁלַֽיִם עִיר הַקֹּֽדֶשׁ בִּמְהֵרָה בְיָמֵֽינוּ, וְהַעֲלֵֽנוּ לְתוֹכָהּ, וְשַׂמְּחֵֽנוּ בְּבִנְיָנָהּ, וּנְבָֽרְכָֽךְ עָלֶֽיהָ בִּקְדֻשָּׁה וּבְטָהֳרָה:"));
   }
 
-  // ── תוספות עונתיות — מוצגות רק כשהתאריך מתאים ──
+  // ── תוספות עונתיות — מוצגות רק כשהתאריך מתאים, כפסקה רגילה בצבע התוספות (prAdd) ──
   // (ויקיטקסט: מעין שלוש עדות המזרח/ספרד; סידור אשכנז) — סדר: שבת, ר"ח, ר"ה, יו"ט/חוה"מ.
   // עדות המזרח מוסיפים ברגלים "בְּיוֹם (טוֹב) מִקְרָא קֹדֶשׁ הַזֶּה" — "טוֹב" ביום טוב בלבד,
   // לא בחול המועד. ספרד ואשכנז — "וְשַׂמְּחֵנוּ בְּיוֹם חַג ___ הַזֶּה" בלבד.
-  const _addSpan = (t) => "<span style=\"color:#fbbf24;\">" + t + "</span>";
   const _evAll = (context.events || []).join(" | ").replace(/[‘’]/g, "'");
   const _isYT = !!context.isYomTov && !context.isCholHamoed && !context.isYomKippur;
   const _isShmini = context.hasHebDate && context.hebMonth === "Tishrei"
@@ -12967,14 +12845,14 @@ function buildAlHamichyaPayload() {
     : /Shmini Atzeret|Shemini Atzeret|Simchat Torah|שמיני עצרת|שמחת תורה/.test(_evAll);
   const _isRegel = (context.isPesach || context.isShavuot || context.isSukkot) && (_isYT || context.isCholHamoed);
   if (context.isShabbat) {
-    parts.push(sup(p(lbl("בשבת") + _addSpan("וּרְצֵה וְהַחֲלִיצֵֽנוּ בְּיוֹם הַשַּׁבָּת הַזֶּה."))));
+    parts.push(p(lbl("בשבת") + prAdd("וּרְצֵה וְהַחֲלִיצֵֽנוּ בְּיוֹם הַשַּׁבָּת הַזֶּה.")));
   }
   if (context.isRoshChodesh) {
     // עדות המזרח: "בְּיוֹם רֹאשׁ חֹדֶשׁ הַזֶּה" (סידור עדות המזרח בספריא); ספרד ואשכנז: "רֹאשׁ הַחֹדֶשׁ"
-    parts.push(sup(p(lbl("בראש חודש") + _addSpan("וְזָכְרֵֽנוּ לְטוֹבָה בְּיוֹם " + (nusach === "mizrahi" ? "רֹאשׁ חֹֽדֶשׁ" : "רֹאשׁ הַחֹֽדֶשׁ") + " הַזֶּה."))));
+    parts.push(p(lbl("בראש חודש") + prAdd("וְזָכְרֵֽנוּ לְטוֹבָה בְּיוֹם " + (nusach === "mizrahi" ? "רֹאשׁ חֹֽדֶשׁ" : "רֹאשׁ הַחֹֽדֶשׁ") + " הַזֶּה.")));
   }
   if (context.isRoshHaShana && _isYT) {
-    parts.push(sup(p(lbl("בראש השנה") + _addSpan("וְזָכְרֵֽנוּ לְטוֹבָה בְּיוֹם הַזִּכָּרוֹן הַזֶּה."))));
+    parts.push(p(lbl("בראש השנה") + prAdd("וְזָכְרֵֽנוּ לְטוֹבָה בְּיוֹם הַזִּכָּרוֹן הַזֶּה.")));
   }
   if (_isRegel) {
     const chag = _isShmini
@@ -12991,7 +12869,7 @@ function buildAlHamichyaPayload() {
     const mikra = nusach === "mizrahi"
       ? (_isYT ? ", בְּיוֹם טוֹב מִקְרָא קֹֽדֶשׁ הַזֶּה" : ", בְּיוֹם מִקְרָא קֹֽדֶשׁ הַזֶּה")
       : "";
-    parts.push(sup(p(lbl(chagLbl) + _addSpan("וְשַׂמְּחֵֽנוּ בְּיוֹם " + chag + " הַזֶּה" + mikra + "."))));
+    parts.push(p(lbl(chagLbl) + prAdd("וְשַׂמְּחֵֽנוּ בְּיוֹם " + chag + " הַזֶּה" + mikra + ".")));
   }
 
   // ── חתימה ──
@@ -13191,6 +13069,10 @@ function buildBirkatHamazonPayload(context) {
   function sup(html) {
     return '<div class="prayer-supplement">' + html + "</div>";
   }
+  // תוספת לפי היום — פסקה רגילה בצבע התוספות (prAdd)
+  function pa(t) {
+    return p(prAdd(t));
+  }
   const hr = '<hr class="prayer-divider">';
 
   const isMizrahi = nusach === "mizrahi";
@@ -13329,9 +13211,9 @@ function buildBirkatHamazonPayload(context) {
     // ביו"ט "יוֹמָא טָבָא אוּשְׁפִּיזָא קַדִּישָׁא" (לא בחוה"מ), ובשבעת ימי הסוכות —
     // כולל חול המועד והושענא רבה — "שִׁבְעָה אוּשְׁפִּיזִין עִלָּאִין קַדִּישִׁין"
     const zimunDayAdditions =
-      (context.isShabbat ? " <b>וּבִרְשׁוּת שַׁבָּת מַלְכְּתָא</b>" : "") +
-      (isYT ? " <b>וּבִרְשׁוּת יוֹמָא טָבָא אוּשְׁפִּיזָא קַדִּישָׁא</b>" : "") +
-      (isSukkotWeek ? " <b>וּבִרְשׁוּת שִׁבְעָה אוּשְׁפִּיזִין עִלָּאִין קַדִּישִׁין</b>" : "");
+      (context.isShabbat ? " " + prAdd("<b>וּבִרְשׁוּת שַׁבָּת מַלְכְּתָא</b>") : "") +
+      (isYT ? " " + prAdd("<b>וּבִרְשׁוּת יוֹמָא טָבָא אוּשְׁפִּיזָא קַדִּישָׁא</b>") : "") +
+      (isSukkotWeek ? " " + prAdd("<b>וּבִרְשׁוּת שִׁבְעָה אוּשְׁפִּיזִין עִלָּאִין קַדִּישִׁין</b>") : "");
 
     // Zimun (supplement)
     parts.push(
@@ -13375,12 +13257,12 @@ function buildBirkatHamazonPayload(context) {
     // על הניסים — חנוכה
     if (context.isChanukah) {
       parts.push(
-        p(
+        pa(
           "עַל הַנִּסִּים וְעַל הַפֻּרְקָן וְעַל הַגְּבוּרוֹת וְעַל הַתְּשׁוּעוֹת וְעַל הַנִּפְלָאוֹת וְעַל הַנֶּחָמוֹת שֶׁעָשִֽׂיתָ לַאֲבוֹתֵֽינוּ בַּיָּמִים הָהֵם בַּזְּמַן הַזֶּה:",
         ),
       );
       parts.push(
-        p(
+        pa(
           "בִּימֵי מַתִּתְיָה בֶן־יוֹחָנָן כֹּהֵן גָּדוֹל חַשְׁמוֹנָאִי וּבָנָיו, כְּשֶׁעָֽמְדָֽה מַלְכוּת יָוָן הָרְשָׁעָה עַל עַמְּךָ יִשְׂרָאֵל, לְשַׁכְּחָם תּוֹרָתָךְ וּלְהַעֲבִירָם מֵחֻקֵּי רְצוֹנָךְ, וְאַתָּה בְּרַחֲמֶֽיךָ הָרַבִּים עָמַֽדְתָּ לָהֶם בְּעֵת צָרָתָם, רַֽבְתָּ אֶת רִיבָם, דַּֽנְתָּ אֶת דִּינָם, נָקַֽמְתָּ אֶת נִקְמָתָם, מָסַֽרְתָּ גִבּוֹרִים בְּיַד חַלָּשִׁים, וְרַבִּים בְּיַד מְעַטִּים, וּרְשָׁעִים בְּיַד צַדִּיקִים, וּטְמֵאִים בְּיַד טְהוֹרִים, וְזֵדִים בְּיַד עֽוֹסְקֵֽי תוֹרָתֶֽךָ. לְךָ עָשִֽׂיתָ שֵׁם גָּדוֹל וְקָדוֹשׁ בְּעוֹלָמָךְ, וּלְעַמְּךָ יִשְׂרָאֵל עָשִֽׂיתָ תְּשׁוּעָה גְדוֹלָה וּפֻרְקָן כְּהַיּוֹם הַזֶּה. וְאַחַר כָּךְ בָּֽאוּ בָנֶֽיךָ לִדְבִיר בֵּיתֶֽךָ, וּפִנּוּ אֶת־הֵיכָלֶֽךָ, וְטִהֲרוּ אֶת־מִקְדָּשֶֽׁךָ, וְהִדְלִֽיקוּ נֵרוֹת בְּחַצְרוֹת קָדְשֶֽׁךָ. וְקָֽבְעֽוּ שְׁמוֹנַת יְמֵי חֲנֻכָּה אֵֽלּוּ בְּהַלֵּל וּבְהוֹדָאָה. וְעָשִֽׂיתָ עִמָּהֶם נִסִּים וְנִפְלָאוֹת וְנוֹדֶה לְשִׁמְךָ הַגָּדוֹל סֶֽלָה:",
         ),
       );
@@ -13388,12 +13270,12 @@ function buildBirkatHamazonPayload(context) {
     // על הניסים — פורים
     if (context.isPurim) {
       parts.push(
-        p(
+        pa(
           "עַל הַנִּסִּים וְעַל הַפֻּרְקָן וְעַל הַגְּבוּרוֹת וְעַל הַתְּשׁוּעוֹת וְעַל הַנִּפְלָאוֹת וְעַל הַנֶּחָמוֹת שֶׁעָשִֽׂיתָ לַאֲבוֹתֵֽינוּ בַּיָּמִים הָהֵם בַּזְּמַן הַזֶּה:",
         ),
       );
       parts.push(
-        p(
+        pa(
           "בִּימֵי מָרְדְּכַי וְאֶסְתֵּר בְּשׁוּשַׁן הַבִּירָה, כְּשֶׁעָמַד עֲלֵיהֶם הָמָן הָרָשָׁע, בִּקֵּשׁ לְהַשְׁמִיד לַהֲרֹג וּלְאַבֵּד אֶת־כָּל־הַיְּהוּדִים מִנַּֽעַר וְעַד זָקֵן טַף וְנָשִׁים בְּיוֹם אֶחָד, בִּשְׁלֹשָׁה עָשָׂר לְחֹֽדֶשׁ שְׁנֵים עָשָׂר, הוּא חֹֽדֶשׁ אֲדָר, וּשְׁלָלָם לָבוֹז. וְאַתָּה בְּרַחֲמֶֽיךָ הָרַבִּים הֵפַֽרְתָּ אֶת־עֲצָתוֹ, וְקִלְקַֽלְתָּ אֶת־מַחֲשַׁבְתּוֹ, וַהֲשֵׁבֽוֹתָ לּוֹ גְּמוּלוֹ בְרֹאשׁוֹ. וְתָלוּ אוֹתוֹ וְאֶת־בָּנָיו עַל הָעֵץ. וְעָשִֽׂיתָ עִמָּהֶם נֵס וָפֶֽלֶא וְנוֹדֶה לְשִׁמְךָ הַגָּדוֹל סֶֽלָה:",
         ),
       );
@@ -13417,7 +13299,7 @@ function buildBirkatHamazonPayload(context) {
     // רצה — שבת
     if (context.isShabbat) {
       parts.push(
-        p(
+        pa(
           "רְצֵה וְהַחֲלִיצֵֽנוּ יְהֹוָה אֱלֹהֵֽינוּ בְּמִצְוֹתֶֽיךָ וּבְמִצְוַת יוֹם הַשְּׁבִיעִי, הַשַּׁבָּת הַגָּדוֹל וְהַקָּדוֹשׁ הַזֶּה. כִּי יוֹם גָּדוֹל וְקָדוֹשׁ הוּא מִלְּפָנֶֽיךָ, נִשְׁבּוֹת בּוֹ וְנָנֽוּחַ בּוֹ וְנִתְעַנֵּג בּוֹ כְּמִצְוַת חֻקֵּי רְצוֹנָךְ, וְאַל־תְּהִי צָרָה וְיָגוֹן בְּיוֹם מְנוּחָתֵֽנוּ. וְהַרְאֵֽנוּ בְּנֶחָמַת צִיּוֹן בִּמְהֵרָה בְיָמֵֽינוּ, כִּי אַתָּה הוּא בַּֽעַל הַנֶּחָמוֹת. וַהֲגַם שֶׁאָכַֽלְנוּ וְשָׁתִֽינוּ חָרְבַּן בֵּֽיתְךָֽ הַגָּדוֹל וְהַקָּדוֹשׁ לֹא שָׁכַֽחְנוּ. אַל־תִּשְׁכָּחֵֽנוּ לָנֶֽצַח וְאַל־תִּזְנָחֵֽנוּ לָעַד כִּי אֵל מֶֽלֶךְ גָּדוֹל וְקָדוֹשׁ אָֽתָּה:",
         ),
       );
@@ -13426,7 +13308,7 @@ function buildBirkatHamazonPayload(context) {
     // יעלה ויבוא — ראש חודש / יו"ט / חוה"מ
     if (needsYaaleh) {
       parts.push(
-        p(
+        pa(
           "אֱלֹהֵֽינוּ וֵאלֹהֵי אֲבוֹתֵֽינוּ, יַעֲלֶה וְיָבֹא, וְיַגִּֽיעַ וְיֵרָאֶה, וְיֵרָצֶה וְיִשָּׁמַע, וְיִפָּקֵד וְיִזָּכֵר, זִכְרוֹנֵֽנוּ וְזִכְרוֹן אֲבוֹתֵֽינוּ, זִכְרוֹן יְרוּשָׁלַֽיִם עִירָךְ, וְזִכְרוֹן מָשִֽׁיחַ בֶּן־דָּוִד עַבְדָּךְ, וְזִכְרוֹן כָּל־עַמְּךָ בֵּית יִשְׂרָאֵל לְפָנֶֽיךָ, לִפְלֵיטָה, לְטוֹבָה, לְחֵן, לְחֶֽסֶד וּלְרַחֲמִים, לְחַיִּים טוֹבִים וּלְשָׁלוֹם, בְּיוֹם " +
             yaalehDayInsert +
             ". לְרַחֵם בּוֹ עָלֵֽינוּ וּלְהוֹשִׁיעֵֽנוּ. זָכְרֵֽנוּ יְהֹוָה אֱלֹהֵֽינוּ בּוֹ לְטוֹבָה, וּפָקְדֵֽנוּ בוֹ לִבְרָכָה, וְהוֹשִׁיעֵֽנוּ בוֹ לְחַיִּים טוֹבִים, בִּדְבַר יְשׁוּעָה וְרַחֲמִים, חוּס וְחָנֵּֽנוּ, וַחֲמוֹל וְרַחֵם עָלֵֽינוּ, וְהוֹשִׁיעֵֽנוּ כִּי אֵלֶֽיךָ עֵינֵֽינוּ, כִּי אֵל מֶֽלֶךְ חַנּוּן וְרַחוּם אָֽתָּה:",
@@ -13462,7 +13344,7 @@ function buildBirkatHamazonPayload(context) {
     // הרחמן — שבת
     if (context.isShabbat) {
       parts.push(
-        p(
+        pa(
           "הָרַחֲמָן הוּא יַנְחִילֵֽנוּ עוֹלָם שֶׁכֻּלּוֹ שַׁבָּת וּמְנוּחָה לְחַיֵּי הָעוֹלָמִים:",
         ),
       );
@@ -13470,7 +13352,7 @@ function buildBirkatHamazonPayload(context) {
     // הרחמן — ראש חודש
     if (context.isRoshChodesh) {
       parts.push(
-        p(
+        pa(
           "הָרַחֲמָן הוּא יְחַדֵּשׁ עָלֵֽינוּ אֶת הַחֹֽדֶשׁ הַזֶּה לְטוֹבָה וְלִבְרָכָה:",
         ),
       );
@@ -13478,7 +13360,7 @@ function buildBirkatHamazonPayload(context) {
     // הרחמן — ראש השנה (התנאי הקודם "ר"ה וגם חוה"מ" לא התקיים לעולם)
     if (context.isRoshHaShana && isYT) {
       parts.push(
-        p(
+        pa(
           "הָרַחֲמָן הוּא יְחַדֵּשׁ עָלֵֽינוּ אֶת הַשָּׁנָה הַזֹּאת לְטוֹבָה וְלִבְרָכָה:",
         ),
       );
@@ -13487,7 +13369,7 @@ function buildBirkatHamazonPayload(context) {
     // לא בשמיני עצרת)
     if (isSukkotWeek) {
       parts.push(
-        p(
+        pa(
           "הָרַחֲמָן הוּא יְזַכֵּֽנוּ לֵישֵׁב בְּסֻכַּת עוֹרוֹ שֶׁל לִוְיָתָן: הָרַחֲמָן הוּא יַשְׁפִּֽיעַ עָלֵֽינוּ שֶֽׁפַע קְדֻשָּׁה וְטָהֳרָה מִשִּׁבְעָה אוּשְׁפִּיזִין עִלָּאִין קַדִּישִׁין, זְכוּתָם תְּהֵא מָגֵן וְצִנָּה בַּעֲדֵֽינוּ: הָרַחֲמָן הוּא יָקִים לָֽנוּ אֶת סֻכַּת דָּוִד הַנּוֹפֶֽלֶת:",
         ),
       );
@@ -13495,14 +13377,14 @@ function buildBirkatHamazonPayload(context) {
     // הרחמן — במועדים (יו"ט וחוה"מ של הרגלים)
     if (isRegel) {
       parts.push(
-        p(
+        pa(
           "הָרַחֲמָן הוּא יַגִּיעֵֽנוּ לְמוֹעֲדִים אֲחֵרִים הַבָּאִים לִקְרָאתֵֽנוּ לְשָׁלוֹם:",
         ),
       );
     }
     // הרחמן — ביום טוב בלבד ("יום שכולו טוב" אינו נאמר בחול המועד)
     if (isYT) {
-      parts.push(p("הָרַחֲמָן הוּא יַנְחִילֵֽנוּ יוֹם שֶׁכֻּלּוֹ טוֹב:"));
+      parts.push(pa("הָרַחֲמָן הוּא יַנְחִילֵֽנוּ יוֹם שֶׁכֻּלּוֹ טוֹב:"));
     }
 
     // הרחמן — תמיד (always at end)
@@ -13539,7 +13421,7 @@ function buildBirkatHamazonPayload(context) {
     const _useMigdol = _useMigdolDay || context.isPurim;
     parts.push(
       p(
-        (_useMigdol ? 'מִגְדּוֹל' : 'מַגְדִּיל') +
+        prAdd(_useMigdol ? 'מִגְדּוֹל' : 'מַגְדִּיל') +
         ' יְשׁוּעֹת מַלְכּוֹ וְעֹֽשֶׂה־חֶסֶד לִמְשִׁיחוֹ לְדָוִד וּלְזַרְעוֹ עַד־עוֹלָם: כְּ֭פִירִים רָשׁ֣וּ וְרָעֵ֑בוּ וְדֹרְשֵׁ֥י יְ֝הֹוָ֗ה לֹא־יַחְסְרוּ כָל־טֽוֹב: נַ֤עַר ׀ הָיִ֗יתִי גַּם־זָ֫קַ֥נְתִּי וְֽלֹא־רָ֭אִיתִי צַדִּ֣יק נֶעֱזָ֑ב וְ֝זַרְעוֹ מְבַקֶּשׁ־לָֽחֶם: כָּל־הַיּוֹם חוֹנֵן וּמַלְוֶה וְזַרְעוֹ לִבְרָכָה: מַה שֶּׁאָכַֽלְנוּ יִהְיֶה לְשָׂבְעָה. וּמַה שֶּׁשָּׁתִֽינוּ יִהְיֶה לִרְפוּאָה. וּמַה שֶּׁהוֹתַֽרְנוּ יִהְיֶה לִבְרָכָה. כְּדִכְתִיב, וַיִּתֵּן לִפְנֵיהֶם וַיֹּאכְלוּ וַיּוֹתִרוּ כִּדְבַר יְהֹוָה: בְּרוּכִים אַתֶּם לַיהֹוָה עֹשֵׂה שָׁמַיִם וָאָרֶץ: בָּרוּךְ הַגֶּבֶר אֲשֶׁר יִבְטַח בַּיהֹוָה וְהָיָה יְהֹוָה מִבְטַחוֹ: יְהֹוָה עֹז לְעַמּוֹ יִתֵּן יְהֹוָה יְבָרֵךְ אֶת־עַמּוֹ בַשָּׁלוֹם: עֹשֶׂה שָׁלוֹם בִּמְרוֹמָיו, הוּא בְּרַחֲמָיו יַעֲשֶׂה שָׁלוֹם עָלֵֽינוּ. וְעַל כָּל־עַמּוֹ יִשְׂרָאֵל, וְאִמְרוּ אָמֵן:',
       ),
     );
@@ -13663,12 +13545,12 @@ function buildBirkatHamazonPayload(context) {
     // על הניסים — חנוכה
     if (context.isChanukah) {
       parts.push(
-        p(
+        pa(
           "וְעַל הַנִּסִּים וְעַל הַפֻּרְקָן וְעַל הַגְּ֒בוּרוֹת וְעַל הַתְּ֒שׁוּעוֹת וְעַל הַנִּפְלָאוֹת וְעַל הַנֶּחָמוֹת וְעַל הַמִּלְחָמוֹת שֶׁעָשִֽׂיתָ לַאֲבוֹתֵֽינוּ בַּיָּמִים הָהֵם בִּזְּ֒מַן הַזֶּה:",
         ),
       );
       parts.push(
-        p(
+        pa(
           "בִּימֵי מַתִּתְיָֽהוּ בֶּן־יוֹחָנָן כֹּהֵן גָּדוֹל חַשְׁמוֹנָאִי וּבָנָיו כְּשֶׁעָמְ֒דָה מַלְכוּת יָוָן הָרְ֒שָׁעָה עַל־עַמְּ֒ךָ יִשְׂרָאֵל לְהַשְׁכִּיחָם תּוֹרָתֶֽךָ וּלְהַעֲבִירָם מֵחֻקֵּי רְצוֹנֶֽךָ: וְאַתָּה בְּרַחֲמֶֽיךָ הָרַבִּים עָמַֽדְתָּ לָהֶם בְּעֵת צָרָתָם רַֽבְתָּ אֶת־רִיבָם דַּֽנְתָּ אֶת־דִּינָם נָקַֽמְתָּ אֶת־נִקְמָתָם מָסַֽרְתָּ גִבּוֹרִים בְּיַד חַלָּשִׁים וְרַבִּים בְּיַד מְעַטִּים וּטְמֵאִים בְּיַד טְהוֹרִים וּרְשָׁעִים בְּיַד צַדִּיקִים וְזֵדִים בְּיַד עוֹסְ֒קֵי תוֹרָתֶֽךָ וּלְךָ עָשִֽׂיתָ שֵׁם גָּדוֹל וְקָדוֹשׁ בְּעוֹלָמֶֽךָ וּלְעַמְּ֒ךָ יִשְׂרָאֵל עָשִֽׂיתָ תְּשׁוּעָה גְדוֹלָה וּפֻרְקָן כְּהַיּוֹם הַזֶּה וְאַחַר כַּךְ בָּֽאוּ בָנֶֽיךָ לִדְבִיר בֵּיתֶֽךָ וּפִנּוּ אֶת הֵיכָלֶֽךָ וְטִהֲרוּ אֶת מִקְדָּשֶֽׁךָ וְהִדְלִֽיקוּ נֵרוֹת בְּחַצְרוֹת קָדְשֶֽׁךָ וְקָבְ֒עוּ שְׁמוֹנַת יְמֵי חֲנֻכָּה אֵֽלּוּ לְהוֹדוֹת וּלְהַלֵּל לְשִׁמְךָ הַגָּדוֹל:",
         ),
       );
@@ -13676,12 +13558,12 @@ function buildBirkatHamazonPayload(context) {
     // על הניסים — פורים
     if (context.isPurim) {
       parts.push(
-        p(
+        pa(
           "וְעַל הַנִּסִּים וְעַל הַפֻּרְקָן וְעַל הַגְּ֒בוּרוֹת וְעַל הַתְּ֒שׁוּעוֹת וְעַל הַמִּלְחָמוֹת שֶׁעָשִֽׂיתָ לַאֲבוֹתֵֽינוּ בַּיָּמִים הָהֵם בִּזְּ֒מַן הַזֶּה:",
         ),
       );
       parts.push(
-        p(
+        pa(
           "בִּימֵי מָרְדְּכַי וְאֶסְתֵּר בְּשׁוּשַׁן הַבִּירָה כְּשֶׁעָמַד עֲלֵיהֶם הָמָן הָרָשָׁע בִּקֵּשׁ לְהַשְׁמִיד לַהֲרוֹג וּלְאַבֵּד אֶת־כָּל־הַיְּ֒הוּדִים מִנַּֽעַר וְעַד־זָקֵן טַף וְנָשִׁים בְּיוֹם אֶחָד בִּשְׁלוֹשָׁה עָשָׂר לְחֹֽדֶשׁ שְׁנֵים־עָשָׂר הוּא חֹֽדֶשׁ אֲדָר וּשְׁלָלָם לָבוֹז: וְאַתָּה בְּרַחֲמֶֽיךָ הָרַבִּים הֵפַֽרְתָּ אֶת־עֲצָתוֹ וְקִלְקַֽלְתָּ אֶת מַחֲשַׁבְתּוֹ וַהֲשֵׁבֽוֹתָ לּוֹ גְּמוּלוֹ בְּרֹאשׁוֹ וְתָלוּ אוֹתוֹ וְאֶת־בָּנָיו עַל־הָעֵץ:",
         ),
       );
@@ -13705,7 +13587,7 @@ function buildBirkatHamazonPayload(context) {
     // רצה — שבת
     if (context.isShabbat) {
       parts.push(
-        p(
+        pa(
           "רְצֵה וְהַחֲלִיצֵֽנוּ יְהֹוָה אֱלֹהֵֽינוּ בְּמִצְוֹתֶֽיךָ וּבְמִצְוַת יוֹם הַשְּׁ֒בִיעִי הַשַּׁבָּת הַגָּדוֹל וְהַקָּדוֹשׁ הַזֶּה כִּי יוֹם זֶה גָדוֹל וְקָדוֹשׁ הוּא לְפָנֶֽיךָ לִשְׁבָּת בּוֹ וְלָנֽוּחַ בּוֹ בְּאַהֲבָה כְּמִצְוַת רְצוֹנֶֽךָ וּבִרְצוֹנְ֒ךָ הָנִֽיחַ לָֽנוּ יְהֹוָה אֱלֹהֵֽינוּ שֶׁלֺּא תְהֵא צָרָה וְיָגוֹן וַאֲנָחָה בְּיוֹם מְנוּחָתֵֽנוּ וְהַרְאֵֽנוּ יְהֹוָה אֱלֹהֵֽינוּ בְּנֶחָמַת צִיּוֹן עִירֶֽךָ וּבְ֒בִנְיַן יְרוּשָׁלַֽיִם עִיר קָדְשֶֽׁךָ כִּי אַתָּה הוּא בַּעַל הַיְשׁוּעוֹת וּבַעַל הַנֶּחָמוֹת:",
         ),
       );
@@ -13714,7 +13596,7 @@ function buildBirkatHamazonPayload(context) {
     // יעלה ויבוא — ראש חודש / יו"ט / חוה"מ
     if (needsYaaleh) {
       parts.push(
-        p(
+        pa(
           "אֱלֹהֵֽינוּ וֵאלֹהֵי אֲבוֹתֵֽינוּ יַעֲלֶה וְיָבֹא וְיַגִּֽיעַ וְיֵרָאֶה וְיֵרָצֶה וְיִשָּׁמַע וְיִפָּקֵד וְיִזָּכֵר זִכְרוֹנֵֽינוּ וּפִקְדוֹנֵֽינוּ וְזִכְרוֹן אֲבוֹתֵֽינוּ וְזִכְרוֹן מָשִֽׁיחַ בֶּן־דָּוִד עַבְדֶּֽךָ וְזִכְרוֹן יְרוּשָׁלַֽיִם עִיר קָדְשֶֽׁךָ וְזִכְרוֹן כָּל־עַמְּ֒ךָ בֵּית יִשְׂרָאֵל לְפָנֶֽיךָ, לִפְלֵיטָה לְטוֹבָה לְחֵן וּלְחֶֽסֶד וּלְרַחֲמִים וּלְחַיִּים טוֹבִים וּלְשָׁלוֹם בְּיוֹם " +
             yaalehDayInsert +
             ". זָכְרֵֽינוּ יְהֹוָה אֱלֹהֵֽינוּ בּוֹ לְטוֹבָה, וּפָקְדֵֽינוּ בוֹ לִבְרָכָה, וְהוֹשִׁיעֵֽנוּ בוֹ לְחַיִּים טוֹבִים, וּבִדְבַר יְשׁוּעָה וְרַחֲמִים חוּס וְחָנֵּֽינוּ, וְרַחֵם עָלֵֽינוּ וְהוֹשִׁיעֵֽינוּ, כִּי אֵלֶֽיךָ עֵינֵֽינוּ, כִּי אֵל מֶֽלֶךְ חַנּוּן וְרַחוּם אָֽתָּה:",
@@ -13727,14 +13609,12 @@ function buildBirkatHamazonPayload(context) {
     // לעדות המזרח אין אומרים אותו בברכה עצמה (כה"ח תקנז סקי"א) — ולכן רק כאן.
     if (context.isTishaBeAv) {
       parts.push(
-        sup(
-          p("[בְּתִשְׁעָה בְּאָב — מִי שֶׁאוֹכֵל (חוֹלֶה וְכַיּוֹצֵא בּוֹ) מוֹסִיף כָּאן:]") +
-            p(
+        p("<small>[בְּתִשְׁעָה בְּאָב — מִי שֶׁאוֹכֵל (חוֹלֶה וְכַיּוֹצֵא בּוֹ) מוֹסִיף כָּאן:]</small>") +
+            pa(
               nusach === "ashkenaz"
                 ? "נַחֵם יְהֹוָה אֱלֹהֵֽינוּ אֶת אֲבֵלֵי צִיּוֹן וְאֶת אֲבֵלֵי יְרוּשָׁלָֽיִם. וְאֶת הָעִיר הָאֲבֵלָה וְהַחֲרֵבָה וְהַבְּ֒זוּיָה וְהַשּוֹמֵמָה. הָאֲבֵלָה מִבְּ֒לִי בָנֶֽיהָ. וְהַחֲרֵבָה מִמְּ֒עוֹנוֹתֶֽיהָ. וְהַבְּ֒זוּיָה מִכְּ֒בוֹדָהּ. וְהַשוֹמֵמָה מֵאֵין יוֹשֵׁב. וְהִיא יוֹשֶֽׁבֶת וְרֹאשָׁהּ חָפוּי כְּאִשָּׁה עֲקָרָה שֶׁלֹּא יָלָֽדָה. וַיְבַלְּ֒עֽוּהָ לִיגְיוֹנוֹת. וְיִירָשֽׁוּהָ עוֹבְ֒דֵי פְסִילִים. וַיָטִּֽילוֹ אֶת עַמְּ֒ךָ יִשְׂרָאֵל לֶחָֽרֶב. וַיַּהַרְגוּ בְזָדוֹן חֲסִידֵי עֶלְיוֹן. עַל כֵּן צִיּוֹן בְּמַר תִבְכֶּה. וִירוּשָׁלַֽיִם תִּתֵּן קוֹלָהּ. לִבִּי לִבִּי עַל חַלְלֵיהֶם. מֵעַי מֵעַי עַל חַלְלֵיהֶם. כִּי אַתָּה יְהֹוָה בָּאֵשׁ הִצַּתָּהּ. וּבָאֵשׁ אַתָּה עָתִיד לִבְנוֹתָהּ. כָּאָמוּר וַאֲנִי אֶהְיֶה לָהּ נְאֻם יְהֹוָה חוֹמַת אֵשׁ סָבִיב וּלְכָבוֹד אֶהְיֶה בְּתוֹכָהּ:"
                 : "נַחֵם יְהֹוָה אֱלֹהֵֽינוּ אֶת אֲבֵלֵי צִיּוֹן וְאֶת אֲבֵלֵי יְרוּשָׁלָֽיִם. וְאֶת הָעִיר הָאֲבֵלָה וְהַחֲרֵבָה וְהַבְּ֒זוּיָה וְהַשּוֹמֵמָה. הָאֲבֵלָה מִבְּ֒לִי בָנֶֽיהָ. וְהַחֲרֵבָה מִמְּ֒עוֹנוֹתֶֽיהָ. וְהַבְּ֒זוּיָה מִכְּ֒בוֹדָהּ. וְהַשוֹמֵמָה מֵאֵין יוֹשֵׁב. וְהִיא יוֹשֶֽׁבֶת וְרֹאשָׁהּ חָפוּי כְּאִשָּׁה עֲקָרָה שֶׁלֹּא יָלָֽדָה. וַיְבַלְּ֒עֽוּהָ לִיגְיוֹנוֹת. וְיִירָשֽׁוּהָ עוֹבְ֒דֵי כוֹכָבִים. וַיָטִּֽילוֹ אֶת עַמְּ֒ךָ יִשְׂרָאֵל לֶחָֽרֶב. וַיַּהַרְגוּ בְזָדוֹן חֲסִידֵי עֶלְיוֹן. עַל כֵּן צִיּוֹן בְּמַר תִבְכֶּה. וִירוּשָׁלַֽיִם תִּתֵּן קוֹלָהּ. לִבִּי לִבִּי עַל חַלְלֵיהֶם. מֵעַי מֵעַי עַל חַלְלֵיהֶם. כִּי אַתָּה יְהֹוָה בָּאֵשׁ הִצַּתָּהּ. וּבָאֵשׁ אַתָּה עָתִיד לִבְנוֹתָהּ. כָּאָמוּר וַאֲנִי אֶהְיֶה לָהּ נְאֻם יְהֹוָה חוֹמַת אֵשׁ סָבִיב וּלְכָבוֹד אֶהְיֶה בְּתוֹכָהּ:",
             ),
-        ),
       );
     }
 
@@ -13791,7 +13671,7 @@ function buildBirkatHamazonPayload(context) {
     // הרחמן — שבת
     if (context.isShabbat) {
       parts.push(
-        p(
+        pa(
           "הָרַחֲמָן הוּא יַנְחִילֵֽנוּ יוֹם שֶׁכֻּלּוֹ שַׁבָּת וּמְנוּחָה לְחַיֵּי הָעוֹלָמִים:",
         ),
       );
@@ -13799,19 +13679,19 @@ function buildBirkatHamazonPayload(context) {
     // הרחמן — ראש חודש
     if (context.isRoshChodesh) {
       parts.push(
-        p(
+        pa(
           "הָרַחֲמָן הוּא יְחַדֵּשׁ עָלֵֽינוּ אֶת הַחֹֽדֶשׁ הַזֶּה לְטוֹבָה וְלִבְרָכָה:",
         ),
       );
     }
     // הרחמן — יו"ט: ביום טוב בלבד, לא בחול המועד ("ביו"ט אומר" — סידור ספרד/אשכנז)
     if (isYT) {
-      parts.push(p("הָרַחֲמָן הוּא יַנְחִילֵֽנוּ יוֹם שֶׁכֻּלּוֹ טוֹב:"));
+      parts.push(pa("הָרַחֲמָן הוּא יַנְחִילֵֽנוּ יוֹם שֶׁכֻּלּוֹ טוֹב:"));
     }
     // הרחמן — ראש השנה (התנאי הקודם "ר"ה וגם חוה"מ" לא התקיים לעולם)
     if (context.isRoshHaShana && isYT) {
       parts.push(
-        p(
+        pa(
           "הָרַחֲמָן הוּא יְחַדֵּשׁ עָלֵֽינוּ אֶת הַשָּׁנָה הַזֹּאת לְטוֹבָה וְלִבְרָכָה:",
         ),
       );
@@ -13819,7 +13699,7 @@ function buildBirkatHamazonPayload(context) {
     // הרחמן — סוכות: כל שבעת הימים (ט"ו–כ"א תשרי, כולל יו"ט ראשון; לא בשמיני עצרת)
     if (isSukkotWeek) {
       parts.push(
-        p("הָרַחֲמָן הוּא יָקִים לָֽנוּ אֶת סֻכַּת דָּוִד הַנּוֹפָֽלֶת:"),
+        pa("הָרַחֲמָן הוּא יָקִים לָֽנוּ אֶת סֻכַּת דָּוִד הַנּוֹפָֽלֶת:"),
       );
     }
     // חנוכה/פורים — מי ששכח "על הנסים" אומרו בתוך "הרחמן" (רמ"א או"ח קפז ד;
@@ -13841,7 +13721,7 @@ function buildBirkatHamazonPayload(context) {
     parts.push(
       p(
         "הָרַחֲמָן הוּא יְזַכֵּֽנוּ לִימוֹת הַמָּשִֽׁיחַ וּלְחַיֵּי הָעוֹלָם הַבָּא, " +
-          (_useMigdolDay ? "מִגְדּוֹל" : "מַגְדִּיל") +
+          prAdd(_useMigdolDay ? "מִגְדּוֹל" : "מַגְדִּיל") +
           " יְשׁוּעוֹת מַלְכּוֹ, וְעֹֽשֶׂה חֶֽסֶד לִמְשִׁיחוֹ לְדָוִד וּלְזַרְעוֹ עַד עוֹלָם: עֹשֶׂה שָׁלוֹם בִּמְרוֹמָיו, הוּא יַעֲשֶׂה שָׁלוֹם עָלֵֽינוּ וְעַל כָּל־יִשְׂרָאֵל, וְאִמְרוּ אָמֵן:",
       ),
     );
@@ -16718,7 +16598,7 @@ function buildShacharitMizrahiPayload(context) {
   );
   parts.push(
     p(
-      "<b>בָּרוּךְ</b> אַתָּה יְהֹוָה, אֱלֹהֵֽינוּ וֵֽאלֹהֵי אֲבוֹתֵֽינוּ, אֱלֹהֵי אַבְרָהָם, אֱלֹהֵי יִצְחָק, וֵֽאלֹהֵי יַעֲקֹב. הָאֵל הַגָּדוֹל הַגִּבּוֹר וְהַנּוֹרָא, אֵל עֶלְיוֹן, גּוֹמֵל חֲסָדִים טוֹבִים, קוֹנֵה הַכֹּל, וְזוֹכֵר חַסְדֵּי אָבוֹת, וּמֵבִיא גוֹאֵל לִבְנֵי בְנֵיהֶם לְמַֽעַן שְׁמוֹ בְּאַֽהֲבָה: <small><small>בעשרת ימי תשובה אומרים:</small> זָכְרֵנוּ לְחַיִּים, מֶלֶךְ חָפֵץ בַּחַיִּים, כָּתְבֵנוּ בְּסֵפֶר חַיִּים, לְמַעַנָךְ אֱלֹהִים חַיִּים.</small> מֶֽלֶךְ עוֹזֵר וּמוֹשִֽׁיעַ וּמָגֵן: בָּרוּךְ אַתָּה יַהַוַהַ, מָגֵן אַבְרָהָם:",
+      "<b>בָּרוּךְ</b> אַתָּה יְהֹוָה, אֱלֹהֵֽינוּ וֵֽאלֹהֵי אֲבוֹתֵֽינוּ, אֱלֹהֵי אַבְרָהָם, אֱלֹהֵי יִצְחָק, וֵֽאלֹהֵי יַעֲקֹב. הָאֵל הַגָּדוֹל הַגִּבּוֹר וְהַנּוֹרָא, אֵל עֶלְיוֹן, גּוֹמֵל חֲסָדִים טוֹבִים, קוֹנֵה הַכֹּל, וְזוֹכֵר חַסְדֵּי אָבוֹת, וּמֵבִיא גוֹאֵל לִבְנֵי בְנֵיהֶם לְמַֽעַן שְׁמוֹ בְּאַֽהֲבָה: " + prOpt(context.isAseretYemeiTeshuva, "בעשרת ימי תשובה אומרים:", "זָכְרֵנוּ לְחַיִּים, מֶלֶךְ חָפֵץ בַּחַיִּים, כָּתְבֵנוּ בְּסֵפֶר חַיִּים, לְמַעַנָךְ אֱלֹהִים חַיִּים.") + " מֶֽלֶךְ עוֹזֵר וּמוֹשִֽׁיעַ וּמָגֵן: בָּרוּךְ אַתָּה יַהַוַהַ, מָגֵן אַבְרָהָם:",
     ),
   );
   parts.push(
@@ -16727,13 +16607,13 @@ function buildShacharitMizrahiPayload(context) {
     ),
   );
   if (isSummer) {
-    parts.push(p("מוֹרִיד הַטָּל. "));
+    pushAdd(parts, p("מוֹרִיד הַטָּל. "));
   } else {
-    parts.push(p("מַשִּׁיב הָרֽוּחַ וּמוֹרִיד הַגֶּֽשֶׁם. "));
+    pushAdd(parts, p("מַשִּׁיב הָרֽוּחַ וּמוֹרִיד הַגֶּֽשֶׁם. "));
   }
   parts.push(
     p(
-      "מְכַלְכֵּל חַיִּים בְּחֶֽסֶד, מְחַיֵּה מֵתִים בְּרַֽחֲמִים רַבִּים, סוֹמֵךְ נֽוֹפְלִים, וְרוֹפֵא חוֹלִים, וּמַתִּיר אֲסוּרִים, וּמְקַיֵּם אֱמֽוּנָתוֹ לִֽישֵׁנֵי עָפָר. מִי כָמֽוֹךָ בַּֽעַל גְּבוּרוֹת, וּמִי דֽוֹמֶה לָךְ, מֶֽלֶךְ מֵמִית וּמְחַיֶּה וּמַצְמִֽיחַ יְשׁוּעָה. <small><small>בעשרת ימי תשובה אומרים:</small> מִי כָמוֹךָ אָב הָרַחֲמָן, זוֹכֵר יְצוּרָיו בְּרַחֲמִים לְחַיִּים.</small> וְנֶֽאֱמָן אַתָּה לְהַֽחֲיוֹת מֵתִים: בָּרוּךְ אַתָּה יֵהֵוֵהֵ, מְחַיֵּה הַמֵּתִים:",
+      "מְכַלְכֵּל חַיִּים בְּחֶֽסֶד, מְחַיֵּה מֵתִים בְּרַֽחֲמִים רַבִּים, סוֹמֵךְ נֽוֹפְלִים, וְרוֹפֵא חוֹלִים, וּמַתִּיר אֲסוּרִים, וּמְקַיֵּם אֱמֽוּנָתוֹ לִֽישֵׁנֵי עָפָר. מִי כָמֽוֹךָ בַּֽעַל גְּבוּרוֹת, וּמִי דֽוֹמֶה לָךְ, מֶֽלֶךְ מֵמִית וּמְחַיֶּה וּמַצְמִֽיחַ יְשׁוּעָה. " + prOpt(context.isAseretYemeiTeshuva, "בעשרת ימי תשובה אומרים:", "מִי כָמוֹךָ אָב הָרַחֲמָן, זוֹכֵר יְצוּרָיו בְּרַחֲמִים לְחַיִּים.") + " וְנֶֽאֱמָן אַתָּה לְהַֽחֲיוֹת מֵתִים: בָּרוּךְ אַתָּה יֵהֵוֵהֵ, מְחַיֵּה הַמֵּתִים:",
     ),
   );
   parts.push(
@@ -16747,7 +16627,7 @@ function buildShacharitMizrahiPayload(context) {
   );
   parts.push(
     p(
-      "<b>אַתָּה</b> קָדוֹשׁ וְשִׁמְךָ קָדוֹשׁ, וּקְדוֹשִׁים בְּכָל־יוֹם יְהַֽלְלֽוּךָ סֶּֽלָה: בָּרוּךְ אַתָּה יֹהֵוָהֵ, הָאֵל הַקָּדוֹשׁ: <small><small>בעשרת ימי תשובה אומרים:</small> הַמֶּלֶךְ הַקָּדוֹשׁ:</small>",
+      "<b>אַתָּה</b> קָדוֹשׁ וְשִׁמְךָ קָדוֹשׁ, וּקְדוֹשִׁים בְּכָל־יוֹם יְהַֽלְלֽוּךָ סֶּֽלָה: בָּרוּךְ אַתָּה יֹהֵוָהֵ, הָאֵל הַקָּדוֹשׁ: " + prOpt(context.isAseretYemeiTeshuva, "בעשרת ימי תשובה אומרים:", "הַמֶּלֶךְ הַקָּדוֹשׁ:") + "",
     ),
   );
   parts.push(
@@ -16771,7 +16651,7 @@ function buildShacharitMizrahiPayload(context) {
     ),
   );
   if (context.isFastDay) {
-    parts.push(
+    pushAdd(parts, 
       sup(
         p("<small>בתענית ציבור השליח ציבור אומר בחזרה</small>") +
           p(
@@ -16789,15 +16669,15 @@ function buildShacharitMizrahiPayload(context) {
     ),
   );
   if (!isRainRequest) {
-    parts.push(p("<small>בקיץ:</small>"));
-    parts.push(
+    pushAdd(parts, p("<small>בקיץ:</small>"));
+    pushAdd(parts, 
       p(
         "<b>בָּֽרְכֵֽנוּ</b> יְהֹוָה אֱלֹהֵֽינוּ בְּכָל־מַֽעֲשֵׂי יָדֵֽינוּ, וּבָרֵךְ שְׁנָתֵֽנוּ בְּטַֽלְלֵי רָצוֹן בְּרָכָה וּנְדָבָה, וּתְהִי אַֽחֲרִיתָהּ חַיִּים וְשָׂבָע וְשָׁלוֹם כַּשָּׁנִים הַטּוֹבוֹת לִבְרָכָה, כִּי אֵל טוֹב וּמֵטִיב אַתָּה וּמְבָרֵךְ הַשָּׁנִים: בָּרוּךְ אַתָּה יִהִוִהִ, מְבָרֵךְ הַשָּׁנִים:",
       ),
     );
   } else {
-    parts.push(p("<small>בחורף:</small> "));
-    parts.push(
+    pushAdd(parts, p("<small>בחורף:</small> "));
+    pushAdd(parts, 
       p(
         "<b>בָּרֵךְ עָלֵֽינוּ</b> יְהֹוָה אֱלֹהֵֽינוּ אֶת־הַשָּׁנָה הַזֹּאת וְאֶת־כָּל־מִינֵי תְּבוּאָתָהּ לְטוֹבָה, וְתֵן טַל וּמָטָר לִבְרָכָה עַל כָּל־פְּנֵי הָאֲדָמָה, וְרַוֵּה פְּנֵי תֵבֵל וְשַׂבַּע אֶת־הָעוֹלָם כֻּלּוֹ מִטּוּבָךְ, וּמַלֵּא יָדֵֽינוּ מִבִּרְכוֹתֶֽיךָ וּמֵעֹֽשֶׁר מַתְּנוֹת יָדֶֽיךָ. שָׁמְרָה וְהַצִּֽילָה שָׁנָה זוֹ מִכָּל־דָּבָר רָע, וּמִכָּל־מִינֵי מַשְׁחִית וּמִכָּל־מִינֵי פֻרְעָנוּת, וַעֲשֵׂה לָהּ תִּקְוָה טוֹבָה וְאַחֲרִית שָׁלוֹם. חוּס וְרַחֵם עָלֶֽיהָ וְעַל כָּל־תְּבוּאָתָהּ וּפֵירוֹתֶיהָ, וּבָֽרְכָֽהּ בְּגִשְׁמֵי רָצוֹן בְּרָכָה וּנְדָבָה, וּתְהִי אַחֲרִיתָהּ חַיִּים וְשָׂבָע וְשָׁלוֹם. כַּשָּׁנִים הַטּוֹבוֹת לִבְרָכָה, כִּי אֵל טוֹב וּמֵטִיב אַתָּה וּמְבָרֵךְ הַשָּׁנִים. בָּרוּךְ אַתָּה יִהִוִהִ, מְבָרֵךְ הַשָּׁנִים:",
       ),
@@ -16810,7 +16690,7 @@ function buildShacharitMizrahiPayload(context) {
   );
   parts.push(
     p(
-      "<b>הָשִֽׁיבָה</b> שֽׁוֹפְטֵֽינוּ כְּבָרִֽאשׁוֹנָה, וְיֽוֹעֲצֵֽינוּ כְּבַתְּחִלָּה, וְהָסֵר מִמֶּֽנּוּ יָגוֹן וַֽאֲנָחָה. וּמְלוֹךְ עָלֵֽינוּ מְהֵרָה אַתָּה יְהֹוָה לְבַדְּךָ, בְּחֶֽסֶד וּבְרַֽחֲמִים, בְּצֶֽדֶק וּבְמִשְׁפָּט: בָּרוּךְ אַתָּה יוּהוּווּהוּ, מֶֽלֶךְ אוֹהֵב צְדָקָה וּמִשְׁפָּט: <small><small>בעשרת ימי תשובה אומרים:</small> הַמֶּלֶךְ הַמִּשְׁפָּט:</small> ",
+      "<b>הָשִֽׁיבָה</b> שֽׁוֹפְטֵֽינוּ כְּבָרִֽאשׁוֹנָה, וְיֽוֹעֲצֵֽינוּ כְּבַתְּחִלָּה, וְהָסֵר מִמֶּֽנּוּ יָגוֹן וַֽאֲנָחָה. וּמְלוֹךְ עָלֵֽינוּ מְהֵרָה אַתָּה יְהֹוָה לְבַדְּךָ, בְּחֶֽסֶד וּבְרַֽחֲמִים, בְּצֶֽדֶק וּבְמִשְׁפָּט: בָּרוּךְ אַתָּה יוּהוּווּהוּ, מֶֽלֶךְ אוֹהֵב צְדָקָה וּמִשְׁפָּט: " + prOpt(context.isAseretYemeiTeshuva, "בעשרת ימי תשובה אומרים:", "הַמֶּלֶךְ הַמִּשְׁפָּט:") + " ",
     ),
   );
   parts.push(
@@ -16840,12 +16720,12 @@ function buildShacharitMizrahiPayload(context) {
   );
   parts.push(
     p(
-      "<small><small>בתענית אומר היחיד עננו, וכן שליח ציבור ששכח לומר בין גואל לרופא יאמר כאן עננו בלי חתימה<br><b>עֲנֵנוּ</b> אָבִינוּ עֲנֵנוּ בְּיוֹם צוֹם הַתַּֽעֲנִית הַזֶּה כִּי בְצָרָה גְדוֹלָה אֲנָֽחְנוּ. אַל־תֵּֽפֶן לְרִשְׁעֵֽנוּ, וְאַל־תִּתְעַלָּם מַלְכֵּֽנוּ מִבַּקָּשָׁתֵֽנוּ. הֱיֵה נָא קָרוֹב לְשַׁוְעָתֵֽנוּ. טֶֽרֶם נִקְרָא אֵלֶֽיךָ אַתָּה תַֽעֲנֶה, נְדַבֵּר וְאַתָּה תִשְׁמַע, כַּדָּבָר שֶׁנֶּאֱמַר: וְהָיָ֥ה טֶֽרֶם־יִקְרָ֖אוּ וַאֲנִ֣י אֶעֱנֶ֑ה ע֛וֹד הֵ֥ם מְדַבְּרִ֖ים וַאֲנִ֥י אֶשְׁמָֽע: כִּי אַתָּה יְהֹוָה פּוֹדֶה וּמַצִּיל וְעוֹנֶה וּמְרַחֵם בְּכָל־עֵת צָרָה וְצוּקָה.</small></small>",
+      prOpt(context.isFastDay, "בתענית אומר היחיד עננו, וכן שליח ציבור ששכח לומר בין גואל לרופא יאמר כאן עננו בלי חתימה", "<b>עֲנֵנוּ</b> אָבִינוּ עֲנֵנוּ בְּיוֹם צוֹם הַתַּֽעֲנִית הַזֶּה כִּי בְצָרָה גְדוֹלָה אֲנָֽחְנוּ. אַל־תֵּֽפֶן לְרִשְׁעֵֽנוּ, וְאַל־תִּתְעַלָּם מַלְכֵּֽנוּ מִבַּקָּשָׁתֵֽנוּ. הֱיֵה נָא קָרוֹב לְשַׁוְעָתֵֽנוּ. טֶֽרֶם נִקְרָא אֵלֶֽיךָ אַתָּה תַֽעֲנֶה, נְדַבֵּר וְאַתָּה תִשְׁמַע, כַּדָּבָר שֶׁנֶּאֱמַר: וְהָיָ֥ה טֶֽרֶם־יִקְרָ֖אוּ וַאֲנִ֣י אֶעֱנֶ֑ה ע֛וֹד הֵ֥ם מְדַבְּרִ֖ים וַאֲנִ֥י אֶשְׁמָֽע: כִּי אַתָּה יְהֹוָה פּוֹדֶה וּמַצִּיל וְעוֹנֶה וּמְרַחֵם בְּכָל־עֵת צָרָה וְצוּקָה.", "<br>"),
     ),
   );
   parts.push(
     p(
-      "<small><small>נוסח עננו בג׳ צומות (סנסן ליעיר ג:ט)</small><br><b>עֲנֵֽנוּ</b> אָבִֽינוּ עֲנֵֽנוּ בְּיוֹם צוֹם הַתַּֽעֲנִית הַזֶּה כִּי בְצָרָה גְדוֹלָה אֲנָֽחְנוּ, עַל כָּל־אֲשֶׁר חָטָֽאנוּ עָוִֽינוּ פָּשַֽׁעְנוּ אֲנַֽחְנוּ וַאֲבוֹתֵֽינוּ, וְעַל יְדֵי זֶה חָֽרְבָֽה עִירֵֽנוּ וְשָׁמֵם מִקְדָּשֵֽׁנוּ, אוֹי וַאֲבוֹי לָנוּ כִּי עֲוֹנֹתֵֽינוּ הִטּוּ אֵֽלֶּה וּפְשָׁעֵֽינוּ הֶאֱרִיכוּ קִצֵּֽנוּ, אֵין לָֽנוּ פֶּה לְהָשִׁיב וְלֹא מֵֽצַח לְהָרִים רֹאשׁ, וּכְמוֹ צַֽעַר בְּנַפְשֵֽׁנוּ עַל חֻרְבַּן בֵּית הַמִּקְדָּשׁ וּבִטּוּל תּוֹרָה וַעֲבוֹדָה זֶה כַּמָּה מֵאוֹת שָׁנִים וְזֶה צַֽעַ״ר הַשָּׁמָֽיִם, אֲהָהּ עָלֵֽינוּ. לָכֵן עַתָּה שַֽׁבְנוּ אֵלֶֽיךָ בְּבֹֽשֶׁת וְחֶרְפָּה וּכְלִמָּה וּבְדֶֽמַע לֵב נְבַקְשָׁה מֵאֱלֹהֵֽינוּ מְרַחֵם, אָֽנָּֽא יְהֹוָה, יְהִי רָצוֹן מִלְּפָנֶֽיךָ יְהֹוָה אֱלֹהֵֽינוּ וֵאלֹהֵי אֲבוֹתֵֽינוּ, שֶׁיְּהֵא מִעוּט חֶלְבֵּֽנוּ וְדָמֵֽינוּ הַמִּתְמָעֵט בְּתַעֲנִיתֵֽנוּ הַיּוֹם כַּחֵֽלֶב מֻנָּח עַל גַּבֵּי הַמִּזְבֵּֽחַ, שֶׁתְּכַפֵּר בּוֹ כָּל־חַטֹּאתֵֽינוּ עֲוֹנֹתֵֽינוּ וּפְשָׁעֵֽינוּ. הָאֵר פָּנֶֽיךָ עַל מִקְדָּֽשְׁךָֽ הַשָּׁמֵם לְמַֽעַן אֲדֹנָי, וּבָא לְצִיּוֹן גּוֹאֵל. אַל־תֵּֽפֶן לְרִשְׁעֵֽנוּ, וְאַל־תִּתְעַלָּם מַלְכֵּֽנוּ מִבַּקָּשָׁתֵֽנוּ. הֱיֵה נָא קָרוֹב לְשַׁוְעָתֵֽנוּ. טֶֽרֶם נִקְרָא אֵלֶֽיךָ אַתָּה תַֽעֲנֶה, נְדַבֵּר וְאַתָּה תִשְׁמַע, כַּדָּבָר שֶׁנֶּאֱמַר: וְהָיָ֥ה טֶֽרֶם־יִקְרָ֖אוּ וַאֲנִ֣י אֶעֱנֶ֑ה ע֛וֹד הֵ֥ם מְדַבְּרִ֖ים וַאֲנִ֥י אֶשְׁמָֽע: כִּי אַתָּה יְהֹוָה פּוֹדֶה וּמַצִּיל וְעוֹנֶה וּמְרַחֵם בְּכָל־עֵת צָרָה וְצוּקָה.</small>",
+      prOpt(context.isFastDay, "נוסח עננו בג׳ צומות (סנסן ליעיר ג:ט)", "<b>עֲנֵֽנוּ</b> אָבִֽינוּ עֲנֵֽנוּ בְּיוֹם צוֹם הַתַּֽעֲנִית הַזֶּה כִּי בְצָרָה גְדוֹלָה אֲנָֽחְנוּ, עַל כָּל־אֲשֶׁר חָטָֽאנוּ עָוִֽינוּ פָּשַֽׁעְנוּ אֲנַֽחְנוּ וַאֲבוֹתֵֽינוּ, וְעַל יְדֵי זֶה חָֽרְבָֽה עִירֵֽנוּ וְשָׁמֵם מִקְדָּשֵֽׁנוּ, אוֹי וַאֲבוֹי לָנוּ כִּי עֲוֹנֹתֵֽינוּ הִטּוּ אֵֽלֶּה וּפְשָׁעֵֽינוּ הֶאֱרִיכוּ קִצֵּֽנוּ, אֵין לָֽנוּ פֶּה לְהָשִׁיב וְלֹא מֵֽצַח לְהָרִים רֹאשׁ, וּכְמוֹ צַֽעַר בְּנַפְשֵֽׁנוּ עַל חֻרְבַּן בֵּית הַמִּקְדָּשׁ וּבִטּוּל תּוֹרָה וַעֲבוֹדָה זֶה כַּמָּה מֵאוֹת שָׁנִים וְזֶה צַֽעַ״ר הַשָּׁמָֽיִם, אֲהָהּ עָלֵֽינוּ. לָכֵן עַתָּה שַֽׁבְנוּ אֵלֶֽיךָ בְּבֹֽשֶׁת וְחֶרְפָּה וּכְלִמָּה וּבְדֶֽמַע לֵב נְבַקְשָׁה מֵאֱלֹהֵֽינוּ מְרַחֵם, אָֽנָּֽא יְהֹוָה, יְהִי רָצוֹן מִלְּפָנֶֽיךָ יְהֹוָה אֱלֹהֵֽינוּ וֵאלֹהֵי אֲבוֹתֵֽינוּ, שֶׁיְּהֵא מִעוּט חֶלְבֵּֽנוּ וְדָמֵֽינוּ הַמִּתְמָעֵט בְּתַעֲנִיתֵֽנוּ הַיּוֹם כַּחֵֽלֶב מֻנָּח עַל גַּבֵּי הַמִּזְבֵּֽחַ, שֶׁתְּכַפֵּר בּוֹ כָּל־חַטֹּאתֵֽינוּ עֲוֹנֹתֵֽינוּ וּפְשָׁעֵֽינוּ. הָאֵר פָּנֶֽיךָ עַל מִקְדָּֽשְׁךָֽ הַשָּׁמֵם לְמַֽעַן אֲדֹנָי, וּבָא לְצִיּוֹן גּוֹאֵל. אַל־תֵּֽפֶן לְרִשְׁעֵֽנוּ, וְאַל־תִּתְעַלָּם מַלְכֵּֽנוּ מִבַּקָּשָׁתֵֽנוּ. הֱיֵה נָא קָרוֹב לְשַׁוְעָתֵֽנוּ. טֶֽרֶם נִקְרָא אֵלֶֽיךָ אַתָּה תַֽעֲנֶה, נְדַבֵּר וְאַתָּה תִשְׁמַע, כַּדָּבָר שֶׁנֶּאֱמַר: וְהָיָ֥ה טֶֽרֶם־יִקְרָ֖אוּ וַאֲנִ֣י אֶעֱנֶ֑ה ע֛וֹד הֵ֥ם מְדַבְּרִ֖ים וַאֲנִ֥י אֶשְׁמָֽע: כִּי אַתָּה יְהֹוָה פּוֹדֶה וּמַצִּיל וְעוֹנֶה וּמְרַחֵם בְּכָל־עֵת צָרָה וְצוּקָה.", "<br>"),
     ),
   );
   parts.push(
@@ -16864,7 +16744,7 @@ function buildShacharitMizrahiPayload(context) {
   // ורק נוסח "בְּיוֹם ..." של היום (ראו _yaalehKind)
   if (context.isRoshChodesh || context.isCholHamoed) {
     var yvDay = { rc: "רֹאשׁ חֹֽדֶשׁ", pesach: "חַג הַמַּצּוֹת הַזֶּה, בְּיוֹם מִקְרָא קֹֽדֶשׁ", sukkot: "חַג הַסֻּכּוֹת הַזֶּה, בְּיוֹם מִקְרָא קֹֽדֶשׁ" }[_yaalehKind(context)] || "רֹאשׁ חֹֽדֶשׁ";
-    parts.push(
+    pushAdd(parts, 
       p(
         "<b>אֱלֹהֵֽינוּ</b> וֵאלֹהֵי אֲבוֹתֵֽינוּ, יַעֲלֶה וְיָבֹא, וְיַגִּֽיעַ וְיֵרָאֶה, וְיֵרָצֶה וְיִשָּׁמַע, וְיִפָּקֵד וְיִזָּכֵר, זִכְרוֹנֵֽנוּ וְזִכְרוֹן אֲבוֹתֵֽינוּ, זִכְרוֹן יְרוּשָׁלַֽיִם עִירָךְ, וְזִכְרוֹן מָשִֽׁיחַ בֶּן־דָּוִד עַבְדָּךְ, וְזִכְרוֹן כָּל־עַמְּךָ בֵּית יִשְׂרָאֵל לְפָנֶֽיךָ, לִפְלֵיטָה, לְטוֹבָה, לְחֵן, לְחֶֽסֶד וּלְרַחֲמִים, לְחַיִּים טוֹבִים וּלְשָׁלוֹם, בְּיוֹם " +
           yvDay +
@@ -16909,11 +16789,11 @@ function buildShacharitMizrahiPayload(context) {
         : p(
             "<small><small>בפורים אומרים</small> <b>בִּימֵי מָרְדְּכַי</b> וְאֶסְתֵּר בְּשׁוּשַׁן הַבִּירָה. כְּשֶׁעָמַד עֲלֵיהֶם הָמָן הָרָשָׁע. בִּקֵּשׁ לְהַשְׁמִיד לַהֲרֹג וּלְאַבֵּד אֶת־כָּל־הַיְּהוּדִים מִנַּֽעַר וְעַד זָקֵן טַף וְנָשִׁים בְּיוֹם אֶחָד. בִּשְׁלֹשָׁה עָשָׂר לְחֹֽדֶשׁ שְׁנֵים עָשָׂר. הוּא חֹֽדֶשׁ אֲדָר. וּשְׁלָלָם לָבוֹז. וְאַתָּה בְּרַחֲמֶֽיךָ הָרַבִּים הֵפַֽרְתָּ אֶת־עֲצָתוֹ וְקִלְקַֽלְתָּ אֶת־מַחֲשַׁבְתּוֹ. וַהֲשֵׁבֽוֹתָ לּוֹ גְּמוּלוֹ בְרֹאשׁוֹ. וְתָלוּ אוֹתוֹ וְאֶת־בָּנָיו עַל הָעֵץ. וְעָשִֽׂיתָ עִמָּהֶם נֵס וָפֶֽלֶא וְנוֹדֶה לְשִׁמְךָ הַגָּדוֹל סֶֽלָה:</small>",
           ));
-    parts.push(sup(han));
+    pushAdd(parts, sup(han));
   }
   parts.push(
     p(
-      "<b>וְעַל</b> כֻּלָּם יִתְבָּרַךְ, וְיִתְרוֹמָם, וְיִתְנַשֵּׂא, תָּמִיד, שִׁמְךָ מַלְכֵּֽנוּ, לְעוֹלָם וָעֶד. וְכָל־הַחַיִּים יוֹדֽוּךָ סֶּֽלָה: <small><small>בעשרת ימי תשובה אומרים:</small> וּכְתֹב לְחַיִּים טוֹבִים כָּל בְּנֵי בְרִיתֶךָ.</small> וִֽיהַֽלְלוּ וִֽיבָֽרְכוּ אֶת־שִׁמְךָ הַגָּדוֹל בֶּֽאֱמֶת לְעוֹלָם כִּי טוֹב, הָאֵל יְשֽׁוּעָתֵֽנוּ וְעֶזְרָתֵֽנוּ סֶֽלָה, הָאֵל הַטּוֹב:  בָּרוּךְ אַתָּה יֻהֻוֻהֻ, הַטּוֹב שִׁמְךָ וּלְךָ נָאֶה לְהוֹדוֹת:",
+      "<b>וְעַל</b> כֻּלָּם יִתְבָּרַךְ, וְיִתְרוֹמָם, וְיִתְנַשֵּׂא, תָּמִיד, שִׁמְךָ מַלְכֵּֽנוּ, לְעוֹלָם וָעֶד. וְכָל־הַחַיִּים יוֹדֽוּךָ סֶּֽלָה: " + prOpt(context.isAseretYemeiTeshuva, "בעשרת ימי תשובה אומרים:", "וּכְתֹב לְחַיִּים טוֹבִים כָּל בְּנֵי בְרִיתֶךָ.") + " וִֽיהַֽלְלוּ וִֽיבָֽרְכוּ אֶת־שִׁמְךָ הַגָּדוֹל בֶּֽאֱמֶת לְעוֹלָם כִּי טוֹב, הָאֵל יְשֽׁוּעָתֵֽנוּ וְעֶזְרָתֵֽנוּ סֶֽלָה, הָאֵל הַטּוֹב:  בָּרוּךְ אַתָּה יֻהֻוֻהֻ, הַטּוֹב שִׁמְךָ וּלְךָ נָאֶה לְהוֹדוֹת:",
     ),
   );
   parts.push(
@@ -16979,7 +16859,7 @@ function buildShacharitMizrahiPayload(context) {
   );
   parts.push(
     p(
-      "<b>שִׂים</b> שָׁלוֹם טוֹבָה וּבְרָכָה, חַיִּים חֵן וָחֶֽסֶד וְרַֽחֲמִים, עָלֵֽינוּ וְעַל כָּל־יִשְׂרָאֵל עַמֶּֽךָ. וּבָֽרְכֵֽנוּ אָבִֽינוּ כֻּלָּֽנוּ כְּאֶחָד בְּאוֹר פָּנֶֽיךָ, כִּי בְאוֹר פָּנֶֽיךָ נָתַֽתָּ לָּֽנוּ יְהֹוָה אֱלֹהֵֽינוּ תּוֹרָה וְחַיִּים, אַֽהֲבָה וָחֶֽסֶד, צְדָקָה וְרַֽחֲמִים, בְּרָכָה וְשָׁלוֹם. וְטוֹב בְּעֵינֶֽיךָ לְבָֽרְכֵֽנוּ וּלְבָרֵךְ אֶת־כָּל־עַמְּךָ יִשְׂרָאֵל, בְּרֹב עֹז וְשָׁלוֹם: <small><small>בעשרת ימי תשובה אומרים:</small> וּבְסֵפֶר חַיִּים, בְּרָכָה וְשָׁלוֹם, וּפַרְנָסָה טוֹבָה וִישׁוּעָה וְנֶחָמָה, וּגְזֵרוֹת טוֹבוֹת, נִזָּכֵר וְנִכָּתֵב לְפָנֶיךָ, אֲנַחְנוּ וְכָל עַמְּךָ בֵּית יִשְׂרָאֵל, לְחַיִּים טוֹבִים וּלְשָׁלוֹם.</small> בָּרוּךְ אַתָּה יוּהוּווּהוּ, הַמְּבָרֵךְ אֶת עַמּוֹ יִשְׂרָאֵל בַּשָּׁלוֹם. אָמֵן: ",
+      "<b>שִׂים</b> שָׁלוֹם טוֹבָה וּבְרָכָה, חַיִּים חֵן וָחֶֽסֶד וְרַֽחֲמִים, עָלֵֽינוּ וְעַל כָּל־יִשְׂרָאֵל עַמֶּֽךָ. וּבָֽרְכֵֽנוּ אָבִֽינוּ כֻּלָּֽנוּ כְּאֶחָד בְּאוֹר פָּנֶֽיךָ, כִּי בְאוֹר פָּנֶֽיךָ נָתַֽתָּ לָּֽנוּ יְהֹוָה אֱלֹהֵֽינוּ תּוֹרָה וְחַיִּים, אַֽהֲבָה וָחֶֽסֶד, צְדָקָה וְרַֽחֲמִים, בְּרָכָה וְשָׁלוֹם. וְטוֹב בְּעֵינֶֽיךָ לְבָֽרְכֵֽנוּ וּלְבָרֵךְ אֶת־כָּל־עַמְּךָ יִשְׂרָאֵל, בְּרֹב עֹז וְשָׁלוֹם: " + prOpt(context.isAseretYemeiTeshuva, "בעשרת ימי תשובה אומרים:", "וּבְסֵפֶר חַיִּים, בְּרָכָה וְשָׁלוֹם, וּפַרְנָסָה טוֹבָה וִישׁוּעָה וְנֶחָמָה, וּגְזֵרוֹת טוֹבוֹת, נִזָּכֵר וְנִכָּתֵב לְפָנֶיךָ, אֲנַחְנוּ וְכָל עַמְּךָ בֵּית יִשְׂרָאֵל, לְחַיִּים טוֹבִים וּלְשָׁלוֹם.") + " בָּרוּךְ אַתָּה יוּהוּווּהוּ, הַמְּבָרֵךְ אֶת עַמּוֹ יִשְׂרָאֵל בַּשָּׁלוֹם. אָמֵן: ",
     ),
   );
   parts.push(
@@ -17009,7 +16889,7 @@ function buildShacharitMizrahiPayload(context) {
   );
   parts.push(
     p(
-      "<b>עֹשֶׂה</b> שָׁלוֹם <small><small>בעשרת ימי תשובה אומר:</small> הַשָּׁלוֹם</small> בִּמְרוֹמָיו, הוּא בְּרַחֲמָיו יַעֲשֶׂה שָׁלוֹם עָלֵֽינוּ, וְעַל כָּל־עַמּוֹ יִשְׂרָאֵל, וְאִמְרוּ אָמֵן:",
+      "<b>עֹשֶׂה</b> שָׁלוֹם " + prOpt(context.isAseretYemeiTeshuva, "בעשרת ימי תשובה אומר:", "הַשָּׁלוֹם") + " בִּמְרוֹמָיו, הוּא בְּרַחֲמָיו יַעֲשֶׂה שָׁלוֹם עָלֵֽינוּ, וְעַל כָּל־עַמּוֹ יִשְׂרָאֵל, וְאִמְרוּ אָמֵן:",
     ),
   );
   parts.push(
@@ -18758,7 +18638,7 @@ function buildShacharitAshkenazPayload(context) {
   );
   // Rule 2: זכרנו → sup(), Ten Days only
   if (context.isAseretYemeiTeshuva) {
-    parts.push(
+    pushAdd(parts, 
       sup(
         '<small>בעשי"ת:</small> זָכְרֵֽנוּ לְחַיִּים מֶֽלֶךְ חָפֵץ בַּחַיִּים וְכָתְבֵֽנוּ בְּסֵֽפֶר הַחַיִּים לְמַעַנְךָ אֱלֹהִים חַיִּים: <small>אם לא אמר זכרנו ונזכר לאחר שכבר אמר בא"י אינו חוזר אבל אם נזכר קודם שאמר השם אף שאמר ברוך אתה אומר זכרנו כו\' מלך עוזר כסדר. הטועה ומזכיר זכרנו בשאר ימות השנה אם נזכר קודם שאמר וכתבנו פוסק ומתחיל מלך עוזר וגו\' אבל אם אמר וכתבנו חוזר לראש התפלה. (דה"ח)</small>',
       ),
@@ -18772,10 +18652,10 @@ function buildShacharitAshkenazPayload(context) {
   );
   // Rule 3: dynamic wind/rain; error note → sup(), winter only
   if (isSummer) {
-    parts.push(p("מוֹרִיד הַטָּל"));
+    pushAdd(parts, p("מוֹרִיד הַטָּל"));
   } else {
-    parts.push(p("מַשִּׁיב הָרֽוּחַ וּמוֹרִיד הַגֶּֽשֶׁם:"));
-    parts.push(
+    pushAdd(parts, p("מַשִּׁיב הָרֽוּחַ וּמוֹרִיד הַגֶּֽשֶׁם:"));
+    pushAdd(parts, 
       sup(
         '<small>טעה ולא אמר בחורף משיב הרוח ומוריד הגשם אם נזכר קודם שאמר הברכה מחיה המתים אומרו במקום שנזכר. אבל אם לא נזכר עד לאחר שסיים הברכה מחיה המתים צריך לחזור לראש התפלה. ואם נסתפק לו אם אמר משיב הרוח או לא אמר. אם הוא לאחר שלושים יום חזקתו שגם עתה התפלל כראוי. אבל בתוך שלושים יום צריך לחזור ולהתפלל (קיצור שו"ע יט)</small>',
       ),
@@ -18788,7 +18668,7 @@ function buildShacharitAshkenazPayload(context) {
   );
   // Rule 4: מי כמוך → sup(), Ten Days only
   if (context.isAseretYemeiTeshuva) {
-    parts.push(
+    pushAdd(parts, 
       sup(
         '<small>בעשי"ת:</small> מִי כָמֽוֹךָ אַב הָרַחֲמִים זוֹכֵר יְצוּרָיו לְחַיִּים בְּרַחֲמִים: <small>אם שכח לומר מי כמוך דינו כמו בזכרנו.</small>',
       ),
@@ -18810,7 +18690,7 @@ function buildShacharitAshkenazPayload(context) {
   );
   // Rule 5: המלך הקדוש → sup(), Ten Days only
   if (context.isAseretYemeiTeshuva) {
-    parts.push(
+    pushAdd(parts, 
       sup(
         '<small>בעשי"ת מסיים:</small> בָּרוּךְ אַתָּה יְהֹוָה הַמֶּֽלֶךְ הַקָּדוֹשׁ: <small>אם טעה וסיים האל הקדוש אם נזכר בתוך כדי דיבור ואמר המלך הקדוש יצא ואם לאו צריך לחזור לראש התפלה וה"ה אם מסופק אם אמר צריך לחזור לראש. ובימות השנה אם אמר המלך הקדוש אינו חוזר.</small>',
       ),
@@ -18838,7 +18718,7 @@ function buildShacharitAshkenazPayload(context) {
   );
   // Rule 6: עננו → sup(), public fast only
   if (context.isFastDay) {
-    parts.push(
+    pushAdd(parts, 
       sup(
         '<small>בתענית ציבור השליח ציבור אומר בחזרה ברכה זו בין "גואל ישראל" ל"רפאנו" (שו"ע או"ח תקסו, א); היחיד אומר "עננו" רק במנחה:</small> ' +
           "<b>עֲנֵנוּ</b> יְהֹוָה עֲנֵנוּ בְּיוֹם צוֹם תַּעֲנִיתֵנוּ, כִּי בְצָרָה גְדוֹלָה אֲנָחְנוּ. אַל תֵּפֶן אֶל רִשְׁעֵנוּ, וְאַל תַּסְתֵּר פָּנֶיךָ מִמֶּנּוּ, וְאַל תִּתְעַלַּם מִתְּחִנָּתֵנוּ. הֱיֵה נָא קָרוֹב לְשַׁוְעָתֵנוּ, יְהִי חַסְדְּךָ לְנַחֲמֵנוּ, טֶרֶם נִקְרָא אֵלֶיךָ עֲנֵנוּ. כַּדָּבָר שֶׁנֶּאֱמַר: וְהָיָה טֶרֶם יִקְרָאוּ וַאֲנִי אֶעֱנֶה, עוֹד הֵם מְדַבְּרִים וַאֲנִי אֶשְׁמָע: כִּי אַתָּה יְהֹוָה הָעוֹנֶה בְּעֵת צָרָה, פּוֹדֶה וּמַצִּיל בְּכָל עֵת צָרָה וְצוּקָה. בָּרוּךְ אַתָּה יְהֹוָה, הָעוֹנֶה בְּעֵת צָרָה.",
@@ -18860,16 +18740,16 @@ function buildShacharitAshkenazPayload(context) {
   if (!isRainRequest) {
     parts.push(
       p(
-        "<b>בָּרֵךְ</b> עָלֵֽינוּ יְהֹוָה אֱלֹהֵֽינוּ אֶת־הַשָּׁנָה הַזֹּאת וְאֶת־כָּל־מִינֵי תְבוּאָתָהּ לְטוֹבָה, וְתֵן בְּרָכָה עַל פְּנֵי הָאֲדָמָה וְשַׂבְּ֒עֵֽנוּ מִטּוּבֶֽךָ וּבָרֵךְ שְׁנָתֵֽנוּ כַּשָּׁנִים הַטּוֹבוֹת: בָּרוּךְ אַתָּה יְהֹוָה מְבָרֵךְ הַשָּׁנִים:",
+        "<b>בָּרֵךְ</b> עָלֵֽינוּ יְהֹוָה אֱלֹהֵֽינוּ אֶת־הַשָּׁנָה הַזֹּאת וְאֶת־כָּל־מִינֵי תְבוּאָתָהּ לְטוֹבָה, " + prAdd("וְתֵן בְּרָכָה") + " עַל פְּנֵי הָאֲדָמָה וְשַׂבְּ֒עֵֽנוּ מִטּוּבֶֽךָ וּבָרֵךְ שְׁנָתֵֽנוּ כַּשָּׁנִים הַטּוֹבוֹת: בָּרוּךְ אַתָּה יְהֹוָה מְבָרֵךְ הַשָּׁנִים:",
       ),
     );
   } else {
     parts.push(
       p(
-        "<b>בָּרֵךְ</b> עָלֵֽינוּ יְהֹוָה אֱלֹהֵֽינוּ אֶת־הַשָּׁנָה הַזֹּאת וְאֶת־כָּל־מִינֵי תְבוּאָתָהּ לְטוֹבָה, וְתֵן טַל וּמָטָר לִבְרָכָה עַל פְּנֵי הָאֲדָמָה וְשַׂבְּ֒עֵֽנוּ מִטּוּבֶֽךָ וּבָרֵךְ שְׁנָתֵֽנוּ כַּשָּׁנִים הַטּוֹבוֹת: בָּרוּךְ אַתָּה יְהֹוָה מְבָרֵךְ הַשָּׁנִים:",
+        "<b>בָּרֵךְ</b> עָלֵֽינוּ יְהֹוָה אֱלֹהֵֽינוּ אֶת־הַשָּׁנָה הַזֹּאת וְאֶת־כָּל־מִינֵי תְבוּאָתָהּ לְטוֹבָה, " + prAdd("וְתֵן טַל וּמָטָר לִבְרָכָה") + " עַל פְּנֵי הָאֲדָמָה וְשַׂבְּ֒עֵֽנוּ מִטּוּבֶֽךָ וּבָרֵךְ שְׁנָתֵֽנוּ כַּשָּׁנִים הַטּוֹבוֹת: בָּרוּךְ אַתָּה יְהֹוָה מְבָרֵךְ הַשָּׁנִים:",
       ),
     );
-    parts.push(
+    pushAdd(parts, 
       sup(
         '<small>אם שכח לומר טַל וּמָטָר ונזכר קודם שהתחיל תְּקַע אומרו במקום שנזכר. התחיל לומר תְּקַע יאמרנה בשׁוֹמֵֽעַ תְּפִלָּה. ואם לא נזכר בש"ת יאמרנה בין ש"ת לרְצֵה. שכח גם שם אם נזכר קודם שעקר רגליו חוזר לברכת השנים ויתחיל בָּרֵךְ עָלֵֽינוּ ויתפלל כסדר. ואם עקר רגליו חוזר לראש התפלה.</small>',
       ),
@@ -18887,7 +18767,7 @@ function buildShacharitAshkenazPayload(context) {
     ),
   );
   if (context.isAseretYemeiTeshuva) {
-    parts.push(
+    pushAdd(parts, 
       sup(
         '<small>בעשי"ת יסיים:</small> הַמֶּֽלֶךְ הַמִּשְׁפָּט: <small>בכל השנה אם אמר המלך המשפט יצא וא"צ לחזור. ובעשי"ת אם טעה ואמר מלך אוהב צדקה ומשפט אם נזכר תוך כדי דבור אומר המלך המשפט. ואם לאחר כ"ד לא יאמר ואין מחזירין אותו.</small>',
       ),
@@ -18928,14 +18808,14 @@ function buildShacharitAshkenazPayload(context) {
   // ורק נוסח "בְּיוֹם ..." של היום (ראו _yaalehKind)
   if (context.isRoshChodesh || context.isCholHamoed) {
     var yvDay = { rc: "רֹאשׁ הַחֹֽדֶשׁ", pesach: "חַג הַמַּצּוֹת", sukkot: "חַג הַסֻּכּוֹת" }[_yaalehKind(context)] || "רֹאשׁ הַחֹֽדֶשׁ";
-    parts.push(
+    pushAdd(parts, 
       p(
         "<b>אֱלֹהֵֽינוּ</b> וֵאלֹהֵי אֲבוֹתֵֽינוּ יַעֲלֶה וְיָבֹא וְיַגִּֽיעַ וְיֵרָאֶה וְיֵרָצֶה וְיִשָּׁמַע וְיִפָּקֵד וְיִזָּכֵר זִכְרוֹנֵֽנוּ וּפִקְדוֹנֵֽנוּ וְזִכְרוֹן אֲבוֹתֵֽינוּ. וְזִכְרוֹן מָשִֽׁיחַ בֶּן דָּוִד עַבְדֶּֽךָ. וְזִכְרוֹן יְרוּשָׁלַֽיִם עִיר קָדְשֶֽׁךָ. וְזִכְרוֹן כָּל עַמְּ֒ךָ בֵּית יִשְׂרָאֵל לְפָנֶֽיךָ. לִפְלֵיטָה לְטוֹבָה לְחֵן וּלְחֶֽסֶד וּלְרַחֲמִים לְחַיִּים וּלְשָׁלוֹם. בְּיוֹם " +
           yvDay +
           " הַזֶּה זָכְרֵֽנוּ יְהֹוָה אֱלֹהֵֽינוּ בּוֹ לְטוֹבָה. וּפָקְדֵֽנוּ בוֹ לִבְרָכָה. וְהוֹשִׁיעֵֽנוּ בוֹ לְחַיִּים. וּבִדְבַר יְשׁוּעָה וְרַחֲמִים חוּס וְחָנֵּֽנוּ וְרַחֵם עָלֵֽינוּ וְהוֹשִׁיעֵֽנוּ. כִּי אֵלֶֽיךָ עֵינֵֽינוּ כִּי אֵל מֶֽלֶךְ חַנּוּן וְרַחוּם אָֽתָּה:",
       ),
     );
-    parts.push(sup(p("<small>שכח ולא אמר יעלה ויבא אם נזכר קודם שאמר יהיו לרצון חוזר ומתחיל רצה. ואפלו אם נזכר קודם שהתחיל מודים כיון שסים ברכת המחזיר שכינתו לציון צריך להתחיל רצה. אך אם נזכר קודם ברכת המחזיר שכינתו לציון אומרו שם ומסים ותחזינה עינינו וכו'. ואם לא נזכר עד לאחר יהיו לרצון וגו' חוזר לראש התפלה.</small>")));
+    pushAdd(parts, sup(p("<small>שכח ולא אמר יעלה ויבא אם נזכר קודם שאמר יהיו לרצון חוזר ומתחיל רצה. ואפלו אם נזכר קודם שהתחיל מודים כיון שסים ברכת המחזיר שכינתו לציון צריך להתחיל רצה. אך אם נזכר קודם ברכת המחזיר שכינתו לציון אומרו שם ומסים ותחזינה עינינו וכו'. ואם לא נזכר עד לאחר יהיו לרצון וגו' חוזר לראש התפלה.</small>")));
   }
   parts.push(
     p(
@@ -18962,14 +18842,14 @@ function buildShacharitAshkenazPayload(context) {
   );
   // Rule 13: על הניסים → sup(), Chanukah or Purim only
   if (context.isChanukah) {
-    parts.push(
+    pushAdd(parts, 
       sup(
         '<small>בחנוכה ופורים אומרים על הנסים. שכח לומר על הנסים ונזכר קודם שאמר השם מברכת הטוב שמך אפילו אמר ברוך אתה חוזר ואומר על הנסים. אבל אם כבר סיים הברכה או שאמר ברוך א"י אינו חוזר (דה"ח תרפ"ב ותרצ"ג).</small> <b>עַל הַנִּסִּים</b> וְעַל הַפֻּרְקָן וְעַל הַגְּ֒בוּרוֹת וְעַל הַתְּ֒שׁוּעוֹת וְעַל הַמִּלְחָמוֹת שֶׁעָשִֽׂיתָ לַאֲבוֹתֵֽינוּ בַּיָּמִים הָהֵם בַּזְּ֒מַן הַזֶּה: <b>בִּימֵי מַתִּתְיָֽהוּ</b> בֶּן יוֹחָנָן כֹּהֵן גָּדוֹל חַשְׁמוֹנָאִי וּבָנָיו כְּשֶׁעָמְ֒דָה מַלְכוּת יָוָן הָרְ֒שָׁעָה עַל־עַמְּ֒ךָ יִשְׂרָאֵל לְהַשְׁכִּיחָם תּוֹרָתֶֽךָ וּלְהַעֲבִירָם מֵחֻקֵּי רְצוֹנֶֽךָ, וְאַתָּה בְּרַחֲמֶֽיךָ הָרַבִּים עָמַֽדְתָּ לָהֶם בְּעֵת צָרָתָם רַֽבְתָּ אֶת־רִיבָם דַּֽנְתָּ אֶת־דִּינָם נָקַֽמְתָּ אֶת־נִקְמָתָם מָסַֽרְתָּ גִבּוֹרִים בְּיַד חַלָּשִׁים וְרַבִּים בְּיַד מְעַטִּים וּטְמֵאִים בְּיַד טְהוֹרִים וּרְשָׁעִים בְּיַד צַדִּיקִים וְזֵדִים בְּיַד עוֹסְ֒קֵי תוֹרָתֶֽךָ וּלְךָ עָשִֽׂיתָ שֵׁם גָּדוֹל וְקָדוֹשׁ בְּעוֹלָמֶֽךָ וּלְעַמְּ֒ךָ יִשְׂרָאֵל עָשִֽׂיתָ תְּשׁוּעָה גְדוֹלָה וּפֻרְקָן כְּהַיּוֹם הַזֶּה וְאַחַר־כֵּן בָּֽאוּ בָנֶֽיךָ לִדְבִיר בֵּיתֶֽךָ וּפִנּוּ אֶת־הֵיכָלֶֽךָ וְטִהֲרוּ אֶת־מִקְדָּשֶֽׁךָ וְהִדְלִֽיקוּ נֵרוֹת בְּחַצְרוֹת קָדְשֶֽׁךָ וְקָבְ֒עוּ שְׁמוֹנַת יְמֵי חֲנֻכָּה אֵֽלּוּ לְהוֹדוֹת וּלְהַלֵּל לְשִׁמְךָ הַגָּדוֹל:',
       ),
     );
   }
   if (context.isPurim) {
-    parts.push(
+    pushAdd(parts, 
       sup(
         '<small>בחנוכה ופורים אומרים על הנסים. שכח לומר על הנסים ונזכר קודם שאמר השם מברכת הטוב שמך אפילו אמר ברוך אתה חוזר ואומר על הנסים. אבל אם כבר סיים הברכה או שאמר ברוך א"י אינו חוזר (דה"ח תרפ"ב ותרצ"ג).</small> <b>עַל הַנִּסִּים</b> וְעַל הַפֻּרְקָן וְעַל הַגְּ֒בוּרוֹת וְעַל הַתְּ֒שׁוּעוֹת וְעַל הַמִּלְחָמוֹת שֶׁעָשִֽׂיתָ לַאֲבוֹתֵֽינוּ בַּיָּמִים הָהֵם בַּזְּ֒מַן הַזֶּה: <b>בִּימֵי מָרְדְּ֒כַי וְאֶסְתֵּר</b> בְּשׁוּשַׁן הַבִּירָה כְּשֶׁעָמַד עֲלֵיהֶם הָמָן הָרָשָׁע בִּקֵּשׁ לְהַשְׁמִיד לַהֲרוֹג וּלְאַבֵּד אֶת־כָּל־הַיְּ֒הוּדִים מִנַּֽעַר וְעַד־זָקֵן טַף וְנָשִׁים בְּיוֹם אֶחָד בִּשְׁלוֹשָׁה עָשָׂר לְחֹֽדֶשׁ שְׁנֵים־עָשָׂר הוּא־חֹֽדֶשׁ אֲדָר וּשְׁלָלָם לָבוֹז: וְאַתָּה בְּרַחֲמֶֽיךָ הָרַבִּים הֵפַֽרְתָּ אֶת־עֲצָתוֹ וְקִלְקַֽלְתָּ אֶת־מַחֲשַׁבְתּוֹ וַהֲשֵׁבֽוֹתָ לּוֹ גְּמוּלוֹ בְּרֹאשׁוֹ וְתָלוּ אוֹתוֹ וְאֶת־בָּנָיו עַל־הָעֵץ (וְעָשִׂיתָ עִמָּהֶם נֵס וָפֶלֶא וְנוֹדֶה לְשִׁמְךָ הָגָּדוֹל סֶלָה):',
       ),
@@ -18983,7 +18863,7 @@ function buildShacharitAshkenazPayload(context) {
   );
   // Rule 14: וכתוב לחיים → sup(), Ten Days only
   if (context.isAseretYemeiTeshuva) {
-    parts.push(
+    pushAdd(parts, 
       sup(
         '<small>בעשי"ת:</small> וּכְתוֹב לְחַיִּים טוֹבִים כָּל בְּנֵי בְרִיתֶֽךָ: <small>אם שכח לומר וכתוב אם נזכר קודם שאמר השם מברכת הטוב חוזר ואם לא נזכר עד לאחר שאמר השם אינו חוזר כמו שנתבאר לעיל אצל זכרנו ומי כמוך. (דה"ח סי\' תקפ"ב)</small>',
       ),
@@ -19007,7 +18887,7 @@ function buildShacharitAshkenazPayload(context) {
     ),
   );
   if (context.isAseretYemeiTeshuva) {
-    parts.push(
+    pushAdd(parts, 
       sup(
         '<small>בעשי"ת:</small> בְּסֵֽפֶר חַיִּים בְּרָכָה וְשָׁלוֹם וּפַרְנָסָה טוֹבָה נִזָּכֵר וְנִכָּתֵב לְפָנֶֽיךָ אֲנַֽחְנוּ וְכָל עַמְּ֒ךָ בֵּית יִשְׂרָאֵל לְחַיִּים טוֹבִים וּלְשָׁלוֹם: <small>אם לא אמר בְּסֵֽפֶר חַיִּים כיון שסיים הברכה או רק בא"י אינו חוזר. ונ"ל דבזה ראוי לומר בספר תיכף כשסיים המברך את עמו ישראל בשלום קודם יהיו לרצון כיון שכבר גמר התפלה. (דהא לר"ת לעולם אומרים בסוף ברכה אפילו בדבר שאין מחזירין אלא דהחולקים סוברים כיון דא"צ לחזור א"כ הוי הפסק באמצע תפלה מה שאין כן כאן.) (חיי אדם כלל כ"ד סעי\' כ"ה)</small>',
       ),
@@ -20348,7 +20228,7 @@ function buildShacharitSfaradPayload(context) {
     ),
   );
   if (context2.isAseretYemeiTeshuva) {
-    parts.push(
+    pushAdd(parts, 
       sup(
         '<small>בעשי"ת:</small> <small>זָכְרֵֽנוּ לְחַיִּים מֶֽלֶךְ חָפֵץ בַּחַיִּים וְכָתְבֵֽנוּ בְּסֵֽפֶר הַחַיִּים לְמַעַנְךָ אֱלֹהִים חַיִּים:</small> <small>אם לא אמר זכרנו ונזכר לאחר שכבר אמר בא"י אינו חוזר אבל אם נזכר קודם שאמר השם אף שאמר ברוך אתה אומר זכרנו כו\' מלך עוזר כסדר. הטועה ומזכיר זכרנו בשאר ימות השנה אם נזכר קודם שאמר וכתבנו פוסק ומתחיל מלך עוזר וגו\' אבל אם אמר וכתבנו חוזר לראש התפלה. (דה"ח)</small>',
       ),
@@ -20360,10 +20240,10 @@ function buildShacharitSfaradPayload(context) {
     ),
   );
   if (isSummer) {
-    parts.push(p("מוֹרִיד הַטָּל"));
+    pushAdd(parts, p("מוֹרִיד הַטָּל"));
   } else {
-    parts.push(p("מַשִּׁיב הָרֽוּחַ וּמוֹרִיד הַגֶּֽשֶׁם:"));
-    parts.push(
+    pushAdd(parts, p("מַשִּׁיב הָרֽוּחַ וּמוֹרִיד הַגֶּֽשֶׁם:"));
+    pushAdd(parts, 
       sup(
         '<small>טעה ולא אמר בחורף משיב הרוח ומוריד הגשם אם נזכר קודם שאמר הברכה מחיה המתים אומרו במקום שנזכר. אבל אם לא נזכר עד לאחר שסיים הברכה מחיה המתים צריך לחזור לראש התפלה. ואם נסתפק לו אם אמר משיב הרוח או לא אמר. אם הוא לאחר שלושים יום חזקתו שגם עתה התפלל כראוי. אבל בתוך שלושים יום צריך לחזור ולהתפלל (קיצור שו"ע יט)</small>',
       ),
@@ -20375,7 +20255,7 @@ function buildShacharitSfaradPayload(context) {
     ),
   );
   if (context2.isAseretYemeiTeshuva) {
-    parts.push(
+    pushAdd(parts, 
       sup(
         '<small>בעשי"ת:</small> <small>מִי כָמֽוֹךָ אָב הָרַחַמָן זוֹכֵר יְצוּרָיו לְחַיִּים בְּרַחֲמִים:</small> <small>אם שכח לומר מי כמוך דינו כמו בזכרנו.</small>',
       ),
@@ -20397,7 +20277,7 @@ function buildShacharitSfaradPayload(context) {
     ),
   );
   if (context2.isAseretYemeiTeshuva) {
-    parts.push(
+    pushAdd(parts, 
       sup(
         '<small>בעשי"ת מסיים:</small> <small>בָּרוּךְ אַתָּה יְהֹוָה הַמֶּֽלֶךְ הַקָּדוֹשׁ:</small> <small>אם טעה וסיים האל הקדוש אם נזכר בתוך כדי דיבור ואמר המלך הקדוש יצא ואם לאו צריך לחזור לראש התפלה וה"ה אם מסופק אם אמר צריך לחזור לראש. ובימות השנה אם אמר המלך הקדוש אינו חוזר.</small>',
       ),
@@ -20425,7 +20305,7 @@ function buildShacharitSfaradPayload(context) {
   );
   if (context2.isFastDay || context2.isTaanit) {
     // בתענית ציבור אומר הש"ץ בחזרה "עננו" ברכה בפני עצמה בין גואל לרופא (נוסח: סידור ספרד, מנחה)
-    parts.push(
+    pushAdd(parts, 
       sup(p("<small>" + "בתענית ציבור אומר כאן הש\"ץ עננו:" + "</small>") + p("עֲנֵֽנוּ יְהֹוָה עֲנֵֽנוּ בְּיוֹם צוֹם תַּעֲנִיתֵֽנוּ. כִּי בְצָרָה גְדוֹלָה אֲנָֽחְנוּ. אַל תֵּֽפֶן אֶל רִשְׁעֵֽנוּ וְאַל תַּסְתֵּר פָּנֶֽיךָ מִמֶּֽנּוּ וְאַל תִּתְעַלַּם מִתְּ֒חִנָּתֵֽנוּ הֱיֵה נָא קָרוֹב לְשַׁוְעָתֵֽנוּ יְהִי נָא חַסְדְּ֒ךָ לְנַחֲמֵֽנוּ טֶֽרֶם נִקְרָא אֵלֶֽיךָ עֲנֵֽנוּ. כַּדָּבָר שֶׁנֶּאֱמַר וְהָיָה טֶֽרֶם יִקְרָֽאוּ וַאֲנִי אֶעֱנֶה. עוֹד הֵם מְדַבְּ֒רִים וַאֲנִי אֶשְׁמָע. כִּי אַתָּה יְהֹוָה הָעוֹנֶה בְּעֵת צָרָה. פּוֹדֶה וּמַצִּיל בְּכָל עֵת צָרָה וְצוּקָה: בָּרוּךְ אַתָּה יְהֹוָה הָעוֹנֶה לְעַמּוֹ יִשְׂרָאֵל בְּעֵת צָרָה:")),
     );
   }
@@ -20446,9 +20326,9 @@ function buildShacharitSfaradPayload(context) {
     ),
   );
   if (!isRainRequest) {
-    parts.push(p("בְּרָכָה"));
+    pushAdd(parts, p("בְּרָכָה"));
   } else {
-    parts.push(p("טַל וּמָטָר לִבְרָכָה"));
+    pushAdd(parts, p("טַל וּמָטָר לִבְרָכָה"));
   }
   parts.push(
     p(
@@ -20456,7 +20336,7 @@ function buildShacharitSfaradPayload(context) {
     ),
   );
   if (isRainRequest) {
-    parts.push(
+    pushAdd(parts, 
       sup(
         '<small>אם שכח לומר טַל וּמָטָר ונזכר קודם שהתחיל תְּקַע אומרו במקום שנזכר. התחיל לומר תְּקַע יאמרנה בשׁוֹמֵֽעַ תְּפִלָּה. ואם לא נזכר בש"ת יאמרנה בין ש"ת לרְצֵה. שכח גם שם אם נזכר קודם שעקר רגליו חוזר לברכת השנים ויתחיל בָּרֵךְ עָלֵֽינוּ ויתפלל כסדר. ואם עקר רגליו חוזר לראש התפלה.</small>',
       ),
@@ -20473,7 +20353,7 @@ function buildShacharitSfaradPayload(context) {
     ),
   );
   if (context2.isAseretYemeiTeshuva) {
-    parts.push(
+    pushAdd(parts, 
       sup(
         '<small>בעשי"ת יסיים:</small> <small>בָּרוּךְ אַתָּה יְהֹוָה הַמֶּֽלֶךְ הַמִּשְׁפָּט:</small> <small>בכל השנה אם אמר המלך המשפט יצא וא"צ לחזור. ובעשי"ת אם טעה ואמר מלך אוהב צדקה ומשפט אם נזכר תוך כדי דבור אומר המלך המשפט. ואם לאחר כ"ד לא יאמר ואין מחזירין אותו.</small>',
       ),
@@ -20519,14 +20399,14 @@ function buildShacharitSfaradPayload(context) {
   // ורק נוסח "בְּיוֹם ..." של היום (ראו _yaalehKind)
   if (context2.isRoshChodesh || context2.isCholHamoed) {
     var yvDay = { rc: "רֹאשׁ הַחֹֽדֶשׁ", pesach: "חַג הַמַּצּוֹת", sukkot: "חַג הַסֻּכּוֹת" }[_yaalehKind(context2)] || "רֹאשׁ הַחֹֽדֶשׁ";
-    parts.push(
+    pushAdd(parts, 
       p(
         "<b>אֱלֹהֵֽינוּ</b> וֵאלֹהֵי אֲבוֹתֵֽינוּ יַעֲלֶה וְיָבֹא וְיַגִּֽיעַ וְיֵרָאֶה וְיֵרָצֶה וְיִשָּׁמַע וְיִפָּקֵד וְיִזָּכֵר זִכְרוֹנֵֽנוּ וּפִקְדוֹנֵֽנוּ וְזִכְרוֹן אֲבוֹתֵֽינוּ וְזִכְרוֹן מָשִֽׁיחַ בֶּן דָּוִד עַבְדֶּֽךָ וְזִכְרוֹן יְרוּשָׁלַֽיִם עִיר קָדְשֶֽׁךָ וְזִכְרוֹן כָּל עַמְּ֒ךָ בֵּית יִשְׂרָאֵל לְפָנֶֽיךָ, לִפְלֵיטָה לְטוֹבָה לְחֵן וּלְחֶֽסֶד וּלְרַחֲמִים וּלְחַיִּים טוֹבִים וּלְשָׁלוֹם בְּיוֹם " +
           yvDay +
           " הַזֶּה זָכְרֵֽנוּ יְהֹוָה אֱלֹהֵֽינוּ בּוֹ לְטוֹבָה, וּפָקְדֵֽנוּ בוֹ לִבְרָכָה, וְהוֹשִׁיעֵֽנוּ בוֹ לְחַיִּים טוֹבִים, וּבִדְבַר יְשׁוּעָה וְרַחֲמִים חוּס וְחָנֵּֽנוּ, וְרַחֵם עָלֵֽינוּ וְהוֹשִׁיעֵֽנוּ, כִּי אֵלֶֽיךָ עֵינֵֽינוּ, כִּי אֵל מֶֽלֶךְ חַנּוּן וְרַחוּם אָֽתָּה:",
       ),
     );
-    parts.push(sup(p("<small>שכח ולא אמר יעלה ויבא אם נזכר קודם שאמר יהיו לרצון חוזר ומתחיל רצה. ואפלו אם נזכר קודם שהתחיל מודים כיון שסים ברכת המחזיר שכינתו לציון צריך להתחיל רצה. אך אם נזכר קודם ברכת המחזיר שכינתו לציון אומרו שם ומסים ותחזינה עינינו וכו'. ואם לא נזכר עד לאחר יהיו לרצון וגו' חוזר לראש התפלה.</small>")));
+    pushAdd(parts, sup(p("<small>שכח ולא אמר יעלה ויבא אם נזכר קודם שאמר יהיו לרצון חוזר ומתחיל רצה. ואפלו אם נזכר קודם שהתחיל מודים כיון שסים ברכת המחזיר שכינתו לציון צריך להתחיל רצה. אך אם נזכר קודם ברכת המחזיר שכינתו לציון אומרו שם ומסים ותחזינה עינינו וכו'. ואם לא נזכר עד לאחר יהיו לרצון וגו' חוזר לראש התפלה.</small>")));
   }
   parts.push(
     p(
@@ -20549,21 +20429,21 @@ function buildShacharitSfaradPayload(context) {
     ),
   );
   if (context2.isChanukah || context2.isPurim) {
-    parts.push(
+    pushAdd(parts, 
       sup(
         '<small>בחנוכה ופורים אומרים על הנסים. שכח לומר על הנסים ונזכר קודם שאמר השם מברכת הטוב שמך אפילו אמר ברוך אתה חוזר ואומר על הנסים. אבל אם כבר סיים הברכה או שאמר ברוך א"י אינו חוזר (דה"ח תרפ"ב ותרצ"ג).</small> <b>וְעַל הַנִּסִּים</b> וְעַל הַפֻּרְקָן וְעַל הַגְּ֒בוּרוֹת וְעַל הַתְּ֒שׁוּעוֹת וְעַל הַנִּפְלָאוֹת וְעַל הַנֶּחָמוֹת וְעַל הַמִּלְחָמוֹת שֶׁעָשִֽׂיתָ לַאֲבוֹתֵֽינוּ בַּיָּמִים הָהֵם בִּזְּ֒מַן הַזֶּה:',
       ),
     );
   }
   if (context2.isChanukah) {
-    parts.push(
+    pushAdd(parts, 
       sup(
         "<small>בחנוכה:</small> <b>בִּימֵי מַתִּתְיָֽהוּ</b> בֶּן יוֹחָנָן כֹּהֵן גָּדוֹל חַשְׁמוֹנָאִי וּבָנָיו כְּשֶׁעָמְ֒דָה מַלְכוּת יָוָן הָרְ֒שָׁעָה עַל־עַמְּ֒ךָ יִשְׂרָאֵל לְהַשְׁכִּיחָם תּוֹרָתֶֽךָ וּלְהַעֲבִירָם מֵחֻקֵּי רְצוֹנֶֽךָ, וְאַתָּה בְּרַחֲמֶֽיךָ הָרַבִּים עָמַֽדְתָּ לָהֶם בְּעֵת צָרָתָם רַֽבְתָּ אֶת־רִיבָם דַּֽנְתָּ אֶת־דִּינָם נָקַֽמְתָּ אֶת־נִקְמָתָם מָסַֽרְתָּ גִבּוֹרִים בְּיַד חַלָּשִׁים וְרַבִּים בְּיַד מְעַטִּים וּטְמֵאִים בְּיַד טְהוֹרִים וּרְשָׁעִים בְּיַד צַדִּיקִים וְזֵדִים בְּיַד עוֹסְ֒קֵי תוֹרָתֶֽךָ וּלְךָ עָשִֽׂיתָ שֵׁם גָּדוֹל וְקָדוֹשׁ בְּעוֹלָמֶֽךָ וּלְעַמְּ֒ךָ יִשְׂרָאֵל עָשִֽׂיתָ תְּשׁוּעָה גְדוֹלָה וּפֻרְקָן כְּהַיּוֹם הַזֶּה וְאַחַר־כַּךְ בָּֽאוּ בָנֶֽיךָ לִדְבִיר בֵּיתֶֽךָ וּפִנּוּ אֶת־הֵיכָלֶֽךָ וְטִהֲרוּ אֶת־מִקְדָּשֶֽׁךָ וְהִדְלִֽיקוּ נֵרוֹת בְּחַצְרוֹת קָדְשֶֽׁךָ וְקָבְ֒עוּ שְׁמוֹנַת יְמֵי חֲנֻכָּה אֵֽלּוּ לְהוֹדוֹת וּלְהַלֵּל לְשִׁמְךָ הַגָּדוֹל:",
       ),
     );
   }
   if (context2.isPurim) {
-    parts.push(
+    pushAdd(parts, 
       sup(
         "<small>בפורים:</small> <b>בִּימֵי מָרְדְּ֒כַי וְאֶסְתֵּר</b> בְּשׁוּשַׁן הַבִּירָה כְּשֶׁעָמַד עֲלֵיהֶם הָמָן הָרָשָׁע בִּקֵּשׁ לְהַשְׁמִיד לַהֲרוֹג וּלְאַבֵּד אֶת־כָּל־הַיְּ֒הוּדִים מִנַּֽעַר וְעַד־זָקֵן טַף וְנָשִׁים בְּיוֹם אֶחָד בִּשְׁלוֹשָׁה עָשָׂר לְחֹֽדֶשׁ שְׁנֵים־עָשָׂר הוּא־חֹֽדֶשׁ אֲדָר וּשְׁלָלָם לָבוֹז: וְאַתָּה בְּרַחֲמֶֽיךָ הָרַבִּים הֵפַֽרְתָּ אֶת־עֲצָתוֹ וְקִלְקַֽלְתָּ אֶת־מַחֲשַׁבְתּוֹ וַהֲשֵׁבֽוֹתָ לּוֹ גְּמוּלוֹ בְּרֹאשׁוֹ וְתָלוּ אוֹתוֹ וְאֶת־בָּנָיו עַל־הָעֵץ:",
       ),
@@ -20575,7 +20455,7 @@ function buildShacharitSfaradPayload(context) {
     ),
   );
   if (context2.isAseretYemeiTeshuva) {
-    parts.push(
+    pushAdd(parts, 
       sup(
         '<small>בעשי"ת:</small> <small>וּכְתוֹב לְחַיִּים טוֹבִים כָּל בְּנֵי בְרִיתֶֽךָ:</small> <small>אם שכח לומר וכתוב אם נזכר קודם שאמר השם מברכת הטוב חוזר ואם לא נזכר עד לאחר שאמר השם אינו חוזר כמו שנתבאר לעיל אצל זכרנו ומי כמוך. (דה"ח סי\' תקפ"ב)</small>',
       ),
@@ -20597,7 +20477,7 @@ function buildShacharitSfaradPayload(context) {
     ),
   );
   if (context2.isAseretYemeiTeshuva) {
-    parts.push(
+    pushAdd(parts, 
       sup(
         '<small>בעשי"ת:</small> <small>בְּסֵֽפֶר חַיִּים בְּרָכָה וְשָׁלוֹם וּפַרְנָסָה טוֹבָה וּגְזֵרוֹת טוֹבוֹת, יְשׁוּעוֹת וְנֶחָמוֹת, נִזָּכֵר וְנִכָּתֵב לְפָנֶֽיךָ אֲנַֽחְנוּ וְכָל עַמְּ֒ךָ בֵּית־יִשְׂרָאֵל לְחַיִּים טוֹבִים וּלְשָׁלוֹם:</small> <small>בעשי"ת אומרים בספר חיים. ואם לא אמר כיון שסיים הברכה או רק בא"י אינו חוזר. ונ"ל דבזה ראוי לומר בספר תיכף כשסיים המברך את עמו ישראל בשלום קודם יהיו לרצון כיון שכבר גמר התפלה. (דהא לר"ת לעולם אומרים בסוף ברכה אפילו בדבר שאין מחזירין אלא דהחולקים סוברים כיון דא"צ לחזור א"כ הוי הפסק באמצע תפלה מה שאין כן כאן.) (חיי אדם כלל כ"ד סעי\' כ"ה)</small>',
       ),
@@ -21035,19 +20915,19 @@ function buildMinchaMizrahiPayload(context) {
   // אבות
   parts.push(p("<b>בָּרוּךְ</b> אַתָּה יְהֹוָה, אֱלֹהֵֽינוּ וֵֽאלֹהֵי אֲבוֹתֵֽינוּ, אֱלֹהֵי אַבְרָהָם, אֱלֹהֵי יִצְחָק, וֵֽאלֹהֵי יַעֲקֹב. הָאֵל הַגָּדוֹל הַגִּבּוֹר וְהַנּוֹרָא, אֵל עֶלְיוֹן, גּוֹמֵל חֲסָדִים טוֹבִים, קוֹנֵה הַכֹּל, וְזוֹכֵר חַסְדֵּי אָבוֹת, וּמֵבִיא גוֹאֵל לִבְנֵי בְנֵיהֶם לְמַֽעַן שְׁמוֹ בְּאַֽהֲבָה:"));
   if (context.isAseretYemeiTeshuva) {
-    parts.push(sup(p("<small><b>זָכְרֵנוּ</b> לְחַיִּים, מֶלֶךְ חָפֵץ בַּחַיִּים, כָּתְבֵנוּ בְּסֵפֶר חַיִּים, לְמַעַנָךְ אֱלֹהִים חַיִּים:</small>")));
+    pushAdd(parts, sup(p("<small><b>זָכְרֵנוּ</b> לְחַיִּים, מֶלֶךְ חָפֵץ בַּחַיִּים, כָּתְבֵנוּ בְּסֵפֶר חַיִּים, לְמַעַנָךְ אֱלֹהִים חַיִּים:</small>")));
   }
   parts.push(p("מֶֽלֶךְ עוֹזֵר וּמוֹשִֽׁיעַ וּמָגֵן: בָּרוּךְ אַתָּה יְהֹוָה, מָגֵן אַבְרָהָם:"));
   // גבורות
   parts.push(p("<b>אַתָּה</b> גִבּוֹר לְעוֹלָם אֲדֹנָי, מְחַיֶּה מֵתִים אַתָּה, רַב לְהוֹשִֽׁיעַ."));
   if (isSummer) {
-    parts.push(p("מוֹרִיד הַטָּל."));
+    pushAdd(parts, p("מוֹרִיד הַטָּל."));
   } else {
-    parts.push(p("מַשִּׁיב הָרֽוּחַ וּמוֹרִיד הַגֶּֽשֶׁם."));
+    pushAdd(parts, p("מַשִּׁיב הָרֽוּחַ וּמוֹרִיד הַגֶּֽשֶׁם."));
   }
   parts.push(p("מְכַלְכֵּל חַיִּים בְּחֶֽסֶד, מְחַיֵּה מֵתִים בְּרַֽחֲמִים רַבִּים, סוֹמֵךְ נֽוֹפְלִים, וְרוֹפֵא חוֹלִים, וּמַתִּיר אֲסוּרִים, וּמְקַיֵּם אֱמֽוּנָתוֹ לִֽישֵׁנֵי עָפָר. מִי כָמֽוֹךָ בַּֽעַל גְּבוּרוֹת, וּמִי דֽוֹמֶה לָךְ, מֶֽלֶךְ מֵמִית וּמְחַיֶּה וּמַצְמִֽיחַ יְשׁוּעָה."));
   if (context.isAseretYemeiTeshuva) {
-    parts.push(sup(p("<small><b>מִי כָמוֹךָ</b> אָב הָרַחֲמָן, זוֹכֵר יְצוּרָיו לְחַיִּים בְּרַחֲמִים:</small>")));
+    pushAdd(parts, sup(p("<small><b>מִי כָמוֹךָ</b> אָב הָרַחֲמָן, זוֹכֵר יְצוּרָיו לְחַיִּים בְּרַחֲמִים:</small>")));
   }
   parts.push(p("וְנֶֽאֱמָן אַתָּה לְהַֽחֲיוֹת מֵתִים: בָּרוּךְ אַתָּה יְהֹוָה, מְחַיֵּה הַמֵּתִים:"));
   // קדושה — בחזרת הש"ץ, אחרי מחיה המתים ולפני אתה קדוש
@@ -21059,7 +20939,7 @@ function buildMinchaMizrahiPayload(context) {
   // קדושת השם
   parts.push(p("<b>אַתָּה</b> קָדוֹשׁ וְשִׁמְךָ קָדוֹשׁ, וּקְדוֹשִׁים בְּכָל־יוֹם יְהַֽלְלֽוּךָ סֶּֽלָה: בָּרוּךְ אַתָּה יְהֹוָה, הָאֵל הַקָּדוֹשׁ:"));
   if (context.isAseretYemeiTeshuva) {
-    parts.push(sup(p("<small>בעשרת ימי תשובה חותמים: <b>הַמֶּלֶךְ הַקָּדוֹשׁ:</b></small>")));
+    pushAdd(parts, sup(p("<small>בעשרת ימי תשובה חותמים: <b>הַמֶּלֶךְ הַקָּדוֹשׁ:</b></small>")));
   }
   // חונן הדעת
   parts.push(p("<b>אַתָּה</b> חוֹנֵן לְאָדָם דַּֽעַת וּמְלַמֵּד לֶאֱנוֹשׁ בִּינָה. וְחָנֵּֽנוּ מֵאִתְּךָ חָכְמָה בִּינָה וָדָֽעַת: בָּרוּךְ אַתָּה יְהֹוָה, חוֹנֵן הַדָּֽעַת:"));
@@ -21071,7 +20951,7 @@ function buildMinchaMizrahiPayload(context) {
   parts.push(p("<b>רְאֵה</b> נָא בְעָנְיֵֽנוּ, וְרִיבָֽה רִיבֵֽנוּ, וּמַהֵר לְגָאֳלֵֽנוּ גְאוּלָּה שְׁלֵמָה לְמַֽעַן שְׁמֶֽךָ, כִּי אֵל גּוֹאֵל חָזָק אָֽתָּה: בָּרוּךְ אַתָּה יְהֹוָה, גּוֹאֵל יִשְׂרָאֵל:"));
   // ענינו — בתענית (in repetition between גאולה and רפואה)
   if (context.isFastDay) {
-    parts.push(sup(
+    pushAdd(parts, sup(
       p("<small>בתענית ציבור השליח ציבור אומר בחזרה בין גאולה לרפואה:</small>") +
       p("<small><b>עֲנֵֽנוּ</b> אָבִינוּ עֲנֵֽנוּ בְּיוֹם צוֹם הַתַּֽעֲנִית הַזֶּה, כִּי בְצָרָה גְדוֹלָה אֲנָֽחְנוּ. אַל תֵּֽפֶן לְרִשְׁעֵֽנוּ, וְאַל תִּתְעַלָּם מַלְכֵּֽנוּ מִבַּקָּשָׁתֵֽנוּ. הֱיֵה נָא קָרוֹב לְשַׁוְעָתֵֽנוּ, טֶֽרֶם נִקְרָא אֵלֶֽיךָ אַתָּה תַעֲנֶה, נְדַבֵּר וְאַתָּה תִשְׁמַע, כַּדָּבָר שֶׁנֶּאֱמַר: וְהָיָה טֶֽרֶם יִקְרָאוּ וַאֲנִי אֶעֱנֶה, עוֹד הֵם מְדַבְּרִים וַאֲנִי אֶשְׁמָע: כִּי אַתָּה יְהֹוָה פּוֹדֶה וּמַצִּיל, וְעוֹנֶה וּמְרַחֵם בְּכָל עֵת צָרָה וְצוּקָה: בָּרוּךְ אַתָּה יְהֹוָה הָעוֹנֶה לְעַמּוֹ יִשְׂרָאֵל בְּעֵת צָרָה:</small>")
     ));
@@ -21080,18 +20960,18 @@ function buildMinchaMizrahiPayload(context) {
   parts.push(p("<b>רְפָאֵֽנוּ</b> יְהֹוָה וְנֵֽרָפֵא, הֽוֹשִׁיעֵֽנוּ וְנִוָּשֵֽׁעָה, כִּי תְהִלָּתֵֽנוּ אָֽתָּה, וְהַֽעֲלֵה אֲרוּכָה וּמַרְפֵּא לְכָל תַּֽחֲלוּאֵֽינוּ וּלְכָל מַכְאוֹבֵֽינוּ וּלְכָל מַכּוֹתֵֽינוּ. כִּי אֵל רוֹפֵא רַחְמָן וְנֶֽאֱמָן אָֽתָּה: בָּרוּךְ אַתָּה יְהֹוָה, רוֹפֵא חוֹלֵי עַמּוֹ יִשְׂרָאֵל:"));
   // שנה
   if (!isRainRequest) {
-    parts.push(p("<small>בקיץ:</small>"));
-    parts.push(p("<b>בָּֽרְכֵֽנוּ</b> יְהֹוָה אֱלֹהֵֽינוּ בְּכָל מַֽעֲשֵׂי יָדֵֽינוּ, וּבָרֵךְ שְׁנָתֵֽנוּ בְּטַֽלְלֵי רָצוֹן בְּרָכָה וּנְדָבָה, וּתְהִי אַֽחֲרִיתָהּ חַיִּים וְשָׂבָע וְשָׁלוֹם כַּשָּׁנִים הַטּוֹבוֹת לִבְרָכָה, כִּי אֵל טוֹב וּמֵטִיב אַתָּה וּמְבָרֵךְ הַשָּׁנִים: בָּרוּךְ אַתָּה יְהֹוָה, מְבָרֵךְ הַשָּׁנִים:"));
+    pushAdd(parts, p("<small>בקיץ:</small>"));
+    pushAdd(parts, p("<b>בָּֽרְכֵֽנוּ</b> יְהֹוָה אֱלֹהֵֽינוּ בְּכָל מַֽעֲשֵׂי יָדֵֽינוּ, וּבָרֵךְ שְׁנָתֵֽנוּ בְּטַֽלְלֵי רָצוֹן בְּרָכָה וּנְדָבָה, וּתְהִי אַֽחֲרִיתָהּ חַיִּים וְשָׂבָע וְשָׁלוֹם כַּשָּׁנִים הַטּוֹבוֹת לִבְרָכָה, כִּי אֵל טוֹב וּמֵטִיב אַתָּה וּמְבָרֵךְ הַשָּׁנִים: בָּרוּךְ אַתָּה יְהֹוָה, מְבָרֵךְ הַשָּׁנִים:"));
   } else {
-    parts.push(p("<small>בחורף:</small>"));
-    parts.push(p("<b>בָּרֵךְ עָלֵֽינוּ</b> יְהֹוָה אֱלֹהֵֽינוּ אֶת הַשָּׁנָה הַזֹּאת וְאֶת כָּל מִינֵי תְּבוּאָתָהּ לְטוֹבָה, וְתֵן טַל וּמָטָר לִבְרָכָה עַל כָּל פְּנֵי הָאֲדָמָה, וְרַוֵּה פְּנֵי תֵבֵל וְשַׂבַּע אֶת הָעוֹלָם כֻּלּוֹ מִטּוּבָךְ, וּמַלֵּא יָדֵֽינוּ מִבִּרְכוֹתֶֽיךָ וּמֵעֹֽשֶׁר מַתְּנוֹת יָדֶֽיךָ. שָׁמְרָה וְהַצִּֽילָה שָׁנָה זוֹ מִכָּל דָּבָר רָע, וּמִכָּל מִינֵי מַשְׁחִית וּמִכָּל מִינֵי פֻרְעָנוּת, וַעֲשֵׂה לָהּ תִּקְוָה טוֹבָה וְאַחֲרִית שָׁלוֹם. חוּס וְרַחֵם עָלֶֽיהָ וְעַל כָּל תְּבוּאָתָהּ וּפֵירוֹתֶיהָ, וּבָֽרְכָֽהּ בְּגִשְׁמֵי רָצוֹן בְּרָכָה וּנְדָבָה, וּתְהִי אַחֲרִיתָהּ חַיִּים וְשָׂבָע וְשָׁלוֹם. כַּשָּׁנִים הַטּוֹבוֹת לִבְרָכָה, כִּי אֵל טוֹב וּמֵטִיב אַתָּה וּמְבָרֵךְ הַשָּׁנִים. בָּרוּךְ אַתָּה יְהֹוָה, מְבָרֵךְ הַשָּׁנִים:"));
+    pushAdd(parts, p("<small>בחורף:</small>"));
+    pushAdd(parts, p("<b>בָּרֵךְ עָלֵֽינוּ</b> יְהֹוָה אֱלֹהֵֽינוּ אֶת הַשָּׁנָה הַזֹּאת וְאֶת כָּל מִינֵי תְּבוּאָתָהּ לְטוֹבָה, וְתֵן טַל וּמָטָר לִבְרָכָה עַל כָּל פְּנֵי הָאֲדָמָה, וְרַוֵּה פְּנֵי תֵבֵל וְשַׂבַּע אֶת הָעוֹלָם כֻּלּוֹ מִטּוּבָךְ, וּמַלֵּא יָדֵֽינוּ מִבִּרְכוֹתֶֽיךָ וּמֵעֹֽשֶׁר מַתְּנוֹת יָדֶֽיךָ. שָׁמְרָה וְהַצִּֽילָה שָׁנָה זוֹ מִכָּל דָּבָר רָע, וּמִכָּל מִינֵי מַשְׁחִית וּמִכָּל מִינֵי פֻרְעָנוּת, וַעֲשֵׂה לָהּ תִּקְוָה טוֹבָה וְאַחֲרִית שָׁלוֹם. חוּס וְרַחֵם עָלֶֽיהָ וְעַל כָּל תְּבוּאָתָהּ וּפֵירוֹתֶיהָ, וּבָֽרְכָֽהּ בְּגִשְׁמֵי רָצוֹן בְּרָכָה וּנְדָבָה, וּתְהִי אַחֲרִיתָהּ חַיִּים וְשָׂבָע וְשָׁלוֹם. כַּשָּׁנִים הַטּוֹבוֹת לִבְרָכָה, כִּי אֵל טוֹב וּמֵטִיב אַתָּה וּמְבָרֵךְ הַשָּׁנִים. בָּרוּךְ אַתָּה יְהֹוָה, מְבָרֵךְ הַשָּׁנִים:"));
   }
   // קיבוץ גלויות
   parts.push(p("<b>תְּקַע</b> בְּשׁוֹפָר גָּדוֹל לְחֵֽרוּתֵֽנוּ, וְשָׂא נֵס לְקַבֵּץ גָּֽלֻיּוֹתֵֽינוּ, וְקַבְּצֵֽנוּ יַֽחַד מֵאַרְבַּע כַּנְפוֹת הָאָֽרֶץ לְאַרְצֵֽנוּ: בָּרוּךְ אַתָּה יְהֹוָה, מְקַבֵּץ נִדְחֵי עַמּוֹ יִשְׂרָאֵל:"));
   // דין
   parts.push(p("<b>הָשִֽׁיבָה</b> שֽׁוֹפְטֵֽינוּ כְּבָרִֽאשׁוֹנָה, וְיֽוֹעֲצֵֽינוּ כְּבַתְּחִלָּה, וְהָסֵר מִמֶּֽנּוּ יָגוֹן וַֽאֲנָחָה. וּמְלוֹךְ עָלֵֽינוּ מְהֵרָה אַתָּה יְהֹוָה לְבַדְּךָ, בְּחֶֽסֶד וּבְרַֽחֲמִים, בְּצֶֽדֶק וּבְמִשְׁפָּט: בָּרוּךְ אַתָּה יְהֹוָה, מֶֽלֶךְ אוֹהֵב צְדָקָה וּמִשְׁפָּט:"));
   if (context.isAseretYemeiTeshuva) {
-    parts.push(sup(p("<small>בעשרת ימי תשובה חותמים: <b>הַמֶּלֶךְ הַמִּשְׁפָּט:</b></small>")));
+    pushAdd(parts, sup(p("<small>בעשרת ימי תשובה חותמים: <b>הַמֶּלֶךְ הַמִּשְׁפָּט:</b></small>")));
   }
   // מינים
   parts.push(p("<b>לַמִּינִים</b> וְלַמַּלְשִׁינִים אַל תְּהִי תִקְוָה, וְכָל הַזֵּדִים כְּרֶֽגַע יֹאבֵֽדוּ, וְכָל אֽוֹיְבֶֽיךָ וְכָל שֽׂוֹנְאֶֽיךָ מְהֵרָה יִכָּרֵֽתוּ, וּמַלְכוּת הָֽרִשְׁעָה מְהֵרָה תְעַקֵּר וּתְשַׁבֵּר וּתְכַלֵּם וְתַכְנִיעֵם בִּמְהֵרָה בְיָמֵֽינוּ: בָּרוּךְ אַתָּה יְהֹוָה, שׁוֹבֵר אוֹיְבִים וּמַכְנִֽיעַ מִינִים:"));
@@ -21102,7 +20982,7 @@ function buildMinchaMizrahiPayload(context) {
   // ירושלים" במקום "בונה ירושלים" (סידור עדות המזרח)
   if (context.isTishaBeAv) {
     parts.push(p("<b>תִּשְׁכּוֹן</b> בְּתוֹךְ יְרוּשָׁלַֽיִם עִֽירְךָ כַּאֲשֶׁר דִּבַּֽרְתָּ, וְכִסֵּא דָוִד עַבְדְּךָ מְהֵרָה בְּתוֹכָהּ תָּכִין, וּבְנֵה אוֹתָהּ בִּנְיַן עוֹלָם בִּמְהֵרָה בְיָמֵֽינוּ:"));
-    parts.push(sup(
+    pushAdd(parts, sup(
       p("<small>בתשעה באב במנחה אומרים:</small>") +
       p("<small><b>נַחֵם</b> יְהֹוָה אֱלֹהֵֽינוּ אֶת אֲבֵלֵי צִיּוֹן וְאֶת אֲבֵלֵי יְרוּשָׁלַיִם, וְאֶת הָעִיר הַחֲרֵבָה וְהַבְּזוּיָה, וְהַשּׁוֹמֵמָה, מִבְּלִי בָנֶֽיהָ הִיא יוֹשֶׁבֶת, וְרֹאשָׁהּ חָפוּי כְּאִשָּׁה עֲקָרָה שֶׁלֹא יָלָֽדָה. וַיְבַלְּעוּהָ לִגְיוֹנִים וַיִּירָשֽׁוּהָ, וַיַּטִּֽילוּ אֶת עַמְּךָ יִשְׂרָאֵל לַחֶֽרֶב, וַיַּהַרְגוּ בְזָדוֹן חֲסִידֵי עֶלְיוֹן. עַל־כֵּן צִיּוֹן בְּמֶֽרֶר תִּבְכֶּה, וִירֽוּשָׁלַֽיִם תִּתֵּן קוֹלָהּ: לִבִּי לִבִּי עַל חַלְלֵיהֶם, מֵעַי מֵעַי עַל הֲרוּגֵיהֶם: כִּי אַתָּה יְהֹוָה בָּאֵשׁ הֵצַתָּהּ, וּבָאֵשׁ אַתָּה עָתִיד לִבְנוֹתָהּ, כַּכָּתוּב: וַאֲנִ֤י אֶֽהְיֶה־לָּהּ֙ נְאֻם־יְהֹוָ֔ה ח֥וֹמַת אֵ֖שׁ סָבִ֑יב וּלְכָב֖וֹד אֶֽהְיֶ֥ה בְתוֹכָֽהּ׃</small>") +
       p("<small>בָּרוּךְ אַתָּה יְהֹוָה, מְנַחֵם צִיּוֹן בְּבִנְיַן יְרוּשָׁלַיִם:</small>")
@@ -21115,7 +20995,7 @@ function buildMinchaMizrahiPayload(context) {
   // שמיעת תפילה
   if (context.isFastDay) {
     parts.push(p("<b>שְׁמַע</b> קוֹלֵֽנוּ, יְהֹוָה אֱלֹהֵֽינוּ, אָב הָרַֽחֲמָן, רַחֵם עָלֵֽינוּ, וְקַבֵּל בְּרַֽחֲמִים וּבְרָצוֹן אֶת תְּפִלָּתֵֽנוּ, כִּי אֵל שׁוֹמֵֽעַ תְּפִלּוֹת וְתַֽחֲנוּנִים אָֽתָּה. וּמִלְּפָנֶֽיךָ מַלְכֵּֽנוּ, רֵיקָם אַל תְּשִׁיבֵֽנוּ, חָנֵּֽנוּ וַֽעֲנֵֽנוּ וּשְׁמַע תְּפִלָּתֵֽנוּ."));
-    parts.push(sup(
+    pushAdd(parts, sup(
       p("<small>בתענית אומר היחיד כאן \"עננו\" (וכן שליח ציבור ששכח לאומרו בין גואל לרופא — אומרו כאן בלי חתימה):</small>") +
       p("<small><b>עֲנֵנוּ</b> אָבִינוּ עֲנֵנוּ בְּיוֹם צוֹם הַתַּֽעֲנִית הַזֶּה כִּי בְצָרָה גְדוֹלָה אֲנָֽחְנוּ. אַל־תֵּֽפֶן לְרִשְׁעֵֽנוּ, וְאַל־תִּתְעַלָּם מַלְכֵּֽנוּ מִבַּקָּשָׁתֵֽנוּ. הֱיֵה נָא קָרוֹב לְשַׁוְעָתֵֽנוּ. טֶֽרֶם נִקְרָא אֵלֶֽיךָ אַתָּה תַֽעֲנֶה, נְדַבֵּר וְאַתָּה תִשְׁמַע, כַּדָּבָר שֶׁנֶּאֱמַר: וְהָיָ֥ה טֶֽרֶם־יִקְרָ֖אוּ וַאֲנִ֣י אֶעֱנֶ֑ה ע֛וֹד הֵ֥ם מְדַבְּרִ֖ים וַאֲנִ֥י אֶשְׁמָֽע: כִּי אַתָּה יְהֹוָה פּוֹדֶה וּמַצִּיל וְעוֹנֶה וּמְרַחֵם בְּכָל־עֵת צָרָה וְצוּקָה.</small>")
     ));
@@ -21131,7 +21011,7 @@ function buildMinchaMizrahiPayload(context) {
   // ורק נוסח "בְּיוֹם ..." של היום (ראו _yaalehKind)
   if (context.isRoshChodesh || context.isCholHamoed) {
     var yvDay = { rc: "רֹאשׁ חֹֽדֶשׁ", pesach: "חַג הַמַּצּוֹת הַזֶּה, בְּיוֹם מִקְרָא קֹֽדֶשׁ", sukkot: "חַג הַסֻּכּוֹת הַזֶּה, בְּיוֹם מִקְרָא קֹֽדֶשׁ" }[_yaalehKind(context)] || "רֹאשׁ חֹֽדֶשׁ";
-    parts.push(
+    pushAdd(parts, 
       p(
         "<b>אֱלֹהֵֽינוּ</b> וֵאלֹהֵי אֲבוֹתֵֽינוּ, יַעֲלֶה וְיָבֹא, וְיַגִּֽיעַ וְיֵרָאֶה, וְיֵרָצֶה וְיִשָּׁמַע, וְיִפָּקֵד וְיִזָּכֵר, זִכְרוֹנֵֽנוּ וְזִכְרוֹן אֲבוֹתֵֽינוּ, זִכְרוֹן יְרוּשָׁלַֽיִם עִירָךְ, וְזִכְרוֹן מָשִֽׁיחַ בֶּן דָּוִד עַבְדָּךְ, וְזִכְרוֹן כָּל עַמְּךָ בֵּית יִשְׂרָאֵל לְפָנֶֽיךָ, לִפְלֵיטָה, לְטוֹבָה, לְחֵן, לְחֶֽסֶד וּלְרַחֲמִים, לְחַיִּים טוֹבִים וּלְשָׁלוֹם, בְּיוֹם " +
           yvDay +
@@ -21154,11 +21034,11 @@ function buildMinchaMizrahiPayload(context) {
       p("<small><b>עַל הַנִּסִּים</b> וְעַל הַפֻּרְקָן וְעַל הַגְּבוּרוֹת וְעַל הַתְּשׁוּעוֹת וְעַל הַנִּפְלָאוֹת וְעַל הַנֶּחָמוֹת שֶׁעָשִֽׂיתָ לַאֲבוֹתֵֽינוּ בַּיָּמִים הָהֵם בַּזְּמַן הַזֶּה:</small>") +
       (context.isChanukah ? p("<small><small>בחנוכה אומרים:</small> <b>בִּימֵי מַתִּתְיָה</b> בֶן־יוֹחָנָן כֹּהֵן גָּדוֹל. חַשְׁמוֹנָאִי וּבָנָיו כְּשֶׁעָֽמְדָֽה מַלְכוּת יָוָן הָרְשָׁעָה עַל עַמְּךָ יִשְׂרָאֵל. לְשַׁכְּחָם תּוֹרָתָךְ וּלְהַעֲבִירָם מֵחֻקֵּי רְצוֹנָךְ. וְאַתָּה בְּרַחֲמֶֽיךָ הָרַבִּים עָמַֽדְתָּ לָהֶם בְּעֵת צָרָתָם. רַֽבְתָּ אֶת רִיבָם. דַּֽנְתָּ אֶת דִּינָם. נָקַֽמְתָּ אֶת נִקְמָתָם. מָסַֽרְתָּ גִבּוֹרִים בְּיַד חַלָּשִׁים. וְרַבִּים בְּיַד מְעַטִּים. וּרְשָׁעִים בְּיַד צַדִּיקִים. וּטְמֵאִים בְּיַד טְהוֹרִים. וְזֵדִים בְּיַד עֽוֹסְקֵֽי תוֹרָתֶֽךָ. לְךָ עָשִֽׂיתָ שֵׁם גָּדוֹל וְקָדוֹשׁ בְּעוֹלָמָךְ. וּלְעַמְּךָ יִשְׂרָאֵל עָשִֽׂיתָ תְּשׁוּעָה גְדוֹלָה וּפֻרְקָן כְּהַיּוֹם הַזֶּה. וְאַחַר כָּךְ בָּֽאוּ בָנֶֽיךָ לִדְבִיר בֵּיתֶֽךָ. וּפִנּוּ אֶת־הֵיכָלֶֽךָ. וְטִהֲרוּ אֶת־מִקְדָּשֶֽׁךָ. וְהִדְלִֽיקוּ נֵרוֹת בְּחַצְרוֹת קָדְשֶֽׁךָ. וְקָֽבְעֽוּ שְׁמוֹנַת יְמֵי חֲנֻכָּה אֵֽלּוּ בְּהַלֵּל וּבְהוֹדָאָה. וְעָשִֽׂיתָ עִמָּהֶם נִסִּים וְנִפְלָאוֹת וְנוֹדֶה לְשִׁמְךָ הַגָּדוֹל סֶֽלָה:</small>") :
        p("<small><small>בפורים אומרים:</small> <b>בִּימֵי מָרְדְּכַי</b> וְאֶסְתֵּר בְּשׁוּשַׁן הַבִּירָה. כְּשֶׁעָמַד עֲלֵיהֶם הָמָן הָרָשָׁע. בִּקֵּשׁ לְהַשְׁמִיד לַהֲרֹג וּלְאַבֵּד אֶת־כָּל־הַיְּהוּדִים מִנַּֽעַר וְעַד זָקֵן טַף וְנָשִׁים בְּיוֹם אֶחָד. בִּשְׁלֹשָׁה עָשָׂר לְחֹֽדֶשׁ שְׁנֵים עָשָׂר. הוּא חֹֽדֶשׁ אֲדָר. וּשְׁלָלָם לָבוֹז. וְאַתָּה בְּרַחֲמֶֽיךָ הָרַבִּים הֵפַֽרְתָּ אֶת־עֲצָתוֹ וְקִלְקַֽלְתָּ אֶת־מַחֲשַׁבְתּוֹ. וַהֲשֵׁבֽוֹתָ לּוֹ גְּמוּלוֹ בְרֹאשׁוֹ. וְתָלוּ אוֹתוֹ וְאֶת־בָּנָיו עַל הָעֵץ. וְעָשִֽׂיתָ עִמָּהֶם נֵס וָפֶֽלֶא וְנוֹדֶה לְשִׁמְךָ הַגָּדוֹל סֶֽלָה:</small>"));
-    parts.push(sup(han));
+    pushAdd(parts, sup(han));
   }
   parts.push(p("<b>וְעַל</b> כֻּלָּם יִתְבָּרַךְ, וְיִתְרוֹמַם, וְיִתְנַשֵּׂא, תָּמִיד, שִׁמְךָ מַלְכֵּֽנוּ, לְעוֹלָם וָעֶד. וְכָל הַחַיִּים יוֹדֽוּךָ סֶּֽלָה:"));
   if (context.isAseretYemeiTeshuva) {
-    parts.push(sup(p("<small><b>וּכְתֹב</b> לְחַיִּים טוֹבִים כָּל בְּנֵי בְרִיתֶךָ:</small>")));
+    pushAdd(parts, sup(p("<small><b>וּכְתֹב</b> לְחַיִּים טוֹבִים כָּל בְּנֵי בְרִיתֶךָ:</small>")));
   }
   parts.push(p("וִֽיהַֽלְלוּ וִֽיבָֽרְכוּ אֶת שִׁמְךָ הַגָּדוֹל בֶּֽאֱמֶת לְעוֹלָם כִּי טוֹב, הָאֵל יְשֽׁוּעָתֵֽנוּ וְעֶזְרָתֵֽנוּ סֶֽלָה, הָאֵל הַטּוֹב: בָּרוּךְ אַתָּה יְהֹוָה, הַטּוֹב שִׁמְךָ וּלְךָ נָאֶה לְהוֹדוֹת:"));
   // ברכת כהנים — בתענית ציבור בחזרת הש"ץ של מנחה (סידור עדות המזרח)
@@ -21182,7 +21062,7 @@ function buildMinchaMizrahiPayload(context) {
   // שים שלום
   parts.push(p("<b>שִׂים</b> שָׁלוֹם טוֹבָה וּבְרָכָה, חַיִּים חֵן וָחֶֽסֶד וְרַֽחֲמִים, עָלֵֽינוּ וְעַל כָּל יִשְׂרָאֵל עַמֶּֽךָ. וּבָֽרְכֵֽנוּ אָבִֽינוּ כֻּלָּֽנוּ כְּאֶחָד בְּאוֹר פָּנֶֽיךָ, כִּי בְאוֹר פָּנֶֽיךָ נָתַֽתָּ לָּֽנוּ יְהֹוָה אֱלֹהֵֽינוּ תּוֹרָה וְחַיִּים, אַֽהֲבָה וָחֶֽסֶד, צְדָקָה וְרַֽחֲמִים, בְּרָכָה וְשָׁלוֹם. וְטוֹב בְּעֵינֶֽיךָ לְבָֽרְכֵֽנוּ וּלְבָרֵךְ אֶת כָּל עַמְּךָ יִשְׂרָאֵל, בְּרֹב עֹז וְשָׁלוֹם:"));
   if (context.isAseretYemeiTeshuva) {
-    parts.push(sup(p("<small><b>וּבְסֵפֶר</b> חַיִּים, בְּרָכָה וְשָׁלוֹם, וּפַרְנָסָה טוֹבָה וִישׁוּעָה וְנֶחָמָה, וּגְזֵרוֹת טוֹבוֹת, נִזָּכֵר וְנִכָּתֵב לְפָנֶיךָ, אֲנַחְנוּ וְכָל עַמְּךָ בֵּית יִשְׂרָאֵל, לְחַיִּים טוֹבִים וּלְשָׁלוֹם:</small>")));
+    pushAdd(parts, sup(p("<small><b>וּבְסֵפֶר</b> חַיִּים, בְּרָכָה וְשָׁלוֹם, וּפַרְנָסָה טוֹבָה וִישׁוּעָה וְנֶחָמָה, וּגְזֵרוֹת טוֹבוֹת, נִזָּכֵר וְנִכָּתֵב לְפָנֶיךָ, אֲנַחְנוּ וְכָל עַמְּךָ בֵּית יִשְׂרָאֵל, לְחַיִּים טוֹבִים וּלְשָׁלוֹם:</small>")));
   }
   parts.push(p("בָּרוּךְ אַתָּה יְהֹוָה, הַמְּבָרֵךְ אֶת עַמּוֹ יִשְׂרָאֵל בַּשָּׁלוֹם:"));
   parts.push(p("<b>יִֽהְיוּ</b> לְרָצוֹן אִמְרֵי פִי וְהֶגְיוֹן לִבִּי לְפָנֶֽיךָ, יְהֹוָה צוּרִי וְגֹאֲלִי:"));
@@ -21460,19 +21340,19 @@ function buildMinchaAshkenazPayload(context) {
   // אבות
   parts.push(p("<b>בָּרוּךְ</b> אַתָּה יְהֹוָה אֱלֹהֵֽינוּ וֵאלֹהֵי אֲבוֹתֵֽינוּ, אֱלֹהֵי אַבְרָהָם, אֱלֹהֵי יִצְחָק, וֵאלֹהֵי יַעֲקֹב, הָאֵל הַגָּדוֹל הַגִּבּוֹר וְהַנּוֹרָא, אֵל עֶלְיוֹן, גּוֹמֵל חֲסָדִים טוֹבִים, קוֹנֵה הַכֹּל, וְזוֹכֵר חַסְדֵּי אָבוֹת, וּמֵבִיא גוֹאֵל לִבְנֵי בְנֵיהֶם לְמַֽעַן שְׁמוֹ בְּאַהֲבָה."));
   if (context.isAseretYemeiTeshuva) {
-    parts.push(sup(p("<small><b>זָכְרֵנוּ לְחַיִּים</b> מֶלֶךְ חָפֵץ בַּחַיִּים וְכָתְבֵנוּ בְּסֵפֶר הַחַיִּים לְמַעַנְךָ אֱלֹהִים חַיִּים.</small>")));
+    pushAdd(parts, sup(p("<small><b>זָכְרֵנוּ לְחַיִּים</b> מֶלֶךְ חָפֵץ בַּחַיִּים וְכָתְבֵנוּ בְּסֵפֶר הַחַיִּים לְמַעַנְךָ אֱלֹהִים חַיִּים.</small>")));
   }
   parts.push(p("מֶֽלֶךְ עוֹזֵר וּמוֹשִֽׁיעַ וּמָגֵן. בָּרוּךְ אַתָּה יְהֹוָה מָגֵן אַבְרָהָם:"));
   // גבורות
   parts.push(p("<b>אַתָּה</b> גִבּוֹר לְעוֹלָם אֲדֹנָי, מְחַיֵּה מֵתִים אַתָּה, רַב לְהוֹשִֽׁיעַ."));
   if (isSummer) {
-    parts.push(p("מוֹרִיד הַטָּל."));
+    pushAdd(parts, p("מוֹרִיד הַטָּל."));
   } else {
-    parts.push(p("מַשִּׁיב הָרוּחַ וּמוֹרִיד הַגֶּֽשֶׁם."));
+    pushAdd(parts, p("מַשִּׁיב הָרוּחַ וּמוֹרִיד הַגֶּֽשֶׁם."));
   }
   parts.push(p("מְכַלְכֵּל חַיִּים בְּחֶֽסֶד, מְחַיֵּה מֵתִים בְּרַחֲמִים רַבִּים, סוֹמֵךְ נוֹפְלִים, וְרוֹפֵא חוֹלִים, וּמַתִּיר אֲסוּרִים, וּמְקַיֵּם אֱמוּנָתוֹ לִישֵׁנֵי עָפָר. מִי כָמוֹךָ בַּֽעַל גְּבוּרוֹת וּמִי דּוֹמֶה לָּךְ, מֶֽלֶךְ מֵמִית וּמְחַיֶּה וּמַצְמִֽיחַ יְשׁוּעָה."));
   if (context.isAseretYemeiTeshuva) {
-    parts.push(sup(p("<small><b>מִי כָמוֹךָ אַב הָרַחֲמִים,</b> זוֹכֵר יְצוּרָיו לְחַיִּים בְּרַחֲמִים.</small>")));
+    pushAdd(parts, sup(p("<small><b>מִי כָמוֹךָ אַב הָרַחֲמִים,</b> זוֹכֵר יְצוּרָיו לְחַיִּים בְּרַחֲמִים.</small>")));
   }
   parts.push(p("וְנֶאֱמָן אַתָּה לְהַחֲיוֹת מֵתִים. בָּרוּךְ אַתָּה יְהֹוָה מְחַיֵּה הַמֵּתִים:"));
   // ─────────────── חזרת הש"ץ — קדושה של מנחה ───────────────
@@ -21485,7 +21365,7 @@ function buildMinchaAshkenazPayload(context) {
   // קדושת השם
   if (context.isAseretYemeiTeshuva) {
     parts.push(p("<b>אַתָּה</b> קָדוֹשׁ וְשִׁמְךָ קָדוֹשׁ, וּקְדוֹשִׁים בְּכָל יוֹם יְהַלְלוּךָ סֶּלָה."));
-    parts.push(sup(p("<small>בעשרת ימי תשובה: <b>בָּרוּךְ אַתָּה יְהֹוָה הַמֶּלֶךְ הַקָּדוֹשׁ:</b></small>")));
+    pushAdd(parts, sup(p("<small>בעשרת ימי תשובה: <b>בָּרוּךְ אַתָּה יְהֹוָה הַמֶּלֶךְ הַקָּדוֹשׁ:</b></small>")));
   } else {
     parts.push(p("<b>אַתָּה</b> קָדוֹשׁ וְשִׁמְךָ קָדוֹשׁ, וּקְדוֹשִׁים בְּכָל יוֹם יְהַלְלוּךָ סֶּלָה. בָּרוּךְ אַתָּה יְהֹוָה הָאֵל הַקָּדוֹשׁ:"));
   }
@@ -21499,7 +21379,7 @@ function buildMinchaAshkenazPayload(context) {
   parts.push(p("<b>רְאֵה</b> בְעָנְיֵנוּ וְרִיבָה רִיבֵנוּ וּגְאָלֵנוּ מְהֵרָה לְמַעַן שְׁמֶֽךָ, כִּי גּוֹאֵל חָזָק אָתָּה. בָּרוּךְ אַתָּה יְהֹוָה גּוֹאֵל יִשְׂרָאֵל:"));
   // ענינו (fast — in repetition, also יחיד)
   if (context.isFastDay) {
-    parts.push(sup(
+    pushAdd(parts, sup(
       p('<small>בתענית ציבור אומר כאן הש"ץ "עננו" בחזרת הש"ץ, ברכה בפני עצמה בין גואל לרופא (היחיד אומרו בשומע תפילה):</small>') +
       p("<small><b>עֲנֵנוּ</b> יְהֹוָה עֲנֵנוּ בְּיוֹם צוֹם תַּעֲנִיתֵנוּ כִּי בְצָרָה גְדוֹלָה אֲנַחְנוּ. אַל תֵּפֶן אֶל רִשְׁעֵנוּ וְאַל תַּסְתֵּר פָּנֶיךָ מִמֶּנּוּ וְאַל תִּתְעַלַּם מִתְּחִנָּתֵנוּ. הֱיֵה נָא קָרוֹב לְשַׁוְעָתֵנוּ, יְהִי נָא חַסְדְּךָ לְנַחֲמֵנוּ. טֶרֶם נִקְרָא אֵלֶיךָ עֲנֵנוּ כַּדָּבָר שֶׁנֶּאֱמַר: וְהָיָה טֶרֶם יִקְרָאוּ וַאֲנִי אֶעֱנֶה, עוֹד הֵם מְדַבְּרִים וַאֲנִי אֶשְׁמָע. כִּי אַתָּה יְהֹוָה הָעוֹנֶה בְּעֵת צָרָה, פּוֹדֶה וּמַצִּיל בְּכָל עֵת צָרָה וְצוּקָה. בָּרוּךְ אַתָּה יְהֹוָה הָעוֹנֶה בְּעֵת צָרָה:</small>")
     ));
@@ -21508,16 +21388,16 @@ function buildMinchaAshkenazPayload(context) {
   parts.push(p("<b>רְפָאֵנוּ</b> יְהֹוָה וְנֵרָפֵא, הוֹשִׁיעֵנוּ וְנִוָּשֵׁעָה, כִּי תְהִלָּתֵנוּ אָתָּה, וְהַעֲלֵה רְפוּאָה שְׁלֵמָה לְכָל מַכּוֹתֵינוּ, כִּי אֵל מֶֽלֶךְ רוֹפֵא נֶאֱמָן וְרַחֲמָן אָתָּה. בָּרוּךְ אַתָּה יְהֹוָה רוֹפֵא חוֹלֵי עַמּוֹ יִשְׂרָאֵל:"));
   // שנה
   if (!isRainRequest) {
-    parts.push(p("<b>בָּרֵךְ עָלֵינוּ</b> יְהֹוָה אֱלֹהֵינוּ אֶת הַשָּׁנָה הַזֹּאת וְאֶת כָּל מִינֵי תְבוּאָתָהּ לְטוֹבָה, וְתֵן בְּרָכָה עַל פְּנֵי הָאֲדָמָה, וְשַׂבְּעֵנוּ מִטּוּבָהּ, וּבָרֵךְ שְׁנָתֵנוּ כַּשָּׁנִים הַטּוֹבוֹת. בָּרוּךְ אַתָּה יְהֹוָה מְבָרֵךְ הַשָּׁנִים:"));
+    parts.push(p("<b>בָּרֵךְ עָלֵינוּ</b> יְהֹוָה אֱלֹהֵינוּ אֶת הַשָּׁנָה הַזֹּאת וְאֶת כָּל מִינֵי תְבוּאָתָהּ לְטוֹבָה, " + prAdd("וְתֵן בְּרָכָה") + " עַל פְּנֵי הָאֲדָמָה, וְשַׂבְּעֵנוּ מִטּוּבָהּ, וּבָרֵךְ שְׁנָתֵנוּ כַּשָּׁנִים הַטּוֹבוֹת. בָּרוּךְ אַתָּה יְהֹוָה מְבָרֵךְ הַשָּׁנִים:"));
   } else {
-    parts.push(p("<b>בָּרֵךְ עָלֵינוּ</b> יְהֹוָה אֱלֹהֵינוּ אֶת הַשָּׁנָה הַזֹּאת וְאֶת כָּל מִינֵי תְבוּאָתָהּ לְטוֹבָה, וְתֵן טַל וּמָטָר לִבְרָכָה עַל פְּנֵי הָאֲדָמָה, וְשַׂבְּעֵנוּ מִטּוּבָהּ, וּבָרֵךְ שְׁנָתֵנוּ כַּשָּׁנִים הַטּוֹבוֹת. בָּרוּךְ אַתָּה יְהֹוָה מְבָרֵךְ הַשָּׁנִים:"));
+    parts.push(p("<b>בָּרֵךְ עָלֵינוּ</b> יְהֹוָה אֱלֹהֵינוּ אֶת הַשָּׁנָה הַזֹּאת וְאֶת כָּל מִינֵי תְבוּאָתָהּ לְטוֹבָה, " + prAdd("וְתֵן טַל וּמָטָר לִבְרָכָה") + " עַל פְּנֵי הָאֲדָמָה, וְשַׂבְּעֵנוּ מִטּוּבָהּ, וּבָרֵךְ שְׁנָתֵנוּ כַּשָּׁנִים הַטּוֹבוֹת. בָּרוּךְ אַתָּה יְהֹוָה מְבָרֵךְ הַשָּׁנִים:"));
   }
   // קיבוץ גלויות
   parts.push(p("<b>תְּקַע</b> בְּשׁוֹפָר גָּדוֹל לְחֵרוּתֵנוּ, וְשָׂא נֵס לְקַבֵּץ גָּלֻיּוֹתֵינוּ, וְקַבְּצֵנוּ יַחַד מֵאַרְבַּע כַּנְפוֹת הָאָרֶץ. בָּרוּךְ אַתָּה יְהֹוָה מְקַבֵּץ נִדְחֵי עַמּוֹ יִשְׂרָאֵל:"));
   // דין
   if (context.isAseretYemeiTeshuva) {
     parts.push(p("<b>הָשִׁיבָה</b> שׁוֹפְטֵינוּ כְּבָרִאשׁוֹנָה וְיוֹעֲצֵינוּ כְּבַתְּחִלָּה, וְהָסֵר מִמֶּנּוּ יָגוֹן וַאֲנָחָה, וּמְלֹךְ עָלֵינוּ אַתָּה יְהֹוָה לְבַדְּךָ בְּחֶסֶד וּבְרַחֲמִים, וְצַדְּקֵנוּ בַּמִּשְׁפָּט."));
-    parts.push(sup(p("<small>בעשרת ימי תשובה: <b>בָּרוּךְ אַתָּה יְהֹוָה הַמֶּלֶךְ הַמִּשְׁפָּט:</b></small>")));
+    pushAdd(parts, sup(p("<small>בעשרת ימי תשובה: <b>בָּרוּךְ אַתָּה יְהֹוָה הַמֶּלֶךְ הַמִּשְׁפָּט:</b></small>")));
   } else {
     parts.push(p("<b>הָשִׁיבָה</b> שׁוֹפְטֵינוּ כְּבָרִאשׁוֹנָה וְיוֹעֲצֵינוּ כְּבַתְּחִלָּה, וְהָסֵר מִמֶּנּוּ יָגוֹן וַאֲנָחָה, וּמְלֹךְ עָלֵינוּ אַתָּה יְהֹוָה לְבַדְּךָ בְּחֶסֶד וּבְרַחֲמִים, וְצַדְּקֵנוּ בַּמִּשְׁפָּט. בָּרוּךְ אַתָּה יְהֹוָה מֶֽלֶךְ אוֹהֵב צְדָקָה וּמִשְׁפָּט:"));
   }
@@ -21530,7 +21410,7 @@ function buildMinchaAshkenazPayload(context) {
   // ירושלים" במקום "בונה ירושלים" (סידור אשכנז)
   if (context.isTishaBeAv) {
     parts.push(p("<b>וְלִירוּשָׁלַיִם</b> עִירְךָ בְּרַחֲמִים תָּשׁוּב, וְתִשְׁכֹּן בְּתוֹכָהּ כַּאֲשֶׁר דִּבַּרְתָּ, וּבְנֵה אוֹתָהּ בְּקָרוֹב בְּיָמֵינוּ בִּנְיַן עוֹלָם, וְכִסֵּא דָוִד מְהֵרָה לְתוֹכָהּ תָּכִין:"));
-    parts.push(sup(
+    pushAdd(parts, sup(
       p("<small>במנחת תשעה באב:</small>") +
       p("<small><b>נַחֵם</b> יְהֹוָה אֱלֹהֵֽינוּ אֶת אֲבֵלֵי צִיּוֹן וְאֶת אֲבֵלֵי יְרוּשָׁלָֽיִם. וְאֶת הָעִיר הָאֲבֵלָה וְהַחֲרֵבָה וְהַבְּזוּיָה וְהַשּוֹמֵמָה. הָאֲבֵלָה מִבְּלִי בָנֶֽיהָ. וְהַחֲרֵבָה מִמְּעוֹנוֹתֶֽיהָ. וְהַבְּזוּיָה מִכְּבוֹדָהּ. וְהַשוֹמֵמָה מֵאֵין יוֹשֵׁב. וְהִיא יוֹשֶֽׁבֶת וְרֹאשָׁהּ חָפוּי כְּאִשָּׁה עֲקָרָה שֶׁלֹּא יָלָֽדָה. וַיְבַלְּעֽוּהָ לִיגְיוֹנוֹת. וְיִירָשֽׁוּהָ עוֹבְדֵי פְסִילִים. וַיָטִּֽילוֹ אֶת עַמְּךָ יִשְׂרָאֵל לֶחָֽרֶב. וַיַּהַרְגוּ בְזָדוֹן חֲסִידֵי עֶלְיוֹן. עַל כֵּן צִיּוֹן בְּמַר תִבְכֶּה. וִירוּשָׁלַֽיִם תִּתֵּן קוֹלָהּ. לִבִּי לִבִּי עַל חַלְלֵיהֶם. מֵעַי מֵעַי עַל חַלְלֵיהֶם. כִּי אַתָּה יְהֹוָה בָּאֵשׁ הִצַּתָּהּ. וּבָאֵשׁ אַתָּה עָתִיד לִבְנוֹתָהּ. כָּאָמוּר וַאֲנִי אֶהְיֶה לָהּ נְאֻם יְהֹוָה חוֹמַת אֵשׁ סָבִיב וּלְכָבוֹד אֶהְיֶה בְּתוֹכָהּ:</small>") +
       p("<small>בָּרוּךְ אַתָּה יְהֹוָה מְנַחֵם צִיּוֹן וּבוֹנֵה יְרוּשָׁלָֽיִם:</small>")
@@ -21543,7 +21423,7 @@ function buildMinchaAshkenazPayload(context) {
   // שמיעת תפילה
   if (context.isFastDay) {
     parts.push(p("<b>שְׁמַע</b> קוֹלֵנוּ יְהֹוָה אֱלֹהֵינוּ חוּס וְרַחֵם עָלֵינוּ, וְקַבֵּל בְּרַחֲמִים וּבְרָצוֹן אֶת תְּפִלָּתֵנוּ, כִּי אֵל שׁוֹמֵעַ תְּפִלּוֹת וְתַחֲנוּנִים אָתָּה, וּמִלְּפָנֶיךָ מַלְכֵּנוּ רֵיקָם אַל תְּשִׁיבֵנוּ"));
-    parts.push(sup(
+    pushAdd(parts, sup(
       p("<small>בתענית ציבור אומרים כאן עננו בתפילת הלחש:</small>") +
       p("<small><b>עֲנֵֽנוּ</b> יְהֹוָה עֲנֵֽנוּ בְּיוֹם צוֹם תַּעֲנִיתֵֽנוּ. כִּי בְצָרָה גְדוֹלָה אֲנָֽחְנוּ. אַל־תֵּֽפֶן אֶל־רִשְׁעֵֽנוּ וְאַל־תַּסְתֵּר פָּנֶֽיךָ מִמֶּֽנּוּ וְאַל־תִּתְעַלַּם מִתְּחִנָּתֵֽנוּ. הֱיֵה נָא קָרוֹב לְשַׁוְעָתֵֽנוּ. יְהִי־נָא חַסְדְּךָ לְנַחֲמֵֽנוּ. טֶֽרֶם נִקְרָא אֵלֶֽיךָ עֲנֵֽנוּ. כַּדָּבָר שֶׁנֶּאֱמַר וְהָיָה טֶֽרֶם יִקְרָֽאוּ וַאֲנִי אֶעֱנֶה. עוֹד הֵם מְדַבְּרִים וַאֲנִי אֶשְׁמָע. כִּי אַתָּה יְהֹוָה הָעוֹנֶה בְּעֵת צָרָה. פּוֹדֶה וּמַצִּיל בְּכָל־עֵת צָרָה וְצוּקָה:</small>")
     ));
@@ -21559,7 +21439,7 @@ function buildMinchaAshkenazPayload(context) {
   // ורק נוסח "בְּיוֹם ..." של היום (ראו _yaalehKind)
   if (context.isRoshChodesh || context.isCholHamoed) {
     var yvDay = { rc: "רֹאשׁ הַחֹדֶשׁ", pesach: "חַג הַמַּצּוֹת", sukkot: "חַג הַסֻּכּוֹת" }[_yaalehKind(context)] || "רֹאשׁ הַחֹדֶשׁ";
-    parts.push(
+    pushAdd(parts, 
       p(
         "<b>אֱלֹהֵֽינוּ</b> וֵאלֹהֵי אֲבוֹתֵֽינוּ יַעֲלֶה וְיָבֹא וְיַגִּֽיעַ וְיֵרָאֶה וְיֵרָצֶה וְיִשָּׁמַע וְיִפָּקֵד וְיִזָּכֵר זִכְרוֹנֵֽנוּ וּפִקְדוֹנֵֽנוּ וְזִכְרוֹן אֲבוֹתֵֽינוּ. וְזִכְרוֹן מָשִֽׁיחַ בֶּן דָּוִד עַבְדֶּֽךָ. וְזִכְרוֹן יְרוּשָׁלַֽיִם עִיר קָדְשֶֽׁךָ. וְזִכְרוֹן כָּל עַמְּךָ בֵּית יִשְׂרָאֵל לְפָנֶֽיךָ. לִפְלֵיטָה לְטוֹבָה לְחֵן וּלְחֶֽסֶד וּלְרַחֲמִים לְחַיִּים וּלְשָׁלוֹם. בְּיוֹם " +
           yvDay +
@@ -21582,11 +21462,11 @@ function buildMinchaAshkenazPayload(context) {
       p("<small><b>עַל הַנִּסִּים</b> וְעַל הַפֻּרְקָן וְעַל הַגְּבוּרוֹת וְעַל הַתְּשׁוּעוֹת וְעַל הַמִּלְחָמוֹת שֶׁעָשִֽׂיתָ לַאֲבוֹתֵֽינוּ בַּיָּמִים הָהֵם בִּזְּמַן הַזֶּה:</small>") +
       (context.isChanukah ? p("<small><small>בחנוכה:</small> <b>בִּימֵי מַתִּתְיָֽהוּ</b> בֶּן יוֹחָנָן כֹּהֵן גָּדוֹל חַשְׁמוֹנָאִי וּבָנָיו כְּשֶׁעָמְדָה מַלְכוּת יָוָן הָרְשָׁעָה עַל־עַמְּךָ יִשְׂרָאֵל לְהַשְׁכִּיחָם תּוֹרָתֶֽךָ וּלְהַעֲבִירָם מֵחֻקֵּי רְצוֹנֶֽךָ, וְאַתָּה בְּרַחֲמֶֽיךָ הָרַבִּים עָמַֽדְתָּ לָהֶם בְּעֵת צָרָתָם רַֽבְתָּ אֶת־רִיבָם דַּֽנְתָּ אֶת־דִּינָם נָקַֽמְתָּ אֶת־נִקְמָתָם מָסַֽרְתָּ גִבּוֹרִים בְּיַד חַלָּשִׁים וְרַבִּים בְּיַד מְעַטִּים וּטְמֵאִים בְּיַד טְהוֹרִים וּרְשָׁעִים בְּיַד צַדִּיקִים וְזֵדִים בְּיַד עוֹסְקֵי תוֹרָתֶֽךָ וּלְךָ עָשִֽׂיתָ שֵׁם גָּדוֹל וְקָדוֹשׁ בְּעוֹלָמֶֽךָ וּלְעַמְּךָ יִשְׂרָאֵל עָשִֽׂיתָ תְּשׁוּעָה גְדוֹלָה וּפֻרְקָן כְּהַיּוֹם הַזֶּה וְאַחַר־כֵּן בָּֽאוּ בָנֶֽיךָ לִדְבִיר בֵּיתֶֽךָ וּפִנּוּ אֶת־הֵיכָלֶֽךָ וְטִהֲרוּ אֶת־מִקְדָּשֶֽׁךָ וְהִדְלִֽיקוּ נֵרוֹת בְּחַצְרוֹת קָדְשֶֽׁךָ וְקָבְעוּ שְׁמוֹנַת יְמֵי חֲנֻכָּה אֵֽלּוּ לְהוֹדוֹת וּלְהַלֵּל לְשִׁמְךָ הַגָּדוֹל:</small>") :
        p("<small><small>בפורים:</small> <b>בִּימֵי מָרְדְּכַי</b> וְאֶסְתֵּר בְּשׁוּשַׁן הַבִּירָה כְּשֶׁעָמַד עֲלֵיהֶם הָמָן הָרָשָׁע בִּקֵּשׁ לְהַשְׁמִיד לַהֲרוֹג וּלְאַבֵּד אֶת־כָּל־הַיְּהוּדִים מִנַּֽעַר וְעַד־זָקֵן טַף וְנָשִׁים בְּיוֹם אֶחָד בִּשְׁלוֹשָׁה עָשָׂר לְחֹֽדֶשׁ שְׁנֵים־עָשָׂר הוּא־חֹֽדֶשׁ אֲדָר וּשְׁלָלָם לָבוֹז: וְאַתָּה בְּרַחֲמֶֽיךָ הָרַבִּים הֵפַֽרְתָּ אֶת־עֲצָתוֹ וְקִלְקַֽלְתָּ אֶת־מַחֲשַׁבְתּוֹ וַהֲשֵׁבֽוֹתָ לּוֹ גְּמוּלוֹ בְּרֹאשׁוֹ וְתָלוּ אוֹתוֹ וְאֶת־בָּנָיו עַל־הָעֵץ</small>"));
-    parts.push(sup(han2));
+    pushAdd(parts, sup(han2));
   }
   parts.push(p("<b>וְעַל</b> כֻּלָּם יִתְבָּרַךְ וְיִתְרוֹמַם שִׁמְךָ מַלְכֵּנוּ תָּמִיד לְעוֹלָם וָעֶד."));
   if (context.isAseretYemeiTeshuva) {
-    parts.push(sup(p("<small><b>וּכְתֹב לְחַיִּים טוֹבִים</b> כָּל בְּנֵי בְרִיתֶֽךָ.</small>")));
+    pushAdd(parts, sup(p("<small><b>וּכְתֹב לְחַיִּים טוֹבִים</b> כָּל בְּנֵי בְרִיתֶֽךָ.</small>")));
   }
   parts.push(p("וְכֹל הַחַיִּים יוֹדֽוּךָ סֶּלָה, וִיהַלְלוּ אֶת שִׁמְךָ בֶּאֱמֶת, הָאֵל יְשׁוּעָתֵנוּ וְעֶזְרָתֵנוּ סֶלָה. בָּרוּךְ אַתָּה יְהֹוָה הַטּוֹב שִׁמְךָ וּלְךָ נָאֶה לְהוֹדוֹת:"));
   // ברכת כהנים — בתענית ציבור אומר הש"ץ בחזרה (ובא"י הכהנים נושאים כפיהם במנחה
@@ -21602,7 +21482,7 @@ function buildMinchaAshkenazPayload(context) {
     parts.push(p("<b>שָׁלוֹם רָב</b> עַל יִשְׂרָאֵל עַמְּךָ תָּשִׂים לְעוֹלָם, כִּי אַתָּה הוּא מֶֽלֶךְ אָדוֹן לְכָל הַשָּׁלוֹם. וְטוֹב בְּעֵינֶיךָ לְבָרֵךְ אֶת עַמְּךָ יִשְׂרָאֵל בְּכָל עֵת וּבְכָל שָׁעָה בִּשְׁלוֹמֶֽךָ."));
   }
   if (context.isAseretYemeiTeshuva) {
-    parts.push(sup(p("<small><b>בְּסֵפֶר חַיִּים</b> בְּרָכָה וְשָׁלוֹם וּפַרְנָסָה טוֹבָה נִזָּכֵר וְנִכָּתֵב לְפָנֶיךָ אֲנַחְנוּ וְכָל עַמְּךָ בֵּית יִשְׂרָאֵל לְחַיִּים טוֹבִים וּלְשָׁלוֹם.</small>")));
+    pushAdd(parts, sup(p("<small><b>בְּסֵפֶר חַיִּים</b> בְּרָכָה וְשָׁלוֹם וּפַרְנָסָה טוֹבָה נִזָּכֵר וְנִכָּתֵב לְפָנֶיךָ אֲנַחְנוּ וְכָל עַמְּךָ בֵּית יִשְׂרָאֵל לְחַיִּים טוֹבִים וּלְשָׁלוֹם.</small>")));
   }
   parts.push(p("בָּרוּךְ אַתָּה יְהֹוָה הַמְבָרֵךְ אֶת עַמּוֹ יִשְׂרָאֵל בַּשָּׁלוֹם:"));
   parts.push(p("<b>יִהְיוּ</b> לְרָצוֹן אִמְרֵי פִי וְהֶגְיוֹן לִבִּי לְפָנֶיךָ יְהֹוָה צוּרִי וְגֹאֲלִי:"));
@@ -21808,19 +21688,19 @@ function buildMinchaSfaradPayload(context) {
   // אבות
   parts.push(p("<b>בָּרוּךְ</b> אַתָּה יְהֹוָה אֱלֹהֵֽינוּ וֵאלֹהֵי אֲבוֹתֵֽינוּ, אֱלֹהֵי אַבְרָהָם, אֱלֹהֵי יִצְחָק, וֵאלֹהֵי יַעֲקֹב. הָאֵל הַגָּדוֹל הַגִּבּוֹר וְהַנּוֹרָא, אֵל עֶלְיוֹן, גּוֹמֵל חֲסָדִים טוֹבִים, קוֹנֵה הַכֹּל, וְזוֹכֵר חַסְדֵּי אָבוֹת, וּמֵבִיא גוֹאֵל לִבְנֵי בְנֵיהֶם לְמַֽעַן שְׁמוֹ בְּאַהֲבָה."));
   if (context.isAseretYemeiTeshuva) {
-    parts.push(sup(p("<small><small>בעשי\"ת:</small> זָכְרֵֽנוּ לְחַיִּים מֶֽלֶךְ חָפֵץ בַּחַיִּים וְכָתְבֵֽנוּ בְּסֵֽפֶר הַחַיִּים לְמַעַנְךָ אֱלֹהִים חַיִּים:</small>")));
+    pushAdd(parts, sup(p("<small><small>בעשי\"ת:</small> זָכְרֵֽנוּ לְחַיִּים מֶֽלֶךְ חָפֵץ בַּחַיִּים וְכָתְבֵֽנוּ בְּסֵֽפֶר הַחַיִּים לְמַעַנְךָ אֱלֹהִים חַיִּים:</small>")));
   }
   parts.push(p("מֶֽלֶךְ עוֹזֵר וּמוֹשִֽׁיעַ וּמָגֵן. בָּרוּךְ אַתָּה יְהֹוָה מָגֵן אַבְרָהָם:"));
   // גבורות
   parts.push(p("<b>אַתָּה</b> גִבּוֹר לְעוֹלָם אֲדֹנָי, מְחַיֵּה מֵתִים אַתָּה, רַב לְהוֹשִֽׁיעַ."));
   if (isSummer) {
-    parts.push(p("מוֹרִיד הַטָּל."));
+    pushAdd(parts, p("מוֹרִיד הַטָּל."));
   } else {
-    parts.push(p("מַשִּׁיב הָרוּחַ וּמוֹרִיד הַגֶּֽשֶׁם."));
+    pushAdd(parts, p("מַשִּׁיב הָרוּחַ וּמוֹרִיד הַגֶּֽשֶׁם."));
   }
   parts.push(p("מְכַלְכֵּל חַיִּים בְּחֶֽסֶד, מְחַיֵּה מֵתִים בְּרַחֲמִים רַבִּים, סוֹמֵךְ נוֹפְלִים, וְרוֹפֵא חוֹלִים, וּמַתִּיר אֲסוּרִים, וּמְקַיֵּם אֱמוּנָתוֹ לִישֵׁנֵי עָפָר. מִי כָמוֹךָ בַּֽעַל גְּבוּרוֹת, וּמִי דּוֹמֶה לָּךְ, מֶֽלֶךְ מֵמִית וּמְחַיֶּה וּמַצְמִֽיחַ יְשׁוּעָה."));
   if (context.isAseretYemeiTeshuva) {
-    parts.push(sup(p("<small><small>בעשי\"ת:</small> מִי כָמֽוֹךָ אָב הָרַחַמָן זוֹכֵר יְצוּרָיו לְחַיִּים בְּרַחֲמִים:</small>")));
+    pushAdd(parts, sup(p("<small><small>בעשי\"ת:</small> מִי כָמֽוֹךָ אָב הָרַחַמָן זוֹכֵר יְצוּרָיו לְחַיִּים בְּרַחֲמִים:</small>")));
   }
   parts.push(p("וְנֶאֱמָן אַתָּה לְהַחֲיוֹת מֵתִים. בָּרוּךְ אַתָּה יְהֹוָה מְחַיֵּה הַמֵּתִים:"));
   parts.push(sup(
@@ -21840,16 +21720,16 @@ function buildMinchaSfaradPayload(context) {
   parts.push(p("<b>סְלַח</b> לָנוּ אָבִינוּ כִּי חָטָאנוּ, מְחַל לָנוּ מַלְכֵּנוּ כִּי פָשָׁעְנוּ, כִּי אֵל טוֹב וְסַלָּח אָתָּה. בָּרוּךְ אַתָּה יְהֹוָה חַנּוּן הַמַּרְבֶּה לִסְלֹחַ:"));
   parts.push(p("<b>רְאֵה</b> בְעָנְיֵנוּ וְרִיבָה רִיבֵנוּ וּגְאָלֵנוּ מְהֵרָה לְמַעַן שְׁמֶֽךָ, כִּי גּוֹאֵל חָזָק אָתָּה. בָּרוּךְ אַתָּה יְהֹוָה גּוֹאֵל יִשְׂרָאֵל:"));
   if (context.isFastDay) {
-    parts.push(sup(
+    pushAdd(parts, sup(
       p('<small>בתענית ציבור אומר כאן הש"ץ "עננו" בחזרת הש"ץ, ברכה בפני עצמה בין גואל לרופא:</small>') +
       p("<small><b>עֲנֵֽנוּ</b> יְהֹוָה עֲנֵֽנוּ בְּיוֹם צוֹם תַּעֲנִיתֵֽנוּ. כִּי בְצָרָה גְדוֹלָה אֲנָֽחְנוּ. אַל תֵּֽפֶן אֶל רִשְׁעֵֽנוּ וְאַל תַּסְתֵּר פָּנֶֽיךָ מִמֶּֽנּוּ וְאַל תִּתְעַלַּם מִתְּחִנָּתֵֽנוּ הֱיֵה נָא קָרוֹב לְשַׁוְעָתֵֽנוּ יְהִי נָא חַסְדְּךָ לְנַחֲמֵֽנוּ טֶֽרֶם נִקְרָא אֵלֶֽיךָ עֲנֵֽנוּ. כַּדָּבָר שֶׁנֶּאֱמַר וְהָיָה טֶֽרֶם יִקְרָֽאוּ וַאֲנִי אֶעֱנֶה. עוֹד הֵם מְדַבְּרִים וַאֲנִי אֶשְׁמָע. כִּי אַתָּה יְהֹוָה הָעוֹנֶה בְּעֵת צָרָה. פּוֹדֶה וּמַצִּיל בְּכָל עֵת צָרָה וְצוּקָה: בָּרוּךְ אַתָּה יְהֹוָה הָעוֹנֶה לְעַמּוֹ יִשְׂרָאֵל בְּעֵת צָרָה:</small>")
     ));
   }
   parts.push(p("<b>רְפָאֵנוּ</b> יְהֹוָה וְנֵרָפֵא, הוֹשִׁיעֵנוּ וְנִוָּשֵׁעָה, כִּי תְהִלָּתֵנוּ אָתָּה, וְהַעֲלֵה רְפוּאָה שְׁלֵמָה לְכָל מַכּוֹתֵינוּ, כִּי אֵל רוֹפֵא רַחֲמָן וְנֶאֱמָן אָתָּה. בָּרוּךְ אַתָּה יְהֹוָה רוֹפֵא חוֹלֵי עַמּוֹ יִשְׂרָאֵל:"));
   if (!isRainRequest) {
-    parts.push(p("<b>בָּרֵךְ עָלֵינוּ</b> יְהֹוָה אֱלֹהֵינוּ אֶת הַשָּׁנָה הַזֹּאת וְאֶת כָּל מִינֵי תְבוּאָתָהּ לְטוֹבָה, וְתֵן בְּרָכָה עַל פְּנֵי הָאֲדָמָה, וְשַׂבְּעֵנוּ מִטּוּבָהּ, וּבָרֵךְ שְׁנָתֵנוּ כַּשָּׁנִים הַטּוֹבוֹת. בָּרוּךְ אַתָּה יְהֹוָה מְבָרֵךְ הַשָּׁנִים:"));
+    parts.push(p("<b>בָּרֵךְ עָלֵינוּ</b> יְהֹוָה אֱלֹהֵינוּ אֶת הַשָּׁנָה הַזֹּאת וְאֶת כָּל מִינֵי תְבוּאָתָהּ לְטוֹבָה, " + prAdd("וְתֵן בְּרָכָה") + " עַל פְּנֵי הָאֲדָמָה, וְשַׂבְּעֵנוּ מִטּוּבָהּ, וּבָרֵךְ שְׁנָתֵנוּ כַּשָּׁנִים הַטּוֹבוֹת. בָּרוּךְ אַתָּה יְהֹוָה מְבָרֵךְ הַשָּׁנִים:"));
   } else {
-    parts.push(p("<b>בָּרֵךְ עָלֵינוּ</b> יְהֹוָה אֱלֹהֵינוּ אֶת הַשָּׁנָה הַזֹּאת וְאֶת כָּל מִינֵי תְבוּאָתָהּ לְטוֹבָה, וְתֵן טַל וּמָטָר לִבְרָכָה עַל פְּנֵי הָאֲדָמָה, וְשַׂבְּעֵנוּ מִטּוּבָהּ, וּבָרֵךְ שְׁנָתֵנוּ כַּשָּׁנִים הַטּוֹבוֹת. בָּרוּךְ אַתָּה יְהֹוָה מְבָרֵךְ הַשָּׁנִים:"));
+    parts.push(p("<b>בָּרֵךְ עָלֵינוּ</b> יְהֹוָה אֱלֹהֵינוּ אֶת הַשָּׁנָה הַזֹּאת וְאֶת כָּל מִינֵי תְבוּאָתָהּ לְטוֹבָה, " + prAdd("וְתֵן טַל וּמָטָר לִבְרָכָה") + " עַל פְּנֵי הָאֲדָמָה, וְשַׂבְּעֵנוּ מִטּוּבָהּ, וּבָרֵךְ שְׁנָתֵנוּ כַּשָּׁנִים הַטּוֹבוֹת. בָּרוּךְ אַתָּה יְהֹוָה מְבָרֵךְ הַשָּׁנִים:"));
   }
   parts.push(p("<b>תְּקַע</b> בְּשׁוֹפָר גָּדוֹל לְחֵרוּתֵנוּ, וְשָׂא נֵס לְקַבֵּץ גָּלֻיּוֹתֵינוּ, וְקַבְּצֵנוּ יַחַד מֵאַרְבַּע כַּנְפוֹת הָאָרֶץ. בָּרוּךְ אַתָּה יְהֹוָה מְקַבֵּץ נִדְחֵי עַמּוֹ יִשְׂרָאֵל:"));
   parts.push(p("<b>הָשִׁיבָה</b> שׁוֹפְטֵינוּ כְּבָרִאשׁוֹנָה וְיוֹעֲצֵינוּ כְּבַתְּחִלָּה, וְהָסֵר מִמֶּנּוּ יָגוֹן וַאֲנָחָה, וּמְלֹךְ עָלֵינוּ אַתָּה יְהֹוָה לְבַדְּךָ בְּחֶסֶד וּבְרַחֲמִים, בְּצֶדֶק וּבְמִשְׁפָּט. בָּרוּךְ אַתָּה יְהֹוָה " + (context.isAseretYemeiTeshuva ? "<b>הַמֶּלֶךְ הַמִּשְׁפָּט:</b>" : "מֶֽלֶךְ אוֹהֵב צְדָקָה וּמִשְׁפָּט:")));
@@ -21859,7 +21739,7 @@ function buildMinchaSfaradPayload(context) {
   // ירושלים" במקום "בונה ירושלים" (סידור ספרד)
   if (context.isTishaBeAv) {
     parts.push(p("<b>וְלִירוּשָׁלַיִם</b> עִירְךָ בְּרַחֲמִים תָּשׁוּב, וְתִשְׁכֹּן בְּתוֹכָהּ כַּאֲשֶׁר דִּבַּרְתָּ, וּבְנֵה אוֹתָהּ בְּקָרוֹב בְּיָמֵינוּ בִּנְיַן עוֹלָם, וְכִסֵּא דָוִד מְהֵרָה לְתוֹכָהּ תָּכִין:"));
-    parts.push(sup(
+    pushAdd(parts, sup(
       p("<small>במנחת תשעה באב:</small>") +
       p("<small><b>נַחֵם</b> יְהֹוָה אֱלֹהֵֽינוּ אֶת אֲבֵלֵי צִיּוֹן וְאֶת אֲבֵלֵי יְרוּשָׁלָֽיִם. וְאֶת הָעִיר הָאֲבֵלָה וְהַחֲרֵבָה וְהַבְּזוּיָה וְהַשּוֹמֵמָה. הָאֲבֵלָה מִבְּלִי בָנֶֽיהָ. וְהַחֲרֵבָה מִמְּעוֹנוֹתֶֽיהָ. וְהַבְּזוּיָה מִכְּבוֹדָהּ. וְהַשוֹמֵמָה מֵאֵין יוֹשֵׁב. וְהִיא יוֹשֶֽׁבֶת וְרֹאשָׁהּ חָפוּי כְּאִשָּׁה עֲקָרָה שֶׁלֹּא יָלָֽדָה. וַיְבַלְּעֽוּהָ לִיגְיוֹנוֹת. וְיִירָשֽׁוּהָ עוֹבְדֵי כוֹכָבִים. וַיָטִּֽילוֹ אֶת עַמְּךָ יִשְׂרָאֵל לֶחָֽרֶב. וַיַּהַרְגוּ בְזָדוֹן חֲסִידֵי עֶלְיוֹן. עַל כֵּן צִיּוֹן בְּמַר תִבְכֶּה. וִירוּשָׁלַֽיִם תִּתֵּן קוֹלָהּ. לִבִּי לִבִּי עַל חַלְלֵיהֶם. מֵעַי מֵעַי עַל חַלְלֵיהֶם. כִּי אַתָּה יְהֹוָה בָּאֵשׁ הִצַּתָּהּ. וּבָאֵשׁ אַתָּה עָתִיד לִבְנוֹתָהּ. כָּאָמוּר וַאֲנִי אֶהְיֶה לָהּ נְאֻם יְהֹוָה חוֹמַת אֵשׁ סָבִיב וּלְכָבוֹד אֶהְיֶה בְּתוֹכָהּ:</small>") +
       p("<small>בָּרוּךְ אַתָּה יְהֹוָה מְנַחֵם צִיּוֹן וּבוֹנֵה יְרוּשָׁלָֽיִם:</small>")
@@ -21870,7 +21750,7 @@ function buildMinchaSfaradPayload(context) {
   parts.push(p("<b>אֶת</b> צֶמַח דָּוִד עַבְדְּךָ מְהֵרָה תַצְמִיחַ, וְקַרְנוֹ תָּרוּם בִּישׁוּעָתֶֽךָ, כִּי לִישׁוּעָתְךָ קִוִּינוּ כָּל הַיּוֹם. בָּרוּךְ אַתָּה יְהֹוָה מַצְמִיחַ קֶרֶן יְשׁוּעָה:"));
   if (context.isFastDay) {
     parts.push(p("<b>שְׁמַע</b> קוֹלֵנוּ יְהֹוָה אֱלֹהֵינוּ חוּס וְרַחֵם עָלֵינוּ, וְקַבֵּל בְּרַחֲמִים וּבְרָצוֹן אֶת תְּפִלָּתֵנוּ, כִּי אֵל שׁוֹמֵעַ תְּפִלּוֹת וְתַחֲנוּנִים אָתָּה, וּמִלְּפָנֶיךָ מַלְכֵּנוּ רֵיקָם אַל תְּשִׁיבֵנוּ"));
-    parts.push(sup(
+    pushAdd(parts, sup(
       p("<small>בתענית ציבור אומרים כאן עננו בתפילת הלחש:</small>") +
       p("<small><b>עֲנֵֽנוּ</b> יְהֹוָה עֲנֵֽנוּ בְּיוֹם צוֹם תַּעֲנִיתֵֽנוּ. כִּי בְצָרָה גְדוֹלָה אֲנָֽחְנוּ. אַל תֵּֽפֶן אֶל רִשְׁעֵֽנוּ וְאַל תַּסְתֵּר פָּנֶֽיךָ מִמֶּֽנּוּ וְאַל תִּתְעַלַּם מִתְּחִנָּתֵֽנוּ הֱיֵה נָא קָרוֹב לְשַׁוְעָתֵֽנוּ יְהִי נָא חַסְדְּךָ לְנַחֲמֵֽנוּ טֶֽרֶם נִקְרָא אֵלֶֽיךָ עֲנֵֽנוּ. כַּדָּבָר שֶׁנֶּאֱמַר וְהָיָה טֶֽרֶם יִקְרָֽאוּ וַאֲנִי אֶעֱנֶה. עוֹד הֵם מְדַבְּרִים וַאֲנִי אֶשְׁמָע. כִּי אַתָּה יְהֹוָה הָעוֹנֶה בְּעֵת צָרָה. פּוֹדֶה וּמַצִּיל בְּכָל עֵת צָרָה וְצוּקָה:</small>")
     ));
@@ -21886,7 +21766,7 @@ function buildMinchaSfaradPayload(context) {
   // ורק נוסח "בְּיוֹם ..." של היום (ראו _yaalehKind)
   if (context.isRoshChodesh || context.isCholHamoed) {
     var yvDay = { rc: "רֹאשׁ הַחֹדֶשׁ", pesach: "חַג הַמַּצּוֹת", sukkot: "חַג הַסֻּכּוֹת" }[_yaalehKind(context)] || "רֹאשׁ הַחֹדֶשׁ";
-    parts.push(
+    pushAdd(parts, 
       p(
         "<b>אֱלֹהֵֽינוּ</b> וֵאלֹהֵי אֲבוֹתֵֽינוּ יַעֲלֶה וְיָבֹא וְיַגִּֽיעַ וְיֵרָאֶה וְיֵרָצֶה וְיִשָּׁמַע וְיִפָּקֵד וְיִזָּכֵר זִכְרוֹנֵֽנוּ וּפִקְדוֹנֵֽנוּ וְזִכְרוֹן אֲבוֹתֵֽינוּ וְזִכְרוֹן מָשִֽׁיחַ בֶּן דָּוִד עַבְדֶּֽךָ וְזִכְרוֹן יְרוּשָׁלַֽיִם עִיר קָדְשֶֽׁךָ וְזִכְרוֹן כָּל עַמְּךָ בֵּית יִשְׂרָאֵל לְפָנֶֽיךָ, לִפְלֵיטָה לְטוֹבָה לְחֵן וּלְחֶֽסֶד וּלְרַחֲמִים וּלְחַיִּים טוֹבִים וּלְשָׁלוֹם בְּיוֹם " +
           yvDay +
@@ -21909,11 +21789,11 @@ function buildMinchaSfaradPayload(context) {
       p("<small><b>וְעַל הַנִּסִּים</b> וְעַל הַפֻּרְקָן וְעַל הַגְּבוּרוֹת וְעַל הַתְּשׁוּעוֹת וְעַל הַנִּפְלָאוֹת וְעַל הַנֶּחָמוֹת וְעַל הַמִּלְחָמוֹת שֶׁעָשִֽׂיתָ לַאֲבוֹתֵֽינוּ בַּיָּמִים הָהֵם בִּזְּמַן הַזֶּה:</small>") +
       (context.isChanukah ? p("<small><small>בחנוכה:</small> <b>בִּימֵי מַתִּתְיָֽהוּ</b> בֶּן יוֹחָנָן כֹּהֵן גָּדוֹל חַשְׁמוֹנָאִי וּבָנָיו כְּשֶׁעָמְדָה מַלְכוּת יָוָן הָרְשָׁעָה עַל־עַמְּךָ יִשְׂרָאֵל לְהַשְׁכִּיחָם תּוֹרָתֶֽךָ וּלְהַעֲבִירָם מֵחֻקֵּי רְצוֹנֶֽךָ, וְאַתָּה בְּרַחֲמֶֽיךָ הָרַבִּים עָמַֽדְתָּ לָהֶם בְּעֵת צָרָתָם רַֽבְתָּ אֶת־רִיבָם דַּֽנְתָּ אֶת־דִּינָם נָקַֽמְתָּ אֶת־נִקְמָתָם מָסַֽרְתָּ גִבּוֹרִים בְּיַד חַלָּשִׁים וְרַבִּים בְּיַד מְעַטִּים וּטְמֵאִים בְּיַד טְהוֹרִים וּרְשָׁעִים בְּיַד צַדִּיקִים וְזֵדִים בְּיַד עוֹסְקֵי תוֹרָתֶֽךָ וּלְךָ עָשִֽׂיתָ שֵׁם גָּדוֹל וְקָדוֹשׁ בְּעוֹלָמֶֽךָ וּלְעַמְּךָ יִשְׂרָאֵל עָשִֽׂיתָ תְּשׁוּעָה גְדוֹלָה וּפֻרְקָן כְּהַיּוֹם הַזֶּה וְאַחַר־כַּךְ בָּֽאוּ בָנֶֽיךָ לִדְבִיר בֵּיתֶֽךָ וּפִנּוּ אֶת־הֵיכָלֶֽךָ וְטִהֲרוּ אֶת־מִקְדָּשֶֽׁךָ וְהִדְלִֽיקוּ נֵרוֹת בְּחַצְרוֹת קָדְשֶֽׁךָ וְקָבְעוּ שְׁמוֹנַת יְמֵי חֲנֻכָּה אֵֽלּוּ לְהוֹדוֹת וּלְהַלֵּל לְשִׁמְךָ הַגָּדוֹל:</small>") :
        p("<small><small>בפורים:</small> <b>בִּימֵי מָרְדְּכַי</b> וְאֶסְתֵּר בְּשׁוּשַׁן הַבִּירָה כְּשֶׁעָמַד עֲלֵיהֶם הָמָן הָרָשָׁע בִּקֵּשׁ לְהַשְׁמִיד לַהֲרוֹג וּלְאַבֵּד אֶת־כָּל־הַיְּהוּדִים מִנַּֽעַר וְעַד־זָקֵן טַף וְנָשִׁים בְּיוֹם אֶחָד בִּשְׁלוֹשָׁה עָשָׂר לְחֹֽדֶשׁ שְׁנֵים־עָשָׂר הוּא־חֹֽדֶשׁ אֲדָר וּשְׁלָלָם לָבוֹז: וְאַתָּה בְּרַחֲמֶֽיךָ הָרַבִּים הֵפַֽרְתָּ אֶת־עֲצָתוֹ וְקִלְקַֽלְתָּ אֶת־מַחֲשַׁבְתּוֹ וַהֲשֵׁבֽוֹתָ לּוֹ גְּמוּלוֹ בְּרֹאשׁוֹ וְתָלוּ אוֹתוֹ וְאֶת־בָּנָיו עַל־הָעֵץ:</small>"));
-    parts.push(sup(han3));
+    pushAdd(parts, sup(han3));
   }
   parts.push(p("<b>וְעַל</b> כֻּלָּם יִתְבָּרַךְ וְיִתְרוֹמַם שִׁמְךָ מַלְכֵּנוּ תָּמִיד לְעוֹלָם וָעֶד."));
   if (context.isAseretYemeiTeshuva) {
-    parts.push(sup(p("<small><small>בעשי\"ת:</small> וּכְתוֹב לְחַיִּים טוֹבִים כָּל בְּנֵי בְרִיתֶֽךָ:</small>")));
+    pushAdd(parts, sup(p("<small><small>בעשי\"ת:</small> וּכְתוֹב לְחַיִּים טוֹבִים כָּל בְּנֵי בְרִיתֶֽךָ:</small>")));
   }
   parts.push(p("וְכֹל הַחַיִּים יוֹדֽוּךָ סֶּֽלָה וִיהַלְלוּ וְיבָרְכוּ אֶת־שִׁמְךָ הַגָּדוֹל בְּאֱמֶת לְעוֹלָם כִּי טוֹב הָאֵל יְשׁוּעָתֵֽנוּ וְעֶזְרָתֵֽנוּ סֶֽלָה הָאֵל הַטּוֹב: בָּרוּךְ אַתָּה יְהֹוָה הַטּוֹב שִׁמְךָ וּלְךָ נָאֶה לְהוֹדוֹת:"));
   // ברכת כהנים — בתענית ציבור בחזרת הש"ץ של מנחה (סידור ספרד); ואם יש כהנים נושאים כפיהם
@@ -21932,7 +21812,7 @@ function buildMinchaSfaradPayload(context) {
   // שים שלום (ספרד)
   parts.push(p("<b>שִׂים</b> שָׁלוֹם טוֹבָה וּבְרָכָה חַיִים חֵן וָחֶֽסֶד וְרַחֲמִים עָלֵֽינוּ וְעַל כָּל יִשְׂרָאֵל עַמֶּֽךָ, בָּרְכֵֽנוּ אָבִֽינוּ כֻּלָּֽנוּ כְּאֶחָד בְּאוֹר פָּנֶֽיךָ כִּי בְאוֹר פָּנֶֽיךָ נָתַֽתָּ לָּֽנוּ יְהֹוָה אֱלֹהֵֽינוּ תּוֹרַת חַיִּים וְאַהֲבַת חֶֽסֶד וּצְדָקָה וּבְרָכָה וְרַחֲמִים וְחַיִּים וְשָׁלוֹם, וְטוֹב יִהְיֶה בְּעֵינֶֽיךָ לְבָרְכֵֽנוּ וּלְבָרֵךְ אֶת כָּל עַמְּךָ יִשְׂרָאֵל בְּכָל עֵת וּבְכָל שָׁעָה בִּשְׁלוֹמֶֽךָ (בְּרוֹב עוֹז וְשָׁלוֹם)."));
   if (context.isAseretYemeiTeshuva) {
-    parts.push(sup(p("<small><small>בעשי\"ת:</small> בְּסֵֽפֶר חַיִּים בְּרָכָה וְשָׁלוֹם וּפַרְנָסָה טוֹבָה וּגְזֵרוֹת טוֹבוֹת, יְשׁוּעוֹת וְנֶחָמוֹת, נִזָּכֵר וְנִכָּתֵב לְפָנֶֽיךָ אֲנַֽחְנוּ וְכָל עַמְּךָ בֵּית־יִשְׂרָאֵל לְחַיִּים טוֹבִים וּלְשָׁלוֹם:</small>")));
+    pushAdd(parts, sup(p("<small><small>בעשי\"ת:</small> בְּסֵֽפֶר חַיִּים בְּרָכָה וְשָׁלוֹם וּפַרְנָסָה טוֹבָה וּגְזֵרוֹת טוֹבוֹת, יְשׁוּעוֹת וְנֶחָמוֹת, נִזָּכֵר וְנִכָּתֵב לְפָנֶֽיךָ אֲנַֽחְנוּ וְכָל עַמְּךָ בֵּית־יִשְׂרָאֵל לְחַיִּים טוֹבִים וּלְשָׁלוֹם:</small>")));
   }
   parts.push(p("בָּרוּךְ אַתָּה יְהֹוָה הַמְבָרֵךְ אֶת עַמּוֹ יִשְׂרָאֵל בַּשָּׁלוֹם:"));
   parts.push(p("<b>יִהְיוּ</b> לְרָצוֹן אִמְרֵי פִי וְהֶגְיוֹן לִבִּי לְפָנֶיךָ יְהֹוָה צוּרִי וְגֹאֲלִי:"));
@@ -22267,23 +22147,24 @@ function _maarivMotzaeiState(context, nusach) {
 
 // ── עשי"ת בתוך הקדישים/העמידה: "(בעשי"ת X)" נפתר לפי התאריך ──
 // במקום להציג כל השנה את שתי החלופות: מחוץ לעשי"ת החלופה נמחקת; בעשי"ת היא
-// מחליפה את נוסח כל-השנה הצמוד לה (שלום→השלום, לעילא מן כל→לעילא ולעילא מכל).
-// התאמה עמידה לסדר סימני הניקוד (אותיות יסוד + סימנים ביניהן).
+// מחליפה את נוסח כל-השנה הצמוד לה (שלום→השלום, לעילא מן כל→לעילא ולעילא מכל) —
+// בצבע התוספות (prAdd). התאמה עמידה לסדר סימני הניקוד (אותיות יסוד + סימנים ביניהן).
 function _maarivResolveAyt(html, isAyt) {
   if (!html || html.indexOf("בעשי") < 0) return html;
   var N = "[\\u0591-\\u05C7]*";
   var w = function (s) { return s.split("").join(N) + N; };
   var PAR = '\\s*\\(<small>בעשי"ת</small>\\s*([^)]*?)\\s*\\)';
   if (!isAyt) return html.replace(new RegExp(PAR, "g"), "");
+  var ADD = prAdd("$1");
   return html
     // "עוֹשֶׂה שָׁלוֹם (בעשי"ת הַשָּׁלוֹם)" → "עוֹשֶׂה הַשָּׁלוֹם"
-    .replace(new RegExp("\\s+" + w("שלום") + PAR, "g"), " $1")
+    .replace(new RegExp("\\s+" + w("שלום") + PAR, "g"), " " + ADD)
     // "עֹשֶׂה (בעשי"ת הַשָּׁלוֹם) שָׁלוֹם" → "עֹשֶׂה הַשָּׁלוֹם"
-    .replace(new RegExp(PAR + "\\s*" + w("שלום"), "g"), " $1")
+    .replace(new RegExp(PAR + "\\s*" + w("שלום"), "g"), " " + ADD)
     // "לְעֵלָּא מִן־כָּל־ (בעשי"ת לְעֵלָּא לְעֵלָּא מִכָּל)" → "לְעֵלָּא לְעֵלָּא מִכָּל"
-    .replace(new RegExp(w("לעלא") + "\\s+" + w("מן") + "\\s*" + w("כל") + PAR, "g"), "$1")
+    .replace(new RegExp(w("לעלא") + "\\s+" + w("מן") + "\\s*" + w("כל") + PAR, "g"), ADD)
     // "לְעֵלָּא (בעשי"ת וּלְעֵלָּא מִכָּל) מִן כָּל" → "לְעֵלָּא וּלְעֵלָּא מִכָּל"
-    .replace(new RegExp(PAR + "\\s*" + w("מן") + "\\s*" + w("כל"), "g"), " $1");
+    .replace(new RegExp(PAR + "\\s*" + w("מן") + "\\s*" + w("כל"), "g"), " " + ADD);
 }
 
 // ── יום הספירה לפי התאריך העברי של ההקשר (ולא CURRENT_OMER_DAY שנקבע בטעינה) ──
@@ -22378,30 +22259,30 @@ function buildMaarivMizrahiPayload(context) {
   parts.push(p("<b>אֲ֭דֹנָי</b> שְׂפָתַ֣י תִּפְתָּ֑ח וּ֝פִ֗י יַגִּ֥יד תְּהִלָּתֶֽךָ׃"));
   parts.push(p("<b>בָּרוּךְ</b> אַתָּה יְהֹוָה, אֱלֹהֵֽינוּ וֵֽאלֹהֵי אֲבוֹתֵֽינוּ, אֱלֹהֵי אַבְרָהָם, אֱלֹהֵי יִצְחָק, וֵֽאלֹהֵי יַעֲקֹב. הָאֵל הַגָּדוֹל הַגִּבּוֹר וְהַנּוֹרָא, אֵל עֶלְיוֹן, גּוֹמֵל חֲסָדִים טוֹבִים, קוֹנֵה הַכֹּל, וְזוֹכֵר חַסְדֵּי אָבוֹת, וּמֵבִיא גוֹאֵל לִבְנֵי בְנֵיהֶם לְמַֽעַן שְׁמוֹ בְּאַֽהֲבָה: מֶֽלֶךְ עוֹזֵר וּמוֹשִֽׁיעַ וּמָגֵן: בָּרוּךְ אַתָּה יַהַוַהַ, מָגֵן אַבְרָהָם:"));
   if (context.isAseretYemeiTeshuva) {
-    parts.push(sup(p("<small><b>זָכְרֵֽנוּ לְחַיִּים</b> מֶֽלֶךְ חָפֵץ בַּחַיִּים וְכָתְבֵֽנוּ בְּסֵֽפֶר הַחַיִּים לְמַעַנְךָ אֱלֹהִים חַיִּים.</small>")));
+    pushAdd(parts, sup(p("<small><b>זָכְרֵֽנוּ לְחַיִּים</b> מֶֽלֶךְ חָפֵץ בַּחַיִּים וְכָתְבֵֽנוּ בְּסֵֽפֶר הַחַיִּים לְמַעַנְךָ אֱלֹהִים חַיִּים.</small>")));
   }
   parts.push(p("<b>אַתָּה</b> גִבּוֹר לְעוֹלָם אֲדֹנָי, מְחַיֶּה מֵתִים אַתָּה, רַב לְהוֹשִֽׁיעַ.  "));
   if (isSummer) {
-    parts.push(p("מוֹרִיד הַטָּל."));
+    pushAdd(parts, p("מוֹרִיד הַטָּל."));
   } else {
-    parts.push(p("מַשִּׁיב הָרֽוּחַ וּמוֹרִיד הַגֶּֽשֶׁם."));
+    pushAdd(parts, p("מַשִּׁיב הָרֽוּחַ וּמוֹרִיד הַגֶּֽשֶׁם."));
   }
   parts.push(p("מְכַלְכֵּל חַיִּים בְּחֶֽסֶד, מְחַיֵּה מֵתִים בְּרַֽחֲמִים רַבִּים, סוֹמֵךְ נֽוֹפְלִים, וְרוֹפֵא חוֹלִים, וּמַתִּיר אֲסוּרִים, וּמְקַיֵּם אֱמֽוּנָתוֹ לִֽישֵׁנֵי עָפָר. מִי כָמֽוֹךָ בַּֽעַל גְּבוּרוֹת, וּמִי דֽוֹמֶה לָךְ, מֶֽלֶךְ מֵמִית וּמְחַיֶּה וּמַצְמִֽיחַ יְשׁוּעָה. וְנֶֽאֱמָן אַתָּה לְהַֽחֲיוֹת מֵתִים: בָּרוּךְ אַתָּה יֵהֵוֵהֵ, מְחַיֵּה הַמֵּתִים:"));
   if (context.isAseretYemeiTeshuva) {
-    parts.push(sup(p("<small><b>מִי כָמוֹךָ</b> אָב הָרַחֲמָן זוֹכֵר יְצוּרָיו לְחַיִּים בְּרַחֲמִים.</small>")));
+    pushAdd(parts, sup(p("<small><b>מִי כָמוֹךָ</b> אָב הָרַחֲמָן זוֹכֵר יְצוּרָיו לְחַיִּים בְּרַחֲמִים.</small>")));
   }
   // קדושת השם
   parts.push(p("<b>אַתָּה</b> קָדוֹשׁ וְשִׁמְךָ קָדוֹשׁ, וּקְדוֹשִׁים בְּכָל יוֹם יְהַֽלְלֽוּךָ סֶּֽלָה:"));
   if (context.isAseretYemeiTeshuva) {
-    parts.push(p("בָּרוּךְ אַתָּה יְהֹוָה, הַמֶּֽלֶךְ הַקָּדוֹשׁ:"));
+    parts.push(p("בָּרוּךְ אַתָּה יְהֹוָה, " + prAdd("הַמֶּֽלֶךְ הַקָּדוֹשׁ:")));
   } else {
     parts.push(p("בָּרוּךְ אַתָּה יְהֹוָה, הָאֵל הַקָּדוֹשׁ:"));
   }
   // אתה חונן
   parts.push(p("<b>אַתָּה</b> חוֹנֵן לְאָדָם דַּֽעַת וּמְלַמֵּד לֶאֱנוֹשׁ בִּינָה. "));
   if (mz.chonantanu) {
-    parts.push(sup(p("<small><small>" + mz.label + "</small></small>")));
-    parts.push(p("<b>אַתָּה</b> חוֹנַנְתָּנוּ יְהֹוָה אֱלֹהֵינוּ מַדָּע וְהַשְׂכֵּל, אַתָּה אָמַרְתָּ לְהַבְדִּיל בֵּין קֹדֶשׁ לְחֹל וּבֵין אוֹר לְחֹשֶׁךְ וּבֵין יִשְׂרָאֵל לָעַמִּים, וּבֵין יוֹם הַשְּׁבִיעִי לְשֵׁשֶׁת יְמֵי הַמַּעֲשֶׂה. כְּשֵׁם שֶׁהִבְדַּלְתָּנוּ יְהֹוָה אֱלֹהֵינוּ מֵעַמֵּי הָאֲרָצוֹת וּמִמִּשְׁפְּחוֹת הָאֲדָמָה, כָּךְ פְּדֵנוּ וְהַצִּילֵנוּ מִשָּׂטָן רָע וּמִפֶּגַע רָע, וּמִכָּל גְּזֵרוֹת קָשׁוֹת וְרָעוֹת הַמִּתְרַגְּשׁוֹת לָבֹא בָעוֹלָם."));
+    pushAdd(parts, sup(p("<small><small>" + mz.label + "</small></small>")));
+    pushAdd(parts, p("<b>אַתָּה</b> חוֹנַנְתָּנוּ יְהֹוָה אֱלֹהֵינוּ מַדָּע וְהַשְׂכֵּל, אַתָּה אָמַרְתָּ לְהַבְדִּיל בֵּין קֹדֶשׁ לְחֹל וּבֵין אוֹר לְחֹשֶׁךְ וּבֵין יִשְׂרָאֵל לָעַמִּים, וּבֵין יוֹם הַשְּׁבִיעִי לְשֵׁשֶׁת יְמֵי הַמַּעֲשֶׂה. כְּשֵׁם שֶׁהִבְדַּלְתָּנוּ יְהֹוָה אֱלֹהֵינוּ מֵעַמֵּי הָאֲרָצוֹת וּמִמִּשְׁפְּחוֹת הָאֲדָמָה, כָּךְ פְּדֵנוּ וְהַצִּילֵנוּ מִשָּׂטָן רָע וּמִפֶּגַע רָע, וּמִכָּל גְּזֵרוֹת קָשׁוֹת וְרָעוֹת הַמִּתְרַגְּשׁוֹת לָבֹא בָעוֹלָם."));
   }
   parts.push(p("וְחָנֵּֽנוּ מֵאִתְּךָ חָכְמָה בִּינָה וָדָֽעַת: בָּרוּךְ אַתָּה יַהַוַהַ, חוֹנֵן הַדָּֽעַת:"));
   parts.push(p("<b>הֲשִׁיבֵֽנוּ</b> אָבִֽינוּ לְתֽוֹרָתֶֽךָ, וְקָֽרְבֵֽנוּ מַלְכֵּֽנוּ לַֽעֲבֽוֹדָתֶֽךָ, וְהַֽחֲזִירֵֽנוּ בִּתְשׁוּבָה שְׁלֵמָה לְפָנֶֽיךָ: בָּרוּךְ אַתָּה יֵהֵוֵהֵ, הָרוֹצֶה בִּתְשׁוּבָה:"));
@@ -22410,13 +22291,13 @@ function buildMaarivMizrahiPayload(context) {
   parts.push(p("<b>רְפָאֵֽנוּ</b> יְהֹוָה וְנֵֽרָפֵא, הֽוֹשִׁיעֵֽנוּ וְנִוָּשֵֽׁעָה, כִּי תְהִלָּתֵֽנוּ אָֽתָּה, וְהַֽעֲלֵה אֲרוּכָה וּמַרְפֵּא לְכָל־תַּֽחֲלוּאֵֽינוּ וּלְכָל־מַכְאוֹבֵֽינוּ וּלְכָל־מַכּוֹתֵֽינוּ. כִּי אֵל רוֹפֵא רַחְמָן וְנֶֽאֱמָן אָֽתָּה: בָּרוּךְ אַתָּה יֹהֹוֹהֹ, רוֹפֵא חוֹלֵי עַמּוֹ יִשְׂרָאֵל:"));
   // ברכת השנים
   if (!isRainRequest) {
-    parts.push(p("<b>בָּֽרְכֵֽנוּ</b> יְהֹוָה אֱלֹהֵֽינוּ בְּכָל־מַֽעֲשֵׂי יָדֵֽינוּ, וּבָרֵךְ שְׁנָתֵֽנוּ בְּטַֽלְלֵי רָצוֹן בְּרָכָה וּנְדָבָה, וּתְהִי אַֽחֲרִיתָהּ חַיִּים וְשָׂבָע וְשָׁלוֹם כַּשָּׁנִים הַטּוֹבוֹת לִבְרָכָה, כִּי אֵל טוֹב וּמֵטִיב אַתָּה וּמְבָרֵךְ הַשָּׁנִים: בָּרוּךְ אַתָּה יִהִוִהִ, מְבָרֵךְ הַשָּׁנִים:"));
+    pushAdd(parts, p("<b>בָּֽרְכֵֽנוּ</b> יְהֹוָה אֱלֹהֵֽינוּ בְּכָל־מַֽעֲשֵׂי יָדֵֽינוּ, וּבָרֵךְ שְׁנָתֵֽנוּ בְּטַֽלְלֵי רָצוֹן בְּרָכָה וּנְדָבָה, וּתְהִי אַֽחֲרִיתָהּ חַיִּים וְשָׂבָע וְשָׁלוֹם כַּשָּׁנִים הַטּוֹבוֹת לִבְרָכָה, כִּי אֵל טוֹב וּמֵטִיב אַתָּה וּמְבָרֵךְ הַשָּׁנִים: בָּרוּךְ אַתָּה יִהִוִהִ, מְבָרֵךְ הַשָּׁנִים:"));
   } else {
-    parts.push(p("<b>בָּרֵךְ</b> עָלֵֽינוּ יְהֹוָה אֱלֹהֵֽינוּ אֶת־הַשָּׁנָה הַזֹּאת וְאֶת־כָּל־מִינֵי תְּבוּאָתָהּ לְטוֹבָה, וְתֵן טַל וּמָטָר לִבְרָכָה עַל כָּל־פְּנֵי הָאֲדָמָה, וְרַוֵּה פְּנֵי תֵבֵל וְשַׂבַּע אֶת־הָעוֹלָם כֻּלּוֹ מִטּוּבָךְ, וּמַלֵּא יָדֵֽינוּ מִבִּרְכוֹתֶֽיךָ וּמֵעֹֽשֶׁר מַתְּנוֹת יָדֶֽיךָ. שָׁמְרָה וְהַצִּֽילָה שָׁנָה זוֹ מִכָּל־דָּבָר רָע, וּמִכָּל־מִינֵי מַשְׁחִית וּמִכָּל־מִינֵי פֻרְעָנוּת, וַעֲשֵׂה לָהּ תִּקְוָה טוֹבָה וְאַחֲרִית שָׁלוֹם. חוּס וְרַחֵם עָלֶֽיהָ וְעַל כָּל־תְּבוּאָתָהּ וּפֵירוֹתֶיהָ, וּבָֽרְכָֽהּ בְּגִשְׁמֵי רָצוֹן בְּרָכָה וּנְדָבָה, וּתְהִי אַחֲרִיתָהּ חַיִּים וְשָׂבָע וְשָׁלוֹם. כַּשָּׁנִים הַטּוֹבוֹת לִבְרָכָה, כִּי אֵל טוֹב וּמֵטִיב אַתָּה וּמְבָרֵךְ הַשָּׁנִים. בָּרוּךְ אַתָּה יִהִוִהִ, מְבָרֵךְ הַשָּׁנִים:"));
+    pushAdd(parts, p("<b>בָּרֵךְ</b> עָלֵֽינוּ יְהֹוָה אֱלֹהֵֽינוּ אֶת־הַשָּׁנָה הַזֹּאת וְאֶת־כָּל־מִינֵי תְּבוּאָתָהּ לְטוֹבָה, וְתֵן טַל וּמָטָר לִבְרָכָה עַל כָּל־פְּנֵי הָאֲדָמָה, וְרַוֵּה פְּנֵי תֵבֵל וְשַׂבַּע אֶת־הָעוֹלָם כֻּלּוֹ מִטּוּבָךְ, וּמַלֵּא יָדֵֽינוּ מִבִּרְכוֹתֶֽיךָ וּמֵעֹֽשֶׁר מַתְּנוֹת יָדֶֽיךָ. שָׁמְרָה וְהַצִּֽילָה שָׁנָה זוֹ מִכָּל־דָּבָר רָע, וּמִכָּל־מִינֵי מַשְׁחִית וּמִכָּל־מִינֵי פֻרְעָנוּת, וַעֲשֵׂה לָהּ תִּקְוָה טוֹבָה וְאַחֲרִית שָׁלוֹם. חוּס וְרַחֵם עָלֶֽיהָ וְעַל כָּל־תְּבוּאָתָהּ וּפֵירוֹתֶיהָ, וּבָֽרְכָֽהּ בְּגִשְׁמֵי רָצוֹן בְּרָכָה וּנְדָבָה, וּתְהִי אַחֲרִיתָהּ חַיִּים וְשָׂבָע וְשָׁלוֹם. כַּשָּׁנִים הַטּוֹבוֹת לִבְרָכָה, כִּי אֵל טוֹב וּמֵטִיב אַתָּה וּמְבָרֵךְ הַשָּׁנִים. בָּרוּךְ אַתָּה יִהִוִהִ, מְבָרֵךְ הַשָּׁנִים:"));
   }
   parts.push(p("<b>תְּקַע</b> בְּשׁוֹפָר גָּדוֹל לְחֵֽרוּתֵֽנוּ, וְשָׂא נֵס לְקַבֵּץ גָּֽלֻיּוֹתֵֽינוּ, וְקַבְּצֵֽנוּ יַֽחַד מֵאַרְבַּע כַּנְפוֹת הָאָֽרֶץ לְאַרְצֵֽנוּ: בָּרוּךְ אַתָּה יֻהֻוֻהֻ, מְקַבֵּץ נִדְחֵי עַמּוֹ יִשְׂרָאֵל:"));
   if (context.isAseretYemeiTeshuva) {
-    parts.push(p("<b>הָשִֽׁיבָה</b> שֽׁוֹפְטֵֽינוּ כְּבָרִֽאשׁוֹנָה, וְיֽוֹעֲצֵֽינוּ כְּבַתְּחִלָּה, וְהָסֵר מִמֶּֽנּוּ יָגוֹן וַֽאֲנָחָה. וּמְלוֹךְ עָלֵֽינוּ מְהֵרָה אַתָּה יְהֹוָה לְבַדְּךָ, בְּחֶֽסֶד וּבְרַֽחֲמִים, בְּצֶֽדֶק וּבְמִשְׁפָּט: בָּרוּךְ אַתָּה יוּהוּווּהוּ, הַמֶּלֶךְ הַמִּשְׁפָּט:"));
+    parts.push(p("<b>הָשִֽׁיבָה</b> שֽׁוֹפְטֵֽינוּ כְּבָרִֽאשׁוֹנָה, וְיֽוֹעֲצֵֽינוּ כְּבַתְּחִלָּה, וְהָסֵר מִמֶּֽנּוּ יָגוֹן וַֽאֲנָחָה. וּמְלוֹךְ עָלֵֽינוּ מְהֵרָה אַתָּה יְהֹוָה לְבַדְּךָ, בְּחֶֽסֶד וּבְרַֽחֲמִים, בְּצֶֽדֶק וּבְמִשְׁפָּט: בָּרוּךְ אַתָּה יוּהוּווּהוּ, " + prAdd("הַמֶּלֶךְ הַמִּשְׁפָּט:")));
   } else {
     parts.push(p("<b>הָשִֽׁיבָה</b> שֽׁוֹפְטֵֽינוּ כְּבָרִֽאשׁוֹנָה, וְיֽוֹעֲצֵֽינוּ כְּבַתְּחִלָּה, וְהָסֵר מִמֶּֽנּוּ יָגוֹן וַֽאֲנָחָה. וּמְלוֹךְ עָלֵֽינוּ מְהֵרָה אַתָּה יְהֹוָה לְבַדְּךָ, בְּחֶֽסֶד וּבְרַֽחֲמִים, בְּצֶֽדֶק וּבְמִשְׁפָּט: בָּרוּךְ אַתָּה יוּהוּווּהוּ, מֶֽלֶךְ אוֹהֵב צְדָקָה וּמִשְׁפָּט:"));
   }
@@ -22426,8 +22307,8 @@ function buildMaarivMizrahiPayload(context) {
     // ליל ת"ב: "נחם" בברכת בונה ירושלים (ילקו"י תקנ"ז:א — היחיד אומרו כבר בערבית),
     // נוסח סידור עדות המזרח, וחתימה "מנחם ציון בבנין ירושלים"
     parts.push(p("<b>תִּשְׁכּוֹן</b> בְּתוֹךְ יְרוּשָׁלַֽיִם עִֽירְךָ כַּאֲשֶׁר דִּבַּֽרְתָּ, וְכִסֵּא דָוִד עַבְדְּךָ מְהֵרָה בְּתוֹכָהּ תָּכִין, וּבְנֵה אוֹתָהּ בִּנְיַן עוֹלָם בִּמְהֵרָה בְיָמֵֽינוּ:"));
-    parts.push(sup(p("<small><small>בתשעה באב אומרים:</small></small>") + p("<small><small><b>נַחֵם</b> יְהֹוָה אֱלֹהֵֽינוּ אֶת אֲבֵלֵי צִיּוֹן וְאֶת אֲבֵלֵי יְרוּשָׁלַיִם, וְאֶת הָעִיר הַחֲרֵבָה וְהַבְּזוּיָה, וְהַשּׁוֹמֵמָה, מִבְּלִי בָנֶֽיהָ הִיא יוֹשֶׁבֶת, וְרֹאשָׁהּ חָפוּי כְּאִשָּׁה עֲקָרָה שֶׁלֹא יָלָֽדָה. וַיְבַלְּעוּהָ לִגְיוֹנִים וַיִּירָשֽׁוּהָ, וַיַּטִּֽילוּ אֶת עַמְּךָ יִשְׂרָאֵל לַחֶֽרֶב, וַיַּהַרְגוּ בְזָדוֹן חֲסִידֵי עֶלְיוֹן. עַל־כֵּן צִיּוֹן בְּמֶֽרֶר תִּבְכֶּה, וִירֽוּשָׁלַֽיִם תִּתֵּן קוֹלָהּ: לִבִּי לִבִּי עַל חַלְלֵיהֶם, מֵעַי מֵעַי עַל הֲרוּגֵיהֶם: כִּי אַתָּה יְהֹוָה בָּאֵשׁ הֵצַתָּהּ, וּבָאֵשׁ אַתָּה עָתִיד לִבְנוֹתָהּ, כַּכָּתוּב: וַאֲנִ֤י אֶֽהְיֶה־לָּהּ֙ נְאֻם־יְהֹוָ֔ה ח֥וֹמַת אֵ֖שׁ סָבִ֑יב וּלְכָב֖וֹד אֶֽהְיֶ֥ה בְתוֹכָֽהּ׃</small></small>")));
-    parts.push(p("בָּרוּךְ אַתָּה יְהֹוָה, מְנַחֵם צִיּוֹן בְּבִנְיַן יְרוּשָׁלָיִם:"));
+    pushAdd(parts, sup(p("<small><small>בתשעה באב אומרים:</small></small>") + p("<small><small><b>נַחֵם</b> יְהֹוָה אֱלֹהֵֽינוּ אֶת אֲבֵלֵי צִיּוֹן וְאֶת אֲבֵלֵי יְרוּשָׁלַיִם, וְאֶת הָעִיר הַחֲרֵבָה וְהַבְּזוּיָה, וְהַשּׁוֹמֵמָה, מִבְּלִי בָנֶֽיהָ הִיא יוֹשֶׁבֶת, וְרֹאשָׁהּ חָפוּי כְּאִשָּׁה עֲקָרָה שֶׁלֹא יָלָֽדָה. וַיְבַלְּעוּהָ לִגְיוֹנִים וַיִּירָשֽׁוּהָ, וַיַּטִּֽילוּ אֶת עַמְּךָ יִשְׂרָאֵל לַחֶֽרֶב, וַיַּהַרְגוּ בְזָדוֹן חֲסִידֵי עֶלְיוֹן. עַל־כֵּן צִיּוֹן בְּמֶֽרֶר תִּבְכֶּה, וִירֽוּשָׁלַֽיִם תִּתֵּן קוֹלָהּ: לִבִּי לִבִּי עַל חַלְלֵיהֶם, מֵעַי מֵעַי עַל הֲרוּגֵיהֶם: כִּי אַתָּה יְהֹוָה בָּאֵשׁ הֵצַתָּהּ, וּבָאֵשׁ אַתָּה עָתִיד לִבְנוֹתָהּ, כַּכָּתוּב: וַאֲנִ֤י אֶֽהְיֶה־לָּהּ֙ נְאֻם־יְהֹוָ֔ה ח֥וֹמַת אֵ֖שׁ סָבִ֑יב וּלְכָב֖וֹד אֶֽהְיֶ֥ה בְתוֹכָֽהּ׃</small></small>")));
+    pushAdd(parts, p("בָּרוּךְ אַתָּה יְהֹוָה, מְנַחֵם צִיּוֹן בְּבִנְיַן יְרוּשָׁלָיִם:"));
   } else {
     parts.push(p("<b>תִּשְׁכּוֹן</b> בְּתוֹךְ יְרוּשָׁלַֽיִם עִֽירְךָ כַּאֲשֶׁר דִּבַּֽרְתָּ, וְכִסֵּא דָוִד עַבְדְּךָ מְהֵרָה בְּתוֹכָהּ תָּכִין, וּבְנֵה אוֹתָהּ בִּנְיַן עוֹלָם בִּמְהֵרָה בְיָמֵֽינוּ: בָּרוּךְ אַתָּה יֻהֻוֻהֻ, בּוֹנֵה יְרוּשָׁלָיִם: "));
   }
@@ -22435,7 +22316,7 @@ function buildMaarivMizrahiPayload(context) {
   parts.push(p("<b>שְׁמַע</b> קוֹלֵֽנוּ, יְהֹוָה אֱלֹהֵֽינוּ, אָב הָרַֽחֲמָן, רַחֵם עָלֵֽינוּ, וְקַבֵּל בְּרַֽחֲמִים וּבְרָצוֹן אֶת־תְּפִלָּתֵֽנוּ, כִּי אֵל שׁוֹמֵֽעַ תְּפִלּוֹת וְתַֽחֲנוּנִים אָֽתָּה. וּמִלְּפָנֶֽיךָ מַלְכֵּֽנוּ, רֵיקָם אַל-תְּשִׁיבֵֽנוּ, חָנֵּֽנוּ וַֽעֲנֵֽנוּ וּשְׁמַע תְּפִלָּתֵֽנוּ."));
   // ליל ת"ב בלבד — התווית בטקסט אומרת "בתשעה באב יש אומרים" (isFastDay הכללי הציג אותה גם בליל צום גדליה)
   if (context.isTishaBeAv) {
-    parts.push(sup(p("<small><small><small>בתשעה באב יש אומרים<br><b>עֲנֵנוּ</b> אָבִינוּ עֲנֵנוּ בְּיוֹם צוֹם הַתַּֽעֲנִית הַזֶּה כִּי בְצָרָה גְדוֹלָה אֲנָֽחְנוּ. אַל־תֵּֽפֶן לְרִשְׁעֵֽנוּ, וְאַל־תִּתְעַלָּם מַלְכֵּֽנוּ מִבַּקָּשָׁתֵֽנוּ. הֱיֵה נָא קָרוֹב לְשַׁוְעָתֵֽנוּ. טֶֽרֶם נִקְרָא אֵלֶֽיךָ אַתָּה תַֽעֲנֶה, נְדַבֵּר וְאַתָּה תִשְׁמַע, כַּדָּבָר שֶׁנֶּאֱמַר: וְהָיָ֥ה טֶֽרֶם־יִקְרָ֖אוּ וַאֲנִ֣י אֶעֱנֶ֑ה ע֛וֹד הֵ֥ם מְדַבְּרִ֖ים וַאֲנִ֥י אֶשְׁמָֽע: כִּי אַתָּה יְהֹוָה פּוֹדֶה וּמַצִּיל וְעוֹנֶה וּמְרַחֵם בְּכָל־עֵת צָרָה וְצוּקָה.</small></small></small>")));
+    pushAdd(parts, sup(p("<small><small><small>בתשעה באב יש אומרים<br><b>עֲנֵנוּ</b> אָבִינוּ עֲנֵנוּ בְּיוֹם צוֹם הַתַּֽעֲנִית הַזֶּה כִּי בְצָרָה גְדוֹלָה אֲנָֽחְנוּ. אַל־תֵּֽפֶן לְרִשְׁעֵֽנוּ, וְאַל־תִּתְעַלָּם מַלְכֵּֽנוּ מִבַּקָּשָׁתֵֽנוּ. הֱיֵה נָא קָרוֹב לְשַׁוְעָתֵֽנוּ. טֶֽרֶם נִקְרָא אֵלֶֽיךָ אַתָּה תַֽעֲנֶה, נְדַבֵּר וְאַתָּה תִשְׁמַע, כַּדָּבָר שֶׁנֶּאֱמַר: וְהָיָ֥ה טֶֽרֶם־יִקְרָ֖אוּ וַאֲנִ֣י אֶעֱנֶ֑ה ע֛וֹד הֵ֥ם מְדַבְּרִ֖ים וַאֲנִ֥י אֶשְׁמָֽע: כִּי אַתָּה יְהֹוָה פּוֹדֶה וּמַצִּיל וְעוֹנֶה וּמְרַחֵם בְּכָל־עֵת צָרָה וְצוּקָה.</small></small></small>")));
   }
   parts.push(p("כִּי אַתָּה שׁוֹמֵעַ תְּפִלַּת כָּל־פֶּה: בָּרוּךְ אַתָּה יֹהְוָה, שׁוֹמֵֽעַ תְּפִלָּה:"));
   parts.push(p("<b>רְצֵה</b> יְהֹוָה אֱלֹהֵֽינוּ בְּעַמְּךָ יִשְׂרָאֵל וְלִתְפִלָּתָם שְׁעֵה, וְהָשֵׁב הָֽעֲבוֹדָה לִדְבִיר בֵּיתֶֽךָ, וְאִשֵּׁי יִשְׂרָאֵל וּתְפִלָּתָם, מְהֵרָה בְּאַֽהֲבָה תְקַבֵּל בְּרָצוֹן, וּתְהִי לְרָצוֹן תָּמִיד עֲבוֹדַת יִשְׂרָאֵל עַמֶּֽךָ: "));
@@ -22443,7 +22324,7 @@ function buildMaarivMizrahiPayload(context) {
   // ורק נוסח "בְּיוֹם ..." של היום (ראו _yaalehKind)
   if (context.isRoshChodesh || context.isCholHamoed) {
     var yvDay = { rc: "רֹאשׁ חֹֽדֶשׁ", pesach: "חַג הַמַּצּוֹת הַזֶּה, בְּיוֹם מִקְרָא קֹֽדֶשׁ", sukkot: "חַג הַסֻּכּוֹת הַזֶּה, בְּיוֹם מִקְרָא קֹֽדֶשׁ" }[_yaalehKind(context)] || "רֹאשׁ חֹֽדֶשׁ";
-    parts.push(
+    pushAdd(parts, 
       p(
         "<b>אֱלֹהֵֽינוּ</b> וֵאלֹהֵי אֲבוֹתֵֽינוּ, יַעֲלֶה וְיָבֹא, וְיַגִּֽיעַ וְיֵרָאֶה, וְיֵרָצֶה וְיִשָּׁמַע, וְיִפָּקֵד וְיִזָּכֵר, זִכְרוֹנֵֽנוּ וְזִכְרוֹן אֲבוֹתֵֽינוּ, זִכְרוֹן יְרוּשָׁלַֽיִם עִירָךְ, וְזִכְרוֹן מָשִֽׁיחַ בֶּן־דָּוִד עַבְדָּךְ, וְזִכְרוֹן כָּל־עַמְּךָ בֵּית יִשְׂרָאֵל לְפָנֶֽיךָ, לִפְלֵיטָה, לְטוֹבָה, לְחֵן, לְחֶֽסֶד וּלְרַחֲמִים, לְחַיִּים טוֹבִים וּלְשָׁלוֹם, בְּיוֹם " +
           yvDay +
@@ -22455,22 +22336,22 @@ function buildMaarivMizrahiPayload(context) {
   parts.push(sup(p("<small><small>בברכת \"מודים\" יכרע ב\"מודים\" ויזקוף בשם <small>(בא\"ח בשלח הכ\"א)</small></small></small>")));
   parts.push(p("<b>מוֹדִים</b> אֲנַֽחְנוּ לָךְ, שֶׁאַתָּה הוּא יְהֹוָה אֱלֹהֵֽינוּ וֵֽאלֹהֵי אֲבוֹתֵֽינוּ לְעוֹלָם וָעֶד, צוּרֵֽנוּ צוּר חַיֵּֽינוּ וּמָגֵן יִשְׁעֵֽנוּ אַתָּה הוּא, לְדוֹר וָדוֹר נוֹדֶה לְךָ וּנְסַפֵּר תְּהִלָּתֶֽךָ, עַל חַיֵּֽינוּ הַמְּסוּרִים בְּיָדֶֽךָ, וְעַל נִשְׁמוֹתֵֽינוּ הַפְּקוּדוֹת לָךְ, וְעַל נִסֶּֽיךָ שֶׁבְּכָל־יוֹם עִמָּֽנוּ, וְעַל נִפְלְאוֹתֶֽיךָ וְטֽוֹבוֹתֶֽיךָ שֶׁבְּכָל־עֵת, עֶֽרֶב וָבֹֽקֶר וְצָֽהֳרָֽיִם. הַטּוֹב, כִּי לֹא כָלוּ רַחֲמֶֽיךָ, הַמְּרַחֵם, כִּי לֹא תַֽמּוּ חֲסָדֶֽיךָ, כִּי מֵֽעוֹלָם קִוִּֽינוּ לָךְ: "));
   if (context.isChanukah || context.isPurim) {
-    parts.push(sup(p("<small><small>בחנוכה ופורים אומרים:</small></small>")));
-    parts.push(sup(p("<small><small><b>עַל הַנִּסִּים</b> וְעַל הַפֻּרְקָן וְעַל הַגְּבוּרוֹת וְעַל הַתְּשׁוּעוֹת וְעַל הַנִּפְלָאוֹת וְעַל הַנֶּחָמוֹת שֶׁעָשִֽׂיתָ לַאֲבוֹתֵֽינוּ בַּיָּמִים הָהֵם בַּזְּמַן הַזֶּה:</small></small>")));
+    pushAdd(parts, sup(p("<small><small>בחנוכה ופורים אומרים:</small></small>")));
+    pushAdd(parts, sup(p("<small><small><b>עַל הַנִּסִּים</b> וְעַל הַפֻּרְקָן וְעַל הַגְּבוּרוֹת וְעַל הַתְּשׁוּעוֹת וְעַל הַנִּפְלָאוֹת וְעַל הַנֶּחָמוֹת שֶׁעָשִֽׂיתָ לַאֲבוֹתֵֽינוּ בַּיָּמִים הָהֵם בַּזְּמַן הַזֶּה:</small></small>")));
     if (context.isChanukah) {
-      parts.push(sup(p("<small><small><small>בחנוכה אומרים:</small> <b>בִּימֵי מַתִּתְיָה</b> בֶן־יוֹחָנָן כֹּהֵן גָּדוֹל. חַשְׁמוֹנָאִי וּבָנָיו כְּשֶׁעָֽמְדָֽה מַלְכוּת יָוָן הָרְשָׁעָה עַל עַמְּךָ יִשְׂרָאֵל. לְשַׁכְּחָם תּוֹרָתָךְ וּלְהַעֲבִירָם מֵחֻקֵּי רְצוֹנָךְ. וְאַתָּה בְּרַחֲמֶֽיךָ הָרַבִּים עָמַֽדְתָּ לָהֶם בְּעֵת צָרָתָם. רַֽבְתָּ אֶת רִיבָם. דַּֽנְתָּ אֶת דִּינָם. נָקַֽמְתָּ אֶת נִקְמָתָם. מָסַֽרְתָּ גִבּוֹרִים בְּיַד חַלָּשִׁים. וְרַבִּים בְּיַד מְעַטִּים. וּרְשָׁעִים בְּיַד צַדִּיקִים. וּטְמֵאִים בְּיַד טְהוֹרִים. וְזֵדִים בְּיַד עֽוֹסְקֵֽי תוֹרָתֶֽךָ. לְךָ עָשִֽׂיתָ שֵׁם גָּדוֹל וְקָדוֹשׁ בְּעוֹלָמָךְ. וּלְעַמְּךָ יִשְׂרָאֵל עָשִֽׂיתָ תְּשׁוּעָה גְדוֹלָה וּפֻרְקָן כְּהַיּוֹם הַזֶּה. וְאַחַר כָּךְ בָּֽאוּ בָנֶֽיךָ לִדְבִיר בֵּיתֶֽךָ. וּפִנּוּ אֶת־הֵיכָלֶֽךָ. וְטִהֲרוּ אֶת־מִקְדָּשֶֽׁךָ. וְהִדְלִֽיקוּ נֵרוֹת בְּחַצְרוֹת קָדְשֶֽׁךָ. וְקָֽבְעֽוּ שְׁמוֹנַת יְמֵי חֲנֻכָּה אֵֽלּוּ בְּהַלֵּל וּבְהוֹדָאָה. וְעָשִֽׂיתָ עִמָּהֶם נִסִּים וְנִפְלָאוֹת וְנוֹדֶה לְשִׁמְךָ הַגָּדוֹל סֶֽלָה:</small></small>")));
+      pushAdd(parts, sup(p("<small><small><small>בחנוכה אומרים:</small> <b>בִּימֵי מַתִּתְיָה</b> בֶן־יוֹחָנָן כֹּהֵן גָּדוֹל. חַשְׁמוֹנָאִי וּבָנָיו כְּשֶׁעָֽמְדָֽה מַלְכוּת יָוָן הָרְשָׁעָה עַל עַמְּךָ יִשְׂרָאֵל. לְשַׁכְּחָם תּוֹרָתָךְ וּלְהַעֲבִירָם מֵחֻקֵּי רְצוֹנָךְ. וְאַתָּה בְּרַחֲמֶֽיךָ הָרַבִּים עָמַֽדְתָּ לָהֶם בְּעֵת צָרָתָם. רַֽבְתָּ אֶת רִיבָם. דַּֽנְתָּ אֶת דִּינָם. נָקַֽמְתָּ אֶת נִקְמָתָם. מָסַֽרְתָּ גִבּוֹרִים בְּיַד חַלָּשִׁים. וְרַבִּים בְּיַד מְעַטִּים. וּרְשָׁעִים בְּיַד צַדִּיקִים. וּטְמֵאִים בְּיַד טְהוֹרִים. וְזֵדִים בְּיַד עֽוֹסְקֵֽי תוֹרָתֶֽךָ. לְךָ עָשִֽׂיתָ שֵׁם גָּדוֹל וְקָדוֹשׁ בְּעוֹלָמָךְ. וּלְעַמְּךָ יִשְׂרָאֵל עָשִֽׂיתָ תְּשׁוּעָה גְדוֹלָה וּפֻרְקָן כְּהַיּוֹם הַזֶּה. וְאַחַר כָּךְ בָּֽאוּ בָנֶֽיךָ לִדְבִיר בֵּיתֶֽךָ. וּפִנּוּ אֶת־הֵיכָלֶֽךָ. וְטִהֲרוּ אֶת־מִקְדָּשֶֽׁךָ. וְהִדְלִֽיקוּ נֵרוֹת בְּחַצְרוֹת קָדְשֶֽׁךָ. וְקָֽבְעֽוּ שְׁמוֹנַת יְמֵי חֲנֻכָּה אֵֽלּוּ בְּהַלֵּל וּבְהוֹדָאָה. וְעָשִֽׂיתָ עִמָּהֶם נִסִּים וְנִפְלָאוֹת וְנוֹדֶה לְשִׁמְךָ הַגָּדוֹל סֶֽלָה:</small></small>")));
     }
     if (context.isPurim) {
-      parts.push(sup(p("<small><small><small>בפורים אומרים</small> <b>בִּימֵי מָרְדְּכַי</b> וְאֶסְתֵּר בְּשׁוּשַׁן הַבִּירָה. כְּשֶׁעָמַד עֲלֵיהֶם הָמָן הָרָשָׁע. בִּקֵּשׁ לְהַשְׁמִיד לַהֲרֹג וּלְאַבֵּד אֶת־כָּל־הַיְּהוּדִים מִנַּֽעַר וְעַד זָקֵן טַף וְנָשִׁים בְּיוֹם אֶחָד. בִּשְׁלֹשָׁה עָשָׂר לְחֹֽדֶשׁ שְׁנֵים עָשָׂר. הוּא חֹֽדֶשׁ אֲדָר. וּשְׁלָלָם לָבוֹז. וְאַתָּה בְּרַחֲמֶֽיךָ הָרַבִּים הֵפַֽרְתָּ אֶת־עֲצָתוֹ וְקִלְקַֽלְתָּ אֶת־מַחֲשַׁבְתּוֹ. וַהֲשֵׁבֽוֹתָ לּוֹ גְּמוּלוֹ בְרֹאשׁוֹ. וְתָלוּ אוֹתוֹ וְאֶת־בָּנָיו עַל הָעֵץ. וְעָשִֽׂיתָ עִמָּהֶם נֵס וָפֶֽלֶא וְנוֹדֶה לְשִׁמְךָ הַגָּדוֹל סֶֽלָה:</small></small>")));
+      pushAdd(parts, sup(p("<small><small><small>בפורים אומרים</small> <b>בִּימֵי מָרְדְּכַי</b> וְאֶסְתֵּר בְּשׁוּשַׁן הַבִּירָה. כְּשֶׁעָמַד עֲלֵיהֶם הָמָן הָרָשָׁע. בִּקֵּשׁ לְהַשְׁמִיד לַהֲרֹג וּלְאַבֵּד אֶת־כָּל־הַיְּהוּדִים מִנַּֽעַר וְעַד זָקֵן טַף וְנָשִׁים בְּיוֹם אֶחָד. בִּשְׁלֹשָׁה עָשָׂר לְחֹֽדֶשׁ שְׁנֵים עָשָׂר. הוּא חֹֽדֶשׁ אֲדָר. וּשְׁלָלָם לָבוֹז. וְאַתָּה בְּרַחֲמֶֽיךָ הָרַבִּים הֵפַֽרְתָּ אֶת־עֲצָתוֹ וְקִלְקַֽלְתָּ אֶת־מַחֲשַׁבְתּוֹ. וַהֲשֵׁבֽוֹתָ לּוֹ גְּמוּלוֹ בְרֹאשׁוֹ. וְתָלוּ אוֹתוֹ וְאֶת־בָּנָיו עַל הָעֵץ. וְעָשִֽׂיתָ עִמָּהֶם נֵס וָפֶֽלֶא וְנוֹדֶה לְשִׁמְךָ הַגָּדוֹל סֶֽלָה:</small></small>")));
     }
   }
   parts.push(p("<b>וְעַל</b> כֻּלָּם יִתְבָּרַךְ, וְיִתְרוֹמָם, וְיִתְנַשֵּׂא, תָּמִיד, שִׁמְךָ מַלְכֵּֽנוּ, לְעוֹלָם וָעֶד. וְכָל־הַחַיִּים יוֹדֽוּךָ סֶּֽלָה: וִֽיהַֽלְלוּ וִֽיבָֽרְכוּ אֶת־שִׁמְךָ הַגָּדוֹל בֶּֽאֱמֶת לְעוֹלָם כִּי טוֹב, הָאֵל יְשֽׁוּעָתֵֽנוּ וְעֶזְרָתֵֽנוּ סֶֽלָה, הָאֵל הַטּוֹב:  בָּרוּךְ אַתָּה יֻהֻוֻהֻ, הַטּוֹב שִׁמְךָ וּלְךָ נָאֶה לְהוֹדוֹת:"));
   if (context.isAseretYemeiTeshuva) {
-    parts.push(sup(p("<small><b>וּכְתֹב לְחַיִּים טוֹבִים</b> כָּל בְּנֵי בְרִיתֶֽךָ:</small>")));
+    pushAdd(parts, sup(p("<small><b>וּכְתֹב לְחַיִּים טוֹבִים</b> כָּל בְּנֵי בְרִיתֶֽךָ:</small>")));
   }
   parts.push(p("<b>שִׂים</b> שָׁלוֹם טוֹבָה וּבְרָכָה, חַיִּים חֵן וָחֶֽסֶד וְרַֽחֲמִים, עָלֵֽינוּ וְעַל כָּל־יִשְׂרָאֵל עַמֶּֽךָ. וּבָֽרְכֵֽנוּ אָבִֽינוּ כֻּלָּֽנוּ כְּאֶחָד בְּאוֹר פָּנֶֽיךָ, כִּי בְאוֹר פָּנֶֽיךָ נָתַֽתָּ לָּֽנוּ יְהֹוָה אֱלֹהֵֽינוּ תּוֹרָה וְחַיִּים, אַֽהֲבָה וָחֶֽסֶד, צְדָקָה וְרַֽחֲמִים, בְּרָכָה וְשָׁלוֹם. וְטוֹב בְּעֵינֶֽיךָ לְבָֽרְכֵֽנוּ וּלְבָרֵךְ אֶת־כָּל־עַמְּךָ יִשְׂרָאֵל, בְּרֹב עֹז וְשָׁלוֹם: בָּרוּךְ אַתָּה יוּהוּווּהוּ, הַמְּבָרֵךְ אֶת עַמּוֹ יִשְׂרָאֵל בַּשָּׁלוֹם. אָמֵן: "));
   if (context.isAseretYemeiTeshuva) {
-    parts.push(sup(p("<small><b>בְּסֵֽפֶר חַיִּים</b> בְּרָכָה וְשָׁלוֹם וּפַרְנָסָה טוֹבָה, יְשׁוּעוֹת וְנֶחָמוֹת, נִזָּכֵר וְנִכָּתֵב לְפָנֶֽיךָ, אֲנַֽחְנוּ וְכָל עַמְּךָ בֵּית יִשְׂרָאֵל, לְחַיִּים טוֹבִים וּלְשָׁלוֹם.</small>")));
+    pushAdd(parts, sup(p("<small><b>בְּסֵֽפֶר חַיִּים</b> בְּרָכָה וְשָׁלוֹם וּפַרְנָסָה טוֹבָה, יְשׁוּעוֹת וְנֶחָמוֹת, נִזָּכֵר וְנִכָּתֵב לְפָנֶֽיךָ, אֲנַֽחְנוּ וְכָל עַמְּךָ בֵּית יִשְׂרָאֵל, לְחַיִּים טוֹבִים וּלְשָׁלוֹם.</small>")));
   }
   parts.push(p("<b>יִֽהְי֥וּ</b> לְרָצ֨וֹן ׀ אִמְרֵי־פִ֡י וְהֶגְי֣וֹן לִבִּ֣י לְפָנֶ֑יךָ יְ֝הֹוָ֗ה צוּרִ֥י וְגֹאֲלִֽי׃  "));
   parts.push(p("<b>אֱלֹהַי</b>, נְצֹר לְשׁוֹנִי מֵרָע וְשִׂפְתוֹתַי מִדַּבֵּר מִרְמָה, וְלִמְקַלְלַי נַפְשִׁי תִדֹּם, וְנַפְשִׁי כֶּֽעָפָר לַכֹּל תִּֽהְיֶה, פְּתַח לִבִּי בְּתוֹרָתֶֽךָ, וְאַחֲרֵי מִצְוֹתֶֽיךָ תִּרְדֹּף נַפְשִׁי. וְכָל־הַקָּמִים עָלַי לְרָעָה, מְהֵרָה הָפֵר עֲצָתָם וְקַלְקֵל מַחְשְׁבוֹתָם. <small>יִֽהְי֗וּ כְּמֹ֥ץ לִפְנֵי־ר֑וּחַ וּמַלְאַ֖ךְ יְהֹוָ֣ה דּוֹחֶֽה. קַבֵּל רִנַּת עַמֶּךָ. שַׂגְּבֵנוּ טַהֲרֵנוּ נוֹרָא.</small> עֲשֵׂה לְמַֽעַן שְׁמָךְ, עֲשֵׂה לְמַֽעַן יְמִינָךְ, עֲשֵׂה לְמַֽעַן תּֽוֹרָתָךְ, עֲשֵׂה לְמַֽעַן קְדֻשָּׁתָךְ."));
@@ -22624,31 +22505,31 @@ function buildMaarivSfaradPayload(context) {
   parts.push(p("אֲדֹנָי שְׂפָתַי תִּפְתָּח וּפִי יַגִּיד תְּהִלָּתֶֽךָ:"));
   parts.push(p("<b>בָּרוּךְ</b> אַתָּה יְהֹוָה אֱלֹהֵֽינוּ וֵאלֹהֵי אֲבוֹתֵֽינוּ אֱלֹהֵי אַבְרָהָם אֱלֹהֵי יִצְחָק וֵאלֹהֵי יַעֲקֹב הָאֵל הַגָּדוֹל הַגִּבּוֹר וְהַנּוֹרָא אֵל עֶלְיוֹן גּוֹמֵל חֲסָדִים טוֹבִים וְקוֹנֵה הַכֹּל וְזוֹכֵר חַסְדֵי אָבוֹת וּמֵבִיא גוֹאֵל לִבְנֵי בְנֵיהֶם לְמַֽעַן שְׁמוֹ בְּאַהֲבָה:"));
   if (context.isAseretYemeiTeshuva) {
-    parts.push(sup(p("<small><small>בעשי\"ת:</small> <small>זָכְרֵֽנוּ לְחַיִּים מֶֽלֶךְ חָפֵץ בַּחַיִּים וְכָתְבֵֽנוּ בְּסֵֽפֶר הַחַיִּים לְמַעַנְךָ אֱלֹהִים חַיִּים:</small></small>")));
+    pushAdd(parts, sup(p("<small><small>בעשי\"ת:</small> <small>זָכְרֵֽנוּ לְחַיִּים מֶֽלֶךְ חָפֵץ בַּחַיִּים וְכָתְבֵֽנוּ בְּסֵֽפֶר הַחַיִּים לְמַעַנְךָ אֱלֹהִים חַיִּים:</small></small>")));
   }
-  if (context.isAseretYemeiTeshuva) parts.push(sup(p("<small><small>אם לא אמר זכרנו ונזכר לאחר שכבר אמר בא\"י אינו חוזר אבל אם נזכר קודם שאמר השם אף שאמר ברוך אתה אומר זכרנו כו' מלך עוזר כסדר. הטועה ומזכיר זכרנו בשאר ימות השנה אם נזכר קודם שאמר וכתבנו פוסק ומתחיל מלך עוזר וגו' אבל אם אמר וכתבנו חוזר לראש התפלה. (דה\"ח)</small></small>")));
+  if (context.isAseretYemeiTeshuva) pushAdd(parts, sup(p("<small><small>אם לא אמר זכרנו ונזכר לאחר שכבר אמר בא\"י אינו חוזר אבל אם נזכר קודם שאמר השם אף שאמר ברוך אתה אומר זכרנו כו' מלך עוזר כסדר. הטועה ומזכיר זכרנו בשאר ימות השנה אם נזכר קודם שאמר וכתבנו פוסק ומתחיל מלך עוזר וגו' אבל אם אמר וכתבנו חוזר לראש התפלה. (דה\"ח)</small></small>")));
   parts.push(p("מֶֽלֶךְ עוֹזֵר וּמוֹשִֽׁיעַ וּמָגֵן: בָּרוּךְ אַתָּה יְהֹוָה מָגֵן אַבְרָהָם:"));
   parts.push(p("<b>אַתָּה גִבּוֹר</b> לְעוֹלָם אֲדֹנָי מְחַיֶּה מֵתִים אַתָּה רַב לְהוֹשִֽׁיעַ:"));
   if (isSummer) {
-    parts.push(p("מוֹרִיד הַטָּל"));
+    pushAdd(parts, p("מוֹרִיד הַטָּל"));
   } else {
-    parts.push(p("מַשִּׁיב הָרֽוּחַ וּמוֹרִיד הַגֶּֽשֶׁם:"));
+    pushAdd(parts, p("מַשִּׁיב הָרֽוּחַ וּמוֹרִיד הַגֶּֽשֶׁם:"));
   }
-  if (!isSummer) parts.push(sup(p("<small><small>טעה ולא אמר בחורף משיב הרוח ומוריד הגשם אם נזכר קודם שאמר הברכה מחיה המתים אומרו במקום שנזכר. אבל אם לא נזכר עד לאחר שסיים הברכה מחיה המתים צריך לחזור לראש התפלה. ואם נסתפק לו אם אמר משיב הרוח או לא אמר. אם הוא לאחר שלושים יום חזקתו שגם עתה התפלל כראוי. אבל בתוך שלושים יום צריך לחזור ולהתפלל (קיצור שו\"ע יט)</small></small>")));
+  if (!isSummer) pushAdd(parts, sup(p("<small><small>טעה ולא אמר בחורף משיב הרוח ומוריד הגשם אם נזכר קודם שאמר הברכה מחיה המתים אומרו במקום שנזכר. אבל אם לא נזכר עד לאחר שסיים הברכה מחיה המתים צריך לחזור לראש התפלה. ואם נסתפק לו אם אמר משיב הרוח או לא אמר. אם הוא לאחר שלושים יום חזקתו שגם עתה התפלל כראוי. אבל בתוך שלושים יום צריך לחזור ולהתפלל (קיצור שו\"ע יט)</small></small>")));
   parts.push(p("מְכַלְכֵּל חַיִּים בְּחֶֽסֶד מְחַיֵּה מֵתִים בְּרַחֲמִים רַבִּים סוֹמֵךְ נוֹפְ֒לִים וְרוֹפֵא חוֹלִים וּמַתִּיר אֲסוּרִים וּמְקַיֵּם אֱמוּנָתוֹ לִישֵׁנֵי עָפָר, מִי כָמֽוֹךָ בַּֽעַל גְּבוּרוֹת וּמִי דּֽוֹמֶה לָּךְ מֶֽלֶךְ מֵמִית וּמְחַיֶּה וּמַצְמִֽיחַ יְשׁוּעָה:"));
   if (context.isAseretYemeiTeshuva) {
-    parts.push(sup(p("<small><small>בעשי\"ת:</small> <small>מִי כָמֽוֹךָ אָב הָרַחַמָן זוֹכֵר יְצוּרָיו לְחַיִּים בְּרַחֲמִים:</small></small>")));
+    pushAdd(parts, sup(p("<small><small>בעשי\"ת:</small> <small>מִי כָמֽוֹךָ אָב הָרַחַמָן זוֹכֵר יְצוּרָיו לְחַיִּים בְּרַחֲמִים:</small></small>")));
   }
   parts.push(p("וְנֶאֱמָן אַתָּה לְהַחֲיוֹת מֵתִים: בָּרוּךְ אַתָּה יְהֹוָה מְחַיֵּה הַמֵּתִים:"));
   parts.push(p("<b>אַתָּה קָדוֹשׁ</b> וְשִׁמְךָ קָדוֹשׁ וּקְדוֹשִׁים בְּכָל יוֹם יְהַלְ֒לֽוּךָ סֶּֽלָה: כִּי אֵל מֶֽלֶךְ גָּדוֹל וְקָדוֹשׁ אָֽתָּה:"));
   if (context.isAseretYemeiTeshuva) {
-    parts.push(sup(p("<small><small>בעשי\"ת:</small> <small>בָּרוּךְ אַתָּה יְהֹוָה הַמֶּֽלֶךְ הַקָּדוֹשׁ:</small></small>")));
+    pushAdd(parts, sup(p("<small><small>בעשי\"ת:</small> <small>בָּרוּךְ אַתָּה יְהֹוָה הַמֶּֽלֶךְ הַקָּדוֹשׁ:</small></small>")));
   } else {
     parts.push(p("בָּרוּךְ אַתָּה יְהֹוָה הָאֵל הַקָּדוֹשׁ:"));
   }
   parts.push(p("<b>אַתָּה חוֹנֵן</b> לְאָדָם דַּֽעַת וּמְלַמֵּד לֶאֱנוֹשׁ בִּינָה:"));
   if (mz.chonantanu) {
-    parts.push(sup(p("<small><small>" + mz.label + "</small></small>") + p("<small><small>אַתָּה חוֹנַנְתָּֽנוּ לְמַדַּע תּוֹרָתֶֽךָ. וַתְּ֒לַמְּ֒דֵֽנוּ לַעֲשׂוֹת חֻקֵּי רְצוֹנֶֽךָ. וַתַּבְדֵּל יְהֹוָה אֱלֹהֵֽינוּ בֵּין קֹֽדֶשׁ לְחֹל בֵּין אוֹר לְחֽשֶׁךְ בֵּין יִשְׂרָאֵל לָעַמִּים בֵּין יוֹם הַשְּׁ֒בִיעִי לְשֵֽׁשֶׁת יְמֵי הַמַּעֲשֶׂה. אָבִֽינוּ מַלְכֵּֽנוּ הָחֵל עָלֵֽינוּ הַיָּמִים הַבָּאִים לִקְרָאתֵֽנוּ לְשָׁלוֹם חֲשׂוּכִים מִכָּל חֵטְא וּמְנֻקִּים מִכָּל עָוֹן וּמְדֻבָּקִים בְּיִרְאָתֶֽךָ: וְ...</small></small>")));
+    pushAdd(parts, sup(p("<small><small>" + mz.label + "</small></small>") + p("<small><small>אַתָּה חוֹנַנְתָּֽנוּ לְמַדַּע תּוֹרָתֶֽךָ. וַתְּ֒לַמְּ֒דֵֽנוּ לַעֲשׂוֹת חֻקֵּי רְצוֹנֶֽךָ. וַתַּבְדֵּל יְהֹוָה אֱלֹהֵֽינוּ בֵּין קֹֽדֶשׁ לְחֹל בֵּין אוֹר לְחֽשֶׁךְ בֵּין יִשְׂרָאֵל לָעַמִּים בֵּין יוֹם הַשְּׁ֒בִיעִי לְשֵֽׁשֶׁת יְמֵי הַמַּעֲשֶׂה. אָבִֽינוּ מַלְכֵּֽנוּ הָחֵל עָלֵֽינוּ הַיָּמִים הַבָּאִים לִקְרָאתֵֽנוּ לְשָׁלוֹם חֲשׂוּכִים מִכָּל חֵטְא וּמְנֻקִּים מִכָּל עָוֹן וּמְדֻבָּקִים בְּיִרְאָתֶֽךָ: וְ...</small></small>")));
   }
   parts.push(p("חָנֵּֽנוּ מֵאִתְּ֒ךָ חָכְמָה בִּינָה וָדָּעַת בָּרוּךְ אַתָּה יְהֹוָה חוֹנֵן הַדָּֽעַת:"));
   parts.push(p("<b>הֲשִׁיבֵֽנוּ</b> אָבִֽינוּ לְתוֹרָתֶֽךָ וְקָרְ֒בֵֽנוּ מַלְכֵּֽנוּ לַעֲבוֹדָתֶֽךָ וְהַחֲזִירֵֽנוּ בִּתְשׁוּבָה שְׁלֵמָה לְפָנֶֽיךָ: בָּרוּךְ אַתָּה יְהֹוָה הָרוֹצֶה בִּתְשׁוּבָה:"));
@@ -22657,17 +22538,17 @@ function buildMaarivSfaradPayload(context) {
   parts.push(p("<b>רְפָאֵֽנוּ</b> יְהֹוָה וְנֵרָפֵא הוֹשִׁיעֵֽנוּ וְנִוָּשֵֽׁעָה כִּי תְהִלָּתֵֽנוּ אָֽתָּה וְהַעֲלֵה אֲרוּכָה וּמַרְפֵּא לְכָל תַּחֲלוּאֵֽינוּ וּלְכָל מַכְאוֹבֵֽינוּ וּלְכָל מַכּוֹתֵֽינוּ כִּי אֵל מֶֽלֶךְ רוֹפֵא נֶאֱמָן וְרַחֲמָן אָֽתָּה: בָּרוּךְ אַתָּה יְהֹוָה רוֹפֵא חוֹלֵי עַמּוֹ יִשְׂרָאֵל:"));
   parts.push(p("<b>בָּרֵךְ</b> עָלֵֽינוּ יְהֹוָה אֱלֹהֵֽינוּ אֶת־הַשָּׁנָה הַזֹּאת וְאֶת־כָּל־מִינֵי תְבוּאָתָהּ לְטוֹבָה, וְתֵן"));
   if (!isRainRequest) {
-    parts.push(p("בְּרָכָה"));
+    pushAdd(parts, p("בְּרָכָה"));
   } else {
-    parts.push(p("טַל וּמָטָר לִבְרָכָה"));
+    pushAdd(parts, p("טַל וּמָטָר לִבְרָכָה"));
   }
   parts.push(p("עַל־פְּנֵי הָאֲדָמָה וְשַׂבְּ֒עֵֽנוּ מִטּוּבֶֽךָ וּבָרֵךְ שְׁנוֹתֵנוּ כַּשָּׁנִים הַטּוֹבוֹת לִבְרָכָה כִּי אֵל טוֹב וּמֵטִיב אַתָּה וּמְבָרֵךְ הַשָּׁנִים: בָּרוּךְ אַתָּה יְהֹוָה מְבָרֵךְ הַשָּׁנִים:"));
-  if (isRainRequest) parts.push(sup(p("<small><small>אם שכח לומר טַל וּמָטָר ונזכר קודם שהתחיל תְּקַע אומרו במקום שנזכר. התחיל לומר תְּקַע יאמרנה בשׁוֹמֵֽעַ תְּפִלָּה. ואם לא נזכר בש\"ת יאמרנה בין ש\"ת לרְצֵה. שכח גם שם אם נזכר קודם שעקר רגליו חוזר לברכת השנים ויתחיל בָּרֵךְ עָלֵֽינוּ ויתפלל כסדר. ואם עקר רגליו חוזר לראש התפלה.</small></small>")));
+  if (isRainRequest) pushAdd(parts, sup(p("<small><small>אם שכח לומר טַל וּמָטָר ונזכר קודם שהתחיל תְּקַע אומרו במקום שנזכר. התחיל לומר תְּקַע יאמרנה בשׁוֹמֵֽעַ תְּפִלָּה. ואם לא נזכר בש\"ת יאמרנה בין ש\"ת לרְצֵה. שכח גם שם אם נזכר קודם שעקר רגליו חוזר לברכת השנים ויתחיל בָּרֵךְ עָלֵֽינוּ ויתפלל כסדר. ואם עקר רגליו חוזר לראש התפלה.</small></small>")));
   parts.push(p("<b>תְּקַע</b> בְּשׁוֹפָר גָּדוֹל לְחֵרוּתֵֽנוּ וְשָׂא נֵס לְקַבֵּץ גָּלֻיּוֹתֵֽינוּ וְקַבְּ֒צֵֽנוּ יַֽחַד מְהֵרָה מֵאַרְבַּע כַּנְפוֹת הָאָֽרֶץ לְאַרְצֵֽנוּ: בָּרוּךְ אַתָּה יְהֹוָה מְקַבֵּץ נִדְחֵי עַמּוֹ יִשְׂרָאֵל:"));
   parts.push(p("<b>הָשִֽׁיבָה</b> שׁוֹפְ֒טֵֽינוּ כְּבָרִאשׁוֹנָה וְיוֹעֲצֵֽינוּ כְּבַתְּ֒חִלָּה וְהָסֵר מִמֶּֽנּוּ יָגוֹן וַאֲנָחָה וּמְלוֹךְ עָלֵֽינוּ מְהֵרָה אַתָּה יְהֹוָה לְבַדְּ֒ךָ בְּחֶֽסֶד וּבְרַחֲמִים וְצַדְּ֒קֵֽנוּ בְּצֶֽדֶק וּבְמִשְׁפָּט:"));
   // עשי"ת: "המלך המשפט" במקום "מלך אוהב צדקה ומשפט" (לא שתי החתימות יחד)
   if (context.isAseretYemeiTeshuva) {
-    parts.push(p("<small>בעשי\"ת מסיים:</small> בָּרוּךְ אַתָּה יְהֹוָה הַמֶּֽלֶךְ הַמִּשְׁפָּט:"));
+    pushAdd(parts, p("<small>בעשי\"ת מסיים:</small> בָּרוּךְ אַתָּה יְהֹוָה הַמֶּֽלֶךְ הַמִּשְׁפָּט:"));
   } else {
     parts.push(p("בָּרוּךְ אַתָּה יְהֹוָה מֶֽלֶךְ אֹהֵב צְדָקָה וּמִשְׁפָּט:"));
   }
@@ -22681,7 +22562,7 @@ function buildMaarivSfaradPayload(context) {
   // ורק נוסח "בְּיוֹם ..." של היום (ראו _yaalehKind)
   if (context.isRoshChodesh || context.isCholHamoed) {
     var yvDay = { rc: "רֹאשׁ הַחֹֽדֶשׁ", pesach: "חַג הַמַּצּוֹת", sukkot: "חַג הַסֻּכּוֹת" }[_yaalehKind(context)] || "רֹאשׁ הַחֹֽדֶשׁ";
-    parts.push(
+    pushAdd(parts, 
       p(
         "<b>אֱלֹהֵֽינוּ</b> וֵאלֹהֵי אֲבוֹתֵֽינוּ יַעֲלֶה וְיָבֹא וְיַגִּֽיעַ וְיֵרָאֶה וְיֵרָצֶה וְיִשָּׁמַע וְיִפָּקֵד וְיִזָּכֵר זִכְרוֹנֵֽנוּ וּפִקְדוֹנֵֽנוּ וְזִכְרוֹן אֲבוֹתֵֽינוּ וְזִכְרוֹן מָשִֽׁיחַ בֶּן דָּוִד עַבְדֶּֽךָ וְזִכְרוֹן יְרוּשָׁלַֽיִם עִיר קָדְשֶֽׁךָ וְזִכְרוֹן כָּל עַמְּ֒ךָ בֵּית יִשְׂרָאֵל לְפָנֶֽיךָ, לִפְלֵיטָה לְטוֹבָה לְחֵן וּלְחֶֽסֶד וּלְרַחֲמִים וּלְחַיִּים טוֹבִים וּלְשָׁלוֹם בְּיוֹם " +
           yvDay +
@@ -22693,16 +22574,16 @@ function buildMaarivSfaradPayload(context) {
   parts.push(sup(p("<small><small>כשאומר מודים כורע ראשו וגופו כאגמון עד שיתפקקו כל חוליות שבשדרה. וכשהוא כורע יכרע במהירות בפעם אחת וכשהוא זוקף זוקף בנחת ראשו תחלה ואחר כך גופו שלא תהא עליו כמשאוי (שו\"ע או\"ח סי' קיג)</small></small>")));
   parts.push(p("<b>מוֹדִים</b> אֲנַֽחְנוּ לָךְ שָׁאַתָּה הוּא יְהֹוָה אֱלֹהֵֽינוּ וֵאלֹהֵי אֲבוֹתֵֽינוּ לְעוֹלָם וָעֶד צוּר חַיֵּֽינוּ מָגֵן יִשְׁעֵֽנוּ אַתָּה הוּא לְדוֹר וָדוֹר נוֹדֶה לְּךָ וּנְסַפֵּר תְּהִלָּתֶֽךָ עַל חַיֵּֽינוּ הַמְּ֒סוּרִים בְּיָדֶֽךָ וְעַל־נִשְׁמוֹתֵֽינוּ הַפְּ֒קוּדוֹת לָךְ וְעַל־נִסֶּֽיךָ שֶׁבְּ֒כָל־יוֹם עִמָּֽנוּ וְעַל־נִפְלְ֒אוֹתֶֽיךָ וְטוֹבוֹתֶֽיךָ שֶׁבְּ֒כָל־עֵת, עֶֽרֶב וָבֹֽקֶר וְצָהֳרָֽיִם, הַטּוֹב כִּי לֹא־כָלוּ רַחֲמֶֽיךָ וְהַמְרַחֵם כִּי לֹא־תַֽמּוּ חֲסָדֶֽיךָ, כִּי מֵעוֹלָם קִוִּינוּ לָךְ:"));
   if (context.isChanukah || context.isPurim) {
-    parts.push(sup(p("<small><small>בחנוכה ופורים אומרים על הנסים. שכח לומר על הנסים ונזכר קודם שאמר השם מברכת הטוב שמך אפילו אמר ברוך אתה חוזר ואומר על הנסים. אבל אם כבר סיים הברכה או שאמר ברוך א\"י אינו חוזר (דה\"ח תרפ\"ב ותרצ\"ג).</small></small>")));
-    parts.push(sup(p("<b>וְעַל הַנִּסִּים</b> וְעַל הַפֻּרְקָן וְעַל הַגְּ֒בוּרוֹת וְעַל הַתְּ֒שׁוּעוֹת וְעַל הַנִּפְלָאוֹת וְעַל הַנֶּחָמוֹת וְעַל הַמִּלְחָמוֹת שֶׁעָשִֽׂיתָ לַאֲבוֹתֵֽינוּ בַּיָּמִים הָהֵם בִּזְּ֒מַן הַזֶּה:")));
+    pushAdd(parts, sup(p("<small><small>בחנוכה ופורים אומרים על הנסים. שכח לומר על הנסים ונזכר קודם שאמר השם מברכת הטוב שמך אפילו אמר ברוך אתה חוזר ואומר על הנסים. אבל אם כבר סיים הברכה או שאמר ברוך א\"י אינו חוזר (דה\"ח תרפ\"ב ותרצ\"ג).</small></small>")));
+    pushAdd(parts, sup(p("<b>וְעַל הַנִּסִּים</b> וְעַל הַפֻּרְקָן וְעַל הַגְּ֒בוּרוֹת וְעַל הַתְּ֒שׁוּעוֹת וְעַל הַנִּפְלָאוֹת וְעַל הַנֶּחָמוֹת וְעַל הַמִּלְחָמוֹת שֶׁעָשִֽׂיתָ לַאֲבוֹתֵֽינוּ בַּיָּמִים הָהֵם בִּזְּ֒מַן הַזֶּה:")));
     if (context.isChanukah) {
-      parts.push(sup(
+      pushAdd(parts, sup(
         p("<small><small>בחנוכה:</small></small>") +
         p("<b>בִּימֵי מַתִּתְיָֽהוּ</b> בֶּן יוֹחָנָן כֹּהֵן גָּדוֹל חַשְׁמוֹנָאִי וּבָנָיו כְּשֶׁעָמְ֒דָה מַלְכוּת יָוָן הָרְ֒שָׁעָה עַל־עַמְּ֒ךָ יִשְׂרָאֵל לְהַשְׁכִּיחָם תּוֹרָתֶֽךָ וּלְהַעֲבִירָם מֵחֻקֵּי רְצוֹנֶֽךָ, וְאַתָּה בְּרַחֲמֶֽיךָ הָרַבִּים עָמַֽדְתָּ לָהֶם בְּעֵת צָרָתָם רַֽבְתָּ אֶת־רִיבָם דַּֽנְתָּ אֶת־דִּינָם נָקַֽמְתָּ אֶת־נִקְמָתָם מָסַֽרְתָּ גִבּוֹרִים בְּיַד חַלָּשִׁים וְרַבִּים בְּיַד מְעַטִּים וּטְמֵאִים בְּיַד טְהוֹרִים וּרְשָׁעִים בְּיַד צַדִּיקִים וְזֵדִים בְּיַד עוֹסְ֒קֵי תוֹרָתֶֽךָ וּלְךָ עָשִֽׂיתָ שֵׁם גָּדוֹל וְקָדוֹשׁ בְּעוֹלָמֶֽךָ וּלְעַמְּ֒ךָ יִשְׂרָאֵל עָשִֽׂיתָ תְּשׁוּעָה גְדוֹלָה וּפֻרְקָן כְּהַיּוֹם הַזֶּה וְאַחַר־כַּךְ בָּֽאוּ בָנֶֽיךָ לִדְבִיר בֵּיתֶֽךָ וּפִנּוּ אֶת־הֵיכָלֶֽךָ וְטִהֲרוּ אֶת־מִקְדָּשֶֽׁךָ וְהִדְלִֽיקוּ נֵרוֹת בְּחַצְרוֹת קָדְשֶֽׁךָ וְקָבְ֒עוּ שְׁמוֹנַת יְמֵי חֲנֻכָּה אֵֽלּוּ לְהוֹדוֹת וּלְהַלֵּל לְשִׁמְךָ הַגָּדוֹל:")
       ));
     }
     if (context.isPurim) {
-      parts.push(sup(
+      pushAdd(parts, sup(
         p("<small><small>בפורים:</small></small>") +
         p("<b>בִּימֵי מָרְדְּ֒כַי וְאֶסְתֵּר</b> בְּשׁוּשַׁן הַבִּירָה כְּשֶׁעָמַד עֲלֵיהֶם הָמָן הָרָשָׁע בִּקֵּשׁ לְהַשְׁמִיד לַהֲרוֹג וּלְאַבֵּד אֶת־כָּל־הַיְּ֒הוּדִים מִנַּֽעַר וְעַד־זָקֵן טַף וְנָשִׁים בְּיוֹם אֶחָד בִּשְׁלוֹשָׁה עָשָׂר לְחֹֽדֶשׁ שְׁנֵים־עָשָׂר הוּא־חֹֽדֶשׁ אֲדָר וּשְׁלָלָם לָבוֹז: וְאַתָּה בְּרַחֲמֶֽיךָ הָרַבִּים הֵפַֽרְתָּ אֶת־עֲצָתוֹ וְקִלְקַֽלְתָּ אֶת־מַחֲשַׁבְתּוֹ וַהֲשֵׁבֽוֹתָ לּוֹ גְּמוּלוֹ בְּרֹאשׁוֹ וְתָלוּ אוֹתוֹ וְאֶת־בָּנָיו עַל־הָעֵץ:")
       ));
@@ -22710,12 +22591,12 @@ function buildMaarivSfaradPayload(context) {
   }
   parts.push(p("<b>וְעַל־כֻּלָּם</b> יִתְבָּרַךְ וְיִתְרוֹמַם וְיִתְנַשֵׂא שִׁמְךָ מַלְכֵּֽנוּ תָּמִיד לְעוֹלָם וָעֶד:"));
   if (context.isAseretYemeiTeshuva) {
-    parts.push(sup(p("<small><small>בעשי\"ת:</small> <small>וּכְתוֹב לְחַיִּים טוֹבִים כָּל בְּנֵי בְרִיתֶֽךָ:</small></small>")));
+    pushAdd(parts, sup(p("<small><small>בעשי\"ת:</small> <small>וּכְתוֹב לְחַיִּים טוֹבִים כָּל בְּנֵי בְרִיתֶֽךָ:</small></small>")));
   }
   parts.push(p("<b>וְכֹל הַחַיִּים</b> יוֹדֽוּךָ סֶּֽלָה וִיהַלְ֒לוּ וְיבָרְ֒כוּ אֶת־שִׁמְךָ הַגָּדוֹל בְּאֱמֶת לְעוֹלָם כִּי טוֹב הָאֵל יְשׁוּעָתֵֽנוּ וְעֶזְרָתֵֽנוּ סֶֽלָה הָאֵל הַטּוֹב: בָּרוּךְ אַתָּה יְהֹוָה הַטּוֹב שִׁמְךָ וּלְךָ נָאֶה לְהוֹדוֹת:"));
   parts.push(p("<b>שִׂים שָׁלוֹם</b> טוֹבָה וּבְרָכָה חַיִים חֵן וָחֶֽסֶד וְרַחֲמִים עָלֵֽינוּ וְעַל כָּל־יִשְׂרָאֵל עַמֶּֽךָ, בָּרְ֒כֵֽנוּ אָבִֽינוּ כֻּלָּֽנוּ כְּאֶחָד בְּאוֹר פָּנֶֽיךָ כִּי בְאוֹר פָּנֶֽיךָ נָתַֽתָּ לָּֽנוּ יְהֹוָה אֱלֹהֵֽינוּ תּוֹרַת חַיִּים וְאַהֲבַת חֶֽסֶד וּצְדָקָה וּבְרָכָה וְרַחֲמִים וְחַיִּים וְשָׁלוֹם, וְטוֹב יִהְיֶה בְּעֵינֶֽיךָ לְבָרְ֒כֵֽנוּ וּלְבָרֵךְ אֶת־כָּל־עַמְּ֒ךָ יִשְׂרָאֵל בְּכָל־עֵת וּבְכָל־שָׁעָה בִּשְׁלוֹמֶֽךָ (בְּרוֹב עוֹז וְשָׁלוֹם)."));
   if (context.isAseretYemeiTeshuva) {
-    parts.push(sup(p("<small><small>בעשי\"ת:</small> <small>בְּסֵֽפֶר חַיִּים בְּרָכָה וְשָׁלוֹם וּפַרְנָסָה טוֹבָה וּגְזֵרוֹת טוֹבוֹת, יְשׁוּעוֹת וְנֶחָמוֹת, נִזָּכֵר וְנִכָּתֵב לְפָנֶֽיךָ אֲנַֽחְנוּ וְכָל עַמְּ֒ךָ בֵּית־יִשְׂרָאֵל לְחַיִּים טוֹבִים וּלְשָׁלוֹם:</small></small>")));
+    pushAdd(parts, sup(p("<small><small>בעשי\"ת:</small> <small>בְּסֵֽפֶר חַיִּים בְּרָכָה וְשָׁלוֹם וּפַרְנָסָה טוֹבָה וּגְזֵרוֹת טוֹבוֹת, יְשׁוּעוֹת וְנֶחָמוֹת, נִזָּכֵר וְנִכָּתֵב לְפָנֶֽיךָ אֲנַֽחְנוּ וְכָל עַמְּ֒ךָ בֵּית־יִשְׂרָאֵל לְחַיִּים טוֹבִים וּלְשָׁלוֹם:</small></small>")));
   }
   parts.push(p("בָּרוּךְ אַתָּה יְהֹוָה הַמְבָרֵךְ אֶת־עַמּוֹ יִשְׂרָאֵל בַּשָּׁלוֹם:"));
   parts.push(p("יִהְיוּ לְרָצוֹן אִמְ֒רֵי פִי וְהֶגְיוֹן לִבִּי לְפָנֶֽיךָ יְהֹוָה צוּרִי וְגוֹאֲלִי:"));
@@ -22891,30 +22772,30 @@ function buildMaarivAshkenazPayload(context) {
   parts.push(p("אֲדֹנָי שְׂפָתַי תִּפְתָּח וּפִי יַגִּיד תְּהִלָּתֶֽךָ:"));
   parts.push(p("<b>בָּרוּךְ</b> אַתָּה יְהֹוָה אֱלֹהֵֽינוּ וֵאלֹהֵי אֲבוֹתֵֽינוּ אֱלֹהֵי אַבְרָהָם אֱלֹהֵי יִצְחָק וֵאלֹהֵי יַעֲקֹב הָאֵל הַגָּדוֹל הַגִּבּוֹר וְהַנּוֹרָא אֵל עֶלְיוֹן גּוֹמֵל חֲסָדִים טוֹבִים וְקוֹנֵה הַכֹּל וְזוֹכֵר חַסְדֵי אָבוֹת וּמֵבִיא גוֹאֵל לִבְנֵי בְנֵיהֶם לְמַֽעַן שְׁמוֹ בְּאַהֲבָה:"));
   if (context.isAseretYemeiTeshuva) {
-    parts.push(sup(p("<small><small>בעשי\"ת:</small> זָכְרֵֽנוּ לְחַיִּים מֶֽלֶךְ חָפֵץ בַּחַיִּים וְכָתְבֵֽנוּ בְּסֵֽפֶר הַחַיִּים לְמַעַנְךָ אֱלֹהִים חַיִּים:</small>")));
+    pushAdd(parts, sup(p("<small><small>בעשי\"ת:</small> זָכְרֵֽנוּ לְחַיִּים מֶֽלֶךְ חָפֵץ בַּחַיִּים וְכָתְבֵֽנוּ בְּסֵֽפֶר הַחַיִּים לְמַעַנְךָ אֱלֹהִים חַיִּים:</small>")));
   }
   parts.push(p("מֶֽלֶךְ עוֹזֵר וּמוֹשִֽׁיעַ וּמָגֵן: בָּרוּךְ אַתָּה יְהֹוָה מָגֵן אַבְרָהָם:"));
   parts.push(p("<b>אַתָּה גִבּוֹר</b> לְעוֹלָם אֲדֹנָי מְחַיֶּה מֵתִים אַתָּה רַב לְהוֹשִֽׁיעַ:"));
   if (isSummer) {
-    parts.push(p("מוֹרִיד הַטָּל"));
+    pushAdd(parts, p("מוֹרִיד הַטָּל"));
   } else {
-    parts.push(p("מַשִּׁיב הָרֽוּחַ וּמוֹרִיד הַגֶּֽשֶׁם:"));
+    pushAdd(parts, p("מַשִּׁיב הָרֽוּחַ וּמוֹרִיד הַגֶּֽשֶׁם:"));
   }
-  if (!isSummer) parts.push(sup(p("<small><small>טעה ולא אמר בחורף משיב הרוח ומוריד הגשם אם נזכר קודם שאמר הברכה מחיה המתים אומרו במקום שנזכר. אבל אם לא נזכר עד לאחר שסיים הברכה מחיה המתים צריך לחזור לראש התפלה. ואם נסתפק לו אם אמר משיב הרוח או לא אמר. אם הוא לאחר שלושים יום חזקתו שגם עתה התפלל כראוי. אבל בתוך שלושים יום צריך לחזור ולהתפלל (קיצור שו\"ע יט)</small></small>")));
+  if (!isSummer) pushAdd(parts, sup(p("<small><small>טעה ולא אמר בחורף משיב הרוח ומוריד הגשם אם נזכר קודם שאמר הברכה מחיה המתים אומרו במקום שנזכר. אבל אם לא נזכר עד לאחר שסיים הברכה מחיה המתים צריך לחזור לראש התפלה. ואם נסתפק לו אם אמר משיב הרוח או לא אמר. אם הוא לאחר שלושים יום חזקתו שגם עתה התפלל כראוי. אבל בתוך שלושים יום צריך לחזור ולהתפלל (קיצור שו\"ע יט)</small></small>")));
   parts.push(p("מְכַלְכֵּל חַיִּים בְּחֶֽסֶד מְחַיֵּה מֵתִים בְּרַחֲמִים רַבִּים סוֹמֵךְ נוֹפְ֒לִים וְרוֹפֵא חוֹלִים וּמַתִּיר אֲסוּרִים וּמְקַיֵּם אֱמוּנָתוֹ לִישֵׁנֵי עָפָר, מִי כָמֽוֹךָ בַּֽעַל גְּבוּרוֹת וּמִי דּֽוֹמֶה לָּךְ מֶֽלֶךְ מֵמִית וּמְחַיֶּה וּמַצְמִֽיחַ יְשׁוּעָה:"));
   if (context.isAseretYemeiTeshuva) {
-    parts.push(sup(p("<small><small>בעשי\"ת:</small> מִי כָמֽוֹךָ אַב הָרַחֲמִים זוֹכֵר יְצוּרָיו לְחַיִּים בְּרַחֲמִים:</small>")));
+    pushAdd(parts, sup(p("<small><small>בעשי\"ת:</small> מִי כָמֽוֹךָ אַב הָרַחֲמִים זוֹכֵר יְצוּרָיו לְחַיִּים בְּרַחֲמִים:</small>")));
   }
   parts.push(p("וְנֶאֱמָן אַתָּה לְהַחֲיוֹת מֵתִים: בָּרוּךְ אַתָּה יְהֹוָה מְחַיֵּה הַמֵּתִים:"));
   parts.push(p("<b>אַתָּה קָדוֹשׁ</b> וְשִׁמְךָ קָדוֹשׁ וּקְדוֹשִׁים בְּכָל־יוֹם יְהַלְלֽוּךָ סֶּֽלָה."));
   if (context.isAseretYemeiTeshuva) {
-    parts.push(p("<small>בעשי\"ת מסיים:</small> בָּרוּךְ אַתָּה יְהֹוָה הַמֶּֽלֶךְ הַקָּדוֹשׁ:"));
+    pushAdd(parts, p("<small>בעשי\"ת מסיים:</small> בָּרוּךְ אַתָּה יְהֹוָה הַמֶּֽלֶךְ הַקָּדוֹשׁ:"));
   } else {
     parts.push(p("בָּרוּךְ אַתָּה יְהֹוָה הָאֵל הַקָּדוֹשׁ:"));
   }
   parts.push(p("<b>אַתָּה חוֹנֵן</b> לְאָדָם דַּֽעַת וּמְלַמֵּד לֶאֱנוֹשׁ בִּינָה:"));
   if (mz.chonantanu) {
-    parts.push(sup(p("<small><small>" + mz.label + "</small></small>") + p("<small><small>אַתָּה חוֹנַנְתָּֽנוּ לְמַדַּע תּוֹרָתֶֽךָ. וַתְּ֒לַמְּ֒דֵֽנוּ לַעֲשׂוֹת חֻקֵּי רְצוֹנֶֽךָ. וַתַּבְדֵּל יְהֹוָה אֱלֹהֵֽינוּ בֵּין קֹֽדֶשׁ לְחֹל בֵּין אוֹר לְחֽשֶׁךְ בֵּין יִשְׂרָאֵל לָעַמִּים בֵּין יוֹם הַשְּׁ֒בִיעִי לְשֵֽׁשֶׁת יְמֵי הַמַּעֲשֶׂה. אָבִֽינוּ מַלְכֵּֽנוּ הָחֵל עָלֵֽינוּ הַיָּמִים הַבָּאִים לִקְרָאתֵֽנוּ לְשָׁלוֹם חֲשׂוּכִים מִכָּל חֵטְא וּמְנֻקִּים מִכָּל עָוֹן וּמְדֻבָּקִים בְּיִרְאָתֶֽךָ: וְ...</small></small>")));
+    pushAdd(parts, sup(p("<small><small>" + mz.label + "</small></small>") + p("<small><small>אַתָּה חוֹנַנְתָּֽנוּ לְמַדַּע תּוֹרָתֶֽךָ. וַתְּ֒לַמְּ֒דֵֽנוּ לַעֲשׂוֹת חֻקֵּי רְצוֹנֶֽךָ. וַתַּבְדֵּל יְהֹוָה אֱלֹהֵֽינוּ בֵּין קֹֽדֶשׁ לְחֹל בֵּין אוֹר לְחֽשֶׁךְ בֵּין יִשְׂרָאֵל לָעַמִּים בֵּין יוֹם הַשְּׁ֒בִיעִי לְשֵֽׁשֶׁת יְמֵי הַמַּעֲשֶׂה. אָבִֽינוּ מַלְכֵּֽנוּ הָחֵל עָלֵֽינוּ הַיָּמִים הַבָּאִים לִקְרָאתֵֽנוּ לְשָׁלוֹם חֲשׂוּכִים מִכָּל חֵטְא וּמְנֻקִּים מִכָּל עָוֹן וּמְדֻבָּקִים בְּיִרְאָתֶֽךָ: וְ...</small></small>")));
   }
   parts.push(p("חָנֵּֽנוּ מֵאִתְּךָ דֵּעָה בִּינָה וְהַשְׂכֵּל: בָּרוּךְ אַתָּה יְהֹוָה חוֹנֵן הַדָּֽעַת:"));
   parts.push(p("<b>הֲשִׁיבֵֽנוּ</b> אָבִֽינוּ לְתוֹרָתֶֽךָ וְקָרְ֒בֵֽנוּ מַלְכֵּֽנוּ לַעֲבוֹדָתֶֽךָ וְהַחֲזִירֵֽנוּ בִּתְשׁוּבָה שְׁלֵמָה לְפָנֶֽיךָ: בָּרוּךְ אַתָּה יְהֹוָה הָרוֹצֶה בִּתְשׁוּבָה:"));
@@ -22923,15 +22804,15 @@ function buildMaarivAshkenazPayload(context) {
   parts.push(p("<b>רְפָאֵֽנוּ</b> יְהֹוָה וְנֵרָפֵא הוֹשִׁיעֵֽנוּ וְנִוָּשֵֽׁעָה כִּי תְהִלָּתֵֽנוּ אָֽתָּה וְהַעֲלֵה רְפוּאָה שְׁלֵמָה לְכָל מַכּוֹתֵֽינוּ כִּי אֵל מֶֽלֶךְ רוֹפֵא נֶאֱמָן וְרַחֲמָן אָֽתָּה: בָּרוּךְ אַתָּה יְהֹוָה רוֹפֵא חוֹלֵי עַמּוֹ יִשְׂרָאֵל:"));
   parts.push(p("<b>בָּרֵךְ</b> עָלֵֽינוּ יְהֹוָה אֱלֹהֵֽינוּ אֶת־הַשָּׁנָה הַזֹּאת וְאֶת־כָּל־מִינֵי תְבוּאָתָהּ לְטוֹבָה, וְתֵן"));
   if (!isRainRequest) {
-    parts.push(p("בְּרָכָה"));
+    pushAdd(parts, p("בְּרָכָה"));
   } else {
-    parts.push(p("<small>בימות הגשמים:</small> טַל וּמָטָר לִבְרָכָה"));
+    pushAdd(parts, p("<small>בימות הגשמים:</small> טַל וּמָטָר לִבְרָכָה"));
   }
   parts.push(p("עַל פְּנֵי הָאֲדָמָה וְשַׂבְּעֵֽנוּ מִטּוּבֶֽךָ וּבָרֵךְ שְׁנָתֵֽנוּ כַּשָּׁנִים הַטּוֹבוֹת: בָּרוּךְ אַתָּה יְהֹוָה מְבָרֵךְ הַשָּׁנִים:"));
   parts.push(p("<b>תְּקַע</b> בְּשׁוֹפָר גָּדוֹל לְחֵרוּתֵֽנוּ וְשָׂא נֵס לְקַבֵּץ גָּלֻיּוֹתֵֽינוּ וְקַבְּצֵֽנוּ יַֽחַד מֵאַרְבַּע כַּנְפוֹת הָאָֽרֶץ: בָּרוּךְ אַתָּה יְהֹוָה מְקַבֵּץ נִדְחֵי עַמּוֹ יִשְׂרָאֵל:"));
   parts.push(p("<b>הָשִֽׁיבָה</b> שׁוֹפְטֵֽינוּ כְּבָרִאשׁוֹנָה וְיוֹעֲצֵֽינוּ כְּבַתְּחִלָּה וְהָסֵר מִמֶּֽנּוּ יָגוֹן וַאֲנָחָה וּמְלוֹךְ עָלֵֽינוּ אַתָּה יְהֹוָה לְבַדְּךָ בְּחֶֽסֶד וּבְרַחֲמִים וְצַדְּקֵֽנוּ בַּמִשְׁפָּט:"));
   if (context.isAseretYemeiTeshuva) {
-    parts.push(p("<small>בעשי\"ת יסיים:</small> בָּרוּךְ אַתָּה יְהֹוָה הַמֶּֽלֶךְ הַמִּשְׁפָּט:"));
+    pushAdd(parts, p("<small>בעשי\"ת יסיים:</small> בָּרוּךְ אַתָּה יְהֹוָה הַמֶּֽלֶךְ הַמִּשְׁפָּט:"));
   } else {
     parts.push(p("בָּרוּךְ אַתָּה יְהֹוָה מֶֽלֶךְ אֹהֵב צְדָקָה וּמִשְׁפָּט:"));
   }
@@ -22945,7 +22826,7 @@ function buildMaarivAshkenazPayload(context) {
   // ורק נוסח "בְּיוֹם ..." של היום (ראו _yaalehKind)
   if (context.isRoshChodesh || context.isCholHamoed) {
     var yvDay = { rc: "רֹאשׁ הַחֹֽדֶשׁ", pesach: "חַג הַמַּצּוֹת", sukkot: "חַג הַסֻּכּוֹת" }[_yaalehKind(context)] || "רֹאשׁ הַחֹֽדֶשׁ";
-    parts.push(
+    pushAdd(parts, 
       p(
         "<b>אֱלֹהֵֽינוּ</b> וֵאלֹהֵי אֲבוֹתֵֽינוּ. יַעֲלֶה וְיָבֹא וְיַגִּֽיעַ וְיֵרָאֶה וְיֵרָצֶה וְיִשָּׁמַע וְיִפָּקֵד וְיִזָּכֵר זִכְרוֹנֵֽנוּ וּפִקְדוֹנֵֽנוּ וְזִכְרוֹן אֲבוֹתֵֽינוּ. וְזִכְרוֹן מָשִֽׁיחַ בֶּן דָּוִד עַבְדֶּֽךָ. וְזִכְרוֹן יְרוּשָׁלַֽיִם עִיר קָדְשֶֽׁךָ. וְזִכְרוֹן כָּל עַמְּ֒ךָ בֵּית יִשְׂרָאֵל לְפָנֶֽיךָ. לִפְלֵיטָה לְטוֹבָה לְחֵן וּלְחֶֽסֶד וּלְרַחֲמִים לְחַיִּים וּלְשָׁלוֹם. בְּיוֹם " +
           yvDay +
@@ -22957,29 +22838,29 @@ function buildMaarivAshkenazPayload(context) {
   parts.push(sup(p("<small><small>כשאומר מודים כורע ראשו וגופו כאגמון עד שיתפקקו כל חוליות שבשדרה. וכשהוא כורע יכרע במהירות בפעם אחת וכשהוא זוקף זוקף בנחת ראשו תחלה ואחר כך גופו שלא תהא עליו כמשאוי (שו\"ע או\"ח סי' קיג)</small></small>")));
   parts.push(p("<b>מוֹדִים</b> אֲנַֽחְנוּ לָךְ שָׁאַתָּה הוּא יְהֹוָה אֱלֹהֵֽינוּ וֵאלֹהֵי אֲבוֹתֵֽינוּ לְעוֹלָם וָעֶד צוּר חַיֵּֽינוּ מָגֵן יִשְׁעֵֽנוּ אַתָּה הוּא לְדוֹר וָדוֹר נֽוֹדֶה לְּךָ וּנְסַפֵּר תְּהִלָּתֶֽךָ עַל־חַיֵּֽינוּ הַמְּסוּרִים בְּיָדֶֽךָ וְעַל נִשְׁמוֹתֵֽינוּ הַפְּקוּדוֹת לָךְ וְעַל נִסֶּֽיךָ שֶׁבְּכָל יוֹם עִמָּֽנוּ וְעַל נִפְלְאוֹתֶֽיךָ וְטוֹבוֹתֶֽיךָ שֶׁבְּכָל עֵת עֶֽרֶב וָבֹֽקֶר וְצָהֳרָֽיִם הַטּוֹב כִּי לֹא כָלוּ רַחֲמֶֽיךָ וְהַמְרַחֵם כִּי לֹא תַֽמּוּ חֲסָדֶֽיךָ מֵעוֹלָם קִוִּֽינוּ לָךְ:"));
   if (context.isChanukah || context.isPurim) {
-    parts.push(sup(p("<small><small>בחנוכה ופורים אומרים על הנסים. שכח לומר על הנסים ונזכר קודם שאמר השם מברכת הטוב שמך אפילו אמר ברוך אתה חוזר ואומר על הנסים. אבל אם כבר סיים הברכה או שאמר ברוך א\"י אינו חוזר (דה\"ח תרפ\"ב ותרצ\"ג).</small></small>")));
-    parts.push(sup(p("<b>עַל הַנִּסִּים</b> וְעַל הַפֻּרְקָן וְעַל הַגְּ֒בוּרוֹת וְעַל הַתְּ֒שׁוּעוֹת וְעַל הַמִּלְחָמוֹת שֶׁעָשִֽׂיתָ לַאֲבוֹתֵֽינוּ בַּיָּמִים הָהֵם בִּזְּ֒מַן הַזֶּה:")));
+    pushAdd(parts, sup(p("<small><small>בחנוכה ופורים אומרים על הנסים. שכח לומר על הנסים ונזכר קודם שאמר השם מברכת הטוב שמך אפילו אמר ברוך אתה חוזר ואומר על הנסים. אבל אם כבר סיים הברכה או שאמר ברוך א\"י אינו חוזר (דה\"ח תרפ\"ב ותרצ\"ג).</small></small>")));
+    pushAdd(parts, sup(p("<b>עַל הַנִּסִּים</b> וְעַל הַפֻּרְקָן וְעַל הַגְּ֒בוּרוֹת וְעַל הַתְּ֒שׁוּעוֹת וְעַל הַמִּלְחָמוֹת שֶׁעָשִֽׂיתָ לַאֲבוֹתֵֽינוּ בַּיָּמִים הָהֵם בִּזְּ֒מַן הַזֶּה:")));
     if (context.isChanukah) {
-      parts.push(sup(
+      pushAdd(parts, sup(
         p("<small><small>בחנוכה:</small> <b>בִּימֵי מַתִּתְיָֽהוּ</b> בֶּן יוֹחָנָן כֹּהֵן גָּדוֹל חַשְׁמוֹנָאִי וּבָנָיו כְּשֶׁעָמְ֒דָה מַלְכוּת יָוָן הָרְ֒שָׁעָה עַל־עַמְּ֒ךָ יִשְׂרָאֵל לְהַשְׁכִּיחָם תּוֹרָתֶֽךָ וּלְהַעֲבִירָם מֵחֻקֵּי רְצוֹנֶֽךָ, וְאַתָּה בְּרַחֲמֶֽיךָ הָרַבִּים עָמַֽדְתָּ לָהֶם בְּעֵת צָרָתָם רַֽבְתָּ אֶת־רִיבָם דַּֽנְתָּ אֶת־דִּינָם נָקַֽמְתָּ אֶת־נִקְמָתָם מָסַֽרְתָּ גִבּוֹרִים בְּיַד חַלָּשִׁים וְרַבִּים בְּיַד מְעַטִּים וּטְמֵאִים בְּיַד טְהוֹרִים וּרְשָׁעִים בְּיַד צַדִּיקִים וְזֵדִים בְּיַד עוֹסְ֒קֵי תוֹרָתֶֽךָ וּלְךָ עָשִֽׂיתָ שֵׁם גָּדוֹל וְקָדוֹשׁ בְּעוֹלָמֶֽךָ וּלְעַמְּ֒ךָ יִשְׂרָאֵל עָשִֽׂיתָ תְּשׁוּעָה גְדוֹלָה וּפֻרְקָן כְּהַיּוֹם הַזֶּה וְאַחַר־כֵּן בָּֽאוּ בָנֶֽיךָ לִדְבִיר בֵּיתֶֽךָ וּפִנּוּ אֶת־הֵיכָלֶֽךָ וְטִהֲרוּ אֶת־מִקְדָּשֶֽׁךָ וְהִדְלִֽיקוּ נֵרוֹת בְּחַצְרוֹת קָדְשֶֽׁךָ וְקָבְ֒עוּ שְׁמוֹנַת יְמֵי חֲנֻכָּה אֵֽלּוּ לְהוֹדוֹת וּלְהַלֵּל לְשִׁמְךָ הַגָּדוֹל:</small>")
       ));
     }
     // בפורים — "בימי מרדכי" (היה חסר לגמרי: בפורים הוצג רק הפתיח הכללי,
     // ובחנוכה הודפסה כותרת "בפורים:" יתומה בלי תוכן)
     if (context.isPurim) {
-      parts.push(sup(
+      pushAdd(parts, sup(
         p("<small><small>בפורים:</small> <b>בִּימֵי מָרְדְּ֒כַי</b> וְאֶסְתֵּר בְּשׁוּשַׁן הַבִּירָה כְּשֶׁעָמַד עֲלֵיהֶם הָמָן הָרָשָׁע בִּקֵּשׁ לְהַשְׁמִיד לַהֲרוֹג וּלְאַבֵּד אֶת־כָּל־הַיְּ֒הוּדִים מִנַּֽעַר וְעַד־זָקֵן טַף וְנָשִׁים בְּיוֹם אֶחָד בִּשְׁלוֹשָׁה עָשָׂר לְחֹֽדֶשׁ שְׁנֵים־עָשָׂר הוּא־חֹֽדֶשׁ אֲדָר וּשְׁלָלָם לָבוֹז: וְאַתָּה בְּרַחֲמֶֽיךָ הָרַבִּים הֵפַֽרְתָּ אֶת־עֲצָתוֹ וְקִלְקַֽלְתָּ אֶת־מַחֲשַׁבְתּוֹ וַהֲשֵׁבֽוֹתָ לּוֹ גְּמוּלוֹ בְּרֹאשׁוֹ וְתָלוּ אוֹתוֹ וְאֶת־בָּנָיו עַל הָעֵץ:</small>")
       ));
     }
   }
   parts.push(p("<b>וְעַל־כֻּלָּם</b> יִתְבָּרַךְ וְיִתְרוֹמַם שִׁמְךָ מַלְכֵּֽנוּ תָּמִיד לְעוֹלָם וָעֶד:"));
   if (context.isAseretYemeiTeshuva) {
-    parts.push(sup(p("<small><small>בעשי\"ת:</small> וּכְתוֹב לְחַיִּים טוֹבִים כָּל בְּנֵי בְרִיתֶֽךָ:</small>")));
+    pushAdd(parts, sup(p("<small><small>בעשי\"ת:</small> וּכְתוֹב לְחַיִּים טוֹבִים כָּל בְּנֵי בְרִיתֶֽךָ:</small>")));
   }
   parts.push(p("<b>וְכֹל הַחַיִּים</b> יוֹדֽוּךָ סֶּֽלָה וִיהַלְ֒לוּ אֶת־שִׁמְךָ בֶּאֱמֶת הָאֵל יְשׁוּעָתֵֽנוּ וְעֶזְרָתֵֽנוּ סֶֽלָה: בָּרוּךְ אַתָּה יְהֹוָה הַטּוֹב שִׁמְךָ וּלְךָ נָאֶה לְהוֹדוֹת:"));
   parts.push(p("<b>שָׁלוֹם רָב</b> עַל יִשְׂרָאֵל עַמְּ֒ךָ תָּשִׂים לְעוֹלָם כִּי אַתָּה הוּא מֶֽלֶךְ אָדוֹן לְכָל־הַשָּׁלוֹם וְטוֹב בְּעֵינֶֽיךָ לְבָרֵךְ אֶת־עַמְּ֒ךָ יִשְׂרָאֵל בְּכָל־עֵת וּבְכָל־שָׁעָה בִּשְׁלוֹמֶֽךָ."));
   if (context.isAseretYemeiTeshuva) {
-    parts.push(sup(p("<small><small>בעשי\"ת:</small> בְּסֵֽפֶר חַיִּים בְּרָכָה וְשָׁלוֹם וּפַרְנָסָה טוֹבָה נִזָּכֵר וְנִכָּתֵב לְפָנֶֽיךָ אֲנַֽחְנוּ וְכָל עַמְּךָ בֵּית יִשְׂרָאֵל לְחַיִּים טוֹבִים וּלְשָׁלוֹם: (בָּרוּךְ אַתָּה יְהֹוָה עֹשֶׂה הַשָּׁלוֹם:)</small>")));
+    pushAdd(parts, sup(p("<small><small>בעשי\"ת:</small> בְּסֵֽפֶר חַיִּים בְּרָכָה וְשָׁלוֹם וּפַרְנָסָה טוֹבָה נִזָּכֵר וְנִכָּתֵב לְפָנֶֽיךָ אֲנַֽחְנוּ וְכָל עַמְּךָ בֵּית יִשְׂרָאֵל לְחַיִּים טוֹבִים וּלְשָׁלוֹם: (בָּרוּךְ אַתָּה יְהֹוָה עֹשֶׂה הַשָּׁלוֹם:)</small>")));
   }
   parts.push(p("בָּרוּךְ אַתָּה יְהֹוָה הַמְבָרֵךְ אֶת־עַמּוֹ יִשְׂרָאֵל בַּשָּׁלוֹם:"));
   parts.push(p("יִהְיוּ לְרָצוֹן אִמְ֒רֵי פִי וְהֶגְיוֹן לִבִּי לְפָנֶֽיךָ יְהֹוָה צוּרִי וְגוֹאֲלִי:"));
@@ -23359,7 +23240,7 @@ window.openDonationModal = function() {
     '<div style="font-size:2.6rem;margin-bottom:0.5rem;">💛</div>'+
     '<h3 style="color:#fde68a;font-size:1.35rem;font-weight:900;margin:0 0 0.7rem;">תרומה לאתר</h3>'+
     '<p style="color:#e2e8f0;font-size:0.9rem;line-height:1.75;margin:0 0 1rem;">האתר הזה הוא <strong>חינמי לחלוטין</strong>, ללא פרסומות, ונבנה באהבה כדי לתת לכל יהודי כלי נגיש ללוח השנה העברי, זמני היום, תפילות, תהילים ועוד.</p>'+
-    '<p style="color:#cbd5e1;font-size:0.85rem;line-height:1.7;margin:0 0 1.25rem;">תרומה שלך — בכל סכום — מסייעת לתחזוקה השוטפת, לפיתוח תכנים נוספים ולהמשך התפעול של האתר.</p>'+
+    '<p style="color:#cbd5e1;font-size:0.85rem;line-height:1.7;margin:0 0 1.25rem;">תרומה שלך — בכל סכום — מסייעת לתחזוקה השוטפת, לפיתוח תכנים נוספים ולהמשך התפעול של האתר. ניתן לשלם דרך PayPal או בכרטיס אשראי.</p>'+
     '<a href="https://www.paypal.com/donate/?hosted_button_id=88H6AJG95Y3PQ" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;justify-content:center;gap:0.5rem;background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#1a1a1a;text-decoration:none;font-weight:800;padding:0.85rem 1.8rem;border-radius:1rem;font-size:1rem;box-shadow:0 8px 20px rgba(251,191,36,0.35);transition:transform 0.15s;" onmouseover="this.style.transform=\'scale(1.04)\'" onmouseout="this.style.transform=\'scale(1)\'">'+
       '<span>תרומה לאתר ❤️</span>'+
     '</a>'+
@@ -25767,7 +25648,7 @@ window.showContactModal = function () {
             </a>
             <div style="text-align:center;margin:1rem auto 0;max-width:480px;">
               <p style="color:#1e293b;font-size:0.9rem;line-height:1.75;margin:0 0 0.85rem;">האתר הזה הוא <strong style="color:#0f172a;">חינמי לחלוטין</strong>, ללא פרסומות, ונבנה באהבה כדי לתת לכל יהודי כלי נגיש ללוח השנה העברי, זמני היום, תפילות, תהילים ועוד.</p>
-              <p style="color:#334155;font-size:0.85rem;line-height:1.7;margin:0 0 0.85rem;">תרומה שלך — בכל סכום — מסייעת לתחזוקה השוטפת, לפיתוח תכנים נוספים ולהמשך התפעול של האתר.</p>
+              <p style="color:#334155;font-size:0.85rem;line-height:1.7;margin:0 0 0.85rem;">תרומה שלך — בכל סכום — מסייעת לתחזוקה השוטפת, לפיתוח תכנים נוספים ולהמשך התפעול של האתר. ניתן לשלם דרך PayPal או בכרטיס אשראי.</p>
               <p style="color:#64748b;font-size:0.72rem;margin:0;">לחיצה על הכפתור תפתח את דף התרומה — מאובטח ופרטי</p>
             </div>
           </div>`;

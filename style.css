@@ -1,3 +1,8 @@
+@property --pr-base {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 16px;
+}
       /* Disable long-press text selection everywhere */
       *, *::before, *::after {
         -webkit-user-select: none;
@@ -606,6 +611,21 @@
       }
       .prayer-supplement strong {
         color: #1e3a8a;
+      }
+      /* תוספות ושינויים בנוסח לפי היום (script.js → prAdd): יעלה ויבוא, משיב הרוח/מוריד הטל,
+         ברך עלינו/ברכנו, על הניסים, עננו, עשי"ת, אתה חוננתנו, ברכת המזון ומעין שלוש —
+         באותו גודל כמו שאר הטקסט, רק בצבע בורדו (בקשת המשתמש 06/10/2026) */
+      .prayer-richtext .pr-add,
+      .prayer-richtext .pr-add b {
+        color: #9f1239;
+      }
+      /* תוספת שיושבת בתוך <small> או בתיבת הערה (prayer-supplement, 0.6em) — בגודל הטקסט הרגיל:
+         --pr-base נרשם כ-<length>, כך ש-1em מחושב פעם אחת על .prayer-richtext ועובר בירושה כפיקסלים */
+      .prayer-richtext {
+        --pr-base: 1em;
+      }
+      .prayer-richtext .pr-add {
+        font-size: var(--pr-base);
       }
       .prayer-richtext .seasonal-block strong {
         color: #1d4ed8;
@@ -9091,6 +9111,8 @@ html.dark .prayer-supplement li {
   color: #bfdbfe !important;
 }
 html.dark .prayer-supplement strong { color: #dbeafe; }
+html.dark .prayer-richtext .pr-add,
+html.dark .prayer-richtext .pr-add b { color: #fda4af; }
 html.dark #prayer-modal .modal-body strong { color: #93c5fd; }
 html.dark #sefaria-modal-title,
 html.dark #chok-israel-modal-title { color: #f1f5f9 !important; }

@@ -75,6 +75,13 @@
   status = 404
   force = true
 
+# קוד הפונקציות (תזכורת העומר) — רץ בשרת של Netlify, לא קובץ לגולשים
+[[redirects]]
+  from = "/netlify/*"
+  to = "/404.html"
+  status = 404
+  force = true
+
 # קובץ ההקשר של Claude Code (הנחיות עבודה למודל) — שייך לריפו, לא לאתר
 [[redirects]]
   from = "/CLAUDE.md"

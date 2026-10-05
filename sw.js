@@ -1,4 +1,4 @@
-const STATIC_CACHE = "moadim-static-v144";
+const STATIC_CACHE = "moadim-static-v145";
 // מטמון ריצה: תשובות API וקבצים חיצוניים (ספריא, hebcal, פונטים, ספריות CDN)
 // נשמרים אחרי הצפייה הראשונה — כך האתר, התפילות והספרים עובדים גם בלי אינטרנט.
 const RUNTIME_CACHE = "moadim-runtime-v1";
@@ -16,10 +16,10 @@ const STATIC_ASSETS = [
   // חשוב: ה-?v= כאן חייב להיות זהה לזה שב-index.html — כך ההתקנה נענית
   // מ-HTTP cache (בלי הורדה כפולה של ~3MB) והבקשות מהדף פוגעות במטמון
   // בדיוק; סטייה עתידית מכוסה ע"י ה-fallback עם ignoreSearch.
-  "/script.js?v=92",
-  "/lux.js?v=78",
+  "/script.js?v=93",
+  "/lux.js?v=79",
   "/sky.js?v=8",
-  "/style.css?v=107",
+  "/style.css?v=108",
   "/tailwind.css?v=2",
   "/fonts.css?v=1",
   "/fonts/assistant-hebrew.woff2",
@@ -531,6 +531,21 @@ self.addEventListener("fetch", (event) => {
         );
 
       return cached || networkFetch;
+    }),
+  );
+});
+
+// לחיצה על התראה מקומית (אישור הפעלת התראות העומר — script.js → _showLocalNotif;
+// פוש התזכורת עצמו מטופל ב-worker של OneSignal ופותח את /?open=omer):
+// מביאים לחזית חלון פתוח של האתר, ואם אין — פותחים אותו
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
+      for (const c of list) {
+        if ("focus" in c) return c.focus();
+      }
+      return self.clients.openWindow("/");
     }),
   );
 });

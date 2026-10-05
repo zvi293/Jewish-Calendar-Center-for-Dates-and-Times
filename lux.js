@@ -2074,6 +2074,8 @@
       setTimeout(function () {
         if (target === "tehillim" && typeof window.openTehillimPage === "function") window.openTehillimPage();
         else if (target === "calendar" && typeof window.openCalendar === "function") window.openCalendar();
+        // ?open=omer — לחיצה על פוש תזכורת ספירת העומר (netlify/functions/omer-reminder.mjs)
+        else if (target === "omer" && typeof window.openOmerModal === "function") window.openOmerModal();
         else if (target === "sefarim" && typeof window.openSefarimNosafimPage === "function") window.openSefarimNosafimPage();
         else if (target === "zmanim") {
           var z = document.getElementById("halacha-banner");
@@ -6701,19 +6703,30 @@
     setTimeout(injectRow2, 4500);
   });
 
-  /* ── 45. הזמנה לסיור מודרך — קופצת פעם אחת בלבד, בכניסה הראשונה ── */
+  /* ── 45. הזמנה לסיור מודרך — קופצת פעם אחת בלבד, בכניסה הראשונה לאפליקציה ── */
   safe("tourInvite", function () {
-    // כבוי לבקשת המשתמש (28/09/2026) — הסיור זמין רק דרך ⚙️ ההגדרות ("סיור מודרך באתר").
-    // להחזרת ההזמנה בכניסה הראשונה: TOUR_INVITE_ON = true
-    var TOUR_INVITE_ON = false;
-    if (!TOUR_INVITE_ON) return;
-    var KEY = "lux_tour_invite_shown";
+    // באתר בדפדפן ההזמנה כבויה (28/09/2026) — שם הסיור זמין רק דרך ⚙️ ההגדרות.
+    // באפליקציה מ-Google Play (06/10/2026) היא קופצת פעם אחת, בכניסה הראשונה לאפליקציה.
+    // זיהוי האפליקציה: גם ה-TWA וגם ה-WebView (טלפון בלי דפדפן) שולחים בפתיחה
+    // Referer: android-app://<package>. נשמר ב-sessionStorage כדי שרענון בתוך האפליקציה
+    // לא יאבד אותו — לא ב-localStorage: ה-TWA חולק את האחסון עם כרום, והאתר בדפדפן
+    // היה "חושב" שהוא האפליקציה. מפתח נפרד מההזמנה הישנה (lux_tour_invite_shown) —
+    // מי שראה אותה באתר לפני 28/09 עדיין מקבל את ההזמנה בכניסה הראשונה לאפליקציה.
+    var APP_REF = "android-app://il.co.jewishcalendar.twa";
+    var isApp = String(document.referrer || "").indexOf(APP_REF) === 0;
+    try {
+      if (isApp) sessionStorage.setItem("moadim_in_app", "1");
+      else isApp = sessionStorage.getItem("moadim_in_app") === "1";
+    } catch (e) {}
+    if (!isApp) return;
+    var KEY = "lux_app_tour_invite_shown";
     try { if (localStorage.getItem(KEY)) return; } catch (e) { return; }
     var tries = 0;
     var t = setInterval(function () {
       tries++;
       if (tries > 20) { clearInterval(t); return; }
-      // מחכים שהדשבורד ייטען, שהסיור יהיה זמין ושאף פופאפ אחר לא פתוח
+      // מחכים שמסך הפתיחה ייעלם, שהדשבורד ייטען, שהסיור יהיה זמין ושאף פופאפ אחר לא פתוח
+      if (document.getElementById("lux-splash")) return;
       var ds = document.getElementById("dashboard-state");
       if (!ds || ds.classList.contains("hidden")) return;
       if (typeof window.luxStartTour !== "function") return;
@@ -6725,7 +6738,7 @@
       try { localStorage.setItem(KEY, "1"); } catch (e) {}
       var ov = luxSheet("lux-tour-invite",
         '<h3 class="lux-sheet-title">🧭 נעים להכיר!</h3>' +
-        '<p class="lux-sheet-note">זו הפעם הראשונה שלכם כאן — רוצים סיור קצר ומודרך שמראה את כל מה שהאתר יודע לעשות? זמנים, תפילות, ספרים, סדרי לימוד ועוד.</p>' +
+        '<p class="lux-sheet-note">זו הפעם הראשונה שלכם באפליקציה — רוצים סיור קצר ומודרך שמראה את כל מה שהאתר יודע לעשות? זמנים, תפילות, ספרים, סדרי לימוד ועוד.</p>' +
         '<div class="lux-sheet-actions">' +
           '<button type="button" class="lux-sheet-primary" id="lux-ti-yes">🧭 כן, קחו אותי לסיור</button>' +
           '<button type="button" class="lux-sheet-cancel" id="lux-ti-no">לא עכשיו</button>' +
@@ -6744,6 +6757,64 @@
         }
       });
     }, 1500);
+  });
+
+  /* ── 45ב. ספירת העומר: "להפעיל תזכורת לספירה?" ───────────────────
+     פעם אחת בכל עונת עומר (המפתח שומר את השנה), רק למי שהתראות העומר שלו
+     כבויות ושהדפדפן שלו תומך בהן ולא חסם אותן. מי שסירב — יש לו כפתור הפעלה
+     בכרטיס ספירת העומר (#omer-notif-btn) ובהגדרות. בדיקה: ?omer=5 */
+  safe("omerNotifAsk", function () {
+    var KEY = "moadim_omer_notif_asked";
+    var year = String(new Date().getFullYear());
+    var force = false;
+    try { force = !!new URLSearchParams(location.search).get("omer"); } catch (e) {}
+    function due() {
+      if (!("Notification" in window) || Notification.permission === "denied") return false;
+      if (typeof window.isNotifMasterActive !== "function" || window.isNotifMasterActive()) return false;
+      if (force) return true;
+      var d = typeof window._omerTonight === "function" ? window._omerTonight() : 0;
+      return d >= 1 && d <= 49;
+    }
+    if (!force) {
+      try { if (localStorage.getItem(KEY) === year) return; } catch (e) { return; }
+    }
+    var tries = 0;
+    var t;
+    setTimeout(function () {
+      t = setInterval(function () {
+        tries++;
+        if (tries > 90) { clearInterval(t); return; }
+        // מחכים למסך נקי: בלי מסך פתיחה, פופאפ, יריעה או סיור מודרך פתוחים
+        if (document.getElementById("lux-splash") || document.getElementById("lux-tour-overlay")) return;
+        var ds = document.getElementById("dashboard-state");
+        if (!ds || ds.classList.contains("hidden")) return;
+        if (document.body.style.position === "fixed") return;
+        if (document.documentElement.classList.contains("lux-modal-open")) return;
+        if (document.querySelector(".lux-sheet-overlay")) return;
+        clearInterval(t);
+        if (!due()) return;
+        try { localStorage.setItem(KEY, year); } catch (e) {}
+        var ov = luxSheet("lux-omer-notif-ask",
+          '<h3 class="lux-sheet-title">✨ ספירת העומר</h3>' +
+          '<p class="lux-sheet-note">רוצים תזכורת לספור את העומר בכל ערב, בצאת הכוכבים?</p>' +
+          '<div class="lux-sheet-actions">' +
+            '<button type="button" class="lux-sheet-primary" id="lux-on-yes">🔔 כן, הפעילו תזכורת</button>' +
+            '<button type="button" class="lux-sheet-cancel" id="lux-on-no">לא תודה</button>' +
+          "</div>");
+        if (!ov) return;
+        ov.querySelector("#lux-on-yes").addEventListener("click", function () {
+          // בקשת ההרשאה חייבת לצאת בתוך מחוות הלחיצה — לפני סגירת היריעה
+          try { window.enableOmerNotifications(); } catch (e) {}
+          luxModalClose("lux-omer-notif-ask");
+        });
+        ov.querySelector("#lux-on-no").addEventListener("click", function () {
+          luxModalClose("lux-omer-notif-ask");
+          if (typeof window.showToast === "function") {
+            window.showToast("💡 אפשר להפעיל תזכורת בכל זמן — בכרטיס ספירת העומר או ב-⚙️ ההגדרות", "info", 4800);
+          }
+        });
+      }, 2000);
+    }, 4000);
   });
 
   /* ── 46. כפתור סגירה עליון בכל פופאפ — ערובה אוניברסלית ──────────

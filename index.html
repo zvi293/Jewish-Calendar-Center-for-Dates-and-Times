@@ -449,7 +449,7 @@
          הכותרת "קפצה" באמצע מסך הפתיחה בטלפון. -->
     <link rel="preload" href="/fonts/frank-ruhl-libre-hebrew.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="/fonts.css?v=1" />
-    <link rel="stylesheet" href="style.css?v=107" />
+    <link rel="stylesheet" href="style.css?v=108" />
     <!-- בלי ציור ראשון של "חצי הירו": הסקריפט של באנר היום (לפני ה-h1) גורם למפרסר לפנות
          את התור, ו-Chrome צייר את ההירו חלקי — ואז קו הגל שבתחתיתו קפץ למטה (CLS). כאן
          הציור הראשון מחכה עד שכל ההירו נפרסר (עד #main-content — מילישניות בודדות).
@@ -466,8 +466,8 @@
     <!-- הקוד הראשי יורד מוקדם (preload) אך מוזרק ומתבצע רק אחרי הציור הראשון —
          ראו הטוען בסוף ה-body. ה-?v= כאן חייב להיות זהה לזה שבטוען וב-sw.js.
          fetchpriority=low: שלא יתחרו ברוחב-הפס עם ה-CSS החוסם (FCP) — כמו defer. -->
-    <link rel="preload" href="script.js?v=92" as="script" fetchpriority="low" />
-    <link rel="preload" href="lux.js?v=78" as="script" fetchpriority="low" />
+    <link rel="preload" href="script.js?v=93" as="script" fetchpriority="low" />
+    <link rel="preload" href="lux.js?v=79" as="script" fetchpriority="low" />
 
     <!-- OneSignal Web Push SDK -->
     <script>
@@ -691,19 +691,8 @@
           title="מצפן לירושלים"
           aria-label="מצפן"
         >
-          <svg
-            class="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-            ></path>
-          </svg>
+          <!-- אותו סמל מצפן כמו בכותרת התפילות (.prayer-cmp-btn) -->
+          <span class="w-5 h-5 flex items-center justify-center" style="font-size:1.2rem;line-height:1" aria-hidden="true">🧭</span>
         </button>
         <button
           onclick="shareApp()"
@@ -1327,6 +1316,17 @@
             data-i18n-key="omer_btn"
           >
             לנוסח הברכה והספירה המלא
+          </button>
+          <!-- מוצג רק כשהתראות ספירת העומר כבויות (script.js → updateNotifStatusUI) -->
+          <button
+            id="omer-notif-btn"
+            type="button"
+            hidden
+            onclick="enableOmerNotifications()"
+            class="text-white px-6 py-2.5 rounded-xl text-sm font-bold transition-all hover:shadow-lg"
+            style="margin:0.5rem 0.25rem 0;background:rgba(232,193,90,0.22);border:1px solid rgba(232,193,90,0.5);"
+          >
+            🔔 הפעלת התראות לספירת העומר
           </button>
         </div>
         <!-- Circular progress ring -->
@@ -2500,7 +2500,7 @@
               <span
                 class="font-bold text-slate-800 dark:text-white"
                 data-i18n-key="notif_settings_title"
-                >התראות דפדפן (פוש)</span
+                >התראות ספירת העומר</span
               >
               <div id="notif-master-control" class="notification-toggle-row">
                 <span
@@ -2523,82 +2523,12 @@
                 </button>
               </div>
             </div>
-            <div
-              id="notif-options"
-              class="space-y-3 text-sm text-slate-600 dark:text-slate-300 opacity-50 pointer-events-none transition-opacity"
+            <p
+              id="notif-omer-note"
+              class="text-sm text-slate-600 dark:text-slate-300"
             >
-              <label class="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  id="notif_shabbat"
-                  onchange="saveNotifPrefs()"
-                  class="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                />
-                <span data-i18n-key="notif_shab">כניסת שבת (חצי שעה לפני)</span>
-              </label>
-              <label class="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  id="notif_holiday"
-                  onchange="saveNotifPrefs()"
-                  class="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                />
-                <span data-i18n-key="notif_hol">כניסת חג (חצי שעה לפני)</span>
-              </label>
-              <label class="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  id="notif_fast"
-                  onchange="saveNotifPrefs()"
-                  class="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                />
-                <span data-i18n-key="notif_fast">סיום צום (חצי שעה לפני)</span>
-              </label>
-              <label class="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  id="notif_omer"
-                  onchange="saveNotifPrefs()"
-                  class="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                />
-                <span data-i18n-key="notif_omer"
-                  >ספירת העומר (בצאת הכוכבים)</span
-                >
-              </label>
-              <label class="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  id="notif_levana"
-                  onchange="saveNotifPrefs()"
-                  class="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                />
-                <span data-i18n-key="notif_levana"
-                  >ברכת הלבנה (תחילת/סוף זמן)</span
-                >
-              </label>
-              <label class="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  id="notif_daf"
-                  onchange="saveNotifPrefs()"
-                  class="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                />
-                <span data-i18n-key="notif_daf"
-                  >הדף היומי (תזכורת בוקר 08:00)</span
-                >
-              </label>
-              <label class="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  id="notif_tefillin"
-                  onchange="saveNotifPrefs()"
-                  class="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                />
-                <span data-i18n-key="notif_tefillin"
-                  >תזכורת להניח תפילין (08:30)</span
-                >
-              </label>
-            </div>
+              תזכורת לספירה בכל ערב בצאת הכוכבים, בימי ספירת העומר.
+            </p>
           </div>
 
           <button
@@ -2886,8 +2816,8 @@
           // כבר מצוירים מתחת למסך הפתיחה ואנימציית הכניסה מתוזמנת לדהייתו. בהיר/כהה לא טוענים אותו.
           // אותו ?v= כמו ב-_luxSkyEnsure (script.js) וב-sw.js.
           if (document.documentElement.classList.contains("lux-sky")) addScript("sky.js?v=8", { id: "lux-sky-js" });
-          addScript("script.js?v=92");
-          addScript("lux.js?v=78");
+          addScript("script.js?v=93");
+          addScript("lux.js?v=79");
         }
         function afterFirstPaint() {
           // rAF אחד (רץ ממש לפני ציור הפריים הראשון) ואז setTimeout(0) — משימה

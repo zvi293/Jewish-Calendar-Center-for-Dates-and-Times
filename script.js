@@ -8297,7 +8297,7 @@ function enableOmerNotifications() {
 // באפליקציה) new Notification() זורק "Illegal constructor". תזכורת הספירה עצמה נשלחת
 // כפוש מהשרת בכל ערב (netlify/functions/omer-reminder.mjs) — גם כשהאתר סגור
 function _showLocalNotif(title, body) {
-  const opts = { body, icon: "/icon-192.png", badge: "/favicon.svg", lang: "he" };
+  const opts = { body, icon: "/icon-192.png", badge: "/notif-badge.png", lang: "he" };
   if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {
     navigator.serviceWorker.ready
       .then((reg) => reg.showNotification(title, opts))

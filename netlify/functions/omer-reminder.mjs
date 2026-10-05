@@ -173,6 +173,8 @@ export default async () => {
     contents: { en: p.body, he: p.body },
     url: SITE + "/?open=omer",
     chrome_web_icon: SITE + "/icon-192.png",
+    // הסמל הקטן בשורת המצב (כרום באנדרואיד) — צללית לבנה; באפליקציה: ic_notification_icon
+    chrome_web_badge: SITE + "/notif-badge.png",
     web_push_topic: "omer",
     delayed_option: "timezone",
     delivery_time_of_day: p.time,

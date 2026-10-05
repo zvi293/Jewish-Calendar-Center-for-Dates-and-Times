@@ -158,7 +158,8 @@ export default async () => {
         filters: [{ field: "tag", key: "omer_selfcheck_nobody", relation: "exists" }],
         contents: { en: "selfcheck" },
       });
-      const keyOk = r.status !== 401 && r.status !== 403;
+      // מפתח תקין: 200 עם "All included players are not subscribed"; מפתח שגוי — 4xx
+      const keyOk = r.status < 300;
       console.log(`[omer] ${p.date}: מחוץ לימי העומר. בדיקת מפתח: ${keyOk ? "תקין" : "נדחה"} (HTTP ${r.status})`, JSON.stringify(r.json));
       return new Response(keyOk ? "ok" : "key rejected", { status: keyOk ? 200 : 500 });
     }

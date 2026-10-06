@@ -23224,8 +23224,9 @@ window._luxModalStepBack = function(modalId) {
   return true;
 };
 window.openDonationModal = function() {
-  // באפליקציה מ-Google Play אין תרומה ב-PayPal (מדיניות Payments של Play) — הכפתור מוסתר שם (jc-web-pay, ראו index.html)
-  if (window.__jcInApp) return;
+  // באפליקציה מ-Google Play אין תרומה ב-PayPal (מדיניות Payments של Play) — שם התרומה עוברת ב-Google Play
+  // (_openPlayDonation למטה), והכפתור מוצג רק כשהיא זמינה (jc-web-pay / jc-play-pay, ראו index.html)
+  if (window.__jcInApp) { if (window._openPlayDonation) window._openPlayDonation(); return; }
   var existing = document.getElementById('donation-modal');
   if (existing) {
     // ghost-tap בנייד: מתעלמים מנגיעה כפולה מיד אחרי הפתיחה — אחרת הפופאפ מהבהב ונסגר
@@ -23252,6 +23253,132 @@ window.openDonationModal = function() {
   document.body.appendChild(overlay);
   pushModalState('donation-modal');
 };
+
+// ── תרומה באפליקציה דרך Google Play (06/10/2026) ──────────────────────────
+// באפליקציה מ-Google Play התרומה עוברת במערכת התשלומים של Play (מדיניות Payments — תרומה למפתח שאינו
+// עמותה מוכרת): Digital Goods API (getDetails/listPurchases/consume) + Payment Request עם
+// "https://play.google.com/billing", דרך ספריית ה-billing של android-browser-helper ב-TWA (מאפליקציה 1.1.1).
+// בלי שרת ובלי מסד נתונים: התרומה לא נותנת שום דבר בתמורה, אז אין מה לאמת — רק לצרוך (consume) כל רכישה
+// מיד, אחרת גוגל מחזירה את הכסף אוטומטית אחרי 3 ימים (consume גם מאפשר לתרום שוב באותו סכום).
+// המוצרים ב-Play Console: donation_1 … donation_6 (מוצרים חד-פעמיים). הסכומים נקבעים שם בלבד, והחלון מציג
+// את מה שקיים לפי המחיר, מהזול ליקר. אפליקציה ישנה / WebView / בלי מוצרים — אין כפתור תרומה בכלל.
+(function () {
+  var PLAY = "https://play.google.com/billing";
+  var SKUS = ["donation_1", "donation_2", "donation_3", "donation_4", "donation_5", "donation_6"];
+  var st = { service: null, items: [] };
+
+  function fmt(price) {
+    var v = parseFloat(price.value), d = v % 1 ? 2 : 0;
+    try {
+      return new Intl.NumberFormat("he-IL", { style: "currency", currency: price.currency, minimumFractionDigits: d, maximumFractionDigits: d }).format(v);
+    } catch (e) { return price.value + " " + price.currency; }
+  }
+
+  // רכישה שלא נצרכה (האפליקציה נסגרה באמצע, או שה-consume נכשל) — נצרכת בפתיחה הבאה ולא מוחזרת
+  function consumePending() {
+    st.service.listPurchases().then(function (list) {
+      (list || []).forEach(function (p) {
+        if (p && p.purchaseToken) st.service.consume(p.purchaseToken).catch(function () {});
+      });
+    }).catch(function () {});
+  }
+
+  function card(inner) {
+    return '<div style="background:linear-gradient(160deg,#1a1f3a,#0f1628);border:1.5px solid rgba(251,191,36,0.4);border-radius:1.5rem;padding:1.75rem 1.5rem;max-width:440px;width:100%;text-align:center;direction:rtl;box-shadow:0 25px 60px rgba(0,0,0,0.6);position:relative;">' +
+      '<button onclick="window._closePopupViaBack(\'donation-modal\');" style="position:absolute;top:0.8rem;left:0.8rem;background:rgba(255,255,255,0.08);border:none;color:#cbd5e1;width:34px;height:34px;border-radius:50%;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;" aria-label="סגור">✕</button>' +
+      inner + '</div>';
+  }
+
+  function thanks(overlay) {
+    overlay.innerHTML = card(
+      '<div style="font-size:2.6rem;margin-bottom:0.5rem;">💛</div>' +
+      '<h3 style="color:#fde68a;font-size:1.35rem;font-weight:900;margin:0 0 0.7rem;">תודה רבה!</h3>' +
+      '<p style="color:#e2e8f0;font-size:0.95rem;line-height:1.75;margin:0;">התרומה התקבלה — תזכו למצוות.</p>');
+  }
+
+  function donate(sku, btn) {
+    var overlay = document.getElementById("donation-modal");
+    if (!st.service || !overlay || overlay.__busy) return;
+    var req;
+    try {
+      // הסכום האמיתי נקבע במוצר ב-Play Console — ה-total נדרש רק כדי לבנות את הבקשה
+      req = new PaymentRequest([{ supportedMethods: PLAY, data: { sku: sku } }],
+        { total: { label: "תרומה", amount: { currency: "ILS", value: "0" } } });
+    } catch (e) {
+      showToast("התשלום דרך Google Play לא זמין כרגע", "error", 3000);
+      return;
+    }
+    overlay.__busy = true;
+    overlay.querySelectorAll(".jc-play-amt").forEach(function (b) { b.disabled = true; b.style.opacity = b === btn ? "1" : "0.5"; });
+    req.show().then(function (res) {
+      var token = res && res.details && res.details.purchaseToken;
+      return (token ? st.service.consume(token).catch(function () {}) : Promise.resolve())
+        .then(function () { return res.complete("success").catch(function () {}); })
+        .then(function () { if (document.getElementById("donation-modal") === overlay) thanks(overlay); });
+    }).catch(function (err) {
+      // AbortError = התורם סגר את חלון התשלום — בלי הודעה
+      if (!err || err.name !== "AbortError") showToast("התשלום לא הושלם — אפשר לנסות שוב", "error", 3000);
+    }).then(function () {
+      overlay.__busy = false;
+      overlay.querySelectorAll(".jc-play-amt").forEach(function (b) { b.disabled = false; b.style.opacity = "1"; });
+    });
+  }
+
+  window._openPlayDonation = function () {
+    if (!st.service || !st.items.length) return;
+    var existing = document.getElementById("donation-modal");
+    if (existing) {
+      if (Date.now() - (existing.__openedAt || 0) < 600) return; // ghost-tap, כמו בחלון של האתר
+      window._closePopupViaBack("donation-modal");
+      return;
+    }
+    var overlay = document.createElement("div");
+    overlay.id = "donation-modal";
+    overlay.__openedAt = Date.now();
+    overlay.style.cssText = "position:fixed;inset:0;z-index:10080;background:rgba(2,6,23,0.7);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:1rem;overflow-y:auto;overscroll-behavior:contain;";
+    overlay.addEventListener("click", function (e) { if (e.target === overlay) window._closePopupViaBack("donation-modal"); });
+    overlay.innerHTML = card(
+      '<div style="font-size:2.6rem;margin-bottom:0.5rem;">💛</div>' +
+      '<h3 style="color:#fde68a;font-size:1.35rem;font-weight:900;margin:0 0 0.7rem;">תרומה ללוח היהודי</h3>' +
+      '<p style="color:#e2e8f0;font-size:0.9rem;line-height:1.75;margin:0 0 1rem;">הלוח היהודי <strong>חינמי לחלוטין</strong>, ונבנה באהבה כדי לתת לכל יהודי כלי נגיש ללוח השנה העברי, זמני היום, תפילות, תהילים ועוד.</p>' +
+      '<p style="color:#cbd5e1;font-size:0.85rem;line-height:1.7;margin:0 0 1.1rem;">תרומה שלך מסייעת לתחזוקה השוטפת, לפיתוח תכנים נוספים ולהמשך התפעול. בחרו סכום:</p>' +
+      '<div class="jc-play-amts" style="display:flex;flex-wrap:wrap;justify-content:center;gap:0.6rem;"></div>' +
+      '<p style="color:#94a3b8;font-size:0.72rem;margin:0.95rem 0 0;">התשלום מתבצע בצורה מאובטחת דרך Google Play</p>');
+    // כפתורי הסכומים נבנים ב-DOM (textContent) — הנתונים מגיעים מ-Google Play, לא נכנסים ל-innerHTML
+    var row = overlay.querySelector(".jc-play-amts");
+    st.items.forEach(function (it) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "jc-play-amt";
+      b.textContent = fmt(it.price);
+      b.style.cssText = "flex:1 1 6.5rem;max-width:10rem;background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#1a1a1a;border:none;font-weight:900;padding:0.85rem 0.75rem;border-radius:1rem;font-size:1.1rem;cursor:pointer;box-shadow:0 8px 20px rgba(251,191,36,0.3);";
+      b.addEventListener("click", function () { donate(it.itemId, b); });
+      row.appendChild(b);
+    });
+    document.body.appendChild(overlay);
+    pushModalState("donation-modal");
+  };
+
+  // רץ פעם אחת בטעינה; חשוף גם לבדיקה בדפדפן (מוקים של getDigitalGoodsService/PaymentRequest) — קריאה חוזרת בטוחה
+  window._jcPlayInit = function () {
+    try {
+      if (!window.__jcInApp || typeof window.getDigitalGoodsService !== "function" || typeof window.PaymentRequest !== "function") return;
+      window.getDigitalGoodsService(PLAY).then(function (service) {
+        if (!service) return;
+        st.service = service;
+        consumePending();
+        return service.getDetails(SKUS).then(function (items) {
+          items = (items || []).filter(function (it) { return it && it.itemId && it.price; });
+          if (!items.length) return;
+          items.sort(function (a, b) { return parseFloat(a.price.value) - parseFloat(b.price.value); });
+          st.items = items;
+          document.documentElement.classList.add("jc-play"); // מציג את כפתור התרומה בסרגל (jc-play-pay)
+        });
+      }).catch(function () {});
+    } catch (e) {}
+  };
+  window._jcPlayInit();
+})();
 
 // ── Auto-scroll: גלילה אוטומטית גלובלית (מימוש חדש ונקי) ──────────────
 // מנוע יחיד שמשמש את כל הכפתורים באתר: ברכות, תפילות, תהילים, ספרים,

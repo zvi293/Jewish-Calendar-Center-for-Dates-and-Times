@@ -20,8 +20,8 @@
     "path": "./android.keystore",
     "alias": "android"
   },
-  "appVersionName": "1.1.0",
-  "appVersionCode": 11,
+  "appVersionName": "1.1.1",
+  "appVersionCode": 12,
   "shortcuts": [
     {
       "name": "תהילים",
@@ -51,7 +51,11 @@
   "generatorApp": "bubblewrap-cli",
   "webManifestUrl": "https://jewishcalendar.co.il/site.webmanifest",
   "fallbackType": "webview",
-  "features": {},
+  "features": {
+    "playBilling": {
+      "enabled": true
+    }
+  },
   "alphaDependencies": {
     "enabled": false
   },
@@ -59,7 +63,7 @@
   "isChromeOSOnly": false,
   "isMetaQuest": false,
   "fullScopeUrl": "https://jewishcalendar.co.il/",
-  "minSdkVersion": 21,
+  "minSdkVersion": 23,
   "orientation": "portrait",
   "fingerprints": [],
   "additionalTrustedOrigins": [],

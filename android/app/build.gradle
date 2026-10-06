@@ -55,10 +55,11 @@ android {
     namespace "il.co.jewishcalendar.twa"
     defaultConfig {
         applicationId "il.co.jewishcalendar.twa"
-        minSdkVersion 21
+        // 23 (אנדרואיד 6): ספריית התשלומים של Play (billing 1.2.0 / PBL 8.3) דורשת אותו; כרום ממילא לא תומך ב-5
+        minSdkVersion 23
         targetSdkVersion 36
-        versionCode 11
-        versionName "1.1.0"
+        versionCode 12
+        versionName "1.1.1"
 
         // The name for the application
         resValue "string", "appName", twaManifest.name
@@ -213,5 +214,7 @@ dependencies {
         implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.6.2'
         // זמני הלכה לווידג'טים — המקור של KosherZmanim שבאתר (אותן שיטות ואותן תוצאות)
         implementation 'com.kosherjava:zmanim:2.5.0'
+        // תרומה באפליקציה דרך Google Play Billing (Play Billing Library 8.3) — PaymentActivity/PaymentService במניפסט
+        implementation 'com.google.androidbrowserhelper:billing:1.2.0'
     
 }

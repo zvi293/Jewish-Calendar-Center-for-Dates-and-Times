@@ -27,6 +27,8 @@
       // ה-WebView (טלפון בלי דפדפן) שולחים בפתיחה Referer android-app://<package>, ובנוסף הודעת הגשר
       // למעלה. נשמר ב-sessionStorage לרענון ולמעבר לדפי הקרדיטים/הפרטיות/התנאים (שבודקים אותו בעצמם) —
       // לא ב-localStorage: ה-TWA חולק את האחסון עם כרום, והאתר בדפדפן היה "חושב" שהוא האפליקציה.
+      // באפליקציה עצמה התרומה עוברת ב-Google Play (script.js, _openPlayDonation): כשהמוצרים זמינים נוסף
+      // html.jc-play, וכפתור התרומה בסרגל (jc-play-pay) חוזר להופיע.
       window.__jcMarkApp = function () {
         window.__jcInApp = true;
         document.documentElement.classList.add("jc-app");
@@ -37,7 +39,10 @@
             sessionStorage.getItem("moadim_in_app") === "1") window.__jcMarkApp();
       } catch (e) {}
     </script>
-    <style>html.jc-app .jc-web-pay { display: none !important; }</style>
+    <style>
+      html.jc-app .jc-web-pay { display: none !important; }
+      html.jc-app.jc-play .jc-play-pay { display: block !important; }
+    </style>
     <script>
       // ערכת העיצוב לפני הציור הראשון — מונע הבזק של התמה הבהירה (FOUC) עד שסקריפט האתר
       // הגדול נטען. applyTheme() רץ אחר-כך באופן אידמפוטנטי.
@@ -502,7 +507,7 @@
     <!-- הקוד הראשי יורד מוקדם (preload) אך מוזרק ומתבצע רק אחרי הציור הראשון —
          ראו הטוען בסוף ה-body. ה-?v= כאן חייב להיות זהה לזה שבטוען וב-sw.js.
          fetchpriority=low: שלא יתחרו ברוחב-הפס עם ה-CSS החוסם (FCP) — כמו defer. -->
-    <link rel="preload" href="script.js?v=98" as="script" fetchpriority="low" />
+    <link rel="preload" href="script.js?v=99" as="script" fetchpriority="low" />
     <link rel="preload" href="lux.js?v=85" as="script" fetchpriority="low" />
 
     <!-- OneSignal Web Push SDK -->
@@ -751,7 +756,7 @@
           </svg>
         </button>
       </div>
-      <div class="pointer-events-auto jc-web-pay">
+      <div class="pointer-events-auto jc-web-pay jc-play-pay">
         <button
           onclick="openDonationModal()"
           class="nav-donate-btn backdrop-blur-md text-white py-2 px-4 rounded-full transition-all shadow-lg flex items-center gap-2"
@@ -2846,7 +2851,7 @@
           // כבר מצוירים מתחת למסך הפתיחה ואנימציית הכניסה מתוזמנת לדהייתו. בהיר/כהה לא טוענים אותו.
           // אותו ?v= כמו ב-_luxSkyEnsure (script.js) וב-sw.js.
           if (document.documentElement.classList.contains("lux-sky")) addScript("sky.js?v=8", { id: "lux-sky-js" });
-          addScript("script.js?v=98");
+          addScript("script.js?v=99");
           addScript("lux.js?v=85");
         }
         function afterFirstPaint() {

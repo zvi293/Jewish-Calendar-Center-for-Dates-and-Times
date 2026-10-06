@@ -2059,11 +2059,79 @@
     document.addEventListener("visibilitychange", function () { if (!document.hidden) { enforceGap(); renderPill(); } });
   });
 
-  /* ── 22. קיצורי PWA (?open=...) ────────────────────────────────── */
+  /* ── 22. קיצורי PWA וקישורים ישירים (?open=...) ────────────────────
+     מקורות: קיצורי הדרך של האפליקציה (לחיצה ארוכה על הסמל), פוש העומר,
+     והווידג'טים של אפליקציית האנדרואיד — כל לחיצה בווידג'ט פותחת את האפליקציה
+     בכתובת /?open=<יעד>&src=widget (android/.../widget). יעד שלא מוכר — דף הבית.
+     הפרמטרים יורדים מהכתובת לפני הפתיחה, כך שרענון לא פותח את החלון שוב. */
   safe("shortcuts", function () {
     var m = location.search.match(/[?&]open=(\w+)/);
     if (!m) return;
     var target = m[1];
+    function qp(name) {
+      var r = location.search.match(new RegExp("[?&]" + name + "=([^&]+)"));
+      return r ? decodeURIComponent(r[1]) : null;
+    }
+    var ch = parseInt(qp("ch"), 10) || 0, verse = parseInt(qp("v"), 10) || 0, planId = qp("plan");
+    try { history.replaceState(history.state, "", location.pathname + location.hash); } catch (e) {}
+    function prayer(id, he, en) {
+      if (typeof window.openPrayer === "function") window.openPrayer(id, he, en);
+    }
+    function clickEl(id) {
+      var el = document.getElementById(id);
+      if (el) el.click();
+    }
+    var ACTIONS = {
+      tehillim: function () {
+        if (typeof window.openTehillimPage !== "function") return;
+        window.openTehillimPage();
+        // ?ch=<פרק>&v=<פסוק> — התהילים היומי (החלוקה החודשית) מתחיל בפרק הזה
+        if (ch >= 1 && ch <= 150) setTimeout(function () {
+          if (typeof window._tehillimOpenPsalm !== "function") return;
+          window._tehillimOpenPsalm(ch);
+          if (verse > 1) setTimeout(function () {
+            var el = document.getElementById("psalm-" + ch + "-v" + verse);
+            if (el) el.scrollIntoView({ block: "start" });
+          }, 900);
+        }, 250);
+      },
+      calendar: function () { if (typeof window.openCalendar === "function") window.openCalendar(); },
+      // ?open=omer — לחיצה על פוש תזכורת ספירת העומר (netlify/functions/omer-reminder.mjs) ועל הווידג'ט
+      omer: function () { if (typeof window.openOmerModal === "function") window.openOmerModal(); },
+      sefarim: function () { if (typeof window.openSefarimNosafimPage === "function") window.openSefarimNosafimPage(); },
+      zmanim: function () {
+        var z = document.getElementById("halacha-banner");
+        if (z) z.scrollIntoView({ behavior: "smooth", block: "center" });
+      },
+      plan: function () {
+        // ?open=plan&plan=<id> — פתיחת סדר לימוד מסוים (הקורא שלו)
+        var ps = jget("lux_study_plans_v1", []);
+        var has = planId && Array.isArray(ps) && ps.some(function (p) { return p && p.id === planId; });
+        if (has && typeof window.luxOpenPlanReader === "function") window.luxOpenPlanReader(planId);
+        else if (Array.isArray(ps) && ps.length && ps[0].id && typeof window.luxOpenPlanReader === "function") window.luxOpenPlanReader(ps[0].id);
+        else if (typeof window.luxOpenPlanWizard === "function") window.luxOpenPlanWizard();
+      },
+      // ?open=plans — רק מביא לאזור "סדר הלימוד האישי שלי" בדף הבית (בלי לפתוח ספר),
+      // ומשם בוחרים סדר ומתחילים ללמוד או בונים סדר חדש
+      plans: function () {
+        var row = document.getElementById("lux-plan-row");
+        if (row) row.scrollIntoView({ behavior: "smooth", block: "center" });
+      },
+      daf: function () { clickEl("daf-yomi-link"); },
+      chok: function () { if (typeof window.openChokLeIsraelModal === "function") window.openChokLeIsraelModal(); },
+      shnayim: function () { clickEl("shnayim-mikra-link"); },
+      shacharit: function () { prayer("shacharit", "תפילת שחרית", "Shacharit"); },
+      mincha: function () { prayer("mincha", "תפילת מנחה", "Mincha"); },
+      maariv: function () { prayer("maariv", "תפילת ערבית", "Maariv"); },
+      bentching: function () { prayer("birkat-hamazon", "ברכת המזון", "Birkat Hamazon"); },
+      meein: function () { prayer("al-hamichya", "ברכת מעין שלוש", "Al HaMichya"); },
+      levana: function () { prayer("kiddush-levana", "ברכת לבנה", "Kiddush Levana"); },
+      shabbat: function () { if (typeof window.openShabbatInfoModal === "function") window.openShabbatInfoModal(); },
+      holiday: function () { if (typeof window.openMoadModal === "function") window.openMoadModal(); },
+      hilula: function () { if (typeof window.openHilulotModal === "function") window.openHilulotModal(0); }
+    };
+    var run = ACTIONS[target];
+    if (!run) return;
     var tries = 0;
     var t = setInterval(function () {
       tries++;
@@ -2071,28 +2139,68 @@
       var ready = document.getElementById("dashboard-state") && !document.getElementById("dashboard-state").classList.contains("hidden");
       if (!ready) return;
       clearInterval(t);
-      setTimeout(function () {
-        if (target === "tehillim" && typeof window.openTehillimPage === "function") window.openTehillimPage();
-        else if (target === "calendar" && typeof window.openCalendar === "function") window.openCalendar();
-        // ?open=omer — לחיצה על פוש תזכורת ספירת העומר (netlify/functions/omer-reminder.mjs)
-        else if (target === "omer" && typeof window.openOmerModal === "function") window.openOmerModal();
-        else if (target === "sefarim" && typeof window.openSefarimNosafimPage === "function") window.openSefarimNosafimPage();
-        else if (target === "zmanim") {
-          var z = document.getElementById("halacha-banner");
-          if (z) z.scrollIntoView({ behavior: "smooth", block: "center" });
-        }
-        else if (target === "plan") {
-          // ?open=plan&plan=<id> — קישור עמוק מהווידג'ט של סדר הלימוד האישי
-          var pidM = location.search.match(/[?&]plan=([^&]+)/);
-          var pid = pidM ? decodeURIComponent(pidM[1]) : null;
-          var ps = jget("lux_study_plans_v1", []);
-          var has = pid && Array.isArray(ps) && ps.some(function (p) { return p && p.id === pid; });
-          if (has && typeof window.luxOpenPlanReader === "function") window.luxOpenPlanReader(pid);
-          else if (Array.isArray(ps) && ps.length && ps[0].id && typeof window.luxOpenPlanReader === "function") window.luxOpenPlanReader(ps[0].id);
-          else if (typeof window.luxOpenPlanWizard === "function") window.luxOpenPlanWizard();
-        }
-      }, 600);
+      setTimeout(function () { try { run(); } catch (e) {} }, 600);
     }, 500);
+  });
+
+  /* ── 22ב. גשר לאפליקציית האנדרואיד — הגדרות לווידג'טים (10/2026) ────
+     הווידג'טים במסך הבית מחושבים בטלפון עצמו (KosherJava, אותן שיטות כמו
+     computeKosherZmanim), אבל ההגדרות של המשתמש חיות כאן ב-localStorage של
+     כרום. האפליקציה פותחת ערוץ PostMessage של TWA (כרום 115+, אימות
+     delegate_permission/common.use_as_origin ב-assetlinks.json): היא שולחת
+     "jc-widgets-hello" עם port, ואנחנו מחזירים דרכו JSON עם העיר, הנוסח, שיטת
+     הזמנים, סדרי הלימוד וטבלת ההילולות — בחיבור, ובכל פעם שמשהו מהם משתנה.
+     בדפדפן רגיל ובמצב WebView אין ערוץ — הקוד פשוט לא עושה כלום. */
+  safe("appBridge", function () {
+    var port = null, lastSent = "", hilCache = null, timer = null;
+    function lsGet(k, d) { try { var v = localStorage.getItem(k); return v == null ? d : v; } catch (e) { return d; } }
+    function payload() {
+      var c = (typeof window.getLocationCoords === "function") ? window.getLocationCoords() : null;
+      if (!c || typeof c.lat !== "number") return null;
+      var jer = typeof window.isInJerusalem === "function" && window.isInJerusalem(c.lat, c.lon);
+      var isr = c.lat >= 29.4 && c.lat <= 33.5 && c.lon >= 34.2 && c.lon <= 35.9;
+      if (!hilCache && typeof window._hilulotTable === "function") hilCache = window._hilulotTable();
+      return {
+        t: "sync",
+        v: 1,
+        loc: {
+          // השם שמוצג בדף (עיר שנבחרה מהרשימה או שם המקום ב-GPS)
+          name: (((document.getElementById("current-city-name") || {}).textContent) || "").trim() || lsGet("moadim_city_name", "") || "",
+          lat: c.lat, lon: c.lon,
+          elev: c.elevation || 0,
+          tz: c.tzid || "Asia/Jerusalem"
+        },
+        // אותה הכרעה כמו computeKosherZmanim: 40 דק' בירושלים, 20 בארץ, 18 בחו"ל
+        candle: jer ? 40 : isr ? 20 : 18,
+        nusach: lsGet("moadim_nusach", "mizrahi"),
+        method: String(lsGet("moadim_method", "MGA")).toUpperCase() === "GRA" ? "GRA" : "MGA",
+        plans: (typeof window._luxPlansSummary === "function") ? window._luxPlansSummary() : [],
+        hil: hilCache || null
+      };
+    }
+    function send(force) {
+      if (!port) return;
+      try {
+        var p = payload();
+        if (!p) return;
+        var j = JSON.stringify(p);
+        if (!force && j === lastSent) return;
+        port.postMessage(j);
+        lastSent = j;
+      } catch (e) {}
+    }
+    window.__appBridgeSync = function () { send(false); };
+    window.addEventListener("message", function (ev) {
+      if (!ev || ev.data !== "jc-widgets-hello" || !ev.ports || !ev.ports[0]) return;
+      if (ev.origin && ev.origin !== location.origin) return;
+      port = ev.ports[0];
+      try { port.start && port.start(); } catch (e) {}
+      // הנתונים של האתר (עיר, זמנים) עוד נטענים בפתיחה — שליחה מיידית, ושוב כשהדף התייצב
+      send(true);
+      setTimeout(function () { send(false); }, 4000);
+      if (!timer) timer = setInterval(function () { if (!document.hidden) send(false); }, 15000);
+    });
+    document.addEventListener("visibilitychange", function () { if (document.hidden) send(false); });
   });
 
   /* ═══════════════════════════════════════════════════════════════
@@ -3037,63 +3145,6 @@
     document.addEventListener("click", function (e) {
       if (e.target.closest && e.target.closest("#lux-streak")) openScreen();
     }, { passive: true });
-  });
-
-  /* ── 32. נתוני ווידג'טים — הכנה לאפליקציה ──────────────────────── */
-  safe("widgetData", function () {
-    // חלוקת תהילים חודשית (ל' ימים)
-    var TH_MONTHLY = {
-      1: "א-ט", 2: "י-יז", 3: "יח-כב", 4: "כג-כח", 5: "כט-לד", 6: "לה-לח",
-      7: "לט-מג", 8: "מד-מח", 9: "מט-נד", 10: "נה-נט", 11: "ס-סה", 12: "סו-סח",
-      13: "סט-עא", 14: "עב-עו", 15: "עז-עח", 16: "עט-פב", 17: "פג-פז", 18: "פח-פט",
-      19: "צ-צו", 20: "צז-קג", 21: "קד-קה", 22: "קו-קז", 23: "קח-קיב", 24: "קיג-קיח",
-      25: 'קיט (עד צ"ו)', 26: 'קיט (מצ"ז)', 27: "קכ-קלד", 28: "קלה-קלט", 29: "קמ-קמד", 30: "קמה-קנ"
-    };
-    function build() {
-      try {
-        var zmanim = [];
-        document.querySelectorAll("#zmanim-details > div[data-zman-key]").forEach(function (c) {
-          var l = c.querySelector("span:first-child"), vl = c.querySelector("span[dir='ltr']");
-          if (l && vl && vl.textContent.trim() !== "--:--") zmanim.push({ l: l.textContent.trim(), v: vl.textContent.trim() });
-        });
-        var hebDay = 1;
-        try { hebDay = parseInt(new Intl.DateTimeFormat("en-u-ca-hebrew", { day: "numeric" }).format(new Date()), 10) || 1; } catch (e) {}
-        var nz = document.getElementById("lux-next-zman");
-        var data = {
-          updated: Date.now(),
-          city: localStorage.getItem("moadim_city_name") || "",
-          hebDate: luxHebDateStr(),
-          gregDate: new Date().toLocaleDateString("he-IL", { day: "numeric", month: "long", year: "numeric" }),
-          parsha: (document.getElementById("stat-parasha") || {}).textContent || "",
-          dafYomi: (document.getElementById("daf-yomi-text") || {}).textContent || "",
-          shabbatEnter: ((document.getElementById("shabbat-enter") || {}).textContent || "").trim(),
-          shabbatExit: ((document.getElementById("shabbat-exit") || {}).textContent || "").trim(),
-          zmanim: zmanim.slice(0, 12),
-          nextZman: nz ? nz.textContent.replace(/^⏳\s*/, "") : "",
-          tehillimDaily: { day: hebDay, range: TH_MONTHLY[Math.min(hebDay, 30)] || "" },
-          omerDay: (window.CURRENT_OMER_DAY || 0),
-          // טקסט נקי (הכרטיס עצמו מכיל מונה מקטעים) — "✓ עכשיו זמן ברכת הלבנה — עד ..."
-          moon: (typeof window._levanaSummaryText === "function" && window._levanaSummaryText()) ||
-            ((document.getElementById("stat-moon") || {}).textContent || "").trim(),
-          pearl: (function () {
-            var el = document.getElementById("lux-pearl");
-            if (!el) return null;
-            var t = el.querySelector(".lux-pearl-text"), src = el.querySelector(".lux-pearl-src");
-            return t ? { t: t.textContent.replace(/^"|"$/g, ""), s: src ? src.textContent.replace(/^—\s*/, "") : "" } : null;
-          })(),
-          plans: (typeof window._luxPlansSummary === "function") ? window._luxPlansSummary() : [],
-          streak: (function () { try { return (JSON.parse(localStorage.getItem("lux_streak") || "null") || {}).count || 0; } catch (e) { return 0; } })()
-        };
-        if (data.zmanim.length || data.hebDate) jset("lux_widget_data", data);
-      } catch (e) {}
-    }
-    setTimeout(build, 6000);
-    setInterval(build, 10 * 60000);
-    // API פומבי — הווידג'טים של האפליקציה ישתמשו בו בהמשך
-    window.LuxWidgetData = {
-      get: function () { return jget("lux_widget_data", null); },
-      refresh: build
-    };
   });
 
   /* ═══════════════════════════════════════════════════════════════
@@ -6053,7 +6104,7 @@
       renderContent();
     }
     window.luxOpenPlanReader = openPlanReader;
-    // סיכום תוכניות לימוד לווידג'טים (widget.html) — שם ספר, התקדמות, יחידה
+    // סיכום תוכניות לימוד — נשלח לווידג'טים של האפליקציה (§ appBridge) — שם ספר, התקדמות, יחידה
     window._luxPlansSummary = function () {
       try {
         return plans().map(function (p) {

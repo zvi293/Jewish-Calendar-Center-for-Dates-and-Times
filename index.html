@@ -466,8 +466,8 @@
     <!-- הקוד הראשי יורד מוקדם (preload) אך מוזרק ומתבצע רק אחרי הציור הראשון —
          ראו הטוען בסוף ה-body. ה-?v= כאן חייב להיות זהה לזה שבטוען וב-sw.js.
          fetchpriority=low: שלא יתחרו ברוחב-הפס עם ה-CSS החוסם (FCP) — כמו defer. -->
-    <link rel="preload" href="script.js?v=94" as="script" fetchpriority="low" />
-    <link rel="preload" href="lux.js?v=79" as="script" fetchpriority="low" />
+    <link rel="preload" href="script.js?v=95" as="script" fetchpriority="low" />
+    <link rel="preload" href="lux.js?v=80" as="script" fetchpriority="low" />
 
     <!-- OneSignal Web Push SDK -->
     <script>
@@ -1444,7 +1444,7 @@
           </div>
           <div>
             <h3 class="font-bold text-slate-600 dark:text-slate-300 mb-2"><span aria-hidden="true">🎨 </span>אילו עוד כלים יש בלוח?</h3>
-            <p>עוד בלוח: <strong>מחולל ברכות מעוצבות</strong> לשליחה לקראת כל חג, <a href="widget.html" class="underline hover:text-blue-600 dark:hover:text-blue-400">ווידג'טים למסך הבית</a>, מצב ערב שבת חגיגי, <strong>חיפוש חכם</strong> בספרים ובתפילות, מרקר לסימון שורה בכל ספר, והערות אישיות ביומן.</p>
+            <p>עוד בלוח: <strong>מחולל ברכות מעוצבות</strong> לשליחה לקראת כל חג, מצב ערב שבת חגיגי, <strong>חיפוש חכם</strong> בספרים ובתפילות, מרקר לסימון שורה בכל ספר, והערות אישיות ביומן.</p>
           </div>
         </div>
 
@@ -1919,12 +1919,6 @@
         class="max-w-6xl mx-auto border-t border-slate-200 dark:border-slate-800 pt-6 flex flex-col items-center gap-4"
       >
         <div class="flex flex-wrap justify-center gap-3">
-          <a
-            href="widget.html"
-            class="inline-flex items-center justify-center rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-5 py-2.5 text-sm font-bold text-slate-700 dark:text-slate-200 transition-colors hover:border-blue-300 hover:text-blue-600 dark:hover:border-blue-500 dark:hover:text-blue-400"
-          >
-            📌 ווידג'טים למסך הבית
-          </a>
           <a
             href="credits.html"
             class="inline-flex items-center justify-center rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-5 py-2.5 text-sm font-bold text-slate-700 dark:text-slate-200 transition-colors hover:border-blue-300 hover:text-blue-600 dark:hover:border-blue-500 dark:hover:text-blue-400"
@@ -2816,8 +2810,8 @@
           // כבר מצוירים מתחת למסך הפתיחה ואנימציית הכניסה מתוזמנת לדהייתו. בהיר/כהה לא טוענים אותו.
           // אותו ?v= כמו ב-_luxSkyEnsure (script.js) וב-sw.js.
           if (document.documentElement.classList.contains("lux-sky")) addScript("sky.js?v=8", { id: "lux-sky-js" });
-          addScript("script.js?v=94");
-          addScript("lux.js?v=79");
+          addScript("script.js?v=95");
+          addScript("lux.js?v=80");
         }
         function afterFirstPaint() {
           // rAF אחד (רץ ממש לפני ציור הפריים הראשון) ואז setTimeout(0) — משימה

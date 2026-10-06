@@ -6297,9 +6297,9 @@ async function _geoRerenderLocationData() {
   if (filter !== "all" || search) {
     try { render(filter, search); } catch (e) {}
   }
-  // נתוני הווידג'טים (lux.js) נבנים מה-DOM — אחרי שהזמנים החדשים הוצבו
+  // מיקום חדש → הווידג'טים של אפליקציית האנדרואיד (lux.js appBridge)
   setTimeout(() => {
-    try { if (window.LuxWidgetData) window.LuxWidgetData.refresh(); } catch (e) {}
+    try { if (window.__appBridgeSync) window.__appBridgeSync(); } catch (e) {}
   }, 400);
 }
 
@@ -27972,6 +27972,15 @@ document.addEventListener("keydown", (e) => {
 
   var _dayOffset = 0;
   var _calRefDate = null;
+
+  // טבלה רזה (שם ותיאור לכל "חודש-יום") לווידג'ט "הילולת היום" באפליקציה — lux.js appBridge
+  window._hilulotTable = function () {
+    var out = {};
+    Object.keys(HD).forEach(function (k) {
+      out[k] = (HD[k] || []).map(function (h) { return { n: h.name || "", t: h.title || "" }; });
+    });
+    return out;
+  };
 
   function getSpecialDay(month, day) {
     // Return a special-day label for the given Hebrew month name + day, or "" if none.

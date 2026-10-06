@@ -2150,6 +2150,8 @@
      delegate_permission/common.use_as_origin ב-assetlinks.json): היא שולחת
      "jc-widgets-hello" עם port, ואנחנו מחזירים דרכו JSON עם העיר, הנוסח, שיטת
      הזמנים, סדרי הלימוד וטבלת ההילולות — בחיבור, ובכל פעם שמשהו מהם משתנה.
+     ההודעה נתפסת בסקריפט קטן בראש index.html (window.__jcAppPort) — היא מגיעה לפני שהקובץ
+     הזה נטען, ובלי זה הלכה לאיבוד (נמדד באמולטור, 10/2026).
      בדפדפן רגיל ובמצב WebView אין ערוץ — הקוד פשוט לא עושה כלום. */
   safe("appBridge", function () {
     var port = null, lastSent = "", hilCache = null, timer = null;
@@ -2190,16 +2192,18 @@
       } catch (e) {}
     }
     window.__appBridgeSync = function () { send(false); };
-    window.addEventListener("message", function (ev) {
-      if (!ev || ev.data !== "jc-widgets-hello" || !ev.ports || !ev.ports[0]) return;
-      if (ev.origin && ev.origin !== location.origin) return;
-      port = ev.ports[0];
+    // ה-port נתפס כבר בראש index.html (ההודעה מגיעה לפני שהקובץ הזה נטען) — ממשיכים ממנו,
+    // וכל port חדש (טעינה חוזרת בתוך האפליקציה) מגיע דרך __jcOnAppPort
+    function attach(p) {
+      port = p;
       try { port.start && port.start(); } catch (e) {}
       // הנתונים של האתר (עיר, זמנים) עוד נטענים בפתיחה — שליחה מיידית, ושוב כשהדף התייצב
       send(true);
       setTimeout(function () { send(false); }, 4000);
       if (!timer) timer = setInterval(function () { if (!document.hidden) send(false); }, 15000);
-    });
+    }
+    window.__jcOnAppPort = attach;
+    if (window.__jcAppPort) attach(window.__jcAppPort);
     document.addEventListener("visibilitychange", function () { if (document.hidden) send(false); });
   });
 

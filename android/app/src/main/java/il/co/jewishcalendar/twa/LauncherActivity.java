@@ -80,11 +80,12 @@ public class LauncherActivity
             @Override
             public void onNavigationEvent(int navigationEvent, Bundle extras) {
                 if (base != null) base.onNavigationEvent(navigationEvent, extras);
+                dbg("navigation " + navigationEvent);
                 if (navigationEvent == NAVIGATION_FINISHED) {
                     CustomTabsSession s = twaSession();
                     if (s != null) {
                         try {
-                            s.requestPostMessageChannel(SITE_ORIGIN, SITE_ORIGIN, new Bundle());
+                            dbg("requestPostMessageChannel=" + s.requestPostMessageChannel(SITE_ORIGIN, SITE_ORIGIN, new Bundle()));
                         } catch (Throwable t) {
                             Log.w("JcBridge", "requestPostMessageChannel", t);
                         }
@@ -96,12 +97,13 @@ public class LauncherActivity
             public void onMessageChannelReady(Bundle extras) {
                 if (base != null) base.onMessageChannelReady(extras);
                 CustomTabsSession s = twaSession();
-                if (s != null) s.postMessage(Sync.HELLO, null);
+                if (s != null) dbg("channel ready, postMessage=" + s.postMessage(Sync.HELLO, null));
             }
 
             @Override
             public void onPostMessage(String message, Bundle extras) {
                 if (base != null) base.onPostMessage(message, extras);
+                dbg("message " + (message == null ? 0 : message.length()) + " chars");
                 Sync.onMessage(getApplicationContext(), message);
             }
 
@@ -118,12 +120,20 @@ public class LauncherActivity
             @Override
             public void onRelationshipValidationResult(int relation, Uri requestedOrigin, boolean result, Bundle extras) {
                 if (base != null) base.onRelationshipValidationResult(relation, requestedOrigin, result, extras);
+                dbg("relationship " + relation + " " + requestedOrigin + " = " + result);
             }
         };
     }
 
+    private static void dbg(String m) {
+        if (Log.isLoggable("JcBridge", Log.DEBUG)) Log.d("JcBridge", m);
+    }
+
     private CustomTabsSession twaSession() {
-        if (launcher == null) return null;
+        if (launcher == null) {
+            dbg("no launcher");
+            return null;
+        }
         try {
             Field f = TwaLauncher.class.getDeclaredField("mSession");
             f.setAccessible(true);

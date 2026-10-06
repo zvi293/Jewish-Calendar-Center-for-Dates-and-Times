@@ -37,15 +37,18 @@ final class Prefs {
         String before = sp(c).getString("sync", "");
         JSONObject keep = new JSONObject();
         try {
-            keep.put("name", loc.optString("name", ""));
+            // במיקום GPS האתר מציג "ירושלים (GPS)" — בכותרת הווידג'ט רק שם העיר
+            keep.put("name", loc.optString("name", "").replaceAll("\\s*\\(GPS\\)\\s*$", "").trim());
             keep.put("lat", lat);
             keep.put("lon", lon);
             keep.put("elev", Math.max(-500, Math.min(9000, loc.optDouble("elev", 0))));
             keep.put("tz", loc.optString("tz", "Asia/Jerusalem"));
             int candle = j.optInt("candle", 20);
             keep.put("candle", candle >= 0 && candle <= 90 ? candle : 20);
+            // המפתחות של האתר (NUSACH_LABELS): mizrahi | sfard | ashkenaz
             String nusach = j.optString("nusach", "mizrahi");
-            keep.put("nusach", "ashkenaz".equals(nusach) || "sefard".equals(nusach) ? nusach : "mizrahi");
+            keep.put("nusach", "ashkenaz".equals(nusach) ? "ashkenaz"
+                    : "sfard".equals(nusach) || "sefard".equals(nusach) ? "sfard" : "mizrahi");
             keep.put("method", "GRA".equals(j.optString("method")) ? "GRA" : "MGA");
             JSONArray plans = j.optJSONArray("plans");
             keep.put("plans", plans == null ? new JSONArray() : plans);
@@ -54,12 +57,20 @@ final class Prefs {
         }
         String now = keep.toString();
         e.putString("sync", now);
+        // האתר שולח את אותן הגדרות כמה פעמים בכל פתיחה — מציירים מחדש רק כשמשהו השתנה
+        boolean changed = !now.equals(before);
         JSONObject hil = j.optJSONObject("hil");
-        if (hil != null && hil.length() > 0) e.putString("hil", hil.toString());
+        if (hil != null && hil.length() > 0) {
+            String h = hil.toString();
+            if (!h.equals(sp(c).getString("hil", ""))) {
+                e.putString("hil", h);
+                hilCache = null;
+                changed = true;
+            }
+        }
         e.putLong("synced_at", System.currentTimeMillis());
         e.apply();
-        hilCache = null;
-        return !now.equals(before) || hil != null;
+        return changed;
     }
 
     static Loc loc(Context c) {
@@ -85,6 +96,11 @@ final class Prefs {
         List<Plan> out = new ArrayList<>();
         String s = sp(c).getString("sync", null);
         if (s == null) return out;
+        // "בוצע היום" באתר = התאריך האזרחי של הסנכרון (todayStr ב-lux.js) — מחצות הוא כבר לא נכון
+        java.util.Calendar synced = java.util.Calendar.getInstance(), today = java.util.Calendar.getInstance();
+        synced.setTimeInMillis(sp(c).getLong("synced_at", 0));
+        boolean sameDay = synced.get(java.util.Calendar.YEAR) == today.get(java.util.Calendar.YEAR)
+                && synced.get(java.util.Calendar.DAY_OF_YEAR) == today.get(java.util.Calendar.DAY_OF_YEAR);
         try {
             JSONArray a = new JSONObject(s).optJSONArray("plans");
             if (a == null) return out;
@@ -97,7 +113,7 @@ final class Prefs {
                 pl.done = p.optInt("done");
                 pl.count = p.optInt("count");
                 pl.perDay = p.optInt("perDay", 1);
-                pl.doneToday = p.optBoolean("doneToday");
+                pl.doneToday = sameDay && p.optBoolean("doneToday");
                 if (!pl.name.isEmpty()) out.add(pl);
             }
         } catch (Exception ignored) {

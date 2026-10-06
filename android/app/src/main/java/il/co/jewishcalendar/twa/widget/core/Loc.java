@@ -13,7 +13,7 @@ public final class Loc {
     public final double lat, lon, elev;
     public final String tz;
     public final int candle;
-    public final String nusach;   // mizrahi | sefard | ashkenaz
+    public final String nusach;   // mizrahi | sfard | ashkenaz (המפתחות של האתר)
     public final String method;   // MGA | GRA
     public final boolean synced;
 

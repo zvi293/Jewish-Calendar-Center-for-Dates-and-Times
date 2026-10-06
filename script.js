@@ -25817,6 +25817,17 @@ window.showContactModal = function () {
               <p style="color:#334155;font-size:0.85rem;line-height:1.7;margin:0 0 0.85rem;">תרומה שלך — בכל סכום — מסייעת לתחזוקה השוטפת, לפיתוח תכנים נוספים ולהמשך התפעול של האתר. ניתן לשלם דרך PayPal או בכרטיס אשראי.</p>
               <p style="color:#64748b;font-size:0.72rem;margin:0;">לחיצה על הכפתור תפתח את דף התרומה — מאובטח ופרטי</p>
             </div>
+            <!-- באפליקציה: אותה תרומה, דרך Google Play (_openPlayDonation) — מוצג רק כש-html.jc-play (index.html) -->
+            <div class="jc-play-only">
+              <button type="button" onclick="if (window._openPlayDonation) window._openPlayDonation()" style="display:inline-flex;align-items:center;justify-content:center;gap:0.5rem;background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#1a1a1a;border:none;cursor:pointer;font-family:inherit;font-weight:800;padding:0.85rem 1.8rem;border-radius:1rem;font-size:1rem;box-shadow:0 8px 20px rgba(251,191,36,0.35);transition:transform 0.15s;" onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform='scale(1)'">
+                <span>תרומה ללוח היהודי ❤️</span>
+              </button>
+              <div style="text-align:center;margin:1rem auto 0;max-width:480px;">
+                <p style="color:#1e293b;font-size:0.9rem;line-height:1.75;margin:0 0 0.85rem;">הלוח היהודי <strong style="color:#0f172a;">חינמי לחלוטין</strong>, ללא פרסומות, ונבנה באהבה כדי לתת לכל יהודי כלי נגיש ללוח השנה העברי, זמני היום, תפילות, תהילים ועוד.</p>
+                <p style="color:#334155;font-size:0.85rem;line-height:1.7;margin:0 0 0.85rem;">תרומה שלך — בכל סכום — מסייעת לתחזוקה השוטפת, לפיתוח תכנים נוספים ולהמשך התפעול. התשלום מתבצע דרך Google Play.</p>
+                <p style="color:#64748b;font-size:0.72rem;margin:0;">לחיצה על הכפתור תפתח את בחירת הסכום — התשלום מאובטח ופרטי</p>
+              </div>
+            </div>
           </div>`;
   overlay.addEventListener("click", (event) => {
     if (event.target === overlay) window._closePopupViaBack('contact-modal');

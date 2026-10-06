@@ -7,10 +7,14 @@
       // הודעת פתיחה ריקה שנושאת port — מיד כשהדף נטען, לפני ש-lux.js (שנטען אחרי הציור הראשון)
       // מאזין. ההודעות של האפליקציה עצמן ("jc-widgets-hello") מגיעות דרך ה-port. שומרים אותו כאן,
       // ו-lux.js §22ב (appBridge) ממשיך ממנו. בדפדפן רגיל אין הודעה כזו ולא קורה כלום.
+      // המקור של הודעת הפתיחה הוא האפליקציה המאומתת, לא האתר:
+      // android-app://jewishcalendar.co.il/il.co.jewishcalendar.twa (כרום, OriginVerifier) —
+      // דף אחר לא יכול לשלוח בשם כזה. ערוץ חדש (האפליקציה ביקשה שוב) מחליף את הקודם.
       window.addEventListener("message", function (e) {
-        if (!e || !e.ports || !e.ports[0] || window.__jcAppPort) return;
+        if (!e || !e.ports || !e.ports[0]) return;
         if (e.data !== "" && e.data !== "jc-widgets-hello") return;
-        if (e.origin && e.origin !== location.origin) return;
+        var o = e.origin || "";
+        if (o && o !== location.origin && o.indexOf("android-app://") !== 0) return;
         window.__jcAppPort = e.ports[0];
         if (typeof window.__jcOnAppPort === "function") window.__jcOnAppPort(e.ports[0]);
       });
@@ -480,7 +484,7 @@
          ראו הטוען בסוף ה-body. ה-?v= כאן חייב להיות זהה לזה שבטוען וב-sw.js.
          fetchpriority=low: שלא יתחרו ברוחב-הפס עם ה-CSS החוסם (FCP) — כמו defer. -->
     <link rel="preload" href="script.js?v=96" as="script" fetchpriority="low" />
-    <link rel="preload" href="lux.js?v=83" as="script" fetchpriority="low" />
+    <link rel="preload" href="lux.js?v=84" as="script" fetchpriority="low" />
 
     <!-- OneSignal Web Push SDK -->
     <script>
@@ -2824,7 +2828,7 @@
           // אותו ?v= כמו ב-_luxSkyEnsure (script.js) וב-sw.js.
           if (document.documentElement.classList.contains("lux-sky")) addScript("sky.js?v=8", { id: "lux-sky-js" });
           addScript("script.js?v=96");
-          addScript("lux.js?v=83");
+          addScript("lux.js?v=84");
         }
         function afterFirstPaint() {
           // rAF אחד (רץ ממש לפני ציור הפריים הראשון) ואז setTimeout(0) — משימה

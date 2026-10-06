@@ -2150,9 +2150,10 @@
      delegate_permission/common.use_as_origin ב-assetlinks.json): היא שולחת
      "jc-widgets-hello" עם port, ואנחנו מחזירים דרכו JSON עם העיר, הנוסח, שיטת
      הזמנים, סדרי הלימוד וטבלת ההילולות — בחיבור, ובכל פעם שמשהו מהם משתנה.
-     כרום מוסר את ה-port בהודעת פתיחה ריקה לחלון, וההודעות של האפליקציה מגיעות דרך ה-port
-     (לא לחלון). הודעת הפתיחה נתפסת בסקריפט קטן בראש index.html (window.__jcAppPort) — היא
-     מגיעה לפני שהקובץ הזה נטען (נמדד באמולטור, 10/2026).
+     כרום מוסר את ה-port בהודעת פתיחה ריקה לחלון, שהמקור שלה הוא האפליקציה
+     (android-app://jewishcalendar.co.il/il.co.jewishcalendar.twa — לא מקור האתר!), וההודעות
+     של האפליקציה מגיעות דרך ה-port (לא לחלון). הודעת הפתיחה נתפסת בסקריפט קטן בראש
+     index.html (window.__jcAppPort) — היא מגיעה לפני שהקובץ הזה נטען (נמדד באמולטור, 10/2026).
      בדפדפן רגיל ובמצב WebView אין ערוץ — הקוד פשוט לא עושה כלום. */
   safe("appBridge", function () {
     var port = null, lastSent = "", hilCache = null, timer = null;
@@ -2196,6 +2197,7 @@
     // ה-port נתפס כבר בראש index.html (ההודעה מגיעה לפני שהקובץ הזה נטען) — ממשיכים ממנו,
     // וכל port חדש (טעינה חוזרת בתוך האפליקציה) מגיע דרך __jcOnAppPort
     function attach(p) {
+      if (port && port !== p) { try { port.close(); } catch (e) {} }
       port = p;
       // "jc-widgets-hello" מהאפליקציה (דרך ה-port) — שולחים שוב את כל ההגדרות
       port.onmessage = function (ev) { if (ev && ev.data === "jc-widgets-hello") send(true); };

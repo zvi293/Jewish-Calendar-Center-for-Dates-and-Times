@@ -23385,27 +23385,39 @@ window.openDonationModal = function() {
   // רץ בטעינה; חשוף גם לבדיקה בדפדפן (מוקים של getDigitalGoodsService/PaymentRequest) — קריאה חוזרת בטוחה.
   // בפתיחה קרה של האפליקציה החיבור ל-Play Billing עוד לא מוכן והקריאה הראשונה נכשלת/חוזרת ריקה
   // (נמדד בטלפון 06/10/2026: הכפתור לא נדלק, וקריאה שנייה אחרי כמה שניות החזירה את 6 הסכומים) —
-  // לכן עד 3 ניסיונות חוזרים, ועוד סבב בכל חזרה לאפליקציה מהרקע. דרישה בשרת: Permissions-Policy עם
+  // לכן ניסיונות חוזרים, ועוד סבב בכל חזרה לאפליקציה מהרקע. דרישה בשרת: Permissions-Policy עם
   // payment=(self) (netlify.toml) — עם payment=() הקריאה נדחית תמיד ב-NotAllowedError.
-  var tries = 0;
+  // (06/10 ערב) באחת הפתיחות בטלפון הכפתור לא נדלק בכלל בסולם הקודם (3 ניסיונות ב-12 שנ', ושני סבבים
+  // במקביל — מהטעינה ומ-visibilitychange — מיצו אותו מהר יותר): עכשיו ניסיון אחד בכל רגע (busy), ניסיון
+  // שלא חוזר תוך 8 שנ' נחשב כישלון (קריאה שנתקעת לא עוצרת את הסולם), וסולם של כדקה וחצי.
+  var DELAYS = [2, 3, 5, 8, 10, 15, 20, 30];
+  var tries = 0, busy = false;
+  function withTimeout(p, ms) {
+    return new Promise(function (resolve, reject) {
+      var t = setTimeout(function () { reject(new Error("timeout")); }, ms);
+      p.then(function (v) { clearTimeout(t); resolve(v); }, function (e) { clearTimeout(t); reject(e); });
+    });
+  }
   window._jcPlayInit = function () {
     try {
       if (!window.__jcInApp || typeof window.getDigitalGoodsService !== "function" || typeof window.PaymentRequest !== "function") return;
-      if (document.documentElement.classList.contains("jc-play")) return;
-      window.getDigitalGoodsService(PLAY).then(function (service) {
+      if (busy || document.documentElement.classList.contains("jc-play")) return;
+      busy = true;
+      withTimeout(window.getDigitalGoodsService(PLAY), 8000).then(function (service) {
         if (!service) throw new Error("no service");
         st.service = service;
         consumePending();
-        return service.getDetails(SKUS).then(function (items) {
+        return withTimeout(service.getDetails(SKUS), 8000).then(function (items) {
           items = sortedItems(items);
           if (!items.length) throw new Error("no items");
           st.items = items;
           document.documentElement.classList.add("jc-play"); // מציג את כפתור התרומה בסרגל (jc-play-pay)
         });
-      }).catch(function () {
-        if (++tries <= 3) setTimeout(window._jcPlayInit, tries * 2000);
-      });
-    } catch (e) {}
+      }).catch(function (err) {
+        window.__jcPlayErr = (err && err.name) + ": " + (err && err.message); // לאבחון בטלפון (CDP)
+        if (tries < DELAYS.length) setTimeout(window._jcPlayInit, DELAYS[tries++] * 1000);
+      }).then(function () { busy = false; });
+    } catch (e) { busy = false; }
   };
   window._jcPlayInit();
   document.addEventListener("visibilitychange", function () {
@@ -25834,6 +25846,8 @@ window.showContactModal = function () {
   });
   document.body.appendChild(overlay);
   pushModalState('contact-modal');
+  // באפליקציה: אם התרומה דרך Google Play עוד לא זמינה (החיבור לא היה מוכן) — עוד ניסיון; הסעיף מופיע מעצמו (CSS)
+  if (window.__jcInApp && window._jcPlayInit) window._jcPlayInit();
 };
 
 window.copyContactEmail = function (btn) {

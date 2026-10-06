@@ -23345,8 +23345,23 @@ window.openDonationModal = function() {
       '<p style="color:#cbd5e1;font-size:0.85rem;line-height:1.7;margin:0 0 1.1rem;">תרומה שלך מסייעת לתחזוקה השוטפת, לפיתוח תכנים נוספים ולהמשך התפעול. בחרו סכום:</p>' +
       '<div class="jc-play-amts" style="display:flex;flex-wrap:wrap;justify-content:center;gap:0.6rem;"></div>' +
       '<p style="color:#94a3b8;font-size:0.72rem;margin:0.95rem 0 0;">התשלום מתבצע בצורה מאובטחת דרך Google Play</p>');
-    // כפתורי הסכומים נבנים ב-DOM (textContent) — הנתונים מגיעים מ-Google Play, לא נכנסים ל-innerHTML
+    renderAmounts(overlay);
+    document.body.appendChild(overlay);
+    pushModalState("donation-modal");
+    // הסכומים מתעדכנים בכל פתיחה: סכום שנוסף בקונסול אחרי טעינת הדף (06/10: 1000 ₪) מופיע בלי להפעיל מחדש
+    st.service.getDetails(SKUS).then(function (items) {
+      items = sortedItems(items);
+      if (!items.length || itemsKey(items) === itemsKey(st.items)) return;
+      st.items = items;
+      if (document.getElementById("donation-modal") === overlay && !overlay.__busy) renderAmounts(overlay);
+    }).catch(function () {});
+  };
+
+  // כפתורי הסכומים נבנים ב-DOM (textContent) — הנתונים מגיעים מ-Google Play, לא נכנסים ל-innerHTML
+  function renderAmounts(overlay) {
     var row = overlay.querySelector(".jc-play-amts");
+    if (!row) return; // החלון כבר עבר להודעת התודה
+    row.textContent = "";
     st.items.forEach(function (it) {
       var b = document.createElement("button");
       b.type = "button";
@@ -23356,9 +23371,16 @@ window.openDonationModal = function() {
       b.addEventListener("click", function () { donate(it.itemId, b); });
       row.appendChild(b);
     });
-    document.body.appendChild(overlay);
-    pushModalState("donation-modal");
-  };
+  }
+
+  function sortedItems(items) {
+    items = (items || []).filter(function (it) { return it && it.itemId && it.price; });
+    items.sort(function (a, b) { return parseFloat(a.price.value) - parseFloat(b.price.value); });
+    return items;
+  }
+  function itemsKey(items) {
+    return items.map(function (it) { return it.itemId + "=" + it.price.value + it.price.currency; }).join(",");
+  }
 
   // רץ בטעינה; חשוף גם לבדיקה בדפדפן (מוקים של getDigitalGoodsService/PaymentRequest) — קריאה חוזרת בטוחה.
   // בפתיחה קרה של האפליקציה החיבור ל-Play Billing עוד לא מוכן והקריאה הראשונה נכשלת/חוזרת ריקה
@@ -23375,9 +23397,8 @@ window.openDonationModal = function() {
         st.service = service;
         consumePending();
         return service.getDetails(SKUS).then(function (items) {
-          items = (items || []).filter(function (it) { return it && it.itemId && it.price; });
+          items = sortedItems(items);
           if (!items.length) throw new Error("no items");
-          items.sort(function (a, b) { return parseFloat(a.price.value) - parseFloat(b.price.value); });
           st.items = items;
           document.documentElement.classList.add("jc-play"); // מציג את כפתור התרומה בסרגל (jc-play-pay)
         });

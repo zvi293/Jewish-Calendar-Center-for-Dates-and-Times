@@ -3305,25 +3305,66 @@
   });
 
   /* ── 35. סיור מודרך בכל האתר ───────────────────────────────────── */
+  // כל שלב: sel (האלמנט הגלוי הראשון שתואם) או els() (כמה אלמנטים — מודגש המלבן המשותף),
+  // ו-ctx אופציונלי — מה שהשלב צריך פתוח: "grid" (הגריד המורחב של התפילות), "hilulot"
+  // (חלון ההילולות), "settings" (ההגדרות). מעבר להקשר אחר סוגר את הקודם (חלונות — דרך
+  // history, כמו ה-X) ופותח את הבא; סוף הסיור מחזיר הכול למצב שלפניו.
+  // 10/2026: נוספו הגריד המורחב, הלימוד היומי, לוח ההילולות, המצפן וסדר הכפתורים בהגדרות;
+  // הוסרו הברכה האישית, גלגל השנה והפנינה היומית; "ניווט מהיר" אוחד לשלב ההגדרות.
   safe("siteTour", function () {
+    function prayerBtn(fn) {
+      return document.querySelector('#prayer-grid-wrap button[onclick^="' + fn + '("]');
+    }
     var STEPS = [
-      { sel: "#lux-greeting", t: "ברכה אישית 👋", d: "ברכה לפי שעת היום עם התאריך העברי. אפשר להוסיף את שמכם דרך ⚙️ ההגדרות כדי שהאתר יברך אתכם בשמכם." },
       { sel: "#lux-moon", t: "הירח החי 🌙", d: "כך נראה הירח בשמים ממש עכשיו. לחיצה מציגה את יום המולד — וממשיכה לברכת הלבנה." },
-      { sel: "#prayer-grid-wrap", t: "תפילות בלחיצה 🙏", d: "תפילת הדרך, ברכת המזון, תיקון הכללי ועוד — לחיצה אחת פותחת את הנוסח המלא. בכפתור \"תפילות נוספות\" מסתתרות עוד הרבה, כולל לוח ברכות הנהנין וסדר התרת נדרים." },
-      { sel: "#lux-plan-row", t: "סדר לימוד אישי 🎯", d: "בוחרים ספר — תהילים, משנה, בן איש חי ועוד — קובעים קצב, והאתר מחלק את הלימוד לימים, מציג בכל יום את המנה, עוקב אחרי ההתקדמות ומעניק תגי התמדה." },
-      { sel: "#shabbat-countdown-wrap", t: "ספירה לאחור לשבת 🕯️", d: "כמה זמן נשאר עד כניסת השבת או החג. לחיצה מציגה את כל פרטי השבת: הדלקת נרות, הבדלה ופרשת השבוע." },
-      { sel: "#btn-open-calendar", t: "לוח שנה חודשי 📅", d: "לוח שנה עברי-לועזי מלא עם כל החגים, ראשי החודשים והפרשות. אפשר לדפדף בין חודשים גם בהחלקת אצבע." },
-      { sel: "#lux-year-wheel-btn", t: "גלגל השנה 🎡", d: "מסע ויזואלי של שנה שלמה — כל החגים על גלגל מסתובב. לחצו על חג כדי לגלות מתי הוא ובעוד כמה ימים." },
       { sel: "#btn-shul-mikve", t: "בתי כנסת ומקוואות 🕍", d: "מציאת בתי כנסת, מקוואות וציוני צדיקים הקרובים אליכם — עם ניווט ישיר בוויז." },
-      { sel: "#dashboard-state", t: "המבט היומי ✨", d: "התאריך העברי של היום, החג הקרוב, פרשת השבוע והדף היומי — הכל במבט אחד. לחיצה על כרטיס פותחת פרטים." },
-      { sel: "#halacha-banner", t: "זמני היום 🕰️", d: "כל זמני ההלכה לפי המיקום שלכם: עלות השחר, זמני ק\"ש, שקיעה וצאת הכוכבים. אפשר גם לשתף כתמונה מעוצבת או להדפיס." },
+      { sel: 'button[onclick="openCompass()"]', t: "מצפן התפילה 🧭", d: "לאן פונים בתפילה? המצפן מראה את הכיוון המדויק לירושלים ולמקום המקדש מכל מקום שבו אתם נמצאים (בטלפון עם חיישן מצפן). הוא מחכה לכם גם בראש תפילות שחרית, מנחה וערבית." },
+      { sel: "#btn-open-calendar", t: "לוח שנה חודשי 📅", d: "לוח שנה עברי-לועזי מלא עם כל החגים, ראשי החודשים והפרשות. אפשר לדפדף בין חודשים גם בהחלקת אצבע." },
+      { sel: "#shabbat-countdown-wrap", t: "ספירה לאחור לשבת 🕯️", d: "כמה זמן נשאר עד כניסת השבת או החג. לחיצה מציגה את כל פרטי השבת: הדלקת נרות, הבדלה ופרשת השבוע." },
+      { sel: "#prayer-grid-wrap", ctx: "grid", t: "תפילות בלחיצה 🙏", d: "שחרית, מנחה וערבית, ברכות השחר, ברכת המזון, תפילת הדרך, תהילים ועוד — לחיצה אחת פותחת את הנוסח המלא לפי הנוסח שלכם, וכל תוספת של היום (יעלה ויבוא, על הניסים, עננו…) כבר בפנים ומסומנת בצבע." },
+      { els: function () { return [prayerBtn("openTefilotNosafotPage"), prayerBtn("openSefarimNosafimPage")]; }, ctx: "grid", t: "תפילות נוספות וספרייה תורנית 📚", d: "ב\"תפילות נוספות\" — פרק שירה, תיקון היסוד, סדר ברית מילה ושבע ברכות, חנוכת הבית, תפילות בציוני צדיקים, התרת נדרים ועוד. ב\"ספרים נוספים\" — ספרייה רחבה לקריאה: תנ\"ך, משנה, תלמוד בבלי וירושלמי עם מפרשים, זוהר, שולחן ערוך ומשנה ברורה, ספרי מוסר וחסידות." },
+      { sel: "#dashboard-state", t: "המבט היומי ✨", d: "התאריך העברי, השבת הקרובה ופרשת השבוע, ברכת הלבנה והמועד הבא — הכל במבט אחד. לחיצה על כרטיס פותחת את הפרטים." },
+      { sel: "#hilulot-inner", ctx: "hilulot", t: "לוח ההילולות 🕯️", d: "הצדיקים שיום ההילולא שלהם חל היום — ולרבים מהם גם דבר תורה. בחיצים עוברים ליום אחר, ולמטה — לוח הילולות לחודש שלם. נפתח בלחיצה על כרטיס \"התאריך היום\"." },
+      { sel: "#study-links", t: "הלימוד היומי 📜", d: "ארבעה לימודים קבועים שמתעדכנים מעצמם בכל יום: שניים מקרא ואחד תרגום על פרשת השבוע, חוק לישראל, הדף היומי ודבר תורה לחודש העברי. לחיצה פותחת את הלימוד של היום." },
+      { els: function () { var z = document.getElementById("zmanim-details"); return [z && z.parentElement]; }, t: "זמני היום 🕰️", d: "כל זמני ההלכה לפי המיקום שלכם: עלות השחר, זמני ק\"ש, שקיעה וצאת הכוכבים. אפשר גם לשתף כתמונה מעוצבת או להדפיס." },
+      { sel: "#lux-plan-row", t: "סדר לימוד אישי 🎯", d: "בוחרים ספר — תהילים, משנה, בן איש חי ועוד — קובעים קצב, והאתר מחלק את הלימוד לימים, מציג בכל יום את המנה, עוקב אחרי ההתקדמות ומעניק תגי התמדה." },
       { sel: "#mainSearch", t: "חיפוש חכם 🔍", d: "הקלידו כל דבר — תפילה, ספר, זמן או חג — ותקבלו קפיצה ישירה אליו." },
-      { sel: "#resultsGrid", t: "החגים הקרובים 🗓️", d: "כל המועדים הקרובים עם זמני כניסה ויציאה. בכל כרטיס: סנכרון ליומן, דבר תורה מיוחד ושיתוף בוואטסאפ." },
-      { sel: "#lux-pearl", t: "פנינה יומית 💎", d: "ציטוט יומי מתחלף מפרקי אבות ומקורות ישראל — השראה קטנה לכל יום." },
-      { sel: "#lux-bottom-nav", t: "ניווט מהיר 📱", d: "סרגל הניווט התחתון — ואפשר לבחור בהגדרות בדיוק אילו קיצורים יופיעו בו." },
-      { sel: ".nav-action-btn", t: "הגדרות ⚙️", d: "נוסח התפילה, שיטת הזמנים, עיצוב, התראות, יארצייטים, הישגים והמרת תאריכים — הכל מתאים את האתר בדיוק אליכם. סיור נעים! 🙌" }
+      { sel: "#resultsGrid .event-card", t: "החגים הקרובים 🗓️", d: "כל המועדים הקרובים עם זמני כניסה ויציאה. בכל כרטיס: סנכרון ליומן, דבר תורה מיוחד ושיתוף בוואטסאפ." },
+      { els: function () {
+          var po = document.querySelector('#settings-modal button[onclick="openPrayerOrderEditor()"]');
+          var ne = document.getElementById("lux-nav-edit-btn");
+          return [po && po.parentElement, ne && ne.parentElement];
+        }, ctx: "settings", t: "ההגדרות — הכל לפי הטעם שלכם ⚙️", d: "כאן קובעים את נוסח התפילה, שיטת הזמנים, גודל הכיתוב, העיצוב וההתראות. ואפשר לשנות את סדר הכפתורים באתר: לגרור את כפתורי התפילות לסדר שנוח לכם (שלושת הראשונים בשורה הראשית), ולבחור אילו קיצורים יופיעו בסרגל הניווט התחתון. זהו — אתם מוכנים! 🙌" }
     ];
+    var PAD = 8, GAP = 14;
     var idx = 0, overlay = null, hi = null, tip = null;
+    var curCtx = null, gridOpenedByTour = false, busy = false, seq = 0;
+
+    var CTX = {
+      grid: {
+        isOpen: function () { var g = document.getElementById("prayer-more-grid"); return !!g && !g.classList.contains("hidden"); },
+        open: function () {
+          if (this.isOpen() || typeof window.toggleMorePrayers !== "function") return;
+          window.toggleMorePrayers();
+          gridOpenedByTour = true;
+        },
+        // הגריד חוזר למצב שהיה לפני הסיור — נסגר רק אם הסיור פתח אותו
+        close: function () {
+          if (gridOpenedByTour && this.isOpen()) window.toggleMorePrayers();
+          gridOpenedByTour = false;
+        }
+      },
+      hilulot: {
+        isOpen: function () { return !!document.getElementById("hilulot-modal"); },
+        open: function () { if (!this.isOpen() && typeof window.openHilulotModal === "function") window.openHilulotModal(0); },
+        close: function () { if (this.isOpen()) window._closePopupViaBack("hilulot-modal"); }
+      },
+      settings: {
+        isOpen: function () { var m = document.getElementById("settings-modal"); return !!m && !m.classList.contains("hidden"); },
+        open: function () { if (!this.isOpen() && typeof window.toggleSettings === "function") window.toggleSettings(); },
+        close: function () { if (this.isOpen()) window._closePopupViaBack("settings-modal"); }
+      }
+    };
 
     function visible(el) {
       if (!el) return false;
@@ -3331,45 +3372,132 @@
       var r = el.getBoundingClientRect();
       return r.width > 4 && r.height > 4;
     }
+    function pick(sel) {
+      var all = document.querySelectorAll(sel);
+      for (var i = 0; i < all.length; i++) if (visible(all[i])) return all[i];
+      return null;
+    }
+    function stepEls(s) {
+      return (s.els ? s.els() : [pick(s.sel)]).filter(visible);
+    }
+    function unionRect(list) {
+      var t = Infinity, l = Infinity, b = -Infinity, r = -Infinity;
+      list.forEach(function (el) {
+        var q = el.getBoundingClientRect();
+        t = Math.min(t, q.top); l = Math.min(l, q.left); b = Math.max(b, q.bottom); r = Math.max(r, q.right);
+      });
+      return { top: t, left: l, bottom: b, right: r, width: r - l, height: b - t };
+    }
+    function inFixed(el) {
+      for (var n = el; n && n !== document.body; n = n.parentElement) {
+        if (getComputedStyle(n).position === "fixed") return true;
+      }
+      return false;
+    }
+    // גבול עליון לשלב בדף — מתחת לסרגל העליון הקבוע (בחלון פתוח הסרגל מוסתר מאחוריו)
+    function topSafe() {
+      if (curCtx === "hilulot" || curCtx === "settings") return 12;
+      var tb = document.getElementById("lux-topbar");
+      if (tb && visible(tb) && getComputedStyle(tb).position === "fixed") return Math.max(12, tb.getBoundingClientRect().bottom + 6);
+      return 12;
+    }
+
+    // בזמן הסיור לחיצות מחוץ לכרטיס לא מפעילות את הדף (חלון שנפתח מתחת לסיור שבר אותו);
+    // הגלילה נשארת חופשית. ה-X האוניברסלי (§46) של שכבת הסיור = יציאה מסודרת מהסיור
+    function blockClick(e) {
+      if (tip && tip.contains(e.target)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      var x = e.target.closest && e.target.closest(".lux-ux");
+      if (x && x.__luxFor === overlay) endTour();
+    }
     function endTour() {
+      seq++;
+      busy = false;
       if (overlay) overlay.remove();
       overlay = hi = tip = null;
       window.removeEventListener("resize", place);
       window.removeEventListener("scroll", placeSoon, true);
+      window.removeEventListener("popstate", onPop);
+      document.removeEventListener("click", blockClick, true);
+      var c = curCtx;
+      curCtx = null;
+      if (c) CTX[c].close();
+    }
+    // "חזרה" (כפתור הטלפון / Esc) סגרה את החלון של השלב — יוצאים מהסיור
+    function onPop() {
+      setTimeout(function () {
+        if (!overlay || busy) return;
+        if (curCtx && curCtx !== "grid" && !CTX[curCtx].isOpen()) { curCtx = null; endTour(); }
+      }, 60);
     }
     var placeT = null;
     function placeSoon() {
       if (placeT) return;
       placeT = setTimeout(function () { placeT = null; place(); }, 60);
     }
-    function stepEl() {
-      var s = STEPS[idx];
-      return s ? document.querySelector(s.sel) : null;
-    }
     function place() {
       if (!overlay) return;
-      var el = stepEl();
-      if (!el || !visible(el)) return;
-      var r = el.getBoundingClientRect();
-      var pad = 8;
-      hi.style.top = (r.top - pad) + "px";
-      hi.style.left = (r.left - pad) + "px";
-      hi.style.width = (r.width + pad * 2) + "px";
-      hi.style.height = (r.height + pad * 2) + "px";
-      // מיקום הכרטיס: מתחת לאלמנט אם יש מקום, אחרת מעליו
-      var tipH = tip.offsetHeight || 180;
-      var below = r.bottom + pad + 14;
-      var top = below + tipH < window.innerHeight - 12 ? below : Math.max(12, r.top - pad - tipH - 14);
-      tip.style.top = top + "px";
-    }
-    function show() {
-      // דילוג על שלבים שהאלמנט שלהם לא קיים/מוסתר
-      var guard = 0;
-      while (idx < STEPS.length && (!stepEl() || !visible(stepEl())) && guard < 30) { idx++; guard++; }
-      if (idx >= STEPS.length) { endTour(); return; }
       var s = STEPS[idx];
-      var el = stepEl();
-      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      var list = s ? stepEls(s) : [];
+      if (!list.length) return;
+      var r = unionRect(list);
+      var vh = window.innerHeight;
+      var tipH = tip.offsetHeight || 190;
+      var top = r.top - PAD, bottom = r.bottom + PAD;
+      var maxBottom = vh - 12 - GAP - tipH;
+      var tipTop;
+      if (bottom <= maxBottom) tipTop = bottom + GAP;
+      else if (top - GAP - tipH >= 12) tipTop = top - GAP - tipH;
+      else {
+        // אלמנט גבוה מהמסך (זמני היום, חלון ההילולות): מודגש החלק העליון והכרטיס יושב מתחתיו
+        bottom = Math.max(top + 40, maxBottom);
+        tipTop = bottom + GAP;
+      }
+      hi.style.top = top + "px";
+      hi.style.left = (r.left - PAD) + "px";
+      hi.style.width = (r.width + PAD * 2) + "px";
+      hi.style.height = (bottom - top) + "px";
+      tip.style.top = Math.max(12, Math.min(tipTop, vh - tipH - 12)) + "px";
+    }
+    // גלילה כך שהאלמנט והכרטיס שמתחתיו נכנסים יחד למסך (גבוה מדי — ראש האלמנט בראש המסך)
+    function scrollToStep(list) {
+      var first = list[0];
+      if (inFixed(first)) {
+        // בתוך חלון פתוח — גוללים את החלון עצמו; בסרגל קבוע אין מה לגלול
+        if (curCtx === "hilulot" || curCtx === "settings") first.scrollIntoView({ behavior: "smooth", block: "center" });
+        return;
+      }
+      var r = unionRect(list);
+      var ts = topSafe();
+      var tipH = tip.offsetHeight || 190;
+      var need = r.height + PAD * 2 + GAP + tipH;
+      var avail = window.innerHeight - ts - 12;
+      var targetTop = need <= avail ? ts + (avail - need) / 2 + PAD : ts + PAD;
+      window.scrollTo({ top: Math.max(0, window.scrollY + r.top - targetTop), behavior: "smooth" });
+    }
+    function waitClosed(c, cb) {
+      var t0 = Date.now();
+      (function poll() {
+        if (!CTX[c].isOpen() || Date.now() - t0 > 1500) return cb();
+        setTimeout(poll, 50);
+      })();
+    }
+    function switchCtx(next, cb) {
+      if (curCtx === next) return cb();
+      var prev = curCtx;
+      curCtx = next;
+      function openNext() {
+        if (!next) return cb();
+        CTX[next].open();
+        // החלון צריך רגע להיפרס לפני המדידה (המיקום מתעדכן שוב בסוף אנימציית הפתיחה)
+        setTimeout(cb, 160);
+      }
+      if (prev) { CTX[prev].close(); waitClosed(prev, openNext); }
+      else openNext();
+    }
+    function render() {
+      var s = STEPS[idx];
       tip.innerHTML =
         '<div class="lux-tour-title">' + s.t + "</div>" +
         '<div class="lux-tour-desc">' + s.d + "</div>" +
@@ -3381,28 +3509,38 @@
           (idx > 0 ? '<button type="button" class="lux-tour-prev">→ הקודם</button>' : "") +
           '<button type="button" class="lux-tour-next">' + (idx === STEPS.length - 1 ? "סיום 🎉" : "הבא ←") + "</button>" +
         "</div>";
-      tip.querySelector(".lux-tour-next").addEventListener("click", function () {
-        idx++;
-        if (idx >= STEPS.length) { endTour(); luxConfetti(); return; }
-        show();
-      });
+      tip.querySelector(".lux-tour-next").addEventListener("click", function () { if (!busy) go(idx + 1, 1); });
       var pv = tip.querySelector(".lux-tour-prev");
-      if (pv) pv.addEventListener("click", function () { idx = Math.max(0, idx - 1); show(); });
+      if (pv) pv.addEventListener("click", function () { if (!busy) go(idx - 1, -1); });
       tip.querySelector(".lux-tour-skip").addEventListener("click", endTour);
-      // ממתינים לגלילה ואז ממקמים
-      setTimeout(place, 350);
-      setTimeout(place, 750);
+    }
+    // מעבר לשלב i בכיוון dir — שלב שהאלמנט שלו לא קיים/מוסתר (גם אחרי פתיחת ההקשר) מדולג
+    function go(i, dir) {
+      if (!overlay) return;
+      if (i < 0) { i = 0; dir = 1; }
+      if (i >= STEPS.length) { endTour(); luxConfetti(); return; }
+      var token = ++seq;
+      busy = true;
+      switchCtx(STEPS[i].ctx || null, function () {
+        if (token !== seq || !overlay) return;
+        var list = stepEls(STEPS[i]);
+        if (!list.length) { busy = false; go(i + dir, dir); return; }
+        busy = false;
+        idx = i;
+        render();
+        scrollToStep(list);
+        place();
+        // ממתינים לגלילה/לאנימציית הפתיחה ואז ממקמים שוב
+        setTimeout(place, 350);
+        setTimeout(place, 750);
+      });
     }
     function startTour() {
       // סיור קודם שעדיין פתוח — סוגרים קודם (מונע שכבות כפולות)
       endTour();
       document.querySelectorAll("#lux-tour-overlay").forEach(function (o) { o.remove(); });
-      // סוגרים הגדרות אם פתוחות
-      try {
-        var sm = document.getElementById("settings-modal");
-        if (sm && !sm.classList.contains("hidden") && typeof window.toggleSettings === "function") window.toggleSettings();
-      } catch (e) {}
-      idx = 0;
+      // הסיור נפתח בדרך כלל מההגדרות — סוגרים אותן ומחכים שייסגרו לפני השלב הראשון
+      CTX.settings.close();
       overlay = document.createElement("div");
       overlay.id = "lux-tour-overlay";
       overlay.innerHTML = '<div id="lux-tour-hi"></div><div id="lux-tour-tip"></div>';
@@ -3411,7 +3549,10 @@
       tip = overlay.querySelector("#lux-tour-tip");
       window.addEventListener("resize", place);
       window.addEventListener("scroll", placeSoon, true);
-      setTimeout(show, 250);
+      window.addEventListener("popstate", onPop);
+      document.addEventListener("click", blockClick, true);
+      busy = true;
+      waitClosed("settings", function () { setTimeout(function () { go(0, 1); }, 150); });
     }
     window.luxStartTour = startTour;
 

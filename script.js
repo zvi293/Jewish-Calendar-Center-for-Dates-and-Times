@@ -23224,6 +23224,8 @@ window._luxModalStepBack = function(modalId) {
   return true;
 };
 window.openDonationModal = function() {
+  // באפליקציה מ-Google Play אין תרומה ב-PayPal (מדיניות Payments של Play) — הכפתור מוסתר שם (jc-web-pay, ראו index.html)
+  if (window.__jcInApp) return;
   var existing = document.getElementById('donation-modal');
   if (existing) {
     // ghost-tap בנייד: מתעלמים מנגיעה כפולה מיד אחרי הפתיחה — אחרת הפופאפ מהבהב ונסגר
@@ -25644,10 +25646,10 @@ window.showContactModal = function () {
               </button>
             </div>
             <p style="color:#94a3b8;font-size:0.72rem;margin:1rem 0 1rem;">לחיצה על הכתובת תפתח את אפליקציית המייל שלכם</p>
-            <a href="https://www.paypal.com/donate/?hosted_button_id=88H6AJG95Y3PQ" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;justify-content:center;gap:0.5rem;background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#1a1a1a;text-decoration:none;font-weight:800;padding:0.85rem 1.8rem;border-radius:1rem;font-size:1rem;box-shadow:0 8px 20px rgba(251,191,36,0.35);transition:transform 0.15s;" onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform='scale(1)'">
+            <a class="jc-web-pay" href="https://www.paypal.com/donate/?hosted_button_id=88H6AJG95Y3PQ" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;justify-content:center;gap:0.5rem;background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#1a1a1a;text-decoration:none;font-weight:800;padding:0.85rem 1.8rem;border-radius:1rem;font-size:1rem;box-shadow:0 8px 20px rgba(251,191,36,0.35);transition:transform 0.15s;" onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform='scale(1)'">
               <span>תרומה לאתר ❤️</span>
             </a>
-            <div style="text-align:center;margin:1rem auto 0;max-width:480px;">
+            <div class="jc-web-pay" style="text-align:center;margin:1rem auto 0;max-width:480px;">
               <p style="color:#1e293b;font-size:0.9rem;line-height:1.75;margin:0 0 0.85rem;">האתר הזה הוא <strong style="color:#0f172a;">חינמי לחלוטין</strong>, ללא פרסומות, ונבנה באהבה כדי לתת לכל יהודי כלי נגיש ללוח השנה העברי, זמני היום, תפילות, תהילים ועוד.</p>
               <p style="color:#334155;font-size:0.85rem;line-height:1.7;margin:0 0 0.85rem;">תרומה שלך — בכל סכום — מסייעת לתחזוקה השוטפת, לפיתוח תכנים נוספים ולהמשך התפעול של האתר. ניתן לשלם דרך PayPal או בכרטיס אשראי.</p>
               <p style="color:#64748b;font-size:0.72rem;margin:0;">לחיצה על הכפתור תפתח את דף התרומה — מאובטח ופרטי</p>

@@ -17,6 +17,14 @@
         }
       } catch (e) {}
     </script>
+    <script>
+      // באפליקציה מ-Google Play — בלי PayPal (מדיניות Payments של Play); הזיהוי והסבר מלא ב-index.html (jc-web-pay)
+      try {
+        if (String(document.referrer || "").indexOf("android-app://il.co.jewishcalendar.twa") === 0)
+          sessionStorage.setItem("moadim_in_app", "1");
+        if (sessionStorage.getItem("moadim_in_app") === "1") document.documentElement.classList.add("jc-app");
+      } catch (e) {}
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>קרדיטים | הלוח היהודי</title>
     <meta name="title" content="קרדיטים | הלוח היהודי" />
@@ -102,6 +110,7 @@
     <!-- גופני האתר באחסון עצמי (ראו fonts.css) — בלי בקשה ל-Google Fonts -->
     <link rel="stylesheet" href="/fonts.css?v=1" />
     <style>
+      html.jc-app .jc-web-pay { display: none !important; }
       body {
         font-family: "Assistant", sans-serif;
         transition:
@@ -536,7 +545,7 @@
             </div>
 
             <div
-              class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5"
+              class="jc-web-pay rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5"
             >
               <h3 class="text-lg font-bold text-slate-900 dark:text-white">
                 PayPal

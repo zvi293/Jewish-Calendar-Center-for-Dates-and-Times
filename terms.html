@@ -17,6 +17,14 @@
         }
       } catch (e) {}
     </script>
+    <script>
+      // באפליקציה מ-Google Play — בלי PayPal (מדיניות Payments של Play); הזיהוי והסבר מלא ב-index.html (jc-web-pay)
+      try {
+        if (String(document.referrer || "").indexOf("android-app://il.co.jewishcalendar.twa") === 0)
+          sessionStorage.setItem("moadim_in_app", "1");
+        if (sessionStorage.getItem("moadim_in_app") === "1") document.documentElement.classList.add("jc-app");
+      } catch (e) {}
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>תנאי שימוש | הלוח היהודי</title>
     <meta name="title" content="תנאי שימוש | הלוח היהודי" />
@@ -102,6 +110,7 @@
     <!-- גופני האתר באחסון עצמי (ראו fonts.css) — בלי בקשה ל-Google Fonts -->
     <link rel="stylesheet" href="/fonts.css?v=1" />
     <style>
+      html.jc-app .jc-web-pay { display: none !important; }
       body {
         font-family: "Assistant", sans-serif;
         transition:
@@ -325,8 +334,8 @@
           </p>
         </section>
 
-        <!-- תרומות -->
-        <section class="rounded-3xl bg-slate-50 dark:bg-slate-900/60 p-6">
+        <!-- תרומות (באפליקציה מוסתר — jc-web-pay, מדיניות Payments של Google Play) -->
+        <section class="jc-web-pay rounded-3xl bg-slate-50 dark:bg-slate-900/60 p-6">
           <h2 class="text-2xl font-black text-slate-900 dark:text-white">
             תרומות
           </h2>

@@ -33417,7 +33417,7 @@ function openSefarimNosafimPage(_pageMode) {
 
   // ── לוח ברכות הנהנין — נבנה מנתונים מובנים (חיפוש פנימי + כרטיסים) ──
   (function buildBirkotBoard() {
-    var C = { hamotzi: "#b45309", mezonot: "#d97706", gefen: "#7c3aed", etz: "#16a34a", adama: "#0d9488", shehakol: "#2563eb" };
+    var C = { hamotzi: "#b45309", mezonot: "#d97706", gefen: "#7c3aed", etz: "#16a34a", adama: "#0d9488", shehakol: "#2563eb", mgas: "#a16207" };
     function chip(txt, color) {
       return "<span style=\"display:inline-block;background:" + color + "18;color:" + color + ";border:1.5px solid " + color + "55;border-radius:999px;padding:0.18rem 0.7rem;font-size:0.82em;font-weight:900;white-space:nowrap;\">" + txt + "</span>";
     }
@@ -33608,6 +33608,223 @@ function openSefarimNosafimPage(_pageMode) {
         ["משקאות חלבון ותחליפי ארוחה", "shehakol", "nefashot"]
       ]}
     ];
+    // ── סדר הקדימה בברכות — מג"ע א"ש (10/2026) ──
+    // פרק בתחתית הלוח: סולם "אבני חן", כלי "מה מברכים קודם?", פסוק שבעת המינים וכללים.
+    // ההלכה כמנהג הספרדים, כמו שאר הלוח — שו"ע או"ח רי"א, בן איש חי (שנה א', מטות א–ה) וכף החיים
+    // רי"א; היכן שמנהג אשכנז שונה (העץ מול האדמה — החביב קודם) — הערה לפי המשנה ברורה וביאור הלכה.
+    // ה-h2/h3 של הפרק נכנסים לתוכן העניינים של הקורא מעצמם (openHardcoded אוסף את כל ה-h2,h3).
+    var MG_ICO = {   // לתאנה ולרימון אין אימוג'י — ציור קטן
+      fig: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12.6 3.4c1-1 2.4-1.4 3.6-1" stroke="#4d7c0f" stroke-width="1.6" fill="none" stroke-linecap="round"/><path d="M12 3.2s.7 2 2.3 3.2C17.6 8.8 19 11.8 19 14.8c0 4-3.1 6.4-7 6.4s-7-2.4-7-6.4c0-3 1.4-6 4.7-8.4C11.3 5.2 12 3.2 12 3.2z" fill="#7e3b6e"/><ellipse cx="9.6" cy="13" rx="1.5" ry="2.8" fill="#fff" opacity=".22"/></svg>',
+      pom: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.6 3.6l1.3 2.2L12 3.4l2.1 2.4 1.3-2.2.5 3.6H8.1z" fill="#9f1239"/><circle cx="12" cy="14.2" r="7.6" fill="#dc2626"/><circle cx="9.2" cy="11.6" r="2.1" fill="#fff" opacity=".25"/></svg>'
+    };
+    // [שם, אייקון, ברכה, דרגה בתוך הברכה] — במזונות: 0 חיטה · 2 שיבולת שועל · 3 אורז;
+    // בהעץ: 1–5 שבעת המינים לפי הקרבה ל"ארץ" (זית, תמר, ענבים, תאנה, רימון) · 9 שאר הפירות.
+    // הסדר מעורבב בכוונה — שלא יסגיר את התשובה
+    var MG_F = [
+      ["עוגה", "🍰", "mezonot", 0], ["בננה", "🍌", "adama", 0], ["ענבים", "🍇", "etz", 3], ["שוקולד", "🍫", "shehakol", 0],
+      ["יין", "🍷", "gefen", 0], ["תפוח", "🍎", "etz", 9], ["לחם", "🍞", "hamotzi", 0], ["אבטיח", "🍉", "adama", 0],
+      ["תמרים", "🌴", "etz", 2], ["מים", "💧", "shehakol", 0], ["פסטה", "🍝", "mezonot", 0], ["תאנים", MG_ICO.fig, "etz", 4],
+      ["מלפפון", "🥒", "adama", 0], ["גלידה", "🍦", "shehakol", 0], ["זיתים", "🫒", "etz", 1], ["אורז", "🍚", "mezonot", 3],
+      ["תפוז", "🍊", "etz", 9], ["מיץ תפוזים", "🧃", "shehakol", 0], ["רימון", MG_ICO.pom, "etz", 5], ["תות שדה", "🍓", "adama", 0],
+      ["עוגיות שיבולת שועל", "🍪", "mezonot", 2], ["מנגו", "🥭", "etz", 9], ["בוטנים", "🥜", "adama", 0], ["עוף", "🍗", "shehakol", 0]
+    ];
+    var MG_RANK = { hamotzi: 0, mezonot: 1, gefen: 2, etz: 3, adama: 4, shehakol: 5 };
+    // [ברכה, אות, שם קצר, דוגמאות, למה דווקא כאן]
+    var MG_STEPS = [
+      ["mezonot", "מ", "מְזוֹנוֹת", "🍰 עוגה · 🍝 פסטה · 🥐 בורקס · 🍚 אורז",
+        'מאכלי הדגן משביעים מכולם, ו"חִטָּה וּשְׂעֹרָה" פותחות את פסוק שבעת המינים. ובתוכם — של חיטה קודמת לשל שעורה ושיבולת שועל.'],
+      ["gefen", "ג", "הַגֶּפֶן", "🍷 יין · 🧃 מיץ ענבים",
+        'היין "הַמְשַׂמֵּחַ אֱלֹהִים וַאֲנָשִׁים" — מפני חשיבותו קבעו לו ברכה משלו, ולכן הוא קודם אפילו לזית ולתמר.'],
+      ["etz", "ע", "הָעֵץ", "🍎 תפוח · 🍇 ענבים · 🌴 תמרים · 🥭 מנגו",
+        'ברכה מבוררת: "האדמה" על פרי עץ — יוצאים בדיעבד, אבל "העץ" על פרי אדמה — לא. הברכה הפרטית יותר — קודמת.'],
+      ["adama", "א", "הָאֲדָמָה", "🍌 בננה · 🍉 אבטיח · 🥒 ירקות · 🥔 תפוח אדמה",
+        'נאמרת רק על מה שצומח מן הארץ — ולכן מבוררת וחשובה מ"שהכל".'],
+      ["shehakol", "ש", "שֶׁהַכֹּל", "💧 מים · 🍫 שוקולד · 🥛 חלב · 🍗 בשר",
+        'הברכה הכוללת — נאמרת על כל דבר ופוטרת בדיעבד את הכול, ולכן היא האחרונה.']
+    ];
+    function mgGem(txt, k) { return '<span class="mg-gem" style="--c:' + C[k] + '">' + txt + '</span>'; }
+    function mgName(i) { return '<span class="mg-fi">' + MG_F[i][1] + '</span>' + MG_F[i][0]; }
+    // "את א, את ב ואת ג" / "א או ב"
+    function mgAt(arr) {
+      var p = arr.map(function(i) { return 'את <b>' + mgName(i) + '</b>'; });
+      return p.length < 2 ? p[0] : p.slice(0, -1).join(", ") + " ו" + p[p.length - 1];
+    }
+    function mgOr(arr) { return arr.map(function(i) { return '<b>' + mgName(i) + '</b>'; }).join(" או "); }
+    function mgRule(c, t, body, src) {
+      return '<div class="mg-rule" style="--c:' + c + '"><div class="mg-rule-t">' + t + '</div>' + body + '<small>' + src + '</small></div>';
+    }
+    function mgSection() {
+      var vw = function(n, w) { return '<span class="mg-w"><i>' + n + '</i>' + w + '</span>'; };
+      var fr = function(n, ico, w) { return '<span class="mg-fr"><b>' + n + '</b><span class="mg-fi">' + ico + '</span>' + w + '</span>'; };
+      var arr = '<span class="mg-arr">←</span>';
+      var h =
+        "<h2 class=\"bb-cat\" data-bb-sec=\"mgas\" style=\"text-align:center;color:#b45309;font-size:1.25em;font-weight:900;margin:1.6rem 0 0.8rem;border-bottom:2px solid rgba(180,83,9,0.4);padding-bottom:0.4rem;\">🪜 מה מברכים קודם? — סדר מג״ע א״ש</h2>" +
+        '<div class="bb-mg" data-s="סדר קדימה בברכות מגעש מגע אש מה מברכים קודם ראשון מזונות גפן יין עץ אדמה שהכל המוציא לחם חביב שבעת המינים זית זיתים תמר תמרים ענבים תאנה תאנים רמון רימון חיטה שעורה שלם ריח ארץ פסוק">' +
+        '<p class="mg-lead">על השולחן עוגה, יין, ענבים, בננה ושוקולד — על מה מברכים קודם? כמו מי שעומד לדבר לפני מלך ומסדר את דבריו מראש, כך סידרו חכמים את הברכות לפי חשיבותן. כל הסדר — בחמש אותיות:</p>' +
+        '<div class="mg-mn" aria-label="מג״ע א״ש">' + mgGem("מ", "mezonot") + mgGem("ג", "gefen") + mgGem("ע", "etz") +
+          '<span class="mg-mn-sep"></span>' + mgGem("א", "adama") + mgGem("ש", "shehakol") + '</div>' +
+        '<div class="mg-mn-cap">זכרו: <b>מַגַּע אֵשׁ</b> 🔥<br>מזונות · גפן · עץ · אדמה · שהכל</div>' +
+
+        '<h3 class="mg-h3">🪜 חמש המדרגות</h3>' +
+        '<div class="mg-stairs">' +
+          '<div class="mg-crown" style="--c:' + C.hamotzi + '">' + mgGem("🍞", "hamotzi") +
+            '<div class="mg-body"><div class="mg-t">הַמּוֹצִיא — מעל הכול</div>' +
+            '<div class="mg-why">הלחם הוא עיקר המזון — "וְלֶחֶם לְבַב אֱנוֹשׁ יִסְעָד". ברכתו קודמת לכל ברכה, גם כשהמאכל האחר חביב יותר; ובסעודת לחם היא פוטרת את מאכלי הסעודה.</div></div>' +
+          '</div>';
+      MG_STEPS.forEach(function(s, i) {
+        h += '<div class="mg-step" style="--c:' + C[s[0]] + ';--i:' + i + '">' +
+          '<span class="mg-num">' + (i + 1) + '</span>' + mgGem(s[1], s[0]) +
+          '<div class="mg-body">' +
+            '<div class="mg-t">' + s[2] + ' <span class="mg-full">' + (s[0] === "shehakol" ? "שֶׁהַכֹּל נִהְיָה בִּדְבָרוֹ" : R[s[0]][0]) + '</span></div>' +
+            '<div class="mg-ex">' + s[3] + '</div>' +
+            '<div class="mg-why">' + s[4] + '</div>' +
+          '</div></div>';
+      });
+      h += '</div>' +
+        '<div class="mg-principle">💡 <b>שני כללים בונים את הסולם:</b> <b>המאכל החשוב קודם</b> (לחם, מזונות, יין), ו<b>הברכה המבוררת קודמת</b> — ברכה שנאמרת על סוג מסוים בלבד קודמת לברכה כללית יותר. ובלשון הבן איש חי: "כל ברכה הקבועה על מין פרטי יש בה שבח להקב"ה יותר, שנראה בזה השגחתו יתברך בפרטות" (מטות א).</div>' +
+
+        '<h3 class="mg-h3">🎯 נסו בעצמכם — מה קודם?</h3>' +
+        '<p class="mg-hint">בחרו כמה מאכלים שעל השולחן (עד חמישה) — והסולם יסדר אותם ויסביר למה</p>' +
+        '<div class="mg-pick">';
+      MG_F.forEach(function(f, i) {
+        h += '<button type="button" class="mg-food" aria-pressed="false" onclick="window._mgToggle(' + i + ')">' + mgName(i) + '</button>';
+      });
+      h += '</div>' +
+        '<div class="mg-acts"><button type="button" class="mg-act" onclick="window._mgRandom()">🎲 הגרילו שולחן</button>' +
+          '<button type="button" class="mg-act mg-act-clear" onclick="window._mgClear()">✕ ניקוי</button></div>' +
+        '<div id="mg-result" class="mg-result" aria-live="polite"><p class="mg-empty">👆 בחרו לפחות שני מאכלים — והסולם יסדר אותם</p></div>' +
+
+        '<h3 class="mg-h3">🌾 שבעת המינים — הסדר שבפסוק</h3>' +
+        '<p class="mg-p">כשיש לפניכם כמה פירות שברכתם "העץ", מברכים על פרי משבעת המינים שנשתבחה בהם ארץ ישראל — וגם ביניהם יש סדר, לפי הפסוק:</p>' +
+        '<div class="mg-verse">' +
+          '<div class="mg-vrow"><span class="mg-eretz">אֶרֶץ</span>' + vw(1, "חִטָּה") + vw(3, "וּשְׂעֹרָה") + vw(5, "וְגֶפֶן") + vw(6, "וּתְאֵנָה") + vw(7, "וְרִמּוֹן") + '</div>' +
+          '<div class="mg-vrow"><span class="mg-eretz">אֶרֶץ</span>' + vw(2, "זֵית שֶׁמֶן") + vw(4, "וּדְבָשׁ") + '</div>' +
+          '<div class="mg-vsrc">(דברים ח, ח) · המספר = סדר החשיבות</div>' +
+        '</div>' +
+        '<p class="mg-p">כל מין שקרוב יותר למילה <b>"אֶרֶץ"</b> — חשוב יותר; וכשהקרבה שווה (חיטה וזית — שתיהן ראשונות) — של "ארץ" הראשונה קודם. ו"דבש" שבפסוק הוא דבש תמרים. ולכן בפירות:</p>' +
+        '<div class="mg-fruits">' + fr(1, "🫒", "זית") + arr + fr(2, "🌴", "תמר") + arr + fr(3, "🍇", "ענבים") + arr +
+          fr(4, MG_ICO.fig, "תאנה") + arr + fr(5, MG_ICO.pom, "רימון") + '</div>' +
+        '<p class="mg-p">חיטה ושעורה כבר עומדות בראש הסולם — כשנעשה מהן פת או תבשיל (המוציא ומזונות). והיין קודם אפילו לזית, מפני חשיבותו הגדולה. פרי משבעת המינים קודם לשאר הפירות אפילו כשהאחר חביב יותר, ואפילו כשהוא חצי פרי מול פרי שלם — ורק כשנגמר בשולו: זיתים קטנים מאוד שלא נגמרו — אין להם קדימה.<br><small>בן איש חי מטות א, ב, ה · רמ"א רי"א, ד</small></p>' +
+
+        '<h3 class="mg-h3">⚖️ כללים חשובים</h3>' +
+        '<div class="mg-rules">' +
+          mgRule(C.hamotzi, "🍽️ מתי בכלל יש סדר?",
+            'רק כשהמאכלים לפניכם ואתם רוצים לאכול משניהם עכשיו. אין צורך להמתין למאכל החשוב שעוד לא הובא, ומי שרוצה לאכול רק אחד — מברך עליו. וכשיש סדר אכילה קבוע (למשל: קודם אוכלים ואחר כך שותים) — אין כאן קדימה.',
+            'בן איש חי מטות ד · רמ"א רי"א, ה · כף החיים רי"א, ה') +
+          mgRule(C.gefen, "❤️ ואם השני חביב עליי יותר?",
+            'בין המדרגות — הסדר קובע: מזונות לפני יין, העץ לפני האדמה, האדמה לפני שהכל — גם כשהמאכל שלמטה חביב עליכם יותר.',
+            'בן איש חי מטות ג · כף החיים רי"א, ו, יד, כח') +
+          mgRule(C.etz, "🔢 ובתוך אותה מדרגה?",
+            'ברכה אחת פוטרת את כולם. ועל איזה מברכים? ① פרי משבעת המינים, לפי סדר הפסוק ② השלם — לפני החתוך ③ החביב עליכם — מה שאוהבים בדרך כלל, ואם שניהם אהובים — מה שמתחשק עכשיו. ובשוויון — על היפה והנקי: "זֶה אֵלִי וְאַנְוֵהוּ".',
+            'בן איש חי מטות ב, ג, ה · כף החיים רי"א, ג, כח') +
+          mgRule(C.adama, "🥄 איך עושים את זה בפועל?",
+            'מברכים על החשוב וטועמים ממנו מעט; אחר כך מברכים על השני ואוכלים כרצונכם — ואפשר לחזור לראשון בלי ברכה נוספת.',
+            'כף החיים רי"א, ט · משנה ברורה רי"א, י') +
+          mgRule(C.mezonot, "🔁 התבלבלתי בסדר?",
+            'הסדר הוא לכתחילה. מי שהקדים בטעות — לא הפסיד: ממשיך ומברך על השני כרגיל. ובברכה שווה — אם התכוון גם לחשוב, הברכה פוטרת גם אותו.',
+            'רמ"א רי"א, ה') +
+          mgRule(C.shehakol, "🌸 ובונוס — ריח",
+            'ברכות האכילה והשתייה — אפילו "שהכל" — קודמות לברכת הריח.',
+            'משנה ברורה רי"א, לה · כף החיים רי"א, כח') +
+        '</div>' +
+        '<div class="mg-ashbox">📘 <b>למנהג אשכנז</b> — הסולם זהה, וההבדל העיקרי הוא בין "העץ" ל"האדמה": ככלל העץ קודם, אבל כשפרי האדמה חביב עליכם יותר — בדרך כלל וגם עכשיו — מקדימים אותו, אפילו מול פרי משבעת המינים.<small>משנה ברורה רי"א ס"ק יח, לה · ביאור הלכה שם</small></div>' +
+        '<p class="mg-src">📚 מקורות: ברכות מ ע"ב – מא ע"ב · שולחן ערוך אורח חיים סימן רי"א · בן איש חי, שנה ראשונה, פרשת מטות א–ה · כף החיים סימן רי"א · משנה ברורה וביאור הלכה סימן רי"א.<br>להלכה למעשה — יש לשאול מורה הוראה.</p>' +
+        '</div>';
+      return h;
+    }
+    // "מה מברכים קודם?" — מסדר את המאכלים שנבחרו לפי הסולם ומסביר כל מעבר
+    var mgSel = [], mgBox = null;
+    function mgWhy(ga, gb) {
+      var a = ga.k, b = gb.k, nb = ', גם אם אתם אוהבים יותר את <b>' + mgName(gb.items[0]) + '</b>';
+      if (a === "hamotzi") return "המוציא קודמת לכל ברכה" + nb;
+      if (a === "mezonot") {
+        if (MG_F[ga.items[0]][3] === 3) return 'ברכת "מזונות" קודמת לפי הסדר' + nb;
+        return (b === "gefen" ? 'מאכלי דגן חשובים מהיין: משביעים יותר, ו"חִטָּה וּשְׂעֹרָה" קודמות ל"גֶפֶן" בפסוק'
+          : b === "etz" ? "מאכלי הדגן קודמים אפילו לפירות שבעת המינים" : "מאכלי הדגן משביעים וחשובים — ברכתם קודמת") + nb;
+      }
+      if (a === "gefen") return (b === "etz" ? "ליין חשיבות גדולה וברכה משלו — הוא קודם אפילו לפירות שבעת המינים" : "ליין חשיבות גדולה וברכה משלו — ברכתו קודמת") + nb;
+      if (a === "etz" && b === "adama") return '"העץ" מבוררת יותר מ"האדמה" — ומנהגנו להקדים אותה' + nb;
+      return 'ברכה מבוררת קודמת ל"שהכל" הכוללת' + nb;
+    }
+    function mgRender() {
+      var box = document.getElementById("mg-result");
+      if (!box) return;
+      var sorted = mgSel.slice().sort(function(a, b) {
+        var fa = MG_F[a], fb = MG_F[b];
+        return (MG_RANK[fa[2]] - MG_RANK[fb[2]]) || (fa[3] - fb[3]) || (mgSel.indexOf(a) - mgSel.indexOf(b));
+      });
+      var groups = [];
+      sorted.forEach(function(i) {
+        var g = groups[groups.length - 1];
+        if (g && g.k === MG_F[i][2]) g.items.push(i); else groups.push({ k: MG_F[i][2], items: [i] });
+      });
+      // השבבים: מסומנים, ועל כל מאכל — מספר המקום שלו בסדר (באותה ברכה — אותו מספר)
+      var num = {};
+      groups.forEach(function(g, gi) { g.items.forEach(function(i) { num[i] = gi + 1; }); });
+      var chips = document.querySelectorAll(".mg-food");
+      for (var ci = 0; ci < chips.length; ci++) {
+        var on = mgSel.indexOf(ci) >= 0;
+        chips[ci].classList.toggle("mg-on", on);
+        chips[ci].setAttribute("aria-pressed", on ? "true" : "false");
+        if (on && mgSel.length > 1) chips[ci].setAttribute("data-n", num[ci]); else chips[ci].removeAttribute("data-n");
+      }
+      if (mgSel.length < 2) {
+        box.innerHTML = '<p class="mg-empty">' + (mgSel.length ? "👆 עוד מאכל אחד לפחות — ונראה מה קודם" : "👆 בחרו לפחות שני מאכלים — והסולם יסדר אותם") + '</p>';
+        return;
+      }
+      var h = '<div class="mg-res-t">כך מברכים — לפי הסדר:</div>', d = 0, has = {};
+      groups.forEach(function(g, gi) {
+        has[g.k] = g;
+        var lead = g.items[0], f = MG_F[lead];
+        var top = g.items.filter(function(i) { return MG_F[i][3] === f[3]; });
+        var low = g.items.filter(function(i) { return MG_F[i][3] !== f[3]; });
+        var line, note = "";
+        if (g.items.length === 1) line = 'על <b>' + mgName(lead) + '</b>';
+        else if (top.length > 1) line = 'על ' + mgOr(top) + ' — על מה שחביב עליכם יותר' + (low.length ? ', ופוטרת גם ' + mgAt(low) : '; ברכה אחת פוטרת את כולם');
+        else {
+          line = 'על <b>' + mgName(lead) + '</b> — ופוטרת גם ' + mgAt(low);
+          if (g.k === "etz") note = MG_F[low[0]][3] <= 5 ? 'בשבעת המינים — הקרוב יותר למילה "אֶרֶץ" בפסוק קודם' : "פרי משבעת המינים קודם לשאר הפירות — אפילו לחביב יותר";
+          else if (g.k === "mezonot") note = "מזונות של חיטה — החשובה מביניהם";
+        }
+        h += '<div class="mg-rc" style="--c:' + C[g.k] + ';animation-delay:' + d + 'ms">' + mgGem(gi + 1, g.k) +
+          '<div class="mg-rb"><span class="mg-rchip">' + R[g.k][0] + '</span>' +
+          '<div class="mg-ritems">' + line + '</div>' + (note ? '<div class="mg-rnote">' + note + '</div>' : '') + '</div></div>';
+        d += 90;
+        if (gi < groups.length - 1) { h += '<div class="mg-rwhy" style="animation-delay:' + d + 'ms">' + mgWhy(g, groups[gi + 1]) + '</div>'; d += 60; }
+      });
+      if (has.hamotzi && groups.length > 1)
+        h += '<div class="mg-rx">🍞 בסעודת לחם — ברכת המוציא פוטרת את מה שבא מחמת הסעודה; ליין, ולפירות ומתוקים שבאים לקינוח, יש דינים משלהם.</div>';
+      if (has.mezonot && MG_F[has.mezonot.items[0]][3] === 3 && groups[groups.length - 1] !== has.mezonot)
+        h += '<div class="mg-rx">🍚 במזונות של אורז נחלקו האחרונים אם יש לה מעלת הקדימה של מיני הדגן — בשאלה למעשה שאלו מורה הוראה.</div>';
+      if (has.etz && has.adama)
+        h += '<div class="mg-rx mg-ash">📘 למנהג אשכנז: אם את <b>' + mgName(has.adama.items[0]) + '</b> אתם אוהבים יותר — בדרך כלל וגם עכשיו — מקדימים את ברכת "האדמה".</div>';
+      box.innerHTML = '<div class="mg-res">' + h + '</div>';
+    }
+    // תוכן הקורא נבנה מחדש בכל פתיחה של הלוח — שדה תוצאה חדש = מתחילים נקי
+    function mgFresh() { var b = document.getElementById("mg-result"); if (b !== mgBox) { mgBox = b; mgSel = []; } }
+    window._mgToggle = function(i) {
+      mgFresh();
+      var at = mgSel.indexOf(i);
+      if (at >= 0) mgSel.splice(at, 1);
+      else { mgSel.push(i); if (mgSel.length > 5) mgSel.shift(); }
+      mgRender();
+    };
+    // שולחן אקראי: 3–4 מאכלים משלוש ברכות שונות לפחות (בלי לחם — הוא תמיד ראשון)
+    window._mgRandom = function() {
+      mgFresh();
+      var pool = [];
+      for (var pi = 0; pi < MG_F.length; pi++) if (MG_F[pi][2] !== "hamotzi") pool.push(pi);
+      var pick, kinds;
+      do {
+        for (var s = pool.length - 1; s > 0; s--) { var r = Math.floor(Math.random() * (s + 1)), t = pool[s]; pool[s] = pool[r]; pool[r] = t; }
+        pick = pool.slice(0, Math.random() < 0.5 ? 3 : 4);
+        kinds = {};
+        pick.forEach(function(i) { kinds[MG_F[i][2]] = 1; });
+      } while (Object.keys(kinds).length < 3);
+      mgSel = pick;
+      mgRender();
+    };
+    window._mgClear = function() { mgFresh(); mgSel = []; mgRender(); };
     var html =
       "<div style=\"text-align:center;direction:rtl;line-height:1.9;color:#1e293b;\">" +
       // חיפוש חכם — דביק בראש הלוח. רקע אטום בלי backdrop-filter (מחלקה .bb-search-bar,
@@ -33621,6 +33838,7 @@ function openSefarimNosafimPage(_pageMode) {
       "<div style=\"display:flex;flex-wrap:wrap;gap:0.35rem;justify-content:center;margin-bottom:1.2rem;\">" +
         jump("hamotzi", "המוציא") + jump("mezonot", "מזונות") + jump("gefen", "הגפן") +
         jump("etz", "העץ") + jump("adama", "האדמה") + jump("shehakol", "שהכל") +
+        jump("mgas", "🪜 מג״ע א״ש") +
       "</div>";
     CATS.forEach(function(cat) {
       html += "<h2 class=\"bb-cat\"" + (cat.k ? " data-bb-sec=\"" + cat.k + "\"" : "") + " style=\"text-align:center;color:#b45309;font-size:1.25em;font-weight:900;margin:1.6rem 0 0.8rem;border-bottom:2px solid rgba(180,83,9,0.4);padding-bottom:0.4rem;\">" + cat.he + "</h2>";
@@ -33642,42 +33860,45 @@ function openSefarimNosafimPage(_pageMode) {
       "<div class=\"bb-item\" data-s=\"שיעור כזית כזיית ברכה אחרונה שיעורים רביעית בורא נפשות מעין שלוש על המחיה שבעת המינים מים עוגה יין\" style=\"background:#fff;border:1.5px solid rgba(0,0,0,0.07);border-right:5px solid #b45309;border-radius:0.85rem;padding:0.85rem 1rem;margin-bottom:0.55rem;line-height:2;\">" +
         "✦ ברכה אחרונה מברכים רק אם אכל <b>כזית</b> (כ־27 גרם) בתוך כ־4 דקות, או שתה <b>רביעית</b> (כ־81 מ\"ל) בבת אחת.<br>" +
         "✦ <b>ספק ברכות להקל</b> — ובכל ספק אפשר לברך שהכל, ש\"שהכל\" פוטר הכל בדיעבד.<br>" +
-        "✦ סדר קדימה בברכות: המוציא, מזונות, הגפן, העץ, האדמה, שהכל.<br>" +
+        "✦ סדר קדימה בברכות: המוציא, מזונות, הגפן, העץ, האדמה, שהכל — <button type=\"button\" class=\"bb-jump\" onclick=\"window._bbJump('mgas')\" style=\"display:inline-block;background:" + C.mgas + "18;color:" + C.mgas + ";border:1.5px solid " + C.mgas + "55;border-radius:999px;padding:0.1rem 0.7rem;font-size:0.8em;font-weight:900;cursor:pointer;font-family:inherit;\">🪜 לפרק המלא</button><br>" +
         "✦ מאכל עיקר וטפל — מברכים על העיקר ופוטרים את הטפל.<br>" +
         "✦ שתה מים ואכל עוגה — מברך תחילה <b>בורא נפשות</b> ואחר כך <b>מעין שלוש</b>; ואם טעה והקדים מעין שלוש — יברך אחריה בורא נפשות.<br>" +
         "✦ בירך <b>הגפן</b> ושתה יין וגם מים — ברכת <b>מעין שלוש</b> שעל היין פוטרת גם את המים, ואינו מברך בורא נפשות.<br>" +
         "✦ אכל פירות מ<b>שבעת המינים</b> יחד עם פירות אחרים שברכתם העץ — מברך באחרונה רק <b>מעין שלוש</b> (\"על העץ\") ופוטר את כולם.<br>" +
         "✦ להלכה למעשה בכל שאלה — יש לפנות למורה הוראה." +
-      "</div></div>";
+      "</div>" + mgSection() + "</div>";
     // הזרקת הלוח לתוך רשומת הספר
     for (var bi = 0; bi < BOOKS.length; bi++) {
       if (BOOKS[bi].id === "birkot-board") { BOOKS[bi].content = html; break; }
     }
     // חיפוש חכם בתוך הלוח — כל מילות החיפוש חייבות להופיע
     window._bbFilter = function(q) {
-      var norm = String(q || "").replace(/[֑-ֽֿ-ׇ]/g, "").toLowerCase().trim();
+      // גרשיים/גרש לא נספרים — "מג"ע" מוצא "מגע", "גחנון" מוצא "ג'חנון"
+      var norm = String(q || "").replace(/[֑-ֽֿ-ׇ]/g, "").replace(/["'״׳]/g, "").toLowerCase().trim();
       var words = norm.split(/\s+/).filter(Boolean);
-      var items = document.querySelectorAll(".bb-item");
+      var items = document.querySelectorAll(".bb-item, .bb-mg");
       var cats = document.querySelectorAll(".bb-cat");
       var shown = 0;
       items.forEach(function(el) {
-        var s = el.getAttribute("data-s") || "";
+        var s = (el.getAttribute("data-s") || "").replace(/["'״׳]/g, "");
         var ok = true;
         for (var w = 0; w < words.length; w++) if (s.indexOf(words[w]) < 0) { ok = false; break; }
         el.style.display = ok ? "" : "none";
-        if (ok) shown++;
+        if (ok && el.classList.contains("bb-item")) shown++;   // פרק מג"ע א"ש אינו "מאכל"
       });
       // הסתרת קטגוריות ריקות
       cats.forEach(function(h) {
         var any = false, sib = h.nextElementSibling;
         while (sib && !sib.classList.contains("bb-cat")) {
-          if (sib.classList.contains("bb-item") && sib.style.display !== "none") { any = true; break; }
+          if ((sib.classList.contains("bb-item") || sib.classList.contains("bb-mg")) && sib.style.display !== "none") { any = true; break; }
           sib = sib.nextElementSibling;
         }
         h.style.display = any ? "" : "none";
       });
       var cnt = document.getElementById("bb-count");
-      if (cnt) cnt.textContent = words.length ? "נמצאו " + shown + " מאכלים" : "";
+      var mg = document.querySelector(".bb-mg");
+      var mgHit = words.length && mg && mg.style.display !== "none";
+      if (cnt) cnt.textContent = !words.length ? "" : (shown || !mgHit) ? "נמצאו " + shown + " מאכלים" + (mgHit ? " · ובפרק \"מה מברכים קודם?\"" : "") : "⬇ נמצא בפרק \"מה מברכים קודם?\"";
     };
     // קפיצה מסמל המקרא אל פרק הברכה — מתחת לשורת החיפוש הדביקה
     window._bbJump = function(k) {

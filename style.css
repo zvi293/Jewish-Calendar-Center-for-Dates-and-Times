@@ -9257,6 +9257,213 @@ html.dark .bb-search-bar {
   border-bottom-color: rgba(251, 191, 36, 0.3) !important;
 }
 
+/* ── לוח ברכות הנהנין — פרק "מה מברכים קודם? מג"ע א"ש" (10/2026) ──
+   סולם אבני חן (המוציא מעל, וחמש מדרגות שהולכות וצרות), "נסו בעצמכם", פסוק שבעת המינים וכללים.
+   הכול ממורכז (מצב הלימוד); מידות ב-em — גדלות עם גופן הקורא; --c = צבע הברכה כמו בכרטיסי הלוח.
+   בלי אנימציות לולאה — רק כניסה קצרה של כרטיסי התוצאה (opacity/transform בקומפוזיטור) */
+.bb-mg { text-align: center; line-height: 1.85; color: #1e293b; }
+.bb-mg b { font-weight: 900; }
+.mg-lead, .mg-p { font-size: 0.8em; color: #334155; margin: 0 auto 0.8em; max-width: 36em; line-height: 1.9; }
+.mg-hint { font-size: 0.72em; color: #64748b; font-weight: 700; margin: 0 auto 0.4em; line-height: 1.7; }
+.mg-p small, .mg-rule small, .mg-ashbox small { display: block; font-size: 0.8em; color: #94a3b8; font-weight: 700; margin-top: 0.3em; line-height: 1.6; }
+.mg-h3 {
+  display: flex; align-items: center; justify-content: center; gap: 0.6em;
+  font-size: 1em; font-weight: 900; color: #92400e; margin: 1.5em 0 0.6em; line-height: 1.4;
+}
+.mg-h3::before, .mg-h3::after { content: ""; flex: 0 1 2.5em; height: 2px; border-radius: 2px; background: rgba(180, 83, 9, 0.35); }
+
+/* אבן חן — עיגול מבריק בצבע הברכה */
+.mg-gem {
+  --c: #b45309;
+  display: inline-flex; align-items: center; justify-content: center; flex: none;
+  width: 2em; height: 2em; border-radius: 50%;
+  color: #fff; font-weight: 900; font-size: 0.95em; line-height: 1; font-family: "Assistant", system-ui, sans-serif;
+  background: var(--c);
+  background: radial-gradient(circle at 32% 26%, rgba(255, 255, 255, 0.7) 0, rgba(255, 255, 255, 0) 40%),
+    linear-gradient(150deg, color-mix(in srgb, var(--c) 60%, #fff), var(--c) 52%, color-mix(in srgb, var(--c) 68%, #000));
+  box-shadow: inset 0 -0.12em 0.25em rgba(0, 0, 0, 0.25), 0 0.15em 0.4em rgba(0, 0, 0, 0.18);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+/* "זכרו: מגע אש" */
+.mg-mn { display: flex; justify-content: center; align-items: center; gap: 0.4em; margin: 0.2em 0 0.35em; }
+.mg-mn .mg-gem { font-size: 1.15em; }
+.mg-mn-sep { width: 0.45em; }
+.mg-mn-cap { font-size: 0.74em; font-weight: 700; color: #92400e; line-height: 1.7; }
+.mg-mn-cap b { font-size: 1.25em; color: #b45309; }
+
+/* הסולם: כתר (המוציא) ומתחתיו חמש מדרגות שהולכות וצרות — הרוחב = החשיבות */
+.mg-stairs { display: flex; flex-direction: column; align-items: center; gap: 0.75em; margin: 0.5em 0 1em; }
+.mg-crown, .mg-step {
+  --c: #b45309;
+  position: relative; box-sizing: border-box; display: flex; align-items: center; gap: 0.6em;
+  padding: 0.6em 0.8em; border-radius: 0.9rem; text-align: center;
+  background: #fff;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--c) 10%, #fff), color-mix(in srgb, var(--c) 3%, #fff));
+  border: 1.5px solid rgba(0, 0, 0, 0.07); border-right: 5px solid var(--c);
+  box-shadow: 0 0.28em 0 -0.06em rgba(0, 0, 0, 0.06), 0 0.45em 1em rgba(0, 0, 0, 0.06);
+  box-shadow: 0 0.28em 0 -0.06em color-mix(in srgb, var(--c) 30%, transparent), 0 0.45em 1em rgba(0, 0, 0, 0.06);
+}
+.mg-step { width: calc(100% - var(--i, 0) * 6%); }
+.mg-crown { width: 76%; border: 1.5px solid color-mix(in srgb, var(--c) 45%, transparent); border-radius: 1.4rem; }
+.mg-body { flex: 1; min-width: 0; }
+.mg-t { font-weight: 900; font-size: 1em; color: var(--c); line-height: 1.35; }
+.mg-full { display: block; font-size: 0.62em; font-weight: 700; color: #64748b; }
+.mg-ex { font-size: 0.7em; font-weight: 700; color: #334155; margin-top: 0.2em; line-height: 1.6; }
+.mg-why { font-size: 0.68em; color: #475569; line-height: 1.65; margin-top: 0.25em; }
+.mg-num {
+  position: absolute; top: -0.6em; left: 0.8em; min-width: 1.5em; padding: 0 0.45em; box-sizing: border-box;
+  border-radius: 999px; background: var(--c); color: #fff;
+  font: 900 0.6em/1.6 "Assistant", system-ui, sans-serif;
+}
+.mg-principle {
+  margin: 0 auto 0.6em; max-width: 34em; padding: 0.6em 0.9em; border-radius: 0.85rem;
+  background: #fef3c7; border: 1.5px solid rgba(217, 119, 6, 0.3); color: #78350f;
+  font-size: 0.74em; line-height: 1.85;
+}
+
+/* "נסו בעצמכם" — שבבי המאכלים מעורבבים ונייטרליים (שלא יסגירו את התשובה); מספר הסדר מופיע על כל שבב שנבחר */
+.mg-pick { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5em 0.4em; margin: 0.5em 0 0.6em; }
+.mg-food {
+  position: relative; display: inline-flex; align-items: center; gap: 0.3em;
+  font: inherit; font-size: 0.72em; font-weight: 800; line-height: 1.4; color: #334155; cursor: pointer;
+  background: #fff; border: 1.5px solid rgba(180, 83, 9, 0.28); border-radius: 999px; padding: 0.3em 0.8em;
+  transition: transform 0.12s ease, background-color 0.15s ease, border-color 0.15s ease;
+}
+.mg-food:active { transform: scale(0.95); }
+.mg-food.mg-on { background: #fde68a; background: linear-gradient(135deg, #fef3c7, #fde68a); border-color: #d97706; color: #78350f; }
+.mg-food[data-n]::after {
+  content: attr(data-n); position: absolute; top: -0.6em; left: -0.4em;
+  min-width: 1.45em; height: 1.45em; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  background: #b45309; color: #fff; font: 900 0.72em/1 "Assistant", system-ui, sans-serif;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+.mg-fi { display: inline-flex; align-items: center; font-size: 1.1em; line-height: 1; }
+.mg-fi svg { width: 1.25em; height: 1.25em; }
+.mg-acts { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5em; margin-bottom: 0.8em; }
+.mg-act {
+  font: inherit; font-size: 0.7em; font-weight: 900; cursor: pointer; border-radius: 999px; padding: 0.3em 1.1em;
+  border: 1.5px solid rgba(124, 58, 237, 0.4); background: rgba(124, 58, 237, 0.08); color: #6d28d9;
+  transition: transform 0.12s ease;
+}
+.mg-act:active { transform: scale(0.95); }
+.mg-act-clear { border-color: rgba(100, 116, 139, 0.35); background: rgba(100, 116, 139, 0.07); color: #475569; }
+.mg-result { max-width: 30em; margin: 0 auto 0.6em; }
+.mg-empty {
+  margin: 0; padding: 0.8em; border: 1.5px dashed rgba(180, 83, 9, 0.3); border-radius: 0.85rem;
+  font-size: 0.72em; font-weight: 700; color: #94a3b8;
+}
+.mg-res-t { font-size: 0.74em; font-weight: 900; color: #92400e; margin-bottom: 0.4em; }
+.mg-rc {
+  --c: #b45309;
+  display: flex; align-items: center; gap: 0.6em; padding: 0.55em 0.8em; text-align: center;
+  background: #fff; border: 1.5px solid rgba(0, 0, 0, 0.07); border-right: 5px solid var(--c); border-radius: 0.85rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  animation: mg-in 0.35s ease both;
+}
+.mg-rc .mg-gem { font-size: 0.8em; }
+.mg-rb { flex: 1; min-width: 0; }
+.mg-rchip {
+  display: inline-block; padding: 0.1em 0.75em; border-radius: 999px; font-size: 0.74em; font-weight: 900;
+  color: var(--c); background: rgba(0, 0, 0, 0.03); border: 1.5px solid currentColor;
+  background: color-mix(in srgb, var(--c) 9%, #fff); border-color: color-mix(in srgb, var(--c) 35%, transparent);
+}
+.mg-ritems { font-size: 0.76em; font-weight: 700; color: #1e293b; margin-top: 0.2em; line-height: 1.7; }
+.mg-rnote { font-size: 0.64em; font-weight: 700; color: #92400e; line-height: 1.6; }
+.mg-rwhy { padding: 0.25em 0.6em 0.35em; font-size: 0.64em; font-weight: 700; color: #64748b; line-height: 1.6; animation: mg-in 0.35s ease both; }
+.mg-rwhy::before { content: "▼"; display: block; font-size: 0.85em; color: #d97706; line-height: 1.3; }
+.mg-rx { margin-top: 0.5em; padding: 0.45em 0.75em; border-radius: 0.65rem; background: #fef3c7; color: #78350f; font-size: 0.66em; line-height: 1.7; animation: mg-in 0.35s ease 0.3s both; }
+.mg-rx.mg-ash { background: #eff6ff; color: #1e3a8a; }
+@keyframes mg-in { from { opacity: 0; transform: translateY(0.35em); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .mg-rc, .mg-rwhy, .mg-rx { animation: none; } }
+
+/* פסוק שבעת המינים — מעל כל מין מספר החשיבות שלו */
+.mg-verse {
+  margin: 0.3em auto 0.7em; max-width: 30em; padding: 0.6em 0.6em 0.45em; border-radius: 1rem;
+  background: linear-gradient(180deg, #fffbeb, #fef3c7); border: 1.5px solid rgba(217, 119, 6, 0.35);
+}
+.mg-vrow { display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-end; gap: 0.2em 0.5em; font-size: 1.05em; font-weight: 700; line-height: 1.5; margin: 0.15em 0; }
+.mg-eretz { color: #b45309; font-weight: 900; text-decoration: underline 2px rgba(180, 83, 9, 0.45); text-underline-offset: 0.3em; }
+.mg-w { display: inline-flex; flex-direction: column; align-items: center; }
+.mg-w i {
+  font-style: normal; min-width: 1.7em; margin-bottom: 0.2em; border-radius: 999px;
+  background: #b45309; color: #fff; font: 900 0.5em/1.7 "Assistant", system-ui, sans-serif;
+}
+.mg-vsrc { font-size: 0.6em; font-weight: 700; color: #92400e; margin-top: 0.2em; }
+.mg-fruits { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 0.35em 0.3em; margin: 0 0 0.8em; font-size: 0.76em; font-weight: 800; }
+.mg-fr {
+  display: inline-flex; align-items: center; gap: 0.3em; padding: 0.15em 0.65em 0.15em 0.75em; border-radius: 999px;
+  background: #fff; border: 1.5px solid rgba(22, 163, 74, 0.4); color: #166534;
+}
+.mg-fr b {
+  min-width: 1.45em; border-radius: 50%; background: #16a34a; color: #fff;
+  font: 900 0.72em/1.45 "Assistant", system-ui, sans-serif;
+}
+.mg-arr { color: #16a34a; font-weight: 900; }
+
+/* כללים — כרטיסים, שניים בשורה כשיש מקום */
+.mg-rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12em), 1fr)); gap: 0.6em; margin: 0.4em 0 0.8em; }
+.mg-rule {
+  --c: #b45309;
+  padding: 0.6em 0.8em; border-radius: 0.85rem; text-align: center;
+  background: #fff; border: 1.5px solid rgba(0, 0, 0, 0.07); border-top: 4px solid var(--c);
+  font-size: 0.72em; line-height: 1.8; color: #334155;
+}
+.mg-rule-t { font-size: 1.08em; font-weight: 900; color: #78350f; margin-bottom: 0.15em; }
+.mg-ashbox {
+  margin: 0 auto 0.8em; max-width: 34em; padding: 0.6em 0.9em; border-radius: 0.85rem;
+  background: #eff6ff; border: 1.5px solid rgba(37, 99, 235, 0.3); color: #1e3a8a;
+  font-size: 0.72em; line-height: 1.8;
+}
+.mg-src { font-size: 0.62em; font-weight: 700; color: #94a3b8; line-height: 1.8; margin: 0; }
+
+/* מסך צר (או כיתוב גדול): המדרגות כמעט ברוחב מלא, אבני החן קטנות יותר */
+@media (max-width: 560px) {
+  .mg-step { width: calc(100% - var(--i, 0) * 2.5%); }
+  .mg-crown { width: 88%; }
+  .mg-crown, .mg-step { padding: 0.55em 0.6em; gap: 0.45em; }
+  .mg-crown .mg-gem, .mg-step .mg-gem { font-size: 0.82em; }
+  .mg-mn .mg-gem { font-size: 0.95em; }
+  .mg-h3::before, .mg-h3::after { display: none; }
+  /* הפסוק נשאר בשתי שורות — "ארץ" ו"ארץ" */
+  .mg-verse { padding-inline: 0.3em; }
+  .mg-vrow { font-size: 0.8em; gap: 0.2em 0.3em; }
+}
+html.lux-ew-420 .mg-step { width: calc(100% - var(--i, 0) * 2.5%); }
+html.lux-ew-420 .mg-crown { width: 88%; }
+html.lux-ew-420 .mg-crown, html.lux-ew-420 .mg-step { padding: 0.55em 0.6em; gap: 0.45em; }
+html.lux-ew-420 .mg-crown .mg-gem, html.lux-ew-420 .mg-step .mg-gem { font-size: 0.82em; }
+html.lux-ew-420 .mg-mn .mg-gem { font-size: 0.95em; }
+html.lux-ew-420 .mg-h3::before, html.lux-ew-420 .mg-h3::after { display: none; }
+html.lux-ew-420 .mg-verse { padding-inline: 0.3em; }
+html.lux-ew-420 .mg-vrow { font-size: 0.8em; gap: 0.2em 0.3em; }
+
+/* מצב כהה */
+html.dark .bb-mg { color: #e2e8f0; }
+html.dark .mg-lead, html.dark .mg-p, html.dark .mg-ex, html.dark .mg-rule { color: #cbd5e1; }
+html.dark .mg-why, html.dark .mg-full, html.dark .mg-hint, html.dark .mg-rwhy { color: #94a3b8; }
+html.dark .mg-h3, html.dark .mg-mn-cap, html.dark .mg-res-t, html.dark .mg-rule-t, html.dark .mg-vsrc, html.dark .mg-rnote { color: #fcd34d; }
+html.dark .mg-mn-cap b, html.dark .mg-eretz { color: #fbbf24; }
+html.dark .mg-crown, html.dark .mg-step {
+  background: rgba(255, 255, 255, 0.04);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--c) 18%, transparent), color-mix(in srgb, var(--c) 6%, transparent));
+  border-color: rgba(255, 255, 255, 0.1); border-right-color: var(--c);
+}
+html.dark .mg-crown { border-color: color-mix(in srgb, var(--c) 50%, transparent); border-right-color: var(--c); }
+html.dark .mg-t, html.dark .mg-rchip { color: color-mix(in srgb, var(--c) 55%, #fff); }
+html.dark .mg-rchip { background: color-mix(in srgb, var(--c) 18%, transparent); border-color: color-mix(in srgb, var(--c) 50%, transparent); }
+html.dark .mg-rc, html.dark .mg-rule, html.dark .mg-food, html.dark .mg-fr { background: rgba(255, 255, 255, 0.05); border-color: rgba(255, 255, 255, 0.12); }
+html.dark .mg-rc { border-right-color: var(--c); }
+html.dark .mg-rule { border-top-color: var(--c); }
+html.dark .mg-ritems, html.dark .mg-food { color: #e2e8f0; }
+html.dark .mg-food.mg-on { background: rgba(245, 158, 11, 0.22); border-color: #f59e0b; color: #fde68a; }
+html.dark .mg-fr { color: #86efac; border-color: rgba(74, 222, 128, 0.4); }
+html.dark .mg-act { color: #c4b5fd; background: rgba(139, 92, 246, 0.14); border-color: rgba(167, 139, 250, 0.4); }
+html.dark .mg-act-clear { color: #cbd5e1; background: rgba(148, 163, 184, 0.1); border-color: rgba(148, 163, 184, 0.35); }
+html.dark .mg-empty { color: #94a3b8; border-color: rgba(251, 191, 36, 0.3); }
+html.dark .mg-principle, html.dark .mg-rx, html.dark .mg-verse { background: rgba(245, 158, 11, 0.12); border-color: rgba(245, 158, 11, 0.35); color: #fcd34d; }
+html.dark .mg-ashbox, html.dark .mg-rx.mg-ash { background: rgba(59, 130, 246, 0.12); border-color: rgba(96, 165, 250, 0.35); color: #bfdbfe; }
+
 /* ── כפתור תוכן העניינים ☰ — אחיד בכל הקוראים (כמו בשחרית/מנחה/ערבית) ── */
 .toc-nav-btn { display: inline-flex; align-items: center; justify-content: center; line-height: 1; padding: 0; }
 /* כותרות משנה בתוך דבר התורה של ההילולה (דברי תורה / סיפורים / ציטוטים) */

@@ -15,6 +15,7 @@
  */
 package il.co.jewishcalendar.twa;
 
+import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.net.Uri;
 import android.os.Build;
@@ -26,7 +27,9 @@ import androidx.browser.customtabs.CustomTabsClient;
 import androidx.browser.customtabs.CustomTabsIntent;
 import androidx.browser.customtabs.CustomTabsSession;
 import androidx.browser.trusted.TrustedWebActivityIntentBuilder;
+import androidx.core.content.FileProvider;
 
+import java.io.File;
 import java.lang.reflect.Field;
 
 import il.co.jewishcalendar.twa.widget.Sync;
@@ -47,6 +50,7 @@ public class LauncherActivity
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        grantSplashUriPermission(); // חייב לפני super.onCreate — שם מתחילה העברת תמונת הפתיחה לכרום
         super.onCreate(savedInstanceState);
         // Setting an orientation crashes the app due to the transparent background on Android 8.0
         // Oreo and below. We only set the orientation on Oreo and above. This only affects the
@@ -141,6 +145,25 @@ public class LauncherActivity
         } catch (Throwable t) {
             Log.w("JcBridge", "no TWA session", t);
             return null;
+        }
+    }
+
+    /**
+     * הבהוב לבן בפתיחה — שורש (06/10/2026, נמדד בטלפון אחרי עדכון כרום 154): מכרום 152 receiveFile בודק
+     * שלאפליקציה השולחת יש הרשאת קריאה לכתובת של תמונת הפתיחה. לבעלת ה-FileProvider אין רשומת הרשאה
+     * (AOSP מדלג על הענקה "בסיסית" לבעלים), אז ההעברה נכשלת ("Failed to transfer splash image") וכרום
+     * פותח את החלון שלו בלבן באנימציית הפתיחה. הענקה עצמית עם PERSISTABLE יוצרת את הרשומה
+     * (בזיכרון בלבד — takePersistableUriPermission לא נקרא); בכרום ישן יותר אין בדיקה כזו ואין השפעה.
+     * העקיפה מהדיון ב-android-browser-helper #623 (אומתה שם ב-S24 Ultra). התיקייה והקובץ — של הספרייה.
+     */
+    private void grantSplashUriPermission() {
+        try {
+            File splash = new File(new File(getFilesDir(), "twa_splash"), "splash_image.png");
+            Uri uri = FileProvider.getUriForFile(this, getString(R.string.providerAuthority), splash);
+            grantUriPermission(getPackageName(), uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+        } catch (Throwable t) {
+            Log.w("JcSplash", "splash uri self-grant failed", t); // לעולם לא לחסום את הפתיחה בגלל מסך הפתיחה
         }
     }
 

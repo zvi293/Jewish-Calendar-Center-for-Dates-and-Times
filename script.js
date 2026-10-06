@@ -23260,11 +23260,12 @@ window.openDonationModal = function() {
 // "https://play.google.com/billing", דרך ספריית ה-billing של android-browser-helper ב-TWA (מאפליקציה 1.1.1).
 // בלי שרת ובלי מסד נתונים: התרומה לא נותנת שום דבר בתמורה, אז אין מה לאמת — רק לצרוך (consume) כל רכישה
 // מיד, אחרת גוגל מחזירה את הכסף אוטומטית אחרי 3 ימים (consume גם מאפשר לתרום שוב באותו סכום).
-// המוצרים ב-Play Console: donation_1 … donation_6 (מוצרים חד-פעמיים). הסכומים נקבעים שם בלבד, והחלון מציג
+// המוצרים ב-Play Console: donation_1 … donation_10 (מוצרים חד-פעמיים). הסכומים נקבעים שם בלבד, והחלון מציג
 // את מה שקיים לפי המחיר, מהזול ליקר. אפליקציה ישנה / WebView / בלי מוצרים — אין כפתור תרומה בכלל.
 (function () {
   var PLAY = "https://play.google.com/billing";
-  var SKUS = ["donation_1", "donation_2", "donation_3", "donation_4", "donation_5", "donation_6"];
+  // עד 10 סכומים — מה שלא קיים בקונסול פשוט לא חוזר (06/10: 1…7 = 10/20/50/100/200/500/1000 ₪)
+  var SKUS = ["donation_1", "donation_2", "donation_3", "donation_4", "donation_5", "donation_6", "donation_7", "donation_8", "donation_9", "donation_10"];
   var st = { service: null, items: [] };
 
   function fmt(price) {
@@ -23359,25 +23360,39 @@ window.openDonationModal = function() {
     pushModalState("donation-modal");
   };
 
-  // רץ פעם אחת בטעינה; חשוף גם לבדיקה בדפדפן (מוקים של getDigitalGoodsService/PaymentRequest) — קריאה חוזרת בטוחה
+  // רץ בטעינה; חשוף גם לבדיקה בדפדפן (מוקים של getDigitalGoodsService/PaymentRequest) — קריאה חוזרת בטוחה.
+  // בפתיחה קרה של האפליקציה החיבור ל-Play Billing עוד לא מוכן והקריאה הראשונה נכשלת/חוזרת ריקה
+  // (נמדד בטלפון 06/10/2026: הכפתור לא נדלק, וקריאה שנייה אחרי כמה שניות החזירה את 6 הסכומים) —
+  // לכן עד 3 ניסיונות חוזרים, ועוד סבב בכל חזרה לאפליקציה מהרקע. דרישה בשרת: Permissions-Policy עם
+  // payment=(self) (netlify.toml) — עם payment=() הקריאה נדחית תמיד ב-NotAllowedError.
+  var tries = 0;
   window._jcPlayInit = function () {
     try {
       if (!window.__jcInApp || typeof window.getDigitalGoodsService !== "function" || typeof window.PaymentRequest !== "function") return;
+      if (document.documentElement.classList.contains("jc-play")) return;
       window.getDigitalGoodsService(PLAY).then(function (service) {
-        if (!service) return;
+        if (!service) throw new Error("no service");
         st.service = service;
         consumePending();
         return service.getDetails(SKUS).then(function (items) {
           items = (items || []).filter(function (it) { return it && it.itemId && it.price; });
-          if (!items.length) return;
+          if (!items.length) throw new Error("no items");
           items.sort(function (a, b) { return parseFloat(a.price.value) - parseFloat(b.price.value); });
           st.items = items;
           document.documentElement.classList.add("jc-play"); // מציג את כפתור התרומה בסרגל (jc-play-pay)
         });
-      }).catch(function () {});
+      }).catch(function () {
+        if (++tries <= 3) setTimeout(window._jcPlayInit, tries * 2000);
+      });
     } catch (e) {}
   };
   window._jcPlayInit();
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "visible" && !document.documentElement.classList.contains("jc-play")) {
+      tries = 0;
+      window._jcPlayInit();
+    }
+  });
 })();
 
 // ── Auto-scroll: גלילה אוטומטית גלובלית (מימוש חדש ונקי) ──────────────

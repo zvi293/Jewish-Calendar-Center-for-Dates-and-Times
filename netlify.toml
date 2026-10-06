@@ -125,6 +125,9 @@
 # CSP מצומצם במכוון: frame-ancestors (מונע clickjacking), base-uri, object-src,
 # form-action — הגנות אמיתיות בלי סיכון שבירה. CSP מלא עם script-src אינו מעשי
 # כאן (עשרות סקריפטים inline ו-onclick=) והיה מחייב 'unsafe-inline' חסר-ערך.
+# payment=(self): תרומה באפליקציה דרך Google Play (Digital Goods API + Payment Request) — עם payment=()
+# getDigitalGoodsService נדחה ב-"NotAllowedError: Payment permissions policy not granted" (06/10/2026).
+# self בלבד — מסגרות של צד שלישי עדיין חסומות.
 [[headers]]
   for = "/*"
   [headers.values]
@@ -132,7 +135,7 @@
     X-Frame-Options = "SAMEORIGIN"
     Referrer-Policy = "strict-origin-when-cross-origin"
     Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload"
-    Permissions-Policy = "geolocation=(self), camera=(), microphone=(), payment=(), usb=(), interest-cohort=(), browsing-topics=()"
+    Permissions-Policy = "geolocation=(self), camera=(), microphone=(), payment=(self), usb=(), interest-cohort=(), browsing-topics=()"
     Content-Security-Policy = "frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'self'"
     Cross-Origin-Opener-Policy = "same-origin"
 

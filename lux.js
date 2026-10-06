@@ -3918,6 +3918,12 @@
       // תהילים יומי
       var hd = luxHebDay(new Date()) || 1;
       var range = TH_MONTHLY[Math.min(hd, 30)] || "";
+      // חודש חסר (כ"ט ימים): ביום כ"ט קוראים גם את של יום ל' — עד סוף הספר
+      if (hd === 29) {
+        var tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        if (luxHebDay(tomorrow) === 1) range = "קמ-קנ";
+      }
       var read = jget("lux_tehillim_read", []).length;
       slides.push({
         cls: "lux-st-tehillim",

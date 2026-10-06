@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- נוצר ע"י gen_widgets.py — שמות ותיאורים של הווידג'טים -->
+<resources>
+    <string name="wl_zmanim">זמני היום</string>
+    <string name="wd_zmanim">כל זמני היום — הזמן הקרוב תמיד למעלה, עם נרות ויציאת שבת וחג ותעניות</string>
+    <string name="wl_next">הזמן ההלכתי הבא</string>
+    <string name="wd_next">הזמן הבא עם ספירה לאחור חיה</string>
+    <string name="wl_date">התאריך העברי</string>
+    <string name="wd_date">התאריך העברי של היום (מתחלף בשקיעה) והלועזי</string>
+    <string name="wl_holiday">המועד הקרוב</string>
+    <string name="wd_holiday">החג, המועד או התענית הקרובים — ספירת ימים וזמני כניסה ויציאה</string>
+    <string name="wl_shabbat">פרשת השבוע</string>
+    <string name="wd_shabbat">הפרשה הקרובה עם הדלקת נרות וצאת השבת</string>
+    <string name="wl_tehillim">תהילים היומי</string>
+    <string name="wd_tehillim">פרקי התהילים של היום — לחיצה פותחת את הפרק הראשון</string>
+    <string name="wl_daf">הדף היומי</string>
+    <string name="wd_daf">הדף היומי של היום — לחיצה פותחת אותו</string>
+    <string name="wl_levana">ברכת הלבנה</string>
+    <string name="wd_levana">מופע הירח, ספירה לאחור לזמן הברכה ועד מתי אפשר לברך</string>
+    <string name="wl_levana_simple">ברכת הלבנה — פשוט</string>
+    <string name="wd_levana_simple">עוד כמה זמן אפשר לברך, או עוד כמה זמן עד שאפשר</string>
+    <string name="wl_study">לימוד יומי</string>
+    <string name="wd_study">דף יומי, חוק לישראל ושניים מקרא — בלחיצה</string>
+    <string name="wl_prayers">תפילות</string>
+    <string name="wd_prayers">שחרית, מנחה, ערבית, ברכת המזון ומעין שלוש — התפילה של עכשיו מודגשת</string>
+    <string name="wl_bentching">ברכת המזון</string>
+    <string name="wd_bentching">ברכת המזון וברכת מעין שלוש בלחיצה</string>
+    <string name="wl_plan">סדר הלימוד שלי</string>
+    <string name="wd_plan">הסדרים האישיים וההתקדמות — לחיצה מביאה לבחירת סדר</string>
+    <string name="wl_omer">ספירת העומר</string>
+    <string name="wd_omer">יום הספירה עם הנוסח — מתחלף בצאת הכוכבים</string>
+    <string name="wl_all">הכול במבט אחד</string>
+    <string name="wd_all">תאריך, הזמן הבא, שבת, דף יומי והמועד הקרוב</string>
+    <string name="wl_clock">שעון הלכתי</string>
+    <string name="wd_clock">השעה הזמנית עכשיו ואורך השעה היום</string>
+    <string name="wl_hilula">הילולת היום</string>
+    <string name="wd_hilula">הצדיקים שהילולתם היום</string>
+</resources>

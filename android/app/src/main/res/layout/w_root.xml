@@ -1,0 +1,10 @@
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@android:id/background"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:layoutDirection="rtl"
+    android:clipToOutline="true">
+    <ImageView android:id="@+id/w_stars" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="centerCrop" android:src="@drawable/wstars" android:visibility="gone" android:importantForAccessibility="no" />
+    <ImageView android:id="@+id/w_hills" android:layout_width="match_parent" android:layout_height="46dp" android:layout_gravity="bottom" android:scaleType="fitXY" android:visibility="gone" android:importantForAccessibility="no" />
+    <LinearLayout android:id="@+id/w_content" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:layoutDirection="rtl" />
+</FrameLayout>

@@ -1,2 +1,19 @@
 node_modules/
-android/
+
+# אפליקציית האנדרואיד: הקוד בגיט, אבל מפתח החתימה, הסיסמה שלו והקבצים הבנויים — לעולם לא
+# (הריפו ציבורי, ו-netlify.toml חוסם את /android/* מהגשה לגולשים).
+# את המפתח והסיסמה לגבות בנפרד, במקום פרטי — בלעדיהם אי אפשר לחתום על עדכונים.
+android/android.keystore
+android/.keystore-pass
+android/KEYSTORE-INFO.txt
+android/*.aab
+android/*.apk
+android/*.idsig
+android/archive/
+android/build/
+android/app/build/
+android/.gradle/
+android/local.properties
+android/play-graphics/
+android/widget-screenshots/
+android/widget-sketches/

@@ -1,0 +1,67 @@
+{
+  "packageId": "il.co.jewishcalendar.twa",
+  "host": "jewishcalendar.co.il",
+  "name": "הלוח היהודי",
+  "launcherName": "הלוח היהודי",
+  "display": "standalone",
+  "themeColor": "#0f172a",
+  "themeColorDark": "#0f172a",
+  "navigationColor": "#0f172a",
+  "navigationColorDark": "#0f172a",
+  "navigationDividerColor": "#0f172a",
+  "navigationDividerColorDark": "#0f172a",
+  "backgroundColor": "#0f172a",
+  "enableNotifications": true,
+  "startUrl": "/",
+  "iconUrl": "https://jewishcalendar.co.il/icon-512.png",
+  "maskableIconUrl": "https://jewishcalendar.co.il/icon-512-maskable.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "./android.keystore",
+    "alias": "android"
+  },
+  "appVersionName": "1.1.0",
+  "appVersionCode": 11,
+  "shortcuts": [
+    {
+      "name": "תהילים",
+      "shortName": "תהילים",
+      "url": "/?open=tehillim",
+      "chosenIconUrl": "https://jewishcalendar.co.il/icon-192.png"
+    },
+    {
+      "name": "זמני היום",
+      "shortName": "זמנים",
+      "url": "/?open=zmanim",
+      "chosenIconUrl": "https://jewishcalendar.co.il/icon-192.png"
+    },
+    {
+      "name": "לוח שנה חודשי",
+      "shortName": "לוח שנה",
+      "url": "/?open=calendar",
+      "chosenIconUrl": "https://jewishcalendar.co.il/icon-192.png"
+    },
+    {
+      "name": "ספרים נוספים",
+      "shortName": "ספרים",
+      "url": "/?open=sefarim",
+      "chosenIconUrl": "https://jewishcalendar.co.il/icon-192.png"
+    }
+  ],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://jewishcalendar.co.il/site.webmanifest",
+  "fallbackType": "webview",
+  "features": {},
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullScopeUrl": "https://jewishcalendar.co.il/",
+  "minSdkVersion": 21,
+  "orientation": "portrait",
+  "fingerprints": [],
+  "additionalTrustedOrigins": [],
+  "retainedBundles": []
+}

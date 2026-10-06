@@ -1,0 +1,2 @@
+<ProgressBar xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/pb" style="@android:style/Widget.ProgressBar.Horizontal"
+    android:layout_width="match_parent" android:layout_height="5dp" android:max="1000" android:progressDrawable="@drawable/wprogress" android:indeterminate="false" />

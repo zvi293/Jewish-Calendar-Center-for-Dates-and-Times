@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- ערכת הנושא של LauncherActivity. באנדרואיד 12+ (values-v31) מוסיפה מסך פתיחה של המערכת בצבע הכהה
+     עם הסמל — בלי זה המערכת מציגה מסך לבן ריק (שכבת החזית של הסמל המותאם שקופה). -->
+<resources>
+    <style name="LauncherTheme" parent="@android:style/Theme.Translucent.NoTitleBar" />
+</resources>

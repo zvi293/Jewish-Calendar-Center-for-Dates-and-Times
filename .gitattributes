@@ -4,3 +4,6 @@
 *.min.js -text
 # מאגר המקומות — החותמת (PLACES_VER) מחושבת מהתוכן; אותם בייטים בכל מערכת
 /places/*.json -text
+
+# סקריפט ההרצה של gradle — חייב סופי שורה של יוניקס
+android/gradlew text eol=lf

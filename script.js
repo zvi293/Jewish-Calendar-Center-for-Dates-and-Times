@@ -4266,15 +4266,16 @@ function computeKosherZmanim(dateObj) {
     try {
       times.minchaKetana = toIso(cal.getMinchaKetana());
     } catch (e) {}
+    // פלג המנחה (10/2026): plagHaMincha = לפי הגר"א (הנץ–שקיעה) — כמו בשדה של hebcal, ובו משתמשים
+    // התזכורות, החיפוש והלוח ב-lux.js. מגן אברהם = לפי עלות–צאת 72 דק' (כמו ק"ש ותפילה מג"א).
+    // עד כאן "מגן אברהם" בטבלה הציג את חישוב הגר"א, ו"הגר"א" את חישוב בעל התניא.
     try {
       times.plagHaMincha = toIso(cal.getPlagHamincha());
     } catch (e) {}
+    times.plagHaMinchaGRA = times.plagHaMincha;
     try {
-      times.plagHaMinchaGRA =
-        toIso(cal.getPlagHaminchaBaalHatanya()) || times.plagHaMincha;
-    } catch (e) {
-      times.plagHaMinchaGRA = times.plagHaMincha;
-    }
+      times.plagHaMinchaMGA = toIso(cal.getPlagHamincha72Minutes());
+    } catch (e) {}
     try {
       times.sunset = toIso(cal.getSunset());
     } catch (e) {}
@@ -11678,11 +11679,11 @@ function buildZmanDefinitionList(bundle) {
       opinions: [
         enrichOpinion(
           {
-            id: "plagHaMincha",
+            id: "plagHaMinchaMGA",
             label: "מגן אברהם",
             shortLabel: "מגן אברהם",
             method: "MGA",
-            candidates: getFieldCandidates(bundle, "plagHaMincha", [
+            candidates: getFieldCandidates(bundle, "plagHaMinchaMGA", [
               "today",
               "next",
             ]),
@@ -11696,7 +11697,7 @@ function buildZmanDefinitionList(bundle) {
             label: 'הגר"א',
             shortLabel: 'הגר"א',
             method: "GRA",
-            candidates: getFieldCandidates(bundle, "plagHaMinchaGRA", [
+            candidates: getFieldCandidates(bundle, "plagHaMincha", [
               "today",
               "next",
             ]),

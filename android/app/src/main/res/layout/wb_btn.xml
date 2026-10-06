@@ -1,0 +1,7 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/btn"
+    android:layout_width="0dp" android:layout_weight="1" android:layout_height="match_parent" android:orientation="vertical" android:gravity="center"
+    android:background="@drawable/wbtn" android:paddingStart="2dp" android:paddingEnd="2dp" android:paddingTop="4dp" android:paddingBottom="4dp">
+    <ImageView android:id="@+id/ic" android:layout_width="24dp" android:layout_height="24dp" android:importantForAccessibility="no" />
+    <FrameLayout android:id="@+id/icgap" android:layout_width="1dp" android:layout_height="4dp" />
+    <TextView android:id="@+id/t" android:layout_width="wrap_content" android:layout_height="wrap_content" android:fontFamily="sans-serif" android:textStyle="bold" android:textColor="#FFFFFF" android:textSize="12.5sp" android:includeFontPadding="false" android:maxLines="1" android:ellipsize="end" android:gravity="center" android:shadowColor="#73000A28" android:shadowRadius="3" android:shadowDy="1" />
+</LinearLayout>

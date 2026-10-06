@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- מסך הפתיחה של המערכת (אנדרואיד 12+): אותו רקע כמו מסך הפתיחה של ה-TWA (backgroundColor),
+     והסמל באותו גודל — העיגול של המערכת (192dp מתוך 288dp) חותך בדיוק סביב טבעת הזהב,
+     כך שהמעבר למסך הפתיחה של ה-TWA (splash.png, 300dp) רציף. -->
+<resources>
+    <style name="LauncherTheme" parent="@android:style/Theme.Translucent.NoTitleBar">
+        <item name="android:windowSplashScreenBackground">@color/backgroundColor</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_icon</item>
+    </style>
+</resources>

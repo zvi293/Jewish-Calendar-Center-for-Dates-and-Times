@@ -111,6 +111,7 @@
     <link rel="stylesheet" href="/fonts.css?v=1" />
     <style>
       html.jc-app .jc-web-pay { display: none !important; }
+      html:not(.jc-app) .jc-app-only { display: none !important; }
       body {
         font-family: "Assistant", sans-serif;
         transition:
@@ -348,6 +349,23 @@
             התרומות אינן מוכרות לזיכוי מס (מפעיל האתר אינו מוסד ציבורי לעניין
             סעיף 46 לפקודת מס הכנסה) ואינן ניתנות להחזר, למעט על פי דין או
             בהתאם למדיניות PayPal.
+          </p>
+        </section>
+
+        <!-- תרומות באפליקציה (מוצג רק באפליקציה — jc-app-only; התרומה שם עוברת ב-Google Play) -->
+        <section class="jc-app-only rounded-3xl bg-slate-50 dark:bg-slate-900/60 p-6">
+          <h2 class="text-2xl font-black text-slate-900 dark:text-white">
+            תרומות
+          </h2>
+          <p class="mt-3 leading-8 text-slate-700 dark:text-slate-300">
+            האפליקציה מאפשרת תרומה וולונטרית לתמיכה בתפעולה, באמצעות מערכת
+            התשלומים של Google Play. התרומה אינה תשלום עבור שירות ואינה מקנה
+            זכויות כלשהן באפליקציה או בתכניה — השירות נותר חינמי לכלל המשתמשים.
+            עיבוד התשלום מתבצע במלואו על ידי Google, בכפוף לתנאים ולמדיניות
+            הפרטיות של Google Play; פרטי אמצעי התשלום אינם עוברים אלינו ואינם
+            נשמרים אצלנו. התרומות אינן מוכרות לזיכוי מס (מפעיל השירות אינו מוסד
+            ציבורי לעניין סעיף 46 לפקודת מס הכנסה); בקשות להחזר מטופלות לפי
+            מדיניות ההחזרים של Google Play.
           </p>
         </section>
 

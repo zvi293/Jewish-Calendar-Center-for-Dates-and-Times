@@ -111,6 +111,7 @@
     <link rel="stylesheet" href="/fonts.css?v=1" />
     <style>
       html.jc-app .jc-web-pay { display: none !important; }
+      html:not(.jc-app) .jc-app-only { display: none !important; }
       body {
         font-family: "Assistant", sans-serif;
         transition:
@@ -477,6 +478,19 @@
               <p class="mt-2 leading-7 text-slate-700 dark:text-slate-300">
                 לחיצה על כפתור התרומה מעבירה אותך לאתר PayPal; האתר אינו מקבל
                 ואינו שומר פרטי תשלום.
+              </p>
+            </div>
+
+            <div
+              class="jc-app-only rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5"
+            >
+              <h3 class="text-lg font-bold text-slate-900 dark:text-white">
+                Google Play (תרומות באפליקציה)
+              </h3>
+              <p class="mt-2 leading-7 text-slate-700 dark:text-slate-300">
+                תרומה באפליקציה מתבצעת כולה במערכת התשלומים של Google Play.
+                איננו מקבלים ואיננו שומרים את פרטי אמצעי התשלום, והאפליקציה אינה
+                שומרת מידע על התרומה; Google מטפלת במידע לפי מדיניות הפרטיות שלה.
               </p>
             </div>
           </div>

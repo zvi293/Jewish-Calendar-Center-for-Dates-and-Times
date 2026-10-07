@@ -17,3 +17,6 @@ android/local.properties
 android/play-graphics/
 android/widget-screenshots/
 android/widget-sketches/
+
+# תיקיית מצב מקומית של Netlify CLI
+.netlify/

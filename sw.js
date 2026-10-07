@@ -1,4 +1,4 @@
-const STATIC_CACHE = "moadim-static-v160";
+const STATIC_CACHE = "moadim-static-v161";
 // מטמון ריצה: תשובות API וקבצים חיצוניים (ספריא, hebcal, פונטים, ספריות CDN)
 // נשמרים אחרי הצפייה הראשונה — כך האתר, התפילות והספרים עובדים גם בלי אינטרנט.
 const RUNTIME_CACHE = "moadim-runtime-v1";
@@ -15,8 +15,8 @@ const STATIC_ASSETS = [
   // חשוב: ה-?v= כאן חייב להיות זהה לזה שב-index.html — כך ההתקנה נענית
   // מ-HTTP cache (בלי הורדה כפולה של ~3MB) והבקשות מהדף פוגעות במטמון
   // בדיוק; סטייה עתידית מכוסה ע"י ה-fallback עם ignoreSearch.
-  "/script.js?v=104",
-  "/lux.js?v=86",
+  "/script.js?v=105",
+  "/lux.js?v=87",
   "/sky.js?v=8",
   "/style.css?v=109",
   "/tailwind.css?v=2",
@@ -252,11 +252,48 @@ function networkShellReady(network, key) {
   });
 }
 
+// דף "אין חיבור" — רק כשאין במכשיר שום עותק של האתר (פתיחה ראשונה בלי אינטרנט). בעיצוב
+// האתר (שמי לילה, מגן דוד בזהב), עם "נסו שוב" ובדיקה אוטומטית: כשהחיבור חוזר הדף נטען לבד.
+// הבדיקה ב-HEAD — ה-SW לא מטפל בבקשות שאינן GET, כך שהיא תמיד יוצאת לרשת ולא נענית
+// מהמטמון (ולא נשמרת בו). סטטוס 200: באפליקציה (TWA) כרום בודק שכתובת הפתיחה נטענת.
 function offlinePage() {
-  return new Response(
-    '<!doctype html><html lang="he" dir="rtl"><meta charset="utf-8"><title>אין חיבור</title><body style="font-family:sans-serif;text-align:center;padding:3rem;"><h1>📡 אין חיבור לאינטרנט</h1><p>בדקו את החיבור ונסו שוב.</p></body></html>',
-    { status: 503, headers: { "Content-Type": "text/html; charset=utf-8" } },
-  );
+  const html =
+    '<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8">' +
+    '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">' +
+    '<meta name="theme-color" content="#0b1530"><title>הלוח היהודי · אין חיבור</title><style>' +
+    "html,body{margin:0;min-height:100%}" +
+    "body{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px 16px;box-sizing:border-box;" +
+    'font-family:"Assistant",system-ui,-apple-system,"Segoe UI",Arial,sans-serif;color:#f8fafc;text-align:center;' +
+    "background:radial-gradient(1px 1px at 12% 18%,#fff9 50%,transparent 51%),radial-gradient(1.6px 1.6px at 78% 12%,#fffb 50%,transparent 51%)," +
+    "radial-gradient(1px 1px at 64% 34%,#fff8 50%,transparent 51%),radial-gradient(1.3px 1.3px at 30% 62%,#fff7 50%,transparent 51%)," +
+    "radial-gradient(1px 1px at 88% 74%,#fff9 50%,transparent 51%),radial-gradient(1.2px 1.2px at 45% 86%,#fff6 50%,transparent 51%)," +
+    "linear-gradient(180deg,#0b1530 0%,#14224a 58%,#2a2f5c 100%)}" +
+    ".card{max-width:370px;width:100%;padding:28px 22px 24px;border-radius:24px;background:rgba(255,255,255,.07);" +
+    "border:1px solid rgba(242,217,138,.45);box-shadow:0 14px 44px rgba(0,0,0,.38)}" +
+    "svg{width:64px;height:64px;margin-bottom:8px}" +
+    "h1{font-size:1.5rem;margin:.2rem 0 .7rem;color:#f2d98a}" +
+    "p{margin:.4rem 0;line-height:1.65;font-size:1rem;color:#e2e8f0}.sub{font-size:.9rem;color:#cbd5e1}" +
+    "button{margin-top:18px;font:inherit;font-weight:800;font-size:1.05rem;padding:.75rem 2.4rem;border-radius:999px;" +
+    "border:1px solid #f2d98a;background:linear-gradient(180deg,#f6e3a1,#d4af37);color:#1e1b4b;cursor:pointer}" +
+    "#st{margin-top:12px;font-size:.84rem;color:#a5b4cf;min-height:1.3em}" +
+    '</style></head><body><main class="card">' +
+    '<svg viewBox="0 0 100 100" aria-hidden="true"><g fill="none" stroke="#f2d98a" stroke-width="5" stroke-linejoin="round">' +
+    '<path d="M50 8 86 70H14Z"/><path d="M50 92 14 30H86Z"/></g></svg>' +
+    "<h1>אין חיבור לאינטרנט</h1>" +
+    "<p>בפתיחה הראשונה הלוח היהודי צריך חיבור, כדי לשמור במכשיר את הלוח, הזמנים והתפילות.</p>" +
+    '<p class="sub">מאותו רגע הוא נפתח גם בלי אינטרנט.</p>' +
+    '<button id="r" type="button">נסו שוב</button>' +
+    '<div id="st" aria-live="polite">כשהחיבור יחזור, הדף ייטען מעצמו.</div>' +
+    "</main><script>(function(){var busy=false,st=document.getElementById('st');" +
+    "function check(m){if(busy)return;busy=true;" +
+    "fetch('/',{method:'HEAD',cache:'no-store'}).then(function(r){if(r&&r.status<500)location.reload();else throw 0})" +
+    ".catch(function(){if(m)st.textContent='עדיין אין חיבור — נמשיך לבדוק לבד.'}).then(function(){busy=false})}" +
+    "document.getElementById('r').onclick=function(){st.textContent='בודק חיבור…';check(true)};" +
+    "addEventListener('online',function(){setTimeout(check,500)});setInterval(check,6000)})();</script></body></html>";
+  return new Response(html, {
+    status: 200,
+    headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" },
+  });
 }
 
 self.addEventListener("install", (event) => {
@@ -536,8 +573,10 @@ self.addEventListener("fetch", (event) => {
 
 // לחיצה על התראה מקומית (אישור הפעלת התראות העומר — script.js → _showLocalNotif;
 // פוש התזכורת עצמו מטופל ב-worker של OneSignal ופותח את /?open=omer):
-// מביאים לחזית חלון פתוח של האתר, ואם אין — פותחים אותו
-self.addEventListener("notificationclick", (event) => {
+// מביאים לחזית חלון פתוח של האתר, ואם אין — פותחים אותו.
+// כשהקובץ הזה רץ בתוך OneSignalSDKWorker.js (מי שהפעיל התראות) — ה-handler של OneSignal
+// כבר מטפל בכל לחיצה; שני handlers היו פותחים/ממקדים שני חלונות.
+if (!self.__jcOneSignal) self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {

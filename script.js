@@ -2416,6 +2416,22 @@ function closeOmerModal() {
 }
 
 // --- Sefaria Modal Logic ---
+// ה-ref שהקורא (openSefariaModal) מבקש מספריא — משותף להורדה ברקע של הלימוד היומי
+// (_prefetchDailyTexts), כך שהעותק שנשמר מראש הוא בדיוק מה שהקורא יבקש בלי אינטרנט.
+// פרשת השבוע: שומרים את הקידומת "Parashat" — כך ספריא מזהה את כל הפרשות.
+// בלעדיה, פרשות עם גרש (האזינו, שלח, בהעלותך) לא נמצאו כלל ("לא נמצא טקסט"),
+// ושאר הפרשות החזירו רק את הפרק הראשון של הספר במקום את הפרשה המלאה.
+// שני איותים ש-hebcal וספריא חלוקים בהם מיושרים כאן (אומת מול כל 61 הפרשות
+// והצירופים ב-18/09/2026).
+function _sefariaModalCleanRef(enRef) {
+  let cleanRef = _sefariaRefNormalize(enRef)
+    .replace(/^Parashat Lech-Lecha$/, "Parashat Lech Lecha")
+    .replace(/^Parashat Vezot Haberakhah$/, "Parashat V'Zot HaBerachah")
+    .replace(/ /g, "_");
+  if (!/^Parashat_/.test(cleanRef) && /\d/.test(cleanRef)) cleanRef = cleanRef.replace("_", "."); // For Daf Yomi
+  return cleanRef;
+}
+
 async function openSefariaModal(hebTitle, enRef, opts) {
   if (!enRef) return;
   // Remove shmikra toggles if present (from previous Shnayim Mikra use)
@@ -2428,16 +2444,7 @@ async function openSefariaModal(hebTitle, enRef, opts) {
   window._dafState = null;
   // ניקוי כפתורי הפירושים של הדף היומי כשפותחים תוכן אחר במודאל
   if (!isDaf) document.getElementById("daf-cm-toggles")?.remove();
-  // פרשת השבוע: שומרים את הקידומת "Parashat" — כך ספריא מזהה את כל הפרשות.
-  // בלעדיה, פרשות עם גרש (האזינו, שלח, בהעלותך) לא נמצאו כלל ("לא נמצא טקסט"),
-  // ושאר הפרשות החזירו רק את הפרק הראשון של הספר במקום את הפרשה המלאה.
-  // שני איותים ש-hebcal וספריא חלוקים בהם מיושרים כאן (אומת מול כל 61 הפרשות
-  // והצירופים ב-18/09/2026).
-  let cleanRef = _sefariaRefNormalize(enRef)
-    .replace(/^Parashat Lech-Lecha$/, "Parashat Lech Lecha")
-    .replace(/^Parashat Vezot Haberakhah$/, "Parashat V'Zot HaBerachah")
-    .replace(/ /g, "_");
-  if (!/^Parashat_/.test(cleanRef) && /\d/.test(cleanRef)) cleanRef = cleanRef.replace("_", "."); // For Daf Yomi
+  const cleanRef = _sefariaModalCleanRef(enRef);
 
   const m = document.getElementById("sefaria-modal");
   document.getElementById("sefaria-modal-title").textContent =
@@ -2500,8 +2507,9 @@ async function openSefariaModal(hebTitle, enRef, opts) {
     _uxSoftFirst(_sefCont);
   } catch (e) {
     _sefCont.__uxSoftAt = null;
-    document.getElementById("sefaria-modal-content").innerHTML =
-      "<p class='text-center text-rose-500 font-bold mt-10'>שגיאה בטעינת הטקסט. אנא בדוק חיבור לאינטרנט.</p>";
+    document.getElementById("sefaria-modal-content").innerHTML = _isOfflineNow()
+      ? _offlineMsgHtml(isDaf ? "הדף היומי הזה" : "הטקסט הזה")
+      : "<p class='text-center text-rose-500 font-bold mt-10'>שגיאה בטעינת הטקסט. אנא בדוק חיבור לאינטרנט.</p>";
   }
 }
 
@@ -3176,8 +3184,9 @@ async function openShnayimMikraModal(hebTitle, enRef) {
     }
   } catch (e) {
     console.error("Shnayim Mikra error:", e);
-    document.getElementById("sefaria-modal-content").innerHTML =
-      "<p class='text-center text-rose-500 font-bold mt-10'>שגיאה בטעינת המקרא והתרגום. אנא בדוק חיבור לאינטרנט.</p>";
+    document.getElementById("sefaria-modal-content").innerHTML = _isOfflineNow()
+      ? _offlineMsgHtml("המקרא והתרגום של הפרשה")
+      : "<p class='text-center text-rose-500 font-bold mt-10'>שגיאה בטעינת המקרא והתרגום. אנא בדוק חיבור לאינטרנט.</p>";
   }
 }
 
@@ -3323,7 +3332,8 @@ async function openChokLeIsraelModal() {
     await fetchChokLeIsraelData();
     if (!_chokLeIsraelData) {
       if (typeof showToast === 'function') {
-        showToast('לא ניתן לטעון את חוק לישראל כעת — בדוק חיבור לאינטרנט ונסה שוב', 'error');
+        showToast(_isOfflineNow() ? _offlineMsgText('חוק לישראל של היום')
+          : 'לא ניתן לטעון את חוק לישראל כעת — בדוק חיבור לאינטרנט ונסה שוב', 'error');
       }
       return;
     }
@@ -3371,8 +3381,9 @@ async function openChokLeIsraelModal() {
     if (getChokRashi() || getChokBartenura()) fetchChokCommentaries();
   } catch (e) {
     if (contentEl) {
-      contentEl.innerHTML =
-        '<p class="text-center text-slate-500 py-10">שגיאה בטעינת התוכן. אנא נסה שוב.</p>';
+      contentEl.innerHTML = _isOfflineNow()
+        ? _offlineMsgHtml('חוק לישראל של היום')
+        : '<p class="text-center text-slate-500 py-10">שגיאה בטעינת התוכן. אנא נסה שוב.</p>';
     }
   }
 }
@@ -4486,6 +4497,134 @@ function _offlineAheadRefresh() {
     });
 }
 
+// ── הורדה ברקע של טקסטי הלימוד היומי (10/2026) ──
+// ב-Wi-Fi, פעם ביום, אחרי שהדף נרגע: הדף היומי של היום ומחר (+ רש"י/תוספות אם הם מוצגים),
+// פרקי התהילים היומיים לשבוע, חק לישראל של היום ושל ששת הימים הבאים, ופרשת השבוע עם
+// אונקלוס. הבקשות זהות לאלה של הקוראים (_sefariaJson ואותן כתובות בדיוק), כך שה-SW שומר
+// אותן במטמון הריצה והקוראים מקבלים אותן גם בלי אינטרנט — גם מה שעוד לא נפתח. לא נשמר
+// ב-localStorage (הקורא שומר בעצמו כשנפתח). בלי SW שולט בדף אין בזה טעם — לא רץ.
+const _PREFETCH_DAY_KEY = "moadim_prefetch_day";
+const _TEHILLIM_DAY_RANGE = [null, [1, 9], [10, 17], [18, 22], [23, 28], [29, 34], [35, 38], [39, 43], [44, 48],
+  [49, 54], [55, 59], [60, 65], [66, 68], [69, 71], [72, 76], [77, 78], [79, 82], [83, 87], [88, 89], [90, 96],
+  [97, 103], [104, 105], [106, 107], [108, 112], [113, 118], [119, 119], [119, 119], [120, 134], [135, 139],
+  [140, 150], [145, 150]]; // כ"ט — עד סוף הספר (בחודש חסר קוראים בו גם את של ל')
+let _prefetchBusy = false;
+let _prefetchWaits = 0;
+function _prefetchNetOk() {
+  if (navigator.onLine === false) return false;
+  const c = navigator.connection;
+  if (!c) return true; // בלי מידע (ספארי/פיירפוקס) — חיבור רגיל
+  if (c.saveData) return false;
+  if (c.type) return c.type === "wifi" || c.type === "ethernet"; // טלפון: רק ב-Wi-Fi
+  return !/2g|3g/.test(c.effectiveType || ""); // מחשב: אין type
+}
+async function _prefetchDailyTexts() {
+  if (_prefetchBusy || !_prefetchNetOk()) return;
+  if (!("serviceWorker" in navigator) || !navigator.serviceWorker.controller) return;
+  // שמות הדפים מגיעים מהמטמון המוקדם (_offlineAheadRefresh) — אם הוא באמצע ריענון, ממתינים לו
+  if (_offlineAheadBusy && _prefetchWaits++ < 6) {
+    setTimeout(_prefetchDailyTexts, 10000);
+    return;
+  }
+  const today = new Date();
+  const todayIso = _isoLocalDate(today);
+  try {
+    if (localStorage.getItem(_PREFETCH_DAY_KEY) === todayIso) return;
+  } catch (e) {
+    return;
+  }
+  _prefetchBusy = true;
+  const S = "https://www.sefaria.org/api/";
+  const urls = [];
+  const add = (u) => { if (u && urls.indexOf(u) < 0) urls.push(u); };
+  const dayAt = (n) => { const d = new Date(today); d.setDate(d.getDate() + n); return d; };
+  const opts = { rounds: 1, timeout: 20000, deadline: 30000 };
+  let onkelos = null;
+  let complete = true;
+  try {
+    // 1. הדף היומי — היום ומחר (openSefariaModal + _fetchDafCommentary)
+    const rashi = localStorage.getItem("daf_show_rashi") === "true";
+    const tosafot = localStorage.getItem("daf_show_tosafot") === "true";
+    for (let n = 0; n < 2; n++) {
+      const a = _offlineAheadGet("daf", _isoLocalDate(dayAt(n)));
+      if (!a || !a.title) continue;
+      const ref = _sefariaModalCleanRef(a.title);
+      add(`${S}texts/${ref}?context=0`);
+      const spaced = ref.replace(/_/g, " ").replace(/\./g, " ");
+      if (rashi) add(`${S}texts/${encodeURIComponent("Rashi on " + spaced)}?context=0&pad=0`);
+      if (tosafot) add(`${S}texts/${encodeURIComponent("Tosafot on " + spaced)}?context=0&pad=0`);
+    }
+    // 2. פרשת השבוע (openSefariaModal) ושניים מקרא ואחד תרגום (openShnayimMikraModal) + אונקלוס
+    const eTitle = window.SHABBAT_PARASHA_ETITLE;
+    if (eTitle) {
+      add(`${S}texts/${_sefariaModalCleanRef(eTitle)}?context=0`);
+      const pn = _sefariaRefNormalize(eTitle).replace(/^Parashat\s+/, "").replace(/ /g, "_");
+      onkelos = { url: `${S}texts/Parashat_${pn}?context=0`, pn };
+      add(onkelos.url);
+    }
+    // 3. תהילים — הפרקים היומיים של היום ושל ששת הימים הבאים (loadPsalmChapter)
+    for (let n = 0; n < 7; n++) {
+      let hd = 0;
+      try {
+        new Intl.DateTimeFormat("en-u-ca-hebrew", { day: "numeric" }).formatToParts(dayAt(n))
+          .forEach((p) => { if (p.type === "day") hd = parseInt(p.value, 10) || 0; });
+      } catch (e) {}
+      const r = _TEHILLIM_DAY_RANGE[hd];
+      if (!r) continue;
+      for (let ch = r[0]; ch <= r[1]; ch++) add(`${S}texts/Psalms.${ch}?lang=he&context=0`);
+    }
+    // 4. חק לישראל — לכל יום: הפרשה מלוח ספריא, ואז הגיליון של הפרשה+היום (fetchChokLeIsraelData)
+    const dayMap = ["יום ראשון", "יום שני", "יום שלישי", "יום רביעי", "יום חמישי", "יום שישי", "ליל שישי"];
+    let sheets = null;
+    for (let n = 0; n < 7 && _prefetchNetOk(); n++) {
+      const d = dayAt(n);
+      let parshaHe = "";
+      try {
+        const cal = await _sefariaJson(`${S}calendars?diaspora=0&timezone=Asia%2FJerusalem&date=${_isoLocalDate(d)}`, opts);
+        const it = ((cal && cal.calendar_items) || []).find((i) => i.title && i.title.he && i.title.he.includes("חק לישראל"));
+        parshaHe = (it && it.displayValue && it.displayValue.he) || "";
+      } catch (e) {
+        complete = false;
+      }
+      if (!parshaHe) continue;
+      if (!sheets) {
+        try {
+          const coll = await _sefariaJson(`${S}collections/%D7%97%D7%A7-%D7%9C%D7%99%D7%A9%D7%A8%D7%90%D7%9C`, { timeout: 12000, rounds: 1 });
+          sheets = (coll && coll.sheets) || [];
+        } catch (e) {
+          complete = false;
+          break;
+        }
+      }
+      const dn = dayMap[d.getDay()];
+      const m = sheets.find((s) => s.title.includes("פרשת " + parshaHe) && s.title.includes(dn)) ||
+        sheets.find((s) => s.title.includes("פרשת " + parshaHe));
+      if (m) add(`${S}sheets/${m.id}`);
+    }
+    // הורדה — אחת-אחת עם הפסקה קצרה (לא להעמיס על ספריא), ועוצרים אם החיבור השתנה
+    for (const u of urls) {
+      if (!_prefetchNetOk()) { complete = false; break; }
+      try {
+        const data = await _sefariaJson(u, opts);
+        // אונקלוס לפי הספר של הפרשה (כמו openShnayimMikraModal) — נוסף לסוף הרשימה
+        if (onkelos && u === onkelos.url && data && data.ref) {
+          add(`${S}texts/Onkelos_${data.ref.split(" ")[0]},_${onkelos.pn}?context=0`);
+        }
+      } catch (e) {
+        complete = false;
+      }
+      await new Promise((r) => setTimeout(r, 350));
+    }
+    if (complete) {
+      try { localStorage.setItem(_PREFETCH_DAY_KEY, todayIso); } catch (e) {}
+    }
+  } catch (e) {
+    // לא קריטי — ננסה שוב בפתיחה הבאה
+  } finally {
+    _prefetchBusy = false;
+  }
+}
+
 // ── תאריך עברי בלי רשת (במבנה של ממיר hebcal: hy/hm/hd/hebrew/events) ──
 // קודם מהמטמון המוקדם; אחרת חישוב במכשיר (Intl) + אירועי היום מרשימות השנה
 // השמורות (ALL_EVENTS_FULL — אותן כותרות hebcal בדיוק) + יום העומר.
@@ -4590,8 +4729,37 @@ function _showNetPill(kind) {
   el.style.display = "block";
   requestAnimationFrame(() => { if (el.__kind === kind) el.style.opacity = "1"; });
   el.__hideT = setTimeout(() => {
-    if (el.__kind === kind) _showNetPill(null);
+    if (el.__kind !== kind) return;
+    // אין חיבור — אחרי ההודעה המלאה נשארת תווית קטנה עד שהחיבור חוזר (10/2026), כדי שתמיד
+    // יהיה ברור שמה שמוצג הוא העותק השמור; "online" / נתונים מהרשת מסירים אותה
+    if (kind === "offline") {
+      el.__kind = "offline-mini";
+      el.textContent = "📴 לא מקוון";
+      el.style.opacity = "0.85";
+      return;
+    }
+    _showNetPill(null);
   }, kind === "back" ? 2800 : 6500);
+}
+
+// ── הודעה ברורה כשאין אינטרנט (10/2026) ──
+// כשטעינה נכשלת והמכשיר לא מחובר — במקום "שגיאה" / "לא נמצא טקסט" מסבירים מה קרה ומה עושים:
+// התוכן עוד לא נשמר במכשיר, ובפתיחה הבאה עם חיבור הוא יישמר לשימוש בלי אינטרנט.
+// בלי צבע קבוע — יורש את צבע הקורא (בהיר/כהה/שמיים).
+function _isOfflineNow() {
+  return navigator.onLine === false;
+}
+function _offlineMsgHtml(what) {
+  return (
+    '<div class="jc-offline-msg" role="status" style="text-align:center;padding:2.2rem 1rem;line-height:1.7;">' +
+    '<div style="font-size:2rem;margin-bottom:0.35rem;">📴</div>' +
+    '<div style="font-weight:800;font-size:1.05rem;margin-bottom:0.35rem;">אין חיבור לאינטרנט</div>' +
+    '<div style="opacity:0.85;font-size:0.95rem;">' + (what || "התוכן הזה") + " עוד לא נשמר במכשיר.<br>" +
+    "כשיהיה חיבור הוא ייפתח ויישמר — ומאז יהיה זמין גם בלי אינטרנט.</div></div>"
+  );
+}
+function _offlineMsgText(what) {
+  return "📴 אין חיבור לאינטרנט — " + (what || "התוכן הזה") + " עוד לא נשמר במכשיר. כשיהיה חיבור הוא יישמר לשימוש גם בלי אינטרנט.";
 }
 
 // ── ריענון אחרי נתונים מקומיים: ברגע שנתון שאחר לחלון מגיע (ונשמר למטמון) —
@@ -4607,9 +4775,11 @@ function _scheduleLiveDataRerun(runSeq, late) {
   if (!late.length) {
     _liveDataReruns = 0;
     const pill = document.getElementById("net-status-pill");
-    if (pill && pill.__kind === "weak") _showNetPill(null);
-    // הכול הגיע מהרשת — מרעננים ברקע את המטמון המוקדם לימים הבאים (פעם בשבוע)
+    if (pill && /^(weak|offline|offline-mini)$/.test(pill.__kind || "")) _showNetPill(null);
+    // הכול הגיע מהרשת — מרעננים ברקע את המטמון המוקדם לימים הבאים (פעם בשבוע),
+    // ואחריו מורידים את טקסטי הלימוד היומי לשבוע (פעם ביום, רק ב-Wi-Fi)
     setTimeout(_offlineAheadRefresh, 5000);
+    setTimeout(_prefetchDailyTexts, 20000);
     return;
   }
   let pending = late.length;
@@ -4649,6 +4819,7 @@ window.addEventListener("online", () => {
     _showNetPill(null);
     // הכול הוצג מהמטמון — רק משלימים ברקע את המטמון המוקדם אם התיישן
     setTimeout(_offlineAheadRefresh, 5000);
+    setTimeout(_prefetchDailyTexts, 20000);
     return;
   }
   _showNetPill("back");
@@ -7282,6 +7453,18 @@ function downloadBulkICS() {
   );
   if (!toSync.length) return alert("אין אירועים לסנכרון.");
   triggerDownload(buildIcsContent(toSync), `לוח_ישראל_מלא.ics`);
+}
+
+// ── סנכרון אוטומטי ליומן הטלפון — באפליקציה בלבד (10/2026, מגרסה 1.1.3) ──
+// דף אינטרנט לא יכול לכתוב ליומן של הטלפון, ולכן הכפתור פותח מסך נייטיב של האפליקציה
+// (CalendarSyncActivity) דרך כתובת intent: — כרום מעביר אותה לאפליקציה בלחיצת המשתמש.
+// משם האפליקציה מחשבת בעצמה חגים, צומות, ראשי חודשים, זמני כניסת ויציאת שבת וחג, עומר,
+// דף יומי ופרשה (אותו מנוע כמו הווידג'טים) ושומרת אותם ביומן הראשי — ומעדכנת לבד.
+// הכפתור מופיע רק כשהאפליקציה הודיעה שהיא תומכת בזה (html.jc-cal-sync — lux.js appBridge);
+// באתר בדפדפן ובגרסאות ישנות של האפליקציה נשארת הורדת הקובץ (downloadBulkICS).
+function openPhoneCalendarSync() {
+  if (navigator.vibrate) navigator.vibrate(20);
+  location.href = "intent://calendar-sync#Intent;scheme=jewishcalendar;package=il.co.jewishcalendar.twa;end";
 }
 
 function downloadICS(eventStr) {
@@ -23356,6 +23539,11 @@ window.openDonationModal = function() {
   }
 
   window._openPlayDonation = function () {
+    // תשלום ב-Google Play דורש חיבור — בלי אינטרנט הסבר ברור במקום חלון שלא יעבוד
+    if (typeof _isOfflineNow === "function" && _isOfflineNow()) {
+      if (typeof showToast === "function") showToast("📴 אין חיבור לאינטרנט — תרומה דרך Google Play דורשת חיבור. אפשר לנסות שוב כשהחיבור יחזור.", "info", 4500);
+      return;
+    }
     if (!st.service || !st.items.length) return;
     var existing = document.getElementById("donation-modal");
     if (existing) {
@@ -24619,7 +24807,8 @@ function openShirHashirimPage() {
       applyPrayerFontSize('#shir-scroll-area');
     } catch (err) {
       const area = document.getElementById('shir-scroll-area');
-      if (area) area.innerHTML = `<p style="color:#ef4444;text-align:center;padding:2rem;">לא ניתן לטעון את הטקסט כעת.</p>`;
+      if (area) area.innerHTML = _isOfflineNow() ? _offlineMsgHtml("שיר השירים")
+        : `<p style="color:#ef4444;text-align:center;padding:2rem;">לא ניתן לטעון את הטקסט כעת.</p>`;
     }
   })();
 }
@@ -26007,7 +26196,8 @@ openPrayer = async function (key, heLabel, enLabel) {
         meta.textContent = "לא הצלחתי לטעון נוסח מלא כעת.";
       }
       if (body) {
-        body.innerHTML = `<div class="prayer-richtext"><p>אירעה שגיאה בטעינת התפילה. אפשר לנסות שוב בעוד רגע.</p></div>`;
+        body.innerHTML = _isOfflineNow() ? _offlineMsgHtml("הנוסח הזה")
+          : `<div class="prayer-richtext"><p>אירעה שגיאה בטעינת התפילה. אפשר לנסות שוב בעוד רגע.</p></div>`;
       }
     }
   };
@@ -26597,7 +26787,8 @@ openTehillimPage = function () {
       const bmBtn = `<div style="text-align:center;margin-bottom:0.75rem;"><button id="th-bm-btn-${chapter}" onclick="window._thToggleBM(${chapter})" style="font-size:0.78rem;font-weight:700;padding:0.3rem 0.85rem;border-radius:999px;cursor:pointer;border:${bmActive?"1.5px solid #f59e0b":"1.5px solid #d1d5db"};color:${bmActive?"#92400e":"#64748b"};background:${bmActive?"#fffbeb":"transparent"};">${bmActive?"🔖 מסומן":"🔖 סמן"}</button></div>`;
       chapterDiv.innerHTML = `<h4 style="color:#1e40af;font-size:1.1rem;font-weight:900;margin-bottom:0.5rem;text-align:center;">תהילים פרק ${toHebrewPsalmNumber(chapter)}</h4>${bmBtn}${verses || "<p>לא נמצא טקסט.</p>"}`;
     } catch (error) {
-      chapterDiv.innerHTML = `<h4 style="color:#1e40af;font-size:1.1rem;font-weight:900;margin-bottom:0.75rem;text-align:center;">תהילים פרק ${toHebrewPsalmNumber(chapter)}</h4><p style="color:#ef4444;">לא הצלחתי לטעון פרק זה.</p>`;
+      chapterDiv.innerHTML = `<h4 style="color:#1e40af;font-size:1.1rem;font-weight:900;margin-bottom:0.75rem;text-align:center;">תהילים פרק ${toHebrewPsalmNumber(chapter)}</h4>` +
+        (_isOfflineNow() ? _offlineMsgHtml("הפרק הזה") : `<p style="color:#ef4444;">לא הצלחתי לטעון פרק זה.</p>`);
     }
     if (deferPrepend) {
       // נפתח בינתיים פרק אחר (סט חדש) או שהקורא נסגר — לא מכניסים לקורא של מישהו אחר
@@ -35191,10 +35382,14 @@ function openSefarimNosafimPage(_pageMode) {
   // כרטיס "הטקסט לא נטען" — כפתור ניסיון חוזר + ניסיון אוטומטי שקט (רק כל עוד הפרק מוצג)
   function _snRenderFailedChapter(chapterDiv, heading, idx, area) {
     var tries = chapterDiv.__snRetries || 0;
+    // בלי חיבור — הסבר ברור (הפרק עוד לא נשמר במכשיר; ייטען לבד כשהחיבור יחזור)
+    var off = typeof _isOfflineNow === "function" && _isOfflineNow();
     chapterDiv.innerHTML = heading +
       "<div class=\"sn-load-fail\" style=\"text-align:center;padding:1.4rem 1rem;margin:0.5rem auto;max-width:420px;border:1.5px dashed rgba(201,153,58,0.55);border-radius:1rem;background:rgba(224,183,79,0.07);\">" +
-        "<p style=\"color:#7c5a1e;font-weight:800;margin:0 0 0.35rem;\">הטקסט לא נטען כרגע</p>" +
-        "<p style=\"color:#94a3b8;font-size:0.8rem;margin:0 0 0.9rem;\">שרת הספרים לא הגיב. מנסה שוב אוטומטית…</p>" +
+        "<p style=\"color:#7c5a1e;font-weight:800;margin:0 0 0.35rem;\">" + (off ? "📴 אין חיבור לאינטרנט" : "הטקסט לא נטען כרגע") + "</p>" +
+        "<p style=\"color:#94a3b8;font-size:0.8rem;margin:0 0 0.9rem;\">" + (off
+          ? "הפרק הזה עוד לא נשמר במכשיר. כשהחיבור יחזור הוא ייטען לבד — ומאז יהיה זמין גם בלי אינטרנט."
+          : "שרת הספרים לא הגיב. מנסה שוב אוטומטית…") + "</p>" +
         "<button type=\"button\" class=\"sn-retry-btn\" style=\"background:linear-gradient(135deg,#e0b74f,#c9993a);color:#1e1b4b;border:none;border-radius:999px;padding:0.5rem 1.4rem;font-weight:900;font-size:0.9rem;cursor:pointer;\">🔄 נסה שוב</button>" +
       "</div>";
     var retry = function() {
@@ -36451,7 +36646,7 @@ function closeSefarimNosafimModal() {
           showToast("לא נמצא דף יומי להיום — נסו שוב בעוד רגע", "error");
         }
       } catch (err) {
-        if (typeof showToast === "function") showToast("שגיאה בטעינת הדף היומי — בדקו את החיבור", "error");
+        if (typeof showToast === "function") showToast(_isOfflineNow() ? _offlineMsgText("הדף היומי של היום") : "שגיאה בטעינת הדף היומי — בדקו את החיבור", "error");
       }
     });
     wire("shnayim-mikra-link", async function () {
@@ -36476,7 +36671,7 @@ function closeSefarimNosafimModal() {
         if (nxP && nxP.en) openShnayimMikraModal(nxP.he || nxP.en, nxP.en);
         else if (typeof showToast === "function") showToast("לא נמצאה פרשת השבוע — נסו שוב בעוד רגע", "error");
       } catch (err) {
-        if (typeof showToast === "function") showToast("שגיאה בטעינת הפרשה — בדקו את החיבור", "error");
+        if (typeof showToast === "function") showToast(_isOfflineNow() ? _offlineMsgText("פרשת השבוע") : "שגיאה בטעינת הפרשה — בדקו את החיבור", "error");
       }
     });
   }

@@ -2074,7 +2074,7 @@
       var r = location.search.match(new RegExp("[?&]" + name + "=([^&]+)"));
       return r ? decodeURIComponent(r[1]) : null;
     }
-    var ch = parseInt(qp("ch"), 10) || 0, verse = parseInt(qp("v"), 10) || 0, planId = qp("plan");
+    var ch = parseInt(qp("ch"), 10) || 0, verse = parseInt(qp("v"), 10) || 0, planId = qp("plan"), dateArg = qp("d");
     try { history.replaceState(history.state, "", location.pathname + location.hash); } catch (e) {}
     function prayer(id, he, en) {
       if (typeof window.openPrayer === "function") window.openPrayer(id, he, en);
@@ -2097,7 +2097,12 @@
           }, 900);
         }, 250);
       },
-      calendar: function () { if (typeof window.openCalendar === "function") window.openCalendar(); },
+      // ?open=calendar&d=YYYY-MM-DD — הווידג'ט "לוח שנה": לחיצה על יום פותחת את הלוח באותו חודש עם היום
+      calendar: function () {
+        var d = dateArg; // נקרא לפני ש-replaceState ניקה את הכתובת
+        if (d && /^\d{4}-\d{2}-\d{2}$/.test(d) && typeof window.openCalendarAt === "function") window.openCalendarAt(d, { openDay: true });
+        else if (typeof window.openCalendar === "function") window.openCalendar();
+      },
       // ?open=omer — לחיצה על פוש תזכורת ספירת העומר (netlify/functions/omer-reminder.mjs) ועל הווידג'ט
       omer: function () { if (typeof window.openOmerModal === "function") window.openOmerModal(); },
       sefarim: function () { if (typeof window.openSefarimNosafimPage === "function") window.openSefarimNosafimPage(); },
@@ -2201,8 +2206,21 @@
     function attach(p) {
       if (port && port !== p) { try { port.close(); } catch (e) {} }
       port = p;
-      // "jc-widgets-hello" מהאפליקציה (דרך ה-port) — שולחים שוב את כל ההגדרות
-      port.onmessage = function (ev) { if (ev && ev.data === "jc-widgets-hello") send(true); };
+      // "jc-widgets-hello" מהאפליקציה (דרך ה-port) — שולחים שוב את כל ההגדרות.
+      // {"t":"caps","cal":1} — יכולות של גרסת האפליקציה (1.1.3+): סנכרון אוטומטי ליומן הטלפון —
+      // בלוח החודשי כפתור הסנכרון מחליף את הורדת הקובץ (index.html: html.jc-cal-sync)
+      port.onmessage = function (ev) {
+        var d = ev && ev.data;
+        if (d === "jc-widgets-hello") { send(true); return; }
+        if (typeof d !== "string" || d.charAt(0) !== "{") return;
+        try {
+          var m = JSON.parse(d);
+          if (m && m.t === "caps" && m.cal) {
+            document.documentElement.classList.add("jc-cal-sync");
+            try { sessionStorage.setItem("moadim_cal_sync", "1"); } catch (e2) {}
+          }
+        } catch (e) {}
+      };
       // הנתונים של האתר (עיר, זמנים) עוד נטענים בפתיחה — שליחה מיידית, ושוב כשהדף התייצב
       send(true);
       setTimeout(function () { send(false); }, 4000);

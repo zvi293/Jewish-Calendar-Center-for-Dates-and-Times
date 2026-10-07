@@ -37,6 +37,8 @@
       try {
         if (String(document.referrer || "").indexOf("android-app://il.co.jewishcalendar.twa") === 0 ||
             sessionStorage.getItem("moadim_in_app") === "1") window.__jcMarkApp();
+        // סנכרון ליומן הטלפון — האפליקציה (1.1.3+) מודיעה דרך הגשר שהיא תומכת (lux.js appBridge, "caps")
+        if (sessionStorage.getItem("moadim_cal_sync") === "1") document.documentElement.classList.add("jc-cal-sync");
       } catch (e) {}
     </script>
     <style>
@@ -44,6 +46,11 @@
       html.jc-app.jc-play .jc-play-pay { display: block !important; }
       /* תוכן תרומה שקיים רק באפליקציה (Google Play) — למשל בחלון "צור קשר"; באתר ובאפליקציה בלי מוצרים מוסתר */
       html:not(.jc-play) .jc-play-only { display: none !important; }
+      /* בלוח החודשי: באפליקציה שתומכת בסנכרון ליומן הטלפון — כפתור הסנכרון במקום הורדת הקובץ (ICS) */
+      html.jc-cal-sync .jc-ics-dl { display: none !important; }
+      html:not(.jc-cal-sync) .jc-cal-sync-only { display: none !important; }
+      .jc-cal-sync-only { white-space: nowrap; }
+      html.lux-ew-360 .jc-cal-sync-only { white-space: normal; } /* מסך צר / כיתוב גדול — נשבר לשורה */
     </style>
     <script>
       // ערכת העיצוב לפני הציור הראשון — מונע הבזק של התמה הבהירה (FOUC) עד שסקריפט האתר
@@ -509,8 +516,8 @@
     <!-- הקוד הראשי יורד מוקדם (preload) אך מוזרק ומתבצע רק אחרי הציור הראשון —
          ראו הטוען בסוף ה-body. ה-?v= כאן חייב להיות זהה לזה שבטוען וב-sw.js.
          fetchpriority=low: שלא יתחרו ברוחב-הפס עם ה-CSS החוסם (FCP) — כמו defer. -->
-    <link rel="preload" href="script.js?v=104" as="script" fetchpriority="low" />
-    <link rel="preload" href="lux.js?v=86" as="script" fetchpriority="low" />
+    <link rel="preload" href="script.js?v=105" as="script" fetchpriority="low" />
+    <link rel="preload" href="lux.js?v=87" as="script" fetchpriority="low" />
 
     <!-- OneSignal Web Push SDK -->
     <script>
@@ -561,11 +568,11 @@
             appId: "eb49147f-b7e7-4173-894d-27872508b775",
             allowLocalhostAsSecureOrigin: true,
             notifyButton: { enable: false },
-            // היקף נפרד ל-worker של OneSignal — אחרת הוא נרשם על scope "/"
-            // ומחליף את sw.js שלנו (שני workers על אותו היקף דורסים זה את זה,
-            // מה ששובר את מטמון האופליין ועלול לגרום להבהובי טעינה)
+            // ה-worker של OneSignal: האפליקציה ב-OneSignal מוגדרת "Typical Site", ובמצב הזה ה-SDK
+            // לוקח את הנתיב וההיקף מהדשבורד (OneSignalSDKWorker.js על "/") ומתעלם מפרמטרים כאן —
+            // לכן OneSignalSDKWorker.js טוען בעצמו גם את sw.js (מנגנון האופליין), והרישום של sw.js
+            // בסוף הדף לא דורס אותו. לא להעביר להיקף אחר: המנויים הקיימים רשומים על "/".
             serviceWorkerPath: "OneSignalSDKWorker.js",
-            serviceWorkerParam: { scope: "/onesignal/" },
           });
           window.OneSignalReady = true;
           // Sync localStorage preference to actual OneSignal subscription state
@@ -2654,12 +2661,22 @@
             </button>
             <button
               onclick="downloadBulkICS()"
-              class="bg-emerald-600 hover:bg-emerald-500 text-xs font-bold px-3 py-1.5 rounded-lg ml-2 transition-colors inline-flex items-center gap-1.5"
+              class="jc-ics-dl bg-emerald-600 hover:bg-emerald-500 text-xs font-bold px-3 py-1.5 rounded-lg ml-2 transition-colors inline-flex items-center gap-1.5"
               aria-label="סנכרן את הלוח ליומן שלך"
               title="סנכרן את הלוח ליומן שלך"
             >
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
               <span class="hidden sm:inline">סנכרן ליומן</span>
+            </button>
+            <!-- באפליקציה בלבד: סנכרון אוטומטי של כל הלוח ליומן הראשי של הטלפון (מסך נייטיב, script.js openPhoneCalendarSync) -->
+            <button
+              onclick="openPhoneCalendarSync()"
+              class="jc-cal-sync-only bg-emerald-600 hover:bg-emerald-500 text-xs font-bold px-3 py-1.5 rounded-lg ml-2 transition-colors inline-flex items-center gap-1.5"
+              aria-label="סנכרון אוטומטי של הלוח ליומן הטלפון"
+              title="סנכרון אוטומטי של הלוח ליומן הטלפון"
+            >
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3M5 11h14M5 5h14a2 2 0 012 2v4M5 5a2 2 0 00-2 2v12a2 2 0 002 2h6m5-5a3 3 0 105.12-2.12M21 13v3h-3"></path></svg>
+              <span>ליומן הטלפון</span>
             </button>
           </div>
           <button
@@ -2853,8 +2870,8 @@
           // כבר מצוירים מתחת למסך הפתיחה ואנימציית הכניסה מתוזמנת לדהייתו. בהיר/כהה לא טוענים אותו.
           // אותו ?v= כמו ב-_luxSkyEnsure (script.js) וב-sw.js.
           if (document.documentElement.classList.contains("lux-sky")) addScript("sky.js?v=8", { id: "lux-sky-js" });
-          addScript("script.js?v=104");
-          addScript("lux.js?v=86");
+          addScript("script.js?v=105");
+          addScript("lux.js?v=87");
         }
         function afterFirstPaint() {
           // rAF אחד (רץ ממש לפני ציור הפריים הראשון) ואז setTimeout(0) — משימה
@@ -2877,13 +2894,40 @@
     <script>
       if ("serviceWorker" in navigator) {
         window.addEventListener("load", function () {
-          navigator.serviceWorker.register("/sw.js")
+          // מי שהפעיל התראות: OneSignal ("Typical Site" בדשבורד) רושם את OneSignalSDKWorker.js על
+          // ההיקף "/" במקום sw.js — והקובץ הזה כבר טוען את sw.js (importScripts), כלומר זה אותו
+          // מנגנון אופליין. לא רושמים את sw.js מעליו: עד 10/2026 כל ביקור החליף ביניהם הלוך ושוב,
+          // ואחרי סגירת האפליקציה נשאר פעיל worker של OneSignal בלי מטמון (פתיחה בלי אינטרנט =
+          // "אין חיבור"). במקום רישום — בדיקת עדכון, שמביאה גם גרסה חדשה של sw.js.
+          navigator.serviceWorker.getRegistration("/")
+            .then(function (reg) {
+              var w = reg && (reg.installing || reg.waiting || reg.active);
+              if (w && /\/OneSignalSDKWorker\.js/.test(w.scriptURL)) {
+                reg.update().catch(function () {});
+                return reg;
+              }
+              return navigator.serviceWorker.register("/sw.js");
+            })
             .then(function (reg) {
               console.log("[SW] Registered successfully (scope: " + reg.scope + ")");
             })
             .catch(function (err) {
               console.warn("[SW] Registration failed:", err);
             });
+          // אחסון קבוע: בלעדיו הדפדפן רשאי למחוק את העותק השמור (האופליין) כשהמכשיר מתמלא.
+          // בכרום ההחלטה שקטה, בלי חלון (לפי התקנה/התראות/מעורבות — באפליקציה אושר מיד, 10/2026);
+          // בפיירפוקס זה פותח חלון הרשאה — לכן לא שם. עד שמאושר — ניסיון אחד ביום.
+          try {
+            if (navigator.storage && navigator.storage.persist && !/Firefox\//.test(navigator.userAgent)) {
+              navigator.storage.persisted().then(function (on) {
+                if (on) return;
+                var last = +localStorage.getItem("moadim_persist_try") || 0;
+                if (Date.now() - last < 864e5) return;
+                localStorage.setItem("moadim_persist_try", String(Date.now()));
+                return navigator.storage.persist();
+              }).catch(function () {});
+            }
+          } catch (e) {}
         });
       }
     </script>

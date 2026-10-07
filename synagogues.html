@@ -2429,10 +2429,20 @@
             if (anyCache && anyCache.length > 0) {
               lastResults = anyCache;
               renderResults(anyCache, tab);
-              showStaleNotice("⚠ כל שרתי OpenStreetMap עמוסים כרגע. מציג את התוצאות האחרונות שנשמרו במכשיר.");
+              showStaleNotice(navigator.onLine === false
+                ? "📴 אין חיבור לאינטרנט — מוצגות התוצאות האחרונות שנשמרו במכשיר."
+                : "⚠ כל שרתי OpenStreetMap עמוסים כרגע. מציג את התוצאות האחרונות שנשמרו במכשיר.");
               return;
             }
             // No cache at all — show a helpful error.
+            if (navigator.onLine === false) {
+              // בלי אינטרנט (10/2026): הסבר ברור במקום "שגיאה" — החיפוש במפה דורש חיבור
+              setError(
+                "📴 אין חיבור לאינטרנט.\n"
+                + "החיפוש במפה צריך חיבור. כשהחיבור יחזור, נסו שוב — והתוצאות יישמרו במכשיר גם לשימוש בלי אינטרנט."
+              );
+              return;
+            }
             const errMsg = lastError && lastError.message ? lastError.message : "כל השרתים לא הגיבו בזמן";
             setError(
               "שגיאה בטעינת נתונים מ-OpenStreetMap.\n"

@@ -3,18 +3,22 @@ package il.co.jewishcalendar.twa.widget;
 import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProvider;
 import android.content.Context;
+import android.content.Intent;
 import android.os.Bundle;
 
 /**
- * ספק אחד לכל ווידג'ט (17). כל המחלקות הפנימיות רק מצהירות על הסוג — העבודה עצמה
+ * ספק אחד לכל ווידג'ט (18). כל המחלקות הפנימיות רק מצהירות על הסוג — העבודה עצמה
  * ב-Updater (חישוב ובנייה) וב-Render (הפריסה לפי גודל).
  */
 public abstract class W extends AppWidgetProvider {
 
     public enum Kind {
         ZMANIM, NEXT, DATE, HOLIDAY, SHABBAT, TEHILLIM, DAF, LEVANA, LEVANA_SIMPLE,
-        STUDY, PRAYERS, BENTCHING, PLAN, OMER, ALL, CLOCK, HILULA
+        STUDY, PRAYERS, BENTCHING, PLAN, OMER, ALL, CLOCK, HILULA, MONTH
     }
+
+    /** חיצי החודש בווידג'ט "לוח שנה" (Render.month): delta = ‎-1/+1, ו-0 = חזרה לחודש הנוכחי. */
+    static final String ACTION_MONTH = "il.co.jewishcalendar.twa.WIDGET_MONTH";
 
     abstract Kind kind();
 
@@ -62,6 +66,7 @@ public abstract class W extends AppWidgetProvider {
             case OMER: return Omer.class;
             case ALL: return All.class;
             case CLOCK: return Clock.class;
+            case MONTH: return MonthCal.class;
             default: return Hilula.class;
         }
     }
@@ -83,4 +88,22 @@ public abstract class W extends AppWidgetProvider {
     public static class All extends W { Kind kind() { return Kind.ALL; } }
     public static class Clock extends W { Kind kind() { return Kind.CLOCK; } }
     public static class Hilula extends W { Kind kind() { return Kind.HILULA; } }
+
+    /** לוח שנה חודשי (10/2026) — עם חיצים למעבר בין חודשים. */
+    public static class MonthCal extends W {
+        Kind kind() { return Kind.MONTH; }
+
+        @Override
+        public void onReceive(Context c, Intent i) {
+            if (ACTION_MONTH.equals(i.getAction())) {
+                int id = i.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID);
+                if (id != AppWidgetManager.INVALID_APPWIDGET_ID) {
+                    Prefs.shiftMonth(c, id, i.getIntExtra("delta", 0));
+                    Updater.update(c, AppWidgetManager.getInstance(c), Kind.MONTH, id);
+                }
+                return;
+            }
+            super.onReceive(c, i);
+        }
+    }
 }

@@ -162,6 +162,19 @@ final class Prefs {
     }
 
     static void forget(Context c, int widgetId) {
-        sp(c).edit().remove("style_" + widgetId).apply();
+        sp(c).edit().remove("style_" + widgetId).remove("mon_off_" + widgetId).remove("mon_at_" + widgetId).apply();
+    }
+
+    // ── ווידג'ט "לוח שנה": החודש שמוצג (ביחס לחודש הנוכחי) ──
+    // אחרי רבע שעה בלי לחיצה על החיצים — חוזר לחודש הנוכחי (בעדכון הבא של הווידג'ט)
+
+    static int monthOffset(Context c, int widgetId) {
+        if (System.currentTimeMillis() - sp(c).getLong("mon_at_" + widgetId, 0) > 15 * 60000L) return 0;
+        return sp(c).getInt("mon_off_" + widgetId, 0);
+    }
+
+    static void shiftMonth(Context c, int widgetId, int delta) {
+        int off = delta == 0 ? 0 : Math.max(-24, Math.min(24, monthOffset(c, widgetId) + delta));
+        sp(c).edit().putInt("mon_off_" + widgetId, off).putLong("mon_at_" + widgetId, System.currentTimeMillis()).apply();
     }
 }

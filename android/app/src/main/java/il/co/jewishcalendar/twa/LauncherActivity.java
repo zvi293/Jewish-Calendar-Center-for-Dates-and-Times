@@ -15,12 +15,28 @@
  */
 package il.co.jewishcalendar.twa;
 
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
+import android.graphics.Typeface;
+import android.graphics.drawable.ColorDrawable;
+import android.graphics.drawable.GradientDrawable;
+import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkCapabilities;
+import android.net.NetworkRequest;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
+import android.util.TypedValue;
+import android.view.Gravity;
+import android.view.View;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+
+import androidx.core.content.res.ResourcesCompat;
 
 import androidx.browser.customtabs.CustomTabsCallback;
 import androidx.browser.customtabs.CustomTabsClient;
@@ -67,6 +83,151 @@ public class LauncherActivity
             if (pkg != null) CustomTabsClient.connectAndInitialize(getApplicationContext(), pkg);
         } catch (Throwable ignored) {
         }
+        if (offlineGate) showOfflineGate();
+    }
+
+    /*
+     * ── פתיחה ראשונה בלי אינטרנט (10/2026) ──
+     * אחרי פתיחה אחת עם חיבור כרום שומר את האתר (Service Worker), והאפליקציה נפתחת גם בלי
+     * אינטרנט. בפתיחה הראשונה עוד אין עותק, וכרום היה מציג דף שגיאה משלו. במקום זה — מסך של
+     * האפליקציה שמסביר מה קורה, עם "נסו שוב", והאתר נפתח לבד ברגע שהחיבור חוזר.
+     * "נטען פעם" = אירוע NAVIGATION_FINISHED ראשון, או הגדרות שכבר הגיעו מהאתר בגרסה קודמת.
+     */
+    private boolean offlineGate;
+    private ConnectivityManager.NetworkCallback netCallback;
+    private TextView gateStatus;
+
+    @Override
+    protected boolean shouldLaunchImmediately() {
+        if (Sync.siteLoaded(this) || hasInternet(this)) return true;
+        offlineGate = true;
+        return false;
+    }
+
+    /** חיבור שעובד בפועל (כולל אימות של המערכת — לא רק Wi-Fi בלי אינטרנט). */
+    static boolean hasInternet(Context c) {
+        try {
+            ConnectivityManager cm = (ConnectivityManager) c.getSystemService(Context.CONNECTIVITY_SERVICE);
+            if (cm == null) return true;
+            Network n = cm.getActiveNetwork();
+            if (n == null) return false;
+            NetworkCapabilities nc = cm.getNetworkCapabilities(n);
+            return nc != null && nc.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                    && nc.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED);
+        } catch (Throwable t) {
+            return true; // בספק — פותחים כרגיל
+        }
+    }
+
+    private int dp(float v) {
+        return Math.round(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, v, getResources().getDisplayMetrics()));
+    }
+
+    private Typeface font(int res) {
+        try {
+            return ResourcesCompat.getFont(this, res);
+        } catch (Throwable t) {
+            return Typeface.DEFAULT_BOLD;
+        }
+    }
+
+    private TextView gateText(String s, float sp, int color, int fontRes) {
+        TextView t = new TextView(this);
+        t.setText(s);
+        t.setTextSize(sp);
+        t.setTextColor(color);
+        t.setTypeface(font(fontRes));
+        t.setGravity(Gravity.CENTER);
+        t.setTextDirection(View.TEXT_DIRECTION_RTL);
+        t.setLineSpacing(0, 1.15f);
+        return t;
+    }
+
+    private void showOfflineGate() {
+        final int navy = 0xFF0F172A, gold = 0xFFF2D98A;
+        getWindow().setBackgroundDrawable(new ColorDrawable(navy));
+        getWindow().setStatusBarColor(navy);
+        getWindow().setNavigationBarColor(navy);
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setGravity(Gravity.CENTER);
+        box.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
+        box.setBackgroundColor(navy);
+        box.setPadding(dp(28), dp(24), dp(28), dp(24));
+
+        ImageView icon = new ImageView(this);
+        icon.setImageResource(R.drawable.splash_icon);
+        icon.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        box.addView(icon, new LinearLayout.LayoutParams(dp(132), dp(132)));
+
+        TextView title = gateText("צריך אינטרנט בפתיחה הראשונה", 23, gold, R.font.frl_bold);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
+        lp.topMargin = dp(18);
+        box.addView(title, lp);
+
+        TextView body = gateText("בפתיחה הראשונה הלוח היהודי שומר במכשיר את הלוח, הזמנים והתפילות. "
+                + "מאותו רגע האפליקציה נפתחת גם בלי אינטרנט.", 16, 0xE6FFFFFF, R.font.assistant_regular);
+        lp = new LinearLayout.LayoutParams(-1, -2);
+        lp.topMargin = dp(12);
+        box.addView(body, lp);
+
+        TextView retry = gateText("נסו שוב", 17, 0xFF1E1B4B, R.font.assistant_extrabold);
+        GradientDrawable pill = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, new int[]{0xFFF6E3A1, 0xFFD4AF37});
+        pill.setCornerRadius(dp(999));
+        retry.setBackground(pill);
+        retry.setPadding(dp(36), dp(12), dp(36), dp(12));
+        retry.setOnClickListener(v -> {
+            if (hasInternet(this)) leaveOfflineGate();
+            else gateStatus.setText("עדיין אין חיבור — האפליקציה תיפתח לבד כשהחיבור יחזור.");
+        });
+        lp = new LinearLayout.LayoutParams(-2, -2);
+        lp.topMargin = dp(26);
+        box.addView(retry, lp);
+
+        gateStatus = gateText("כשהחיבור יחזור, האפליקציה תיפתח מעצמה.", 13, 0xB3FFFFFF, R.font.assistant_regular);
+        lp = new LinearLayout.LayoutParams(-1, -2);
+        lp.topMargin = dp(14);
+        box.addView(gateStatus, lp);
+        setContentView(box);
+
+        try {
+            ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+            netCallback = new ConnectivityManager.NetworkCallback() {
+                @Override
+                public void onCapabilitiesChanged(Network network, NetworkCapabilities nc) {
+                    if (nc.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                            && nc.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)) {
+                        runOnUiThread(() -> leaveOfflineGate());
+                    }
+                }
+            };
+            cm.registerNetworkCallback(new NetworkRequest.Builder()
+                    .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET).build(), netCallback);
+        } catch (Throwable t) {
+            Log.w("JcOffline", "network callback", t);
+        }
+    }
+
+    private void leaveOfflineGate() {
+        if (!offlineGate || isFinishing()) return;
+        offlineGate = false;
+        stopNetCallback();
+        launchTwa();
+    }
+
+    private void stopNetCallback() {
+        if (netCallback == null) return;
+        try {
+            ((ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE)).unregisterNetworkCallback(netCallback);
+        } catch (Throwable ignored) {
+        }
+        netCallback = null;
+    }
+
+    @Override
+    protected void onDestroy() {
+        stopNetCallback();
+        super.onDestroy();
     }
 
     /*
@@ -86,6 +247,8 @@ public class LauncherActivity
                 if (base != null) base.onNavigationEvent(navigationEvent, extras);
                 dbg("navigation " + navigationEvent);
                 if (navigationEvent == NAVIGATION_FINISHED) {
+                    // האתר נטען פעם — מעכשיו יש לכרום עותק, ופתיחה בלי אינטרנט לא צריכה את המסך שלנו
+                    Sync.markSiteLoaded(getApplicationContext());
                     CustomTabsSession s = twaSession();
                     if (s != null) {
                         try {
@@ -101,7 +264,11 @@ public class LauncherActivity
             public void onMessageChannelReady(Bundle extras) {
                 if (base != null) base.onMessageChannelReady(extras);
                 CustomTabsSession s = twaSession();
-                if (s != null) dbg("channel ready, postMessage=" + s.postMessage(Sync.HELLO, null));
+                if (s != null) {
+                    dbg("channel ready, postMessage=" + s.postMessage(Sync.HELLO, null));
+                    // היכולות של הגרסה (סנכרון ליומן) — הדף מציג לפיהן את כפתור "ליומן הטלפון"
+                    dbg("caps=" + s.postMessage(Sync.CAPS, null));
+                }
             }
 
             @Override

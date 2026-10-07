@@ -35,4 +35,6 @@
     <string name="wd_clock">השעה הזמנית עכשיו ואורך השעה היום</string>
     <string name="wl_hilula">הילולת היום</string>
     <string name="wd_hilula">הצדיקים שהילולתם היום</string>
+    <string name="wl_month">לוח שנה</string>
+    <string name="wd_month">לוח חודשי עברי-לועזי עם החגים, ראשי החודשים והתעניות — לחיצה על יום פותחת אותו</string>
 </resources>

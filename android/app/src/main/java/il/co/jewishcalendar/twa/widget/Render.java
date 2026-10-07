@@ -1,6 +1,8 @@
 package il.co.jewishcalendar.twa.widget;
 
+import android.app.PendingIntent;
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Typeface;
 import android.text.SpannableStringBuilder;
 import android.text.Spanned;
@@ -51,6 +53,7 @@ final class Render {
             case OMER: return omer(c, id, w, h, e, t);
             case ALL: return all(c, id, w, h, e, t);
             case CLOCK: return clock(c, id, w, h, e, t);
+            case MONTH: return month(c, id, w, h, e, t);
             default: return hilula(c, id, w, h, e, t);
         }
     }
@@ -881,6 +884,190 @@ final class Render {
         root.addView(C, Ui.line(c, Ui.R_, "שעה זמנית " + (k.day ? "היום" : "הלילה") + ": " + shaahMin + " דקות", 11.5f * s, Ui.MUTED));
         root.addView(C, Ui.gap(c, 4));
         root.addView(C, Ui.countdown(c, e.now, k.hourEnd, k.hour < 12 ? "השעה הבאה בעוד" : (k.day ? "השקיעה בעוד" : "הנץ בעוד"), 11.5f * s, t, false));
+        return root;
+    }
+
+    // ═══════════════════════ 17. לוח שנה (10/2026) ═══════════════════════
+    // חודש לועזי עם התאריך העברי בכל יום, היום מסומן בזהב, שבתות וימים טובים בזהב, ובחגים,
+    // ראשי חודשים ותעניות — רקע עדין ושם המועד (כשיש מקום). חיצים למעבר בין חודשים (W.MonthCal),
+    // לחיצה על יום פותחת את הלוח באתר באותו יום (?open=calendar&d=), ולחיצה על הכותרת —
+    // את הלוח באתר (או חזרה לחודש הנוכחי אחרי מעבר בחיצים).
+
+    private static final int FAST_C = 0xFFFCA5A5;
+
+    private static RemoteViews monthNav(Context c, String label, PendingIntent pi) {
+        RemoteViews v = new RemoteViews(c.getPackageName(), R.layout.wb_mnav);
+        v.setTextViewText(R.id.t, label);
+        v.setOnClickPendingIntent(R.id.t, pi);
+        return v;
+    }
+
+    private static PendingIntent monthShift(Context c, int id, int delta) {
+        Intent i = new Intent(c, W.MonthCal.class).setAction(W.ACTION_MONTH)
+                .putExtra(android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_ID, id).putExtra("delta", delta);
+        return PendingIntent.getBroadcast(c, (id * 7 + delta + 3) & 0x7fffffff, i, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+    }
+
+    /** ימים מאז 1970 (UTC) — הפרש ימים מדויק בין תאריכים בלי תלות בשעון קיץ. */
+    private static long epochDay(int y, int m, int d) {
+        Calendar u = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+        u.clear();
+        u.set(y, m - 1, d, 0, 0, 0);
+        return u.getTimeInMillis() / Engine.DAY;
+    }
+
+    /** שם קצר של המועד לתא ביום (או null). */
+    private static String monthCellLabel(JewishCalendar jc) {
+        switch (jc.getYomTovIndex()) {
+            case JewishCalendar.ROSH_HASHANA: return "ר״ה";
+            case JewishCalendar.EREV_ROSH_HASHANA: return "ערב ר״ה";
+            case JewishCalendar.FAST_OF_GEDALYAH: return "צום גדליה";
+            case JewishCalendar.EREV_YOM_KIPPUR: return "ערב יוה״כ";
+            case JewishCalendar.YOM_KIPPUR: return "יום כיפור";
+            case JewishCalendar.EREV_SUCCOS: return "ערב סוכות";
+            case JewishCalendar.SUCCOS: return "סוכות";
+            case JewishCalendar.CHOL_HAMOED_SUCCOS: case JewishCalendar.CHOL_HAMOED_PESACH: return "חוה״מ";
+            case JewishCalendar.HOSHANA_RABBA: return "הוש״ר";
+            case JewishCalendar.SHEMINI_ATZERES: case JewishCalendar.SIMCHAS_TORAH: return "שמח״ת";
+            case JewishCalendar.CHANUKAH: return "חנוכה";
+            case JewishCalendar.TENTH_OF_TEVES: return "י׳ בטבת";
+            case JewishCalendar.TU_BESHVAT: return "ט״ו בשבט";
+            case JewishCalendar.FAST_OF_ESTHER: return "תענית אסתר";
+            case JewishCalendar.PURIM: return "פורים";
+            case JewishCalendar.SHUSHAN_PURIM: return "שושן פורים";
+            case JewishCalendar.PURIM_KATAN: return "פורים קטן";
+            case JewishCalendar.EREV_PESACH: return "ערב פסח";
+            case JewishCalendar.PESACH: return jc.getJewishDayOfMonth() == 21 ? "שביעי פסח" : "פסח";
+            case JewishCalendar.PESACH_SHENI: return "פסח שני";
+            case JewishCalendar.LAG_BAOMER: return "ל״ג בעומר";
+            case JewishCalendar.EREV_SHAVUOS: return "ערב שבועות";
+            case JewishCalendar.SHAVUOS: return "שבועות";
+            case JewishCalendar.SEVENTEEN_OF_TAMMUZ: return "י״ז בתמוז";
+            case JewishCalendar.TISHA_BEAV: return "ט׳ באב";
+            case JewishCalendar.TU_BEAV: return "ט״ו באב";
+            case JewishCalendar.YOM_HASHOAH: return "יום השואה";
+            case JewishCalendar.YOM_HAZIKARON: return "יום הזיכרון";
+            case JewishCalendar.YOM_HAATZMAUT: return "יום העצמאות";
+            case JewishCalendar.YOM_YERUSHALAYIM: return "יום ירושלים";
+            default: break;
+        }
+        if (jc.isRoshChodesh()) return "ר״ח";
+        if (jc.getDayOfWeek() == 7) {
+            String p = Engine.shabbatTitle(jc);
+            if (p != null) return p.replace("פרשת ", "");
+        }
+        return null;
+    }
+
+    static RemoteViews month(Context c, int id, float w, float h, Engine e, Ui.Theme t) {
+        RemoteViews root = base(c, t, w, h, false, id, null);
+        Ui.pad(root, C, c, 8, 8, 8, 6);
+        int off = Prefs.monthOffset(c, id);
+        Calendar k = e.cal();
+        k.clear();
+        k.set(e.y, e.m - 1, 1, 12, 0, 0);
+        k.add(Calendar.MONTH, off);
+        int ty = k.get(Calendar.YEAR), tm = k.get(Calendar.MONTH) + 1;
+        int days = k.getActualMaximum(Calendar.DAY_OF_MONTH);
+        int lead = k.get(Calendar.DAY_OF_WEEK) - 1; // ראשון = 0
+        int weeks = (lead + days + 6) / 7;
+        int firstOff = (int) (epochDay(ty, tm, 1) - epochDay(e.y, e.m, e.d)); // היסט היום הראשון מהיום
+        JewishCalendar hFirst = e.jcOf(firstOff), hLast = e.jcOf(firstOff + days - 1);
+        String hebRange = Heb.month(hFirst) + (Heb.month(hFirst).equals(Heb.month(hLast)) ? "" : "–" + Heb.month(hLast))
+                + " " + Heb.year(hLast);
+        String[] gm = {"ינואר", "פברואר", "מרץ", "אפריל", "מאי", "יוני", "יולי", "אוגוסט", "ספטמבר", "אוקטובר", "נובמבר", "דצמבר"};
+        float s = clamp(Math.min(w / 340f, h / 330f), 0.8f, 1.35f);
+
+        // כותרת: [→ חודש קודם] [לועזי + עברי] [← חודש הבא] — בימין לשמאל: הקודם בימין, הבא בשמאל (כמו באתר).
+        // חצים רגילים ולא ‹ ›: אלה מתהפכים אוטומטית בטקסט מימין לשמאל (נמדד 10/2026)
+        RemoteViews hd = Ui.hbox(c);
+        hd.addView(BOX, monthNav(c, "→", monthShift(c, id, -1)));
+        RemoteViews tc = Ui.vboxW(c);
+        float full = Ui.widthHint;
+        Ui.widthHint = full - 2 * 40;
+        tc.addView(BOX, Ui.center(c, Ui.FRLB, gm[tm - 1] + " " + ty, 16.5f * s, Ui.WHITE));
+        tc.addView(BOX, Ui.center(c, Ui.SB, hebRange, 11.5f * s, t.gold));
+        Ui.widthHint = full;
+        tc.setOnClickPendingIntent(BOX, off == 0 ? Ui.open(c, id, "calendar") : monthShift(c, id, 0));
+        hd.addView(BOX, tc);
+        hd.addView(BOX, monthNav(c, "←", monthShift(c, id, 1)));
+        root.addView(C, hd);
+        if (off != 0) {
+            RemoteViews back = Ui.hbox(c);
+            back.addView(BOX, Ui.hspace(c));
+            RemoteViews chip = monthNav(c, "חזרה להיום", monthShift(c, id, 0));
+            chip.setTextViewTextSize(R.id.t, android.util.TypedValue.COMPLEX_UNIT_SP, 11.5f);
+            back.addView(BOX, chip);
+            back.addView(BOX, Ui.hspace(c));
+            root.addView(C, Ui.gap(c, 2));
+            root.addView(C, back);
+        }
+        root.addView(C, Ui.gap(c, 4));
+
+        // ימי השבוע — א׳ בימין
+        RemoteViews wd = Ui.hbox(c);
+        for (int i = 1; i <= 7; i++) {
+            RemoteViews d = new RemoteViews(c.getPackageName(), R.layout.wb_mwd);
+            d.setTextViewText(R.id.t, Heb.weekdayLetter(i));
+            d.setTextViewTextSize(R.id.t, android.util.TypedValue.COMPLEX_UNIT_SP, 11 * s);
+            if (i == 7) d.setTextColor(R.id.t, t.gold);
+            wd.addView(BOX, d);
+        }
+        root.addView(C, wd);
+        root.addView(C, Ui.gap(c, 2));
+
+        // הרשת — שורות במשקל שווה; התאים מחוץ לחודש ריקים
+        float headerDp = 54 * s + (off != 0 ? 34 : 0) + 22;
+        float rowH = Math.max(18, (h - 16 - headerDp) / weeks);
+        float gSp = clamp(rowH * 0.34f, 10.5f, 19f), hSp = clamp(rowH * 0.21f, 8.5f, 12.5f), evSp = clamp(rowH * 0.18f, 8f, 11f);
+        boolean showHeb = rowH >= 28, showEv = rowH >= 44 && w >= 250;
+        for (int r = 0; r < weeks; r++) {
+            RemoteViews row = Ui.hboxFill(c);
+            for (int col = 0; col < 7; col++) {
+                int day = r * 7 + col - lead + 1;
+                RemoteViews cell = new RemoteViews(c.getPackageName(), R.layout.wb_mcell);
+                if (day < 1 || day > days) {
+                    cell.setViewVisibility(R.id.g, View.INVISIBLE);
+                    cell.setViewVisibility(R.id.h, View.GONE);
+                    row.addView(BOX, cell);
+                    continue;
+                }
+                int dOff = firstOff + day - 1;
+                JewishCalendar jc = e.jcOf(dOff);
+                boolean today = dOff == 0;
+                boolean holy = Engine.isHoly(jc);
+                boolean fast = Engine.isFastDay(jc) && jc.getYomTovIndex() != JewishCalendar.YOM_KIPPUR;
+                String label = monthCellLabel(jc);
+                // שבת רגילה — רק שם הפרשה (בלי רקע); מועד, ר"ח ותענית — רקע עדין
+                boolean parashaOnly = label != null && jc.getDayOfWeek() == 7 && jc.getYomTovIndex() < 0 && !jc.isRoshChodesh();
+                boolean evt = label != null && !parashaOnly;
+                cell.setTextViewText(R.id.g, String.valueOf(day));
+                cell.setTextViewTextSize(R.id.g, android.util.TypedValue.COMPLEX_UNIT_SP, gSp);
+                if (holy || today) cell.setTextColor(R.id.g, t.gold);
+                if (showHeb) {
+                    int hdm = jc.getJewishDayOfMonth();
+                    cell.setTextViewText(R.id.h, hdm == 1 ? Heb.month(jc) : Heb.num(hdm));
+                    cell.setTextViewTextSize(R.id.h, android.util.TypedValue.COMPLEX_UNIT_SP, hSp);
+                    if (hdm == 1) cell.setTextColor(R.id.h, t.gold);
+                } else {
+                    cell.setViewVisibility(R.id.h, View.GONE);
+                }
+                if (showEv && label != null) {
+                    cell.setViewVisibility(R.id.ev, View.VISIBLE);
+                    cell.setTextViewText(R.id.ev, label);
+                    cell.setTextViewTextSize(R.id.ev, android.util.TypedValue.COMPLEX_UNIT_SP, evSp);
+                    if (fast) cell.setTextColor(R.id.ev, FAST_C);
+                    else if (parashaOnly) cell.setTextColor(R.id.ev, Ui.MUTED); // פרשת השבוע
+                }
+                if (today) cell.setInt(R.id.cell, "setBackgroundResource", R.drawable.wcell_today);
+                else if (evt) cell.setInt(R.id.cell, "setBackgroundResource", R.drawable.wcell_evt);
+                String iso = ty + "-" + (tm < 10 ? "0" : "") + tm + "-" + (day < 10 ? "0" : "") + day;
+                cell.setOnClickPendingIntent(R.id.cell, Ui.open(c, id, "calendar&d=" + iso));
+                cell.setContentDescription(R.id.cell, day + " · " + Heb.dayOfMonth(jc) + (label != null ? " · " + label : ""));
+                row.addView(BOX, cell);
+            }
+            root.addView(C, row);
+        }
         return root;
     }
 

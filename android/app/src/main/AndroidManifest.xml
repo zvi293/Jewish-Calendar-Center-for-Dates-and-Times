@@ -27,6 +27,11 @@
         <!-- ווידג'טים: עדכון בדקה המדויקת של כל זמן הלכתי, והפעלה מחדש אחרי הדלקת הטלפון -->
         <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
         <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+        <!-- סנכרון אוטומטי ליומן הטלפון (cal/CalSync) — רק אחרי שהמשתמש מפעיל אותו במסך הסנכרון -->
+        <uses-permission android:name="android.permission.READ_CALENDAR"/>
+        <uses-permission android:name="android.permission.WRITE_CALENDAR"/>
+        <!-- פתיחה ראשונה בלי אינטרנט: בדיקת חיבור והמתנה לו (LauncherActivity) -->
+        <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
     
 
     
@@ -222,6 +227,22 @@
             </intent-filter>
         </service>
 
+        <!-- סנכרון ליומן הטלפון: נפתח מהאתר (intent://calendar-sync#Intent;scheme=jewishcalendar;package=...;end) -->
+        <activity android:name=".cal.CalendarSyncActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:theme="@android:style/Theme.Material.NoActionBar">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="jewishcalendar" android:host="calendar-sync" />
+            </intent-filter>
+        </activity>
+        <service android:name=".cal.CalJob"
+            android:permission="android.permission.BIND_JOB_SERVICE"
+            android:exported="false" />
+
         <!-- ווידג'טים: התחלה -->
         <!-- ערוץ PostMessage בין האתר לאפליקציה (סנכרון הגדרות לווידג'טים) -->
         <service android:name="androidx.browser.customtabs.PostMessageService" android:exported="true" />
@@ -348,6 +369,13 @@
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/w_hilula" />
+        </receiver>
+        <!-- לוח שנה חודשי (10/2026): החיצים שולחים WIDGET_MONTH לספק עצמו (W.MonthCal.onReceive) -->
+        <receiver android:name=".widget.W$MonthCal" android:exported="true" android:label="@string/wl_month">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/w_month" />
         </receiver>
         <!-- ווידג'טים: סוף -->
     </application>

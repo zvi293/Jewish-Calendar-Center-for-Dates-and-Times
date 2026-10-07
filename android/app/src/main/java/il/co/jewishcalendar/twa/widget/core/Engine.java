@@ -271,9 +271,11 @@ public final class Engine {
         boolean holyToday = isHoly(jc), holyTomorrow = isHoly(jcNext);
         boolean ykTomorrow = jcNext.getYomTovIndex() == JewishCalendar.YOM_KIPPUR;
         boolean av9Tomorrow = jcNext.getYomTovIndex() == JewishCalendar.TISHA_BEAV;
+        // ערב שבת שהוא יום טוב — נרות שבת לפני השקיעה (מאש קיימת), לא בצאת הכוכבים (תוקן 10/2026)
+        boolean shabbatTomorrow = jcNext.getDayOfWeek() == 7;
         // הדלקת נרות — ערב שבת או ערב יו"ט שאינו שבת/יו"ט בעצמו
-        if (holyTomorrow && !holyToday) {
-            add(r, "candle", ykTomorrow ? "הדלקת נרות · כניסת הצום" : "הדלקת נרות", null, z.candle, true);
+        if (holyTomorrow && (!holyToday || shabbatTomorrow)) {
+            add(r, "candle", ykTomorrow ? "הדלקת נרות · כניסת הצום" : holyToday ? "הדלקת נרות · מאש קיימת" : "הדלקת נרות", null, z.candle, true);
         }
         add(r, "shkia", av9Tomorrow ? "שקיעה · תחילת הצום" : "שקיעה", null, z.sunset, av9Tomorrow);
         add(r, "bein", "בין השמשות", null, z.bein, false);
@@ -281,8 +283,9 @@ public final class Engine {
         String tzLabel = "צאת הכוכבים";
         boolean tzSpecial = false;
         if (holyToday && holyTomorrow) {
-            tzLabel = "צאת הכוכבים · הדלקת נרות";
-            tzSpecial = true;
+            // יום טוב שני / יו"ט במוצאי שבת — מדליקים בצאת הכוכבים; ליל שבת — כבר הודלק לפני השקיעה
+            tzLabel = shabbatTomorrow ? "צאת הכוכבים" : "צאת הכוכבים · הדלקת נרות";
+            tzSpecial = !shabbatTomorrow;
         } else if (holyToday) {
             boolean sh = jc.getDayOfWeek() == 7, yt = jc.isYomTovAssurBemelacha();
             tzLabel = sh && yt ? "צאת השבת והחג" : sh ? "צאת השבת" : "צאת החג";

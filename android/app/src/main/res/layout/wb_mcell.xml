@@ -1,0 +1,8 @@
+<!-- ווידג'ט "לוח שנה": תא של יום — מספר לועזי, תאריך עברי ושם המועד (Render.month) -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/cell"
+    android:layout_width="0dp" android:layout_weight="1" android:layout_height="match_parent"
+    android:layout_margin="1dp" android:orientation="vertical" android:gravity="center">
+    <TextView android:id="@+id/g" android:layout_width="wrap_content" android:layout_height="wrap_content" android:fontFamily="sans-serif" android:textStyle="bold" android:textColor="#FFFFFF" android:textSize="14sp" android:includeFontPadding="false" android:maxLines="1" android:shadowColor="#73000A28" android:shadowRadius="3" android:shadowDy="1" />
+    <TextView android:id="@+id/h" android:layout_width="wrap_content" android:layout_height="wrap_content" android:fontFamily="sans-serif" android:textColor="#D9FFFFFF" android:textSize="10sp" android:includeFontPadding="false" android:maxLines="1" android:shadowColor="#73000A28" android:shadowRadius="3" android:shadowDy="1" />
+    <TextView android:id="@+id/ev" android:layout_width="wrap_content" android:layout_height="wrap_content" android:fontFamily="sans-serif" android:textStyle="bold" android:textColor="#F2D98A" android:textSize="9sp" android:includeFontPadding="false" android:maxLines="1" android:ellipsize="end" android:visibility="gone" android:shadowColor="#73000A28" android:shadowRadius="3" android:shadowDy="1" />
+</LinearLayout>

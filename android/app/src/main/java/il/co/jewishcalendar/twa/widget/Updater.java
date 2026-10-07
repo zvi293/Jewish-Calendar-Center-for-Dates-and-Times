@@ -70,8 +70,10 @@ final class Updater {
             if (sizes != null && !sizes.isEmpty()) {
                 if (sizes.size() == 1) return Render.build(c, k, id, sizes.get(0).getWidth(), sizes.get(0).getHeight(), e);
                 Map<SizeF, RemoteViews> map = new HashMap<>();
+                // לוח שנה: 42 תאים עם לחיצה לכל יום — עד שני גדלים, שהעדכון לא יעבור את מגבלת הגודל של המערכת
+                int maxSizes = k == W.Kind.MONTH ? 2 : 4;
                 for (SizeF s : sizes) {
-                    if (map.size() >= 4) break;
+                    if (map.size() >= maxSizes) break;
                     map.put(s, Render.build(c, k, id, s.getWidth(), s.getHeight(), e));
                 }
                 return new RemoteViews(map);
@@ -96,6 +98,7 @@ final class Updater {
     static int[] defaultCells(W.Kind k) {
         switch (k) {
             case ZMANIM: return new int[]{4, 3};
+            case MONTH: return new int[]{4, 4};
             case ALL: return new int[]{4, 2};
             case STUDY: case PRAYERS: return new int[]{4, 1};
             case DAF: case BENTCHING: case LEVANA_SIMPLE: return new int[]{2, 1};

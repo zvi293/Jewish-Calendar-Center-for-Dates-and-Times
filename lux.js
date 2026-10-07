@@ -1318,8 +1318,10 @@
         // בכל שאר האתר). בדיקה לפי הכותרת האנגלית של Hebcal וגם לפי השם העברי —
         // התאמה מדויקת בלבד, כדי לא לפסול בטעות "יום כיפור"/"יום הכיפורים".
         var ttl = String(e.titleStr || "").replace(/[‘’]/g, "'");
-        if (/^Yom HaShoah$|^Yom HaAtzma'ut$/.test(ttl)) return false;
-        if (/^יום (השואה|העצמאות)$/.test(nm) || /^יום (השואה|העצמאות)$/.test(String(e.heb || ""))) return false;
+        if (/^Yom HaShoah$|^Yom HaAtzma'ut$|^Hebrew Language Day$/.test(ttl)) return false;
+        // יום השפה העברית — הוסר מהגלגל (בקשת בעל האתר, 10/2026)
+        var heNm = String(e.heb || "").replace(/[\u0591-\u05C7]/g, "");
+        if (/^יום (השואה|העצמאות|השפה העברית)$/.test(nm) || /^יום (השואה|העצמאות|השפה העברית)$/.test(heNm)) return false;
         var d = luxParseDate(e.date);
         var diff = (d - new Date()) / 86400000;
         // עד 363 — שלא ייחתך חג שיושב ממש בתפר (תשעה באב של השנה הבאה)

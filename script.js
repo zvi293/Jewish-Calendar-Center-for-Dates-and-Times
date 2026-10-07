@@ -7741,12 +7741,10 @@ function applyFilter(t) {
   btn.setAttribute("aria-pressed", "true");
   render(t, document.getElementById("mainSearch").value);
 }
+// בלי גלילה אל רשימת התוצאות בזמן ההקלדה (בקשת המשתמש 10/2026): הדף נשאר במקום,
+// וההצעות החכמות (ספרים, תפילות, ברכות, חגים — lux.js smartSearch) מוצגות מתחת לתיבה
 document.getElementById("mainSearch").addEventListener("input", (e) => {
   render("all", e.target.value);
-  if (e.target.value.trim().length > 0) {
-    const grid = document.getElementById("resultsGrid");
-    if (grid) grid.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
 });
 
 function openCalendar() {
@@ -12959,7 +12957,8 @@ function buildShemaPayload(context) {
       context.isShabbat || !!context.isYomTov || context.isCholHamoed ||
       context.isRoshChodesh || context.isChanukah || context.isPurim ||
       context.isShushanPurim || /Purim Katan|פורים קטן/.test(_evS) ||
-      !!context.isNoTachanun;
+      !!context.isNoTachanun ||
+      _isTishreiTailNoTachanun(context, CURRENT_NUSACH || "mizrahi");
     // מוצאי שבת / יו"ט / ר"ח — עד חצות הלילה
     var _zAll = window._lastZData || {};
     var _chatzotIso = _nowS.getHours() >= 12
@@ -13442,7 +13441,8 @@ function buildBirkatHamazonPayload(context) {
       context.isPurim ||
       context.isShushanPurim ||
       /Purim Katan|פורים קטן/.test(_dayEvents) ||
-      (context.isNoTachanun && !context.isTishaBeAv);
+      (context.isNoTachanun && !context.isTishaBeAv) ||
+      _isTishreiTailNoTachanun(context, nusach);
     if (_noTachanunDay) {
       parts.push(
         sup(
@@ -15686,6 +15686,8 @@ function buildShacharitMizrahiPayload(context) {
     !context.isShabbat &&
     !context.isCholHamoed &&
     !context.isNoTachanun &&
+    // כ"ד–כ"ט תשרי — אין תחנון (ולכן גם לא יענך ותפלה לדוד) בעדות המזרח
+    !_isTishreiTailNoTachanun(context, "mizrahi") &&
     // פורים קטן ושושן פורים קטן (י"ד-ט"ו אדר א') — אין אומרים תחנון (שו"ע או"ח תרצז:א)
     !/Purim Katan|פורים קטן/.test((context.events || []).join(" "));
   var isHallelDay =
@@ -19538,7 +19540,9 @@ function buildShacharitSfaradPayload(context) {
     !context2.isShabbat &&
     !context2.isCholHamoed &&
     !_isAdarPurimDays &&
-    !context2.isNoTachanun;
+    !context2.isNoTachanun &&
+    // כ"ד–כ"ט תשרי — אין תחנון בנוסח ספרד (_isTishreiTailNoTachanun)
+    !_isTishreiTailNoTachanun(context2, "sfard");
   var isHallelDay =
     context2.isRoshChodesh ||
     context2.isChanukah ||
@@ -21208,6 +21212,32 @@ function buildMinchaMizrahiPayload(context) {
 //     (כה"ח קלא אות צח; סידור ספרד); אשכנז — עד אסרו חג (כ"ג תשרי).
 // התאריך העברי של מחר מחושב בלוח העברי המובנה בדפדפן (Intl), וימים שתאריכם
 // זז (יום העצמאות / יום ירושלים) נבדקים ב-ALL_EVENTS_FULL.
+
+// ── סוף תשרי לפי הנוסח (10/2026) ──
+// context.isNoTachanun משותף לכל הנוסחים ומסמן בתשרי רק עד אסרו חג (כ"ג). בעדות המזרח
+// ובנוסח ספרד אין נופלים על פניהם עד סוף תשרי — כמו (ג) למעלה — ובימים אלה גם אין
+// אומרים "למנצח... יענך" ו"תפלה לדוד". עד 10/2026 רק המנחה ידעה את זה, והשחרית של
+// כ"ד–כ"ט תשרי הציגה תחנון, יענך ותפלה לדוד.
+function _isTishreiTailNoTachanun(context, nusachKey) {
+  if (nusachKey === "ashkenaz") return false;
+  var m = "", day = 0;
+  if (context && context.hasHebDate) {
+    m = context.hebMonth;
+    day = context.hebDay;
+  } else {
+    try {
+      new Intl.DateTimeFormat("en-u-ca-hebrew", { day: "numeric", month: "long" })
+        .formatToParts((context && context.displayDate) || new Date())
+        .forEach(function (pt) {
+          if (pt.type === "month") m = pt.value;
+          if (pt.type === "day") day = parseInt(pt.value, 10) || 0;
+        });
+    } catch (e) {}
+  }
+  m = String(m || "").replace(/[‘’'\x60]/g, "").toLowerCase();
+  return (m === "tishrei" || m === "tishri") && day >= 24 && day <= 29;
+}
+
 function _minchaTachanunInfo(context, nusachKey) {
   var d = context.displayDate || new Date();
   var dow = d.getDay();

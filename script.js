@@ -37392,21 +37392,8 @@ function closeSefarimNosafimModal() {
       return;
     }
     // (10/2026) החלון לא נרשם בהיסטוריה — "חזור" בטלפון יצא מהאפליקציה. עכשיו הוא חלון
-    // היסטוריה-בטוח: כשנפתח מההגדרות, רשומת ההגדרות *מוחלפת* ברשומת העורך (סינכרוני, בלי
-    // history.back — שמגיע אחרי ה-pushState ומוחק אותו) והנעילה של ההגדרות עוברת אליו
-    var _poTookOver = false;
-    try {
-      var sm = document.getElementById("settings-modal");
-      if (sm && !sm.classList.contains("hidden")) {
-        if (_activeModals[_activeModals.length - 1] === "settings-modal") {
-          sm.__closing = false;
-          _uxHideModal(sm, sm.children[0]);
-          _activeModals[_activeModals.length - 1] = "prayer-order-modal";
-          history.replaceState({ modal: "prayer-order-modal" }, "");
-          _poTookOver = true;
-        } else if (typeof toggleSettings === "function") toggleSettings();
-      }
-    } catch(e) {}
+    // היסטוריה-בטוח שנפתח *מעל* ההגדרות (כמו עורך סרגל הניווט ב-lux.js): "חזור", ✕, רקע,
+    // שמירה ואיפוס — חוזרים להגדרות (בקשת המשתמש: חזרה לדף הקודם, לא לדף הראשי)
 
     // אריחים שנראים בדיוק כמו כפתורי התפילות בדף הראשי
     var tilesHtml = btns.map(function(b) {
@@ -37444,8 +37431,8 @@ function closeSefarimNosafimModal() {
       '</div>';
     overlay.addEventListener("click", function(e) { if (e.target === overlay) _poClose(); });
     document.body.appendChild(overlay);
-    if (_poTookOver) { if (window.__luxUxTickNow) window.__luxUxTickNow(); }
-    else { lockBodyScroll(); pushModalState("prayer-order-modal"); }
+    lockBodyScroll();
+    pushModalState("prayer-order-modal");
     _poAttachDrag(document.getElementById("po-grid"));
   };
 

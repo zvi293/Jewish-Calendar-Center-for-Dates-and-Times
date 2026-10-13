@@ -529,7 +529,8 @@
     // צמתי הטקסט של הבלוק — בלי תת-עץ של פירוש משובץ (שורה מודגשת לא "נשפכת" לתוך בלוק הפירוש)
     var CM_FILTER = { acceptNode: function (n) {
       if (n.nodeType !== 1) return NodeFilter.FILTER_ACCEPT;
-      return n.classList && n.classList.contains("chok-cm-blk") ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_SKIP;
+      // גם בלי אייקון הסימנייה שמעל כל פסוק (.sn-vbm) — כדי שהיסטי הסימון השמורים לא יזוזו
+      return n.classList && (n.classList.contains("chok-cm-blk") || n.classList.contains("sn-vbm")) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_SKIP;
     } };
     function textNodes(block) {
       var out = [], w = document.createTreeWalker(block, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, CM_FILTER);
@@ -797,12 +798,12 @@
           var t = pane.querySelector("#bih-reading-title");
           return t && t.parentElement ? { row: t.parentElement, ref: t, where: "beforebegin", style: "margin-left:0.35rem;" } : null;
         } },
-      // ספרים נוספים — קבוצת [📑][🔖][📌][🔍] (#sn-reader-tools, או הורה של 🔖 בגרסה הישנה); המרקר ראשון
+      // ספרים נוספים — קבוצת [☰][📌][🔍] (#sn-reader-tools); המרקר ראשון
       { area: "#sn-reader-content", resolve: function () {
           var v = document.getElementById("sn-reader-view");
           if (!vis(v)) return null;
           var g = document.getElementById("sn-reader-tools");
-          if (!g || !v.contains(g)) { var b = v.querySelector("#sn-reader-bm-btn"); g = b ? b.parentElement : null; }
+          if (!g || !v.contains(g)) return null;
           return g ? { row: g, ref: g, where: "afterbegin" } : null;
         } },
       // קוראי lux (סליחות / מסלולים / סדר לימוד) — סדר אחיד 09/2026: [כותרות ימין][✕ שמאל]; המרקר ראשון = קצה ימין

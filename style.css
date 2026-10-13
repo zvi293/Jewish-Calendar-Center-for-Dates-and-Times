@@ -636,6 +636,21 @@
       .sn-cmb-vn { font-size: 0.73em; font-weight: 800; margin-left: 0.35rem; white-space: nowrap; }
       .sn-cmb-c { margin: 0 0 1rem; line-height: 2.3; text-align: center; }
       .sn-cmb-c:last-child { margin-bottom: 0; }
+      /* סימנייה קטנה מעל כל פסוק (script.js → _snVerseBMHtml): בפרשות חומש — צפה מעל מספר הפסוק בתוך
+         הרווח שבין השורות (line-height 2.3), בלי לשבור את זרימת הפרק; ברבינו בחיי — שורה מעל תיבת הפסוק.
+         כבויה = אפורה ושקופה למחצה, מסומנת = בצבע מלא */
+      .sn-vn { position: relative; display: inline-block; text-indent: 0; }
+      .sn-vbm {
+        background: none; border: 0; margin: 0; padding: 0.12em 0.32em; cursor: pointer;
+        font-size: 0.62em; line-height: 1; opacity: 0.36; filter: grayscale(1);
+        -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent;
+        transition: opacity 0.15s, filter 0.15s;
+      }
+      .sn-vbm.on { opacity: 1; filter: none; }
+      .sn-vn .sn-vbm { position: absolute; bottom: 82%; left: 50%; transform: translateX(-50%); }
+      .sn-vbm-row { text-align: center; margin: 0 0 0.15rem; }
+      .sn-vbm-row .sn-vbm { font-size: 0.78em; }
+      @media (hover: hover) { .sn-vbm:hover { opacity: 0.75; } .sn-vbm.on:hover { opacity: 1; } }
       /* כוונות האר"י במוסף ראש חודש (script.js → _rcMusafKavanaHtml) — רשת 12 חודשים, החודש הנוכחי בזהב */
       .prayer-supplement.rc-kav { text-align: center; padding: 0.6rem 0.7rem 0.55rem; }
       .rc-kav .rck-h { font-weight: 800; font-size: 1.1em; color: #1e3a8a; }

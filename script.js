@@ -31517,6 +31517,13 @@ function openSefarimNosafimPage(_pageMode) {
     if (!_bk || _bk.solo) return "";
     var key = (_sbk ? _sbk.id : "") + "|" + secIdx + "|" + paraIdx;
     var active = _bmHas(_bk.id, key);
+    // תנ"ך (נביאים וכתובים — כל פסקה היא פסוק): אותו אייקון קטן כמו מעל פסוקי החומש (_snVerseBMHtml)
+    if (_bk.id === "tanakh") {
+      var lbl = "פסוק " + toHN(paraIdx + 1);
+      return "<div class=\"sn-vbm-row\"><button type=\"button\" class=\"sn-vbm" + (active ? " on" : "") + "\" id=\"sn-parabm-" + secIdx + "-" + paraIdx + "\"" +
+        " onclick=\"window._snToggleBMByPara(" + secIdx + "," + paraIdx + ")\" aria-pressed=\"" + active + "\"" +
+        " aria-label=\"סימנייה — " + lbl + "\" title=\"סימנייה — " + lbl + "\">🔖</button></div>";
+    }
     return '<div style="text-align:center;margin:0 0 0.4rem;">' +
       '<button id="sn-parabm-' + secIdx + '-' + paraIdx + '" onclick="window._snToggleBMByPara(' + secIdx + ',' + paraIdx + ')" ' +
       'style="font-size:0.68rem;font-weight:700;padding:0.18rem 0.65rem;border-radius:999px;cursor:pointer;' +
@@ -31524,6 +31531,17 @@ function openSefarimNosafimPage(_pageMode) {
       'color:' + (active ? '#92400e' : '#9ca3af') + ';' +
       'background:' + (active ? '#fffbeb' : 'transparent') + ';">' +
       (active ? '🔖 מסומן' : '🔖 סמן') + '</button></div>';
+  }
+
+  // סימנייה קטנה מעל כל פסוק (10/2026) — בטווח רב-פרקי (פרשות חומש) ובספר מפרש על פרשה (cmBook).
+  // מפתח: "תת-ספר|סעיף|פרק(אינדקס)|פסוק(אינדקס)"; סימניות פרק ישנות ("תת-ספר|סעיף|פרק") עדיין נפתחות
+  function _snVerseBMHtml(secIdx, ci, vi, chapNum, vNum) {
+    if (!_bk || _bk.solo || typeof secIdx !== "number") return "";
+    var on = _bmHas(_bk.id, (_sbk ? _sbk.id : "") + "|" + secIdx + "|" + ci + "|" + vi);
+    var lbl = "פרק " + toHN(chapNum) + " פסוק " + toHN(vNum);
+    return "<button type=\"button\" class=\"sn-vbm" + (on ? " on" : "") + "\" id=\"sn-vbm-" + secIdx + "-" + ci + "-" + vi + "\"" +
+      " onclick=\"window._snToggleBMByVerse(" + secIdx + "," + ci + "," + vi + "," + chapNum + "," + vNum + ")\"" +
+      " aria-pressed=\"" + on + "\" aria-label=\"סימנייה — " + lbl + "\" title=\"סימנייה — " + lbl + "\">🔖</button>";
   }
 
   function renderParagraphs(he, color, secIdx, inlineNotes, secRef, pasukHe) {
@@ -31546,16 +31564,16 @@ function openSefarimNosafimPage(_pageMode) {
           var list = (Array.isArray(cms) ? cms : [cms]).map(function(c){ return String(c || ""); }).filter(function(c){ return c.trim(); });
           if (!list.length) return "";
           var pText = pas && pas[j] ? _collapsePoetryGaps(String(pas[j])) : "";
-          return "<div class=\"sn-cmb-v\" style=\"border-color:" + color + "33;\">" +
+          return "<div class=\"sn-cmb-v\" id=\"sn-v-" + secIdx + "-" + i + "-" + j + "\" style=\"border-color:" + color + "33;\">" +
+            "<div class=\"sn-vbm-row\">" + _snVerseBMHtml(secIdx, i, j, chapNum, vStart + j) + "</div>" +
             "<div class=\"sn-cmb-pasuk\"><span class=\"sn-cmb-vn\" style=\"color:" + color + ";\">" +
               toHN(chapNum) + ", " + toHN(vStart + j) + "</span>" + (pText ? " " + pText : "") + "</div>" +
             list.map(function(c){ return "<p class=\"sn-cmb-c\">" + c + "</p>"; }).join("") +
           "</div>";
         }).filter(Boolean).join("");
         if (!blocks) return "";
-        var paraBM = (typeof secIdx === "number") ? _snParaBMHtml(secIdx, i) : "";
         return "<h4 data-sn-chap=\"" + chapNum + "\" style=\"color:" + color + ";font-size:1.02rem;font-weight:900;margin:1.4rem 0 0.75rem;text-align:center;border-bottom:1.5px solid " + color + "44;padding-bottom:0.35rem;\">פרק " + toHN(chapNum) + "</h4>" +
-          paraBM + "<div id=\"sn-para-" + secIdx + "-" + i + "\" data-sn-para=\"" + i + "\">" + blocks + "</div>";
+          "<div id=\"sn-para-" + secIdx + "-" + i + "\" data-sn-para=\"" + i + "\">" + blocks + "</div>";
       }).filter(Boolean).join("");
     }
     if (isMultiChap) {
@@ -31570,14 +31588,14 @@ function openSefarimNosafimPage(_pageMode) {
         var verses = vArr.map(function(vs, j) {
           var t = _collapsePoetryGaps(String(vs || ""));
           if (!t.trim()) return "";
-          return "<span style=\"color:" + color + ";font-size:0.73em;font-weight:700;margin-left:0.35rem;\">[" + toHN(vStart + j) + "]</span>" + t +
+          return "<span class=\"sn-vn\" id=\"sn-v-" + secIdx + "-" + i + "-" + j + "\">" + _snVerseBMHtml(secIdx, i, j, chapNum, vStart + j) +
+            "<span style=\"color:" + color + ";font-size:0.73em;font-weight:700;margin-left:0.35rem;\">[" + toHN(vStart + j) + "]</span></span>" + t +
             ((chNotes && chNotes[j]) ? chNotes[j] : "");
         }).filter(Boolean).join(" ");
         if (!verses) return "";
-        var paraBM = (typeof secIdx === "number") ? _snParaBMHtml(secIdx, i) : "";
         var note = (inlineNotes && !chNotes && inlineNotes[i]) ? inlineNotes[i] : "";
         return "<h4 data-sn-chap=\"" + chapNum + "\" style=\"color:" + color + ";font-size:1.02rem;font-weight:900;margin:1.4rem 0 0.75rem;text-align:center;border-bottom:1.5px solid " + color + "44;padding-bottom:0.35rem;\">פרק " + toHN(chapNum) + "</h4>" +
-          paraBM + "<p id=\"sn-para-" + secIdx + "-" + i + "\" data-sn-para=\"" + i + "\" style=\"margin:0 0 1.4rem;line-height:2.3;\">" + verses + "</p>" + note;
+          "<p id=\"sn-para-" + secIdx + "-" + i + "\" data-sn-para=\"" + i + "\" style=\"margin:0 0 1.4rem;line-height:2.3;\">" + verses + "</p>" + note;
       }).filter(Boolean).join("");
     }
     return he.map(function(v, i) {
@@ -35167,30 +35185,6 @@ function openSefarimNosafimPage(_pageMode) {
     }).join("");
   }
 
-  function updateBMBtn() {
-    var btn = document.getElementById("sn-reader-bm-btn");
-    if (!btn || !_bk) return;
-    var key = (_sbk ? _sbk.id : "") + "|" + _sec;
-    var active = _bmHas(_bk.id, key);
-    var _dk = document.documentElement.classList.contains("dark");
-    btn.style.background = active ? "rgba(245,158,11,0.2)" : (_dk ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)");
-    btn.style.color = active ? (_dk ? "#fbbf24" : "#92400e") : (_dk ? "#cbd5e1" : "#1e293b");
-  }
-
-  window._snToggleBookmark = function() {
-    if (!_bk) return;
-    var key = (_sbk ? _sbk.id : "") + "|" + _sec;
-    var sections = _sbk ? _sbk.sections : (_bk.sections||[]);
-    var s = _bk.type === "hardcoded" ? {he:_bk.he} : (sections[_sec]||{he:""});
-    var wasAdded;
-    if (_bmHas(_bk.id, key)) { _bmRemove(_bk.id, key); wasAdded = false; }
-    else { _bmAdd(_bk.id, key, s.he, _sbk ? _sbk.he : null); wasAdded = true; }
-    updateBMBtn(); buildBMPanel();
-    if (typeof window.showToast === "function") {
-      wasAdded ? window.showToast("🔖 הסימנייה נשמרה", "success", 2200) : showBookmarkRemovedToast();
-    }
-  };
-
   // Find the section + paragraph currently at the top of the reader-content viewport
   function _snCurrentVisiblePara() {
     var content = document.getElementById("sn-reader-content");
@@ -35256,7 +35250,7 @@ function openSefarimNosafimPage(_pageMode) {
     return true;
   };
   window._snBMRemove = function(bid, key) {
-    _bmRemove(bid, key); buildBMPanel(); if(_bk&&_bk.id===bid) updateBMBtn();
+    _bmRemove(bid, key); buildBMPanel();
     if (typeof showBookmarkRemovedToast === "function") showBookmarkRemovedToast();
   };
   window._snBMGoto = function(bid, key) {
@@ -35266,11 +35260,13 @@ function openSefarimNosafimPage(_pageMode) {
     var sbid = parts[0];
     var sidx = parseInt(parts[1]);
     // parts[2] is paragraph index OR "__LP__" sentinel; we also support 4-part LP keys
-    var paraIdx = null;
+    var paraIdx = null, verseIdx = null;
     if (parts.length >= 3 && parts[2] !== "__LP__") {
       var p = parseInt(parts[2]);
       if (!isNaN(p)) paraIdx = p;
     }
+    // סימנייה לפסוק: "sbid|sec|chap|verse"
+    if (paraIdx !== null && parts.length >= 4 && /^d+$/.test(parts[3])) verseIdx = parseInt(parts[3]);
     _bk = book;
     _sbk = (book.type === "multi" && sbid) ? (book.subBooks.find(function(s){ return s.id === sbid; })||null) : null;
     var panel = document.getElementById("sn-bm-panel");
@@ -35293,8 +35289,9 @@ function openSefarimNosafimPage(_pageMode) {
     // Scroll to specific paragraph after section opens (if applicable)
     if (paraIdx !== null) {
       setTimeout(function() {
-        var el = document.getElementById("sn-para-" + sidx + "-" + paraIdx);
-        if (el) el.scrollIntoView({ behavior: "auto", block: "start" });
+        var el = (verseIdx !== null && document.getElementById("sn-v-" + sidx + "-" + paraIdx + "-" + verseIdx)) ||
+                 document.getElementById("sn-para-" + sidx + "-" + paraIdx);
+        if (el) el.scrollIntoView({ behavior: "auto", block: verseIdx !== null ? "center" : "start" });
       }, 700);
     }
   };
@@ -35372,7 +35369,6 @@ function openSefarimNosafimPage(_pageMode) {
     if (!_bk) return;
     _bmRemove(_bk.id, key);
     buildBookBMPanel();
-    updateBMBtn();
     buildBMPanel();
   };
 
@@ -35602,41 +35598,49 @@ function openSefarimNosafimPage(_pageMode) {
   // ── Open section (reader) — continuous scroll ──
   var _snLoadedIdx = null;
 
-  // Build a per-section bookmark button (rendered above each section's heading)
-  function _snSecBMHtml(idx) {
-    if (!_bk) return "";
-    var key = (_sbk ? _sbk.id : "") + "|" + idx;
-    var active = _bmHas(_bk.id, key);
-    return '<div style="text-align:center;margin:0 0 0.75rem;">' +
-      '<button id="sn-secbm-' + idx + '" onclick="window._snToggleBMBySecIdx(' + idx + ')" ' +
-      'style="font-size:0.78rem;font-weight:700;padding:0.3rem 0.85rem;border-radius:999px;cursor:pointer;' +
-      'border:' + (active ? '1.5px solid #f59e0b' : '1.5px solid #d1d5db') + ';' +
-      'color:' + (active ? '#92400e' : '#64748b') + ';' +
-      'background:' + (active ? '#fffbeb' : 'transparent') + ';">' +
-      (active ? '🔖 מסומן' : '🔖 סמן') + '</button></div>';
-  }
-
   // Per-paragraph (verse/halacha) bookmark toggle
   window._snToggleBMByPara = function(secIdx, paraIdx) {
     if (!_bk) return;
     var sections = _sbk ? _sbk.sections : (_bk.sections || []);
     var s = sections[secIdx] || {he:""};
     var key = (_sbk ? _sbk.id : "") + "|" + secIdx + "|" + paraIdx;
-    var label = (s.he || "סעיף") + " — " + toHN(paraIdx + 1);
+    // תנ"ך: "פרק א פסוק ג" (שם הספר כבר מוצג בשורת הסימנייה — בלי " — תהילים" שבשם הפרק)
+    var label = _bk.id === "tanakh" ? String(s.he || "").replace(/ — .*$/, "") + " פסוק " + toHN(paraIdx + 1)
+                                    : (s.he || "סעיף") + " — " + toHN(paraIdx + 1);
     var wasAdded;
     if (_bmHas(_bk.id, key)) { _bmRemove(_bk.id, key); wasAdded = false; }
     else { _bmAdd(_bk.id, key, label, _sbk ? _sbk.he : null); wasAdded = true; }
     // Update this specific button's appearance
     var btn = document.getElementById("sn-parabm-" + secIdx + "-" + paraIdx);
-    if (btn) {
+    if (btn && btn.classList.contains("sn-vbm")) {
+      btn.classList.toggle("on", wasAdded); btn.setAttribute("aria-pressed", String(wasAdded));
+    } else if (btn) {
       var _dk = document.documentElement.classList.contains("dark");
       btn.style.border = wasAdded ? "1.5px solid " + (_dk ? "#b45309" : "#f59e0b") : "1.5px solid " + (_dk ? "#475569" : "#d1d5db");
       btn.style.color = wasAdded ? (_dk ? "#fbbf24" : "#92400e") : "#9ca3af";
       btn.style.background = wasAdded ? (_dk ? "rgba(245,158,11,0.18)" : "#fffbeb") : "transparent";
       btn.innerHTML = wasAdded ? "🔖 מסומן" : "🔖 סמן";
     }
-    // Keep the global header button & panels in sync
-    if (typeof updateBMBtn === "function") updateBMBtn();
+    // Keep the panels in sync
+    if (typeof buildBMPanel === "function") buildBMPanel();
+    if (typeof buildBookBMPanel === "function") { try { buildBookBMPanel(); } catch(e) {} }
+    if (typeof window.showToast === "function") {
+      wasAdded ? window.showToast("🔖 הסימנייה נשמרה", "success", 2200) : showBookmarkRemovedToast();
+    }
+  };
+
+  // סימנייה לפסוק בודד (האייקון הקטן שמעל כל פסוק — _snVerseBMHtml)
+  window._snToggleBMByVerse = function(secIdx, ci, vi, chapNum, vNum) {
+    if (!_bk) return;
+    var sections = _sbk ? _sbk.sections : (_bk.sections || []);
+    var s = sections[secIdx] || {he:""};
+    var key = (_sbk ? _sbk.id : "") + "|" + secIdx + "|" + ci + "|" + vi;
+    var label = (s.he ? s.he + " — " : "") + "פרק " + toHN(chapNum) + " פסוק " + toHN(vNum);
+    var wasAdded;
+    if (_bmHas(_bk.id, key)) { _bmRemove(_bk.id, key); wasAdded = false; }
+    else { _bmAdd(_bk.id, key, label, _sbk ? _sbk.he : null); wasAdded = true; }
+    var btn = document.getElementById("sn-vbm-" + secIdx + "-" + ci + "-" + vi);
+    if (btn) { btn.classList.toggle("on", wasAdded); btn.setAttribute("aria-pressed", String(wasAdded)); }
     if (typeof buildBMPanel === "function") buildBMPanel();
     if (typeof buildBookBMPanel === "function") { try { buildBookBMPanel(); } catch(e) {} }
     if (typeof window.showToast === "function") {
@@ -35950,7 +35954,7 @@ function openSefarimNosafimPage(_pageMode) {
     if (!content) return;
     if (title) title.textContent = (_sbk ? _sbk.he + " — " : "") + sec.he;
     _snUpdateLocationBar();
-    applyFS(); updateBMBtn();
+    applyFS();
     if (_snCMPopoverOpen()) window._snCMPopoverToggle(false);   // חלונית המפרשים נסגרת במעבר סעיף/ספר
     _snBuildCMToolbar();
     // ספר solo (סעיף יחיד) — אין מה לנווט אליו, כפתור הפרקים מוסתר
@@ -36053,7 +36057,6 @@ function openSefarimNosafimPage(_pageMode) {
             var s = sections[num];
             if (s && title) title.textContent = (_sbk ? _sbk.he + " — " : "") + s.he;
             _snUpdateLocationBar();
-            updateBMBtn();
           }
           break;
         }
@@ -36090,7 +36093,7 @@ function openSefarimNosafimPage(_pageMode) {
     content.onscroll = null;
     var locBar = document.getElementById("sn-location-bar");
     if (locBar) { locBar.textContent = book.he; locBar.style.display = ""; }
-    applyFS(); updateBMBtn();
+    applyFS();
     if (_snCMPopoverOpen()) window._snCMPopoverToggle(false);   // חלונית המפרשים נסגרת במעבר סעיף/ספר
     _snBuildCMToolbar();
     // לספר "hardcoded" אין פרקים — כפתור ניווט הפרקים מוסתר (יופעל מחדש למטה אם יש תוכן עניינים)
@@ -36560,7 +36563,6 @@ function openSefarimNosafimPage(_pageMode) {
           // תוכן עניינים — כפתור ☰ אחיד בכל האתר (כמו בשחרית/מנחה/ערבית)
           "<button id=\"sn-chapters-btn\" class=\"toc-nav-btn\" onclick=\"window._snGoToChapters();\" style=\"background:rgba(0,0,0,0.06);border:none;color:#64748b;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.15rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;\" title=\"תוכן העניינים\" aria-label=\"תוכן העניינים\">☰</button>",
           // בעמוד התפילות אין סימניות (לבקשת המשתמש 09/2026) — רק בספרים
-          (_pageMode === "tefilot" ? "" : "<button id=\"sn-reader-bm-btn\" onclick=\"window._snToggleBookmark();\" style=\"background:rgba(0,0,0,0.06);border:none;color:#1e293b;padding:0.4rem 0.55rem;border-radius:999px;cursor:pointer;font-size:0.82rem;\" title=\"סימנייה\">🔖</button>"),
           (_pageMode === "tefilot" ? "" : "<button onclick=\"window._snToggleBookBMPanel();\" style=\"background:rgba(0,0,0,0.06);border:none;color:#1e293b;padding:0.4rem 0.55rem;border-radius:999px;cursor:pointer;font-size:0.82rem;\" title=\"סימניות הספר\">📌</button>"),
           "<button class=\"sn-reader-search-btn\" onclick=\"window._snOpenSearch();\" style=\"background:rgba(0,0,0,0.06);border:none;color:#1e293b;padding:0.4rem 0.55rem;border-radius:999px;cursor:pointer;font-size:0.82rem;\">🔍</button>",
         "</div>",

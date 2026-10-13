@@ -612,6 +612,89 @@
       .prayer-supplement strong {
         color: #1e3a8a;
       }
+      /* כוונת שמע ישראל (script.js → _shemaKavanaHtml) — לפני כל קריאת שמע */
+      .prayer-supplement.shema-kav { text-align: center; padding: 0.6rem 0.8rem 0.55rem; }
+      .shema-kav .shk-h { font-weight: 800; font-size: 1.1em; color: #1e3a8a; margin-bottom: 0.3rem; }
+      .shema-kav .shk-r { margin: 0.12rem 0; }
+      .shema-kav .shk-k { color: #1e3a8a; font-weight: 800; white-space: nowrap; }
+      .shema-kav .shk-n { font-size: 0.86em; opacity: 0.8; }
+      .shema-kav .shk-p { margin-top: 0.45rem; padding-top: 0.4rem; border-top: 1px dashed rgba(37,99,235,0.22); }
+      .shema-kav .shk-name {
+        display: inline-block; white-space: nowrap; font-weight: 700;
+        padding: 0 0.4em; margin: 0.12rem 0.1em; border-radius: 0.4em;
+        border: 1px solid rgba(37,99,235,0.32); background: rgba(59,130,246,0.07);
+      }
+      .shema-kav .shk-src { margin-top: 0.45rem; font-size: 0.86em; opacity: 0.75; }
+      /* ספר מפרש בספרייה (script.js → renderParagraphs, cmBook — רבינו בחיי): לכל פסוק — הפסוק המלא
+         בתיבה עדינה ומתחתיו הדיבורים; הכול ממורכז (מצב הלימוד) */
+      .sn-cmb-v { margin: 0 0 1.5rem; padding-bottom: 1.1rem; border-bottom: 1px dashed; text-align: center; }
+      .sn-cmb-v:last-child { border-bottom: none; }
+      .sn-cmb-pasuk {
+        font-weight: 700; line-height: 2.1; margin: 0 0 0.85rem; padding: 0.55rem 0.8rem;
+        background: rgba(21, 128, 61, 0.06); border-radius: 0.75rem; text-align: center;
+      }
+      .sn-cmb-vn { font-size: 0.73em; font-weight: 800; margin-left: 0.35rem; white-space: nowrap; }
+      .sn-cmb-c { margin: 0 0 1rem; line-height: 2.3; text-align: center; }
+      .sn-cmb-c:last-child { margin-bottom: 0; }
+      /* כוונות האר"י במוסף ראש חודש (script.js → _rcMusafKavanaHtml) — רשת 12 חודשים, החודש הנוכחי בזהב */
+      .prayer-supplement.rc-kav { text-align: center; padding: 0.6rem 0.7rem 0.55rem; }
+      .rc-kav .rck-h { font-weight: 800; font-size: 1.1em; color: #1e3a8a; }
+      .rc-kav .rck-sub { font-size: 0.9em; opacity: 0.85; margin: 0.15rem 0 0.5rem; }
+      .rc-kav .rck-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.3rem; direction: rtl; }
+      @media (min-width: 640px) { .rc-kav .rck-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+      .rc-kav .rck-c {
+        display: flex; flex-direction: column; align-items: center; gap: 0.05rem; padding: 0.3rem 0.15rem;
+        border: 1px solid rgba(37, 99, 235, 0.2); border-radius: 0.55rem; background: rgba(255, 255, 255, 0.55);
+      }
+      .rc-kav .rck-m { font-size: 0.85em; font-weight: 700; opacity: 0.8; }
+      .rc-kav .rck-n { font-size: 1.12em; font-weight: 800; color: #1e3a8a; letter-spacing: 0.04em; line-height: 1.35; }
+      .rc-kav .rck-on { border: 2px solid #b8862b; background: rgba(232, 193, 90, 0.2); box-shadow: 0 0 0 2px rgba(232, 193, 90, 0.2); }
+      .rc-kav .rck-on .rck-m { color: #7a4f0e; opacity: 1; }
+      .rc-kav .rck-note { margin-top: 0.45rem; font-size: 0.88em; opacity: 0.8; }
+      /* פופאפ "תוספות בתפילה היום" (script.js → _showPrayerAdditionsPopup) — מעל חלון התפילה;
+         כניסה/יציאה ב-opacity/transform בלבד (קומפוזיטור) */
+      #pr-adds-pop {
+        position: fixed; inset: 0; z-index: 255; display: flex; align-items: center; justify-content: center;
+        padding: 1rem; background: rgba(2, 6, 23, 0.55); overscroll-behavior: contain;
+        direction: rtl; animation: pra-fade 0.2s ease-out both;
+      }
+      #pr-adds-pop.pra-out { animation: pra-fade-out 0.18s ease-in both; }
+      #pr-adds-pop .pra-card {
+        position: relative; width: 100%; max-width: 380px; max-height: calc(100dvh - 2rem); overflow-y: auto;
+        overscroll-behavior: contain; background: #faf9f6; border: 1px solid rgba(161, 118, 42, 0.45);
+        border-radius: 1.5rem; padding: 1.4rem 1.2rem 1.15rem; text-align: center;
+        box-shadow: 0 25px 60px rgba(0, 0, 0, 0.3); animation: pra-pop 0.24s cubic-bezier(0.22, 1, 0.36, 1) both;
+      }
+      #pr-adds-pop .pra-x {
+        position: absolute; top: 0.75rem; left: 0.75rem; width: 34px; height: 34px; border-radius: 50%;
+        border: none; background: rgba(0, 0, 0, 0.06); color: #64748b; font-size: 1rem; cursor: pointer;
+      }
+      #pr-adds-pop .pra-ico { font-size: 1.8rem; line-height: 1; margin-bottom: 0.35rem; }
+      #pr-adds-pop .pra-title { margin: 0 0 0.45rem; color: #1a1a1a; font-size: 1.2rem; font-weight: 900; }
+      #pr-adds-pop .pra-tags { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.3rem; margin-bottom: 0.75rem; }
+      #pr-adds-pop .pra-tag {
+        font-size: 0.75rem; font-weight: 700; color: #7a4f0e; background: rgba(232, 193, 90, 0.18);
+        border: 1px solid rgba(161, 118, 42, 0.35); border-radius: 999px; padding: 0.1rem 0.6rem;
+      }
+      #pr-adds-pop .pra-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.4rem; }
+      #pr-adds-pop .pra-item {
+        display: flex; flex-direction: column; align-items: center; gap: 0.05rem;
+        background: #fff; border: 1px solid rgba(159, 18, 57, 0.16); border-radius: 0.85rem; padding: 0.5rem 0.75rem;
+      }
+      #pr-adds-pop .pra-name { color: #9f1239; font-size: 1.05rem; font-weight: 800; line-height: 1.4; }
+      #pr-adds-pop .pra-where { color: #475569; font-size: 0.8rem; line-height: 1.4; }
+      #pr-adds-pop .pra-note { margin: 0.7rem 0 0.8rem; color: #64748b; font-size: 0.75rem; }
+      #pr-adds-pop .pra-ok {
+        width: 100%; min-height: 46px; border: none; border-radius: 0.9rem; cursor: pointer;
+        background: linear-gradient(135deg, #b8862b, #8a5a12); color: #fff; font-size: 1rem; font-weight: 800;
+        box-shadow: 0 6px 16px rgba(138, 90, 18, 0.28);
+      }
+      @keyframes pra-fade { from { opacity: 0; } to { opacity: 1; } }
+      @keyframes pra-fade-out { from { opacity: 1; } to { opacity: 0; } }
+      @keyframes pra-pop { from { opacity: 0; transform: translateY(14px) scale(0.97); } to { opacity: 1; transform: none; } }
+      @media (prefers-reduced-motion: reduce) {
+        #pr-adds-pop, #pr-adds-pop .pra-card { animation: none; }
+      }
       /* תוספות ושינויים בנוסח לפי היום (script.js → prAdd): יעלה ויבוא, משיב הרוח/מוריד הטל,
          ברך עלינו/ברכנו, על הניסים, עננו, עשי"ת, אתה חוננתנו, ברכת המזון ומעין שלוש —
          באותו גודל כמו שאר הטקסט, רק בצבע בורדו (בקשת המשתמש 06/10/2026) */
@@ -9111,6 +9194,24 @@ html.dark .prayer-supplement li {
   color: #bfdbfe !important;
 }
 html.dark .prayer-supplement strong { color: #dbeafe; }
+html.dark .shema-kav .shk-h,
+html.dark .shema-kav .shk-k { color: #dbeafe; }
+html.dark .shema-kav .shk-p { border-top-color: rgba(147,197,253,0.28); }
+html.dark .shema-kav .shk-name { border-color: rgba(147,197,253,0.45); background: rgba(59,130,246,0.18); }
+html.dark .sn-cmb-pasuk { background: rgba(74, 222, 128, 0.08); }
+html.dark .rc-kav .rck-h,
+html.dark .rc-kav .rck-n { color: #dbeafe; }
+html.dark .rc-kav .rck-c { background: rgba(255, 255, 255, 0.04); border-color: rgba(147, 197, 253, 0.28); }
+html.dark .rc-kav .rck-on { border-color: #e8c15a; background: rgba(232, 193, 90, 0.14); }
+html.dark .rc-kav .rck-on .rck-m { color: #f2d98a; }
+html.dark #pr-adds-pop .pra-card { background: #111827; border-color: rgba(232, 193, 90, 0.4); }
+html.dark #pr-adds-pop .pra-title { color: #f8fafc; }
+html.dark #pr-adds-pop .pra-x { background: rgba(255, 255, 255, 0.08); color: #cbd5e1; }
+html.dark #pr-adds-pop .pra-tag { color: #f2d98a; background: rgba(232, 193, 90, 0.12); }
+html.dark #pr-adds-pop .pra-item { background: rgba(255, 255, 255, 0.05); border-color: rgba(253, 164, 175, 0.22); }
+html.dark #pr-adds-pop .pra-name { color: #fda4af; }
+html.dark #pr-adds-pop .pra-where,
+html.dark #pr-adds-pop .pra-note { color: #94a3b8; }
 html.dark .prayer-richtext .pr-add,
 html.dark .prayer-richtext .pr-add b { color: #fda4af; }
 html.dark #prayer-modal .modal-body strong { color: #93c5fd; }
@@ -9824,14 +9925,20 @@ html.lux-sky {
   --skyc-ink: #0f172a; --skyc-ink2: #334155; --skyc-ink3: #475569;
   --skyc-field: rgba(255, 255, 255, 0.55); --skyc-field-edge: rgba(201, 153, 58, 0.3);
 }
-/* לילה / דמדומים: גוון כחול-לילה קל ואותיות בהירות */
+/* לילה / דמדומים: גוון כחול-לילה 45% ואותיות בהירות. עד 13/10/2026 — 24%: בטלפון (בלי טשטוש)
+   הכוכבים ואורות העיר עברו חדים מאחורי הכתב ("קשה לקרוא"); 45% נבחר מסקיצה של 24/45/60 */
 html.lux-sky:not([data-sky="day"]) {
-  --skyc-tint: rgba(12, 18, 44, 0.24);
+  --skyc-tint: rgba(12, 18, 44, 0.45);
   --skyc-gloss: linear-gradient(160deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.02) 48%, rgba(255, 255, 255, 0) 100%);
   --skyc-shadow: 0 14px 40px -14px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.18);
   --skyc-halo: 0 1px 2px rgba(0, 0, 0, 0.6), 0 0 12px rgba(0, 0, 0, 0.45);
-  --skyc-ink: #f6f7fb; --skyc-ink2: rgba(226, 232, 240, 0.88); --skyc-ink3: rgba(203, 213, 225, 0.72);
-  --skyc-field: rgba(255, 255, 255, 0.12); --skyc-field-edge: rgba(255, 255, 255, 0.26);
+  --skyc-ink: #f6f7fb; --skyc-ink2: rgba(241, 245, 249, 0.97); --skyc-ink3: rgba(226, 232, 240, 0.9);
+  --skyc-field: rgba(255, 255, 255, 0.16); --skyc-field-edge: rgba(255, 255, 255, 0.26);
+}
+html.lux-sky:not([data-sky="day"]) #mainSearch::placeholder { color: rgba(226, 232, 240, 0.85); }
+/* גריד התפילות בלילה — אותו גוון כמו כרטיסי הדף (במקור כמעט שקוף: 3%–8% לבן) */
+html.lux-sky:not([data-sky="day"]) body .prayer-btn:not(.lux-erev-btn) {
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.02)), var(--skyc-tint) !important;
 }
 /* ── משטחים: זכוכית צלולה ── */
 html.lux-sky main > nav[class~="bg-white"],
@@ -10068,20 +10175,21 @@ html.lux-sky[data-sky="day"] .lux-erev-orn::after { background: linear-gradient(
 html.lux-sky[data-sky="day"] .lux-erev-times span { background: var(--skyc-field); border-color: rgba(161, 118, 42, 0.5); color: var(--skyc-ink); box-shadow: none; }
 html.lux-sky[data-sky="day"] .lux-erev-times b,
 html.lux-sky[data-sky="day"] .lux-erev-entered { color: #7a4f0e; text-shadow: none; }
-/* הספירה לאחור — רגילה ובמצב ערב שבת */
+/* הספירה לאחור — רגילה ובמצב ערב שבת. ביום — רקע שמנת כמעט אטום כמו גלולות "הדלקת נרות/הבדלה"
+   שבפאנל: הספירה יושבת בדרך כלל בתחתית המסך מול הנוף הכהה, ועל זכוכית 20% הכתב הכהה לא נראה (13/10/2026) */
 html.lux-sky[data-sky="day"] #shabbat-countdown-bar,
 html.lux-sky[data-sky="day"] body.lux-erev #shabbat-countdown-wrap {
-  background: var(--skyc-gloss), var(--skyc-tint);
+  background: rgba(255, 251, 240, 0.88);
   border-color: rgba(161, 118, 42, 0.7);
-  box-shadow: var(--skyc-shadow);
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.18);
 }
 html.lux-sky[data-sky="day"] body.lux-erev #shabbat-countdown-bar { background: none; border-color: transparent; box-shadow: none; }
 html.lux-sky[data-sky="day"] #countdown-display,
-html.lux-sky[data-sky="day"] body.lux-erev #countdown-display { color: #7a4f0e !important; text-shadow: none !important; animation: none; }
+html.lux-sky[data-sky="day"] body.lux-erev #countdown-display { color: #6b3f05 !important; text-shadow: none !important; animation: none; }
 html.lux-sky[data-sky="day"] #countdown-label,
 html.lux-sky[data-sky="day"] #countdown-event-type,
 html.lux-sky[data-sky="day"] body.lux-erev #countdown-label,
-html.lux-sky[data-sky="day"] body.lux-erev #countdown-event-type { color: var(--skyc-ink2) !important; text-shadow: none; }
+html.lux-sky[data-sky="day"] body.lux-erev #countdown-event-type { color: var(--skyc-ink) !important; font-weight: 800; text-shadow: none; }
 /* "לכבוד שבת קודש" וכפתורי הערב */
 html.lux-sky[data-sky="day"] .lux-erev-grid-head { color: #7a4f0e; text-shadow: none; }
 html.lux-sky[data-sky="day"] .lux-erev-grid-head::before { background: linear-gradient(90deg, transparent, rgba(161, 118, 42, 0.8)); }

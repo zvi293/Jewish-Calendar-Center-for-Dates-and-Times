@@ -37359,39 +37359,54 @@ function closeSefarimNosafimModal() {
   // חשיפה לשימוש חוזר (עורך סרגל הניווט ב-lux.js משתמש באותו מנוע גרירה)
   window._poAttachDrag = _poAttachDrag;
 
+  // סגירה דרך ההיסטוריה (X / רקע / שמירה / איפוס) — כמו כל חלון באתר; ה-popstate מסיר
+  // את החלון ומשחרר את הנעילה (removeModalById)
+  function _poClose() {
+    if (window._closePopupViaBack) window._closePopupViaBack("prayer-order-modal");
+    else { var m = document.getElementById("prayer-order-modal"); if (m) m.remove(); }
+  }
+  window._poClose = _poClose;
+
   window._poSave = function() {
     var grid = document.getElementById("po-grid");
     if (!grid) return;
     var order = Array.prototype.slice.call(grid.querySelectorAll(".po-tile")).map(function(t) { return t.getAttribute("data-key"); });
     saveOrder(order);
     window.applyPrayerOrder(order);
-    var m = document.getElementById("prayer-order-modal");
-    if (m) m.remove();
-    try { unlockBodyScroll(); } catch(e) {}
+    _poClose();
     if (typeof showToast === "function") showToast("✅ סדר הכפתורים נשמר במכשיר זה", "success");
   };
 
   window._poReset = function() {
     try { localStorage.removeItem(ORDER_KEY); } catch(e) {}
     if (window._poDefaultOrder) window.applyPrayerOrder(window._poDefaultOrder);
-    var m = document.getElementById("prayer-order-modal");
-    if (m) m.remove();
-    try { unlockBodyScroll(); } catch(e) {}
+    _poClose();
     if (typeof showToast === "function") showToast("↩️ הסדר הוחזר לברירת המחדל", "info");
   };
 
   window.openPrayerOrderEditor = function() {
-    var existing = document.getElementById("prayer-order-modal");
-    if (existing) existing.remove();
-    try {
-      var sm = document.getElementById("settings-modal");
-      if (sm && !sm.classList.contains("hidden") && typeof toggleSettings === "function") toggleSettings();
-    } catch(e) {}
+    if (document.getElementById("prayer-order-modal")) return;
     var btns = _allButtons();
     if (!btns.length) {
       if (typeof showToast === "function") showToast("הכפתורים עדיין נטענים — נסה שוב בעוד רגע", "info");
       return;
     }
+    // (10/2026) החלון לא נרשם בהיסטוריה — "חזור" בטלפון יצא מהאפליקציה. עכשיו הוא חלון
+    // היסטוריה-בטוח: כשנפתח מההגדרות, רשומת ההגדרות *מוחלפת* ברשומת העורך (סינכרוני, בלי
+    // history.back — שמגיע אחרי ה-pushState ומוחק אותו) והנעילה של ההגדרות עוברת אליו
+    var _poTookOver = false;
+    try {
+      var sm = document.getElementById("settings-modal");
+      if (sm && !sm.classList.contains("hidden")) {
+        if (_activeModals[_activeModals.length - 1] === "settings-modal") {
+          sm.__closing = false;
+          _uxHideModal(sm, sm.children[0]);
+          _activeModals[_activeModals.length - 1] = "prayer-order-modal";
+          history.replaceState({ modal: "prayer-order-modal" }, "");
+          _poTookOver = true;
+        } else if (typeof toggleSettings === "function") toggleSettings();
+      }
+    } catch(e) {}
 
     // אריחים שנראים בדיוק כמו כפתורי התפילות בדף הראשי
     var tilesHtml = btns.map(function(b) {
@@ -37418,7 +37433,7 @@ function closeSefarimNosafimModal() {
       '<div style="width:100%;max-width:520px;max-height:94vh;display:flex;flex-direction:column;direction:rtl;">' +
         '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.35rem;padding:0 0.25rem;">' +
           '<h3 style="color:#f1f5f9;font-size:1.05rem;font-weight:900;margin:0;">✏️ סידור כפתורי התפילות</h3>' +
-          '<button onclick="document.getElementById(\'prayer-order-modal\').remove();" style="background:rgba(255,255,255,0.08);border:none;color:#94a3b8;width:34px;height:34px;border-radius:50%;cursor:pointer;font-size:1rem;">✕</button>' +
+          '<button onclick="window._poClose()" aria-label="סגירה" style="background:rgba(255,255,255,0.08);border:none;color:#94a3b8;width:34px;height:34px;border-radius:50%;cursor:pointer;font-size:1rem;">✕</button>' +
         '</div>' +
         '<p style="color:#94a3b8;font-size:0.72rem;margin:0 0 0.7rem;padding:0 0.25rem;">גרור כפתור למיקום הרצוי — בדיוק כפי שיופיע בדף הראשי. הסדר נשמר במכשיר זה בלבד.</p>' +
         '<div id="po-grid" style="flex:1;overflow-y:auto;display:grid;grid-template-columns:repeat(3,1fr);gap:0.5rem;align-content:start;padding:0.25rem;">' + tilesHtml.join("") + '</div>' +
@@ -37427,8 +37442,10 @@ function closeSefarimNosafimModal() {
           '<button onclick="window._poReset()" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:#cbd5e1;font-weight:700;padding:0.7rem 1rem;border-radius:0.8rem;cursor:pointer;font-size:0.82rem;">↩️ איפוס</button>' +
         '</div>' +
       '</div>';
-    overlay.addEventListener("click", function(e) { if (e.target === overlay) overlay.remove(); });
+    overlay.addEventListener("click", function(e) { if (e.target === overlay) _poClose(); });
     document.body.appendChild(overlay);
+    if (_poTookOver) { if (window.__luxUxTickNow) window.__luxUxTickNow(); }
+    else { lockBodyScroll(); pushModalState("prayer-order-modal"); }
     _poAttachDrag(document.getElementById("po-grid"));
   };
 

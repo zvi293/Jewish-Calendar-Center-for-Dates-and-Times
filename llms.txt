@@ -22,6 +22,7 @@
 - [קרדיטים ומקורות נתונים](https://jewishcalendar.co.il/credits.html)
 - [מדיניות פרטיות](https://jewishcalendar.co.il/privacy.html)
 - [תנאי שימוש](https://jewishcalendar.co.il/terms.html)
+- [הצהרת נגישות](https://jewishcalendar.co.il/accessibility.html)
 
 ## מקורות נתונים (Data sources)
 

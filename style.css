@@ -2641,7 +2641,7 @@ html.lux-js #resultsGrid .event-card.lux-in {
   animation: lux-today-pulse 2.6s ease-in-out infinite;
 }
 #cal-days-grid > div.border-blue-500 > div > span.font-black {
-  color: #b8860b !important;
+  color: #8a6508 !important;
 }
 /* עמודת שבת — נגיעת קלף מוזהבת */
 #cal-days-grid > div:nth-child(7n):not([aria-hidden]) {
@@ -10475,3 +10475,16 @@ html.lux-keynav textarea:focus { box-shadow: inset 0 0 0 5px rgba(251, 191, 36, 
   #prayer-more-btn.chevron-cta-pulse::before,
   #prayer-more-btn.chevron-cta-pulse::after { animation: none !important; opacity: 0 !important; }
 }
+
+/* ── לוח ברכות הנהנין — צבע הכתב בשבבי הברכות (10/2026, נגישות): ניגודיות 4.5:1 לפחות
+      בבהיר ובכהה. הרקע והמסגרת נשארים בצבע הבסיס (script.js, buildBirkotBoard → tc) ── */
+:root {
+  --bbt-hamotzi: #92400e; --bbt-mezonot: #c2410c; --bbt-gefen: #6d28d9; --bbt-etz: #166534;
+  --bbt-adama: #0f766e; --bbt-shehakol: #1d4ed8; --bbt-mgas: #854d0e;
+}
+html.dark {
+  --bbt-hamotzi: #fbbf24; --bbt-mezonot: #fb923c; --bbt-gefen: #a78bfa; --bbt-etz: #4ade80;
+  --bbt-adama: #2dd4bf; --bbt-shehakol: #60a5fa; --bbt-mgas: #facc15;
+}
+/* תאריך היום בלוח החודשי — זהב בהיר במצב כהה (הזהב הכהה של הבהיר לא קריא על כהה) */
+html.dark #cal-days-grid > div.border-blue-500 > div > span.font-black { color: #f2d98a !important; }

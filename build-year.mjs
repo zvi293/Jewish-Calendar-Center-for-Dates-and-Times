@@ -361,7 +361,7 @@ try {
       /(<loc>https:\/\/jewishcalendar\.co\.il\/<\/loc>\s*<lastmod>)[^<]+/,
       `$1${buildIso}`,
     );
-    for (const page of ["synagogues.html", "credits.html", "privacy.html", "terms.html"]) {
+    for (const page of ["synagogues.html", "credits.html", "privacy.html", "terms.html", "accessibility.html"]) {
       let gitDate = "";
       try {
         const { execFileSync } = await import("node:child_process");

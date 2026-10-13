@@ -111,6 +111,7 @@
     <link rel="stylesheet" href="/fonts.css?v=1" />
     <style>
       html.jc-app .jc-web-pay { display: none !important; }
+      html:not(.jc-app) .jc-app-only { display: none !important; }
       body {
         font-family: "Assistant", sans-serif;
         transition:
@@ -133,7 +134,7 @@
       }
     </style>
     <script type="application/ld+json">
-    {"@context":"https://schema.org","@type":"WebPage","@id":"https://jewishcalendar.co.il/credits.html","url":"https://jewishcalendar.co.il/credits.html","name":"קרדיטים ומקורות נתונים","description":"מקורות הנתונים, הספריות והרישיונות שעליהם מבוסס הלוח היהודי.","inLanguage":"he-IL","dateModified":"2026-09-02","isPartOf":{"@type":"WebSite","@id":"https://jewishcalendar.co.il/#website","url":"https://jewishcalendar.co.il/","name":"הלוח היהודי"},"breadcrumb":{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"הלוח היהודי","item":"https://jewishcalendar.co.il/"},{"@type":"ListItem","position":2,"name":"קרדיטים","item":"https://jewishcalendar.co.il/credits.html"}]}}
+    {"@context":"https://schema.org","@type":"WebPage","@id":"https://jewishcalendar.co.il/credits.html","url":"https://jewishcalendar.co.il/credits.html","name":"קרדיטים ומקורות נתונים","description":"מקורות הנתונים, הספריות והרישיונות שעליהם מבוסס הלוח היהודי.","inLanguage":"he-IL","dateModified":"2026-10-14","isPartOf":{"@type":"WebSite","@id":"https://jewishcalendar.co.il/#website","url":"https://jewishcalendar.co.il/","name":"הלוח היהודי"},"breadcrumb":{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"הלוח היהודי","item":"https://jewishcalendar.co.il/"},{"@type":"ListItem","position":2,"name":"קרדיטים","item":"https://jewishcalendar.co.il/credits.html"}]}}
     </script>
   </head>
   <body
@@ -179,6 +180,11 @@
             השילוב בין הרכיבים וההתאמות הייעודיות בוצעו כחלק מהקמת האתר והפעלתו.
             כל הזכויות בעיצוב, במבנה ובקוד המקורי של האתר שמורות ל-Zstore Ai.
           </p>
+          <p class="mt-3 leading-8 text-slate-700 dark:text-slate-300">
+            גם ערכת העיצוב "שמיים חיים" (רקע שמיים חי לפי זמני היום ההלכתיים,
+            שמתקשט בשבתות ובחגים), אפליקציית האנדרואיד, 18 הווידג'טים שלה
+            והסנכרון ליומן הטלפון פותחו על ידי Zstore Ai.
+          </p>
         </section>
 
         <!-- מקורות נתונים -->
@@ -200,14 +206,15 @@
                   href="https://www.hebcal.com/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  class="text-blue-600 dark:text-blue-400 hover:underline"
+                  class="text-blue-600 dark:text-blue-400 underline"
                   >Hebcal</a
                 >
                 לצורך קבלת נתוני לוח שנה עברי, המרת תאריכים (לועזי-עברי), מועדי
                 חגים ושבתות, זמני הדלקת נרות, פרשת השבוע, דף יומי ונתונים נוספים
                 הקשורים ללוח העברי. הנתונים מתקבלים באמצעות ממשקי ה-API של
                 Hebcal. כל הזכויות בשירות, בנתונים ובממשקי ה-API שייכות ל-Hebcal
-                ולבעליו. השימוש כפוף לתנאי השימוש של Hebcal.
+                ולבעליו. הנתונים מופצים ברישיון Creative Commons Attribution 4.0,
+                והשימוש כפוף לתנאי השימוש של Hebcal.
               </p>
             </div>
 
@@ -223,7 +230,7 @@
                   href="https://github.com/BehindTheMath/KosherZmanim"
                   target="_blank"
                   rel="noopener noreferrer"
-                  class="text-blue-600 dark:text-blue-400 hover:underline"
+                  class="text-blue-600 dark:text-blue-400 underline"
                   >KosherZmanim</a
                 >
                 (גרסת JavaScript של KosherJava) לחישוב זמנים הלכתיים מדויקים
@@ -233,26 +240,29 @@
                   href="https://kosherjava.com/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  class="text-blue-600 dark:text-blue-400 hover:underline"
+                  class="text-blue-600 dark:text-blue-400 underline"
                   >KosherJava</a
                 >
-                מאת Eliyahu Hershfeld. הספרייה נטענת מרשתות CDN ציבוריות —
+                מאת Eliyahu Hershfeld. הספרייה מאוחסנת בשרתי האתר עצמו, ורק אם טעינתה
+                נכשלת היא נטענת כגיבוי מרשתות CDN ציבוריות —
                 <a
                   href="https://unpkg.com/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  class="text-blue-600 dark:text-blue-400 hover:underline"
+                  class="text-blue-600 dark:text-blue-400 underline"
                   >unpkg</a
                 >
-                (מקור ראשי) ו-<a
+                ו-<a
                   href="https://www.jsdelivr.com/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  class="text-blue-600 dark:text-blue-400 hover:underline"
+                  class="text-blue-600 dark:text-blue-400 underline"
                   >jsDelivr</a
                 >
-                (גיבוי). כל הזכויות בספרייה שייכות ליוצריה בהתאם לרישיון הקוד
-                הפתוח שלה (LGPL 2.1).
+                . כל הזכויות בספרייה שייכות ליוצריה בהתאם לרישיון הקוד הפתוח שלה
+                (LGPL 2.1). בווידג'טים ובסנכרון ליומן של אפליקציית האנדרואיד
+                הזמנים מחושבים בטלפון עצמו בספריית KosherJava המקורית (Java),
+                באותו רישיון.
               </p>
             </div>
 
@@ -269,9 +279,10 @@
                   href="https://www.geonames.org/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  class="text-blue-600 dark:text-blue-400 hover:underline"
+                  class="text-blue-600 dark:text-blue-400 underline"
                   >GeoNames</a
-                >. כל הזכויות במאגר שייכות ל-GeoNames ולבעליו.
+                >, המופץ ברישיון Creative Commons Attribution 4.0. כל הזכויות במאגר
+                שייכות ל-GeoNames ולבעליו.
               </p>
             </div>
 
@@ -288,7 +299,7 @@
                   href="https://www.sefaria.org.il/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  class="text-blue-600 dark:text-blue-400 hover:underline"
+                  class="text-blue-600 dark:text-blue-400 underline"
                   >ספריא (Sefaria)</a
                 >
                 באמצעות ה-API הציבורי שלה. הטקסטים כפופים לרישיון המצוין בעמוד
@@ -310,7 +321,7 @@
                   href="https://www.openstreetmap.org/copyright"
                   target="_blank"
                   rel="noopener noreferrer"
-                  class="text-blue-600 dark:text-blue-400 hover:underline"
+                  class="text-blue-600 dark:text-blue-400 underline"
                   >OpenStreetMap</a
                 >, הזמינים תחת רישיון ODbL, ומתקבלים באמצעות שירותי Overpass
                 API ו-Nominatim (גם להמרת כתובות המקוואות למיקום). המפה מוצגת באמצעות ספריית הקוד הפתוח
@@ -318,7 +329,7 @@
                   href="https://leafletjs.com/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  class="text-blue-600 dark:text-blue-400 hover:underline"
+                  class="text-blue-600 dark:text-blue-400 underline"
                   >Leaflet</a
                 >
                 (רישיון BSD-2), המאוחסנת באתר.
@@ -340,7 +351,7 @@
                   href="https://data.gov.il/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  class="text-blue-600 dark:text-blue-400 hover:underline"
+                  class="text-blue-600 dark:text-blue-400 underline"
                   >data.gov.il</a
                 >, אתר המידע הממשלתי הפתוח. מיקומי ציוני הצדיקים נבדקו גם מול
                 ויקיפדיה העברית. הנתונים מתעדכנים בכל עדכון של האתר.
@@ -359,7 +370,7 @@
                   href="https://he.wikisource.org/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  class="text-blue-600 dark:text-blue-400 hover:underline"
+                  class="text-blue-600 dark:text-blue-400 underline"
                   >ויקיטקסט העברי</a
                 >
                 (מבית קרן ויקימדיה, רישיון CC BY-SA),
@@ -367,7 +378,7 @@
                   href="https://benyehuda.org/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  class="text-blue-600 dark:text-blue-400 hover:underline"
+                  class="text-blue-600 dark:text-blue-400 underline"
                   >פרויקט בן-יהודה</a
                 >
                 (טקסטים בנחלת הכלל) ומאתר
@@ -375,7 +386,7 @@
                   href="https://www.toratemetfreeware.com/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  class="text-blue-600 dark:text-blue-400 hover:underline"
+                  class="text-blue-600 dark:text-blue-400 underline"
                   >תורת אמת</a
                 >. הזכויות בכל טקסט שייכות לבעליהן בהתאם לרישיון החל עליו.
               </p>
@@ -436,7 +447,7 @@
                   href="https://tailwindcss.com/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  class="text-blue-600 dark:text-blue-400 hover:underline"
+                  class="text-blue-600 dark:text-blue-400 underline"
                   >Tailwind Labs</a
                 >
                 תחת רישיון MIT.
@@ -457,11 +468,13 @@
                   href="https://fonts.google.com/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  class="text-blue-600 dark:text-blue-400 hover:underline"
+                  class="text-blue-600 dark:text-blue-400 underline"
                   >Google Fonts</a
                 >, המאוחסנים ומוגשים משרתי האתר עצמו. יוצר כרטיסי הברכה טוען
                 בפתיחתו בלבד, מ-Google Fonts, גם את הגופנים David Libre, Suez One,
-                Secular One ו-Amatic SC (כולם ברישיון SIL Open Font License 1.1).
+                Secular One ו-Amatic SC (כולם ברישיון SIL Open Font License 1.1), ובורר
+                גופן הקריאה בספרים טוען, רק לפי בחירתך, את David Libre, Noto Serif
+                Hebrew ו-Alef (SIL Open Font License 1.1) ואת Tinos (רישיון Apache 2.0).
                 גופן Assistant פותח על ידי
                 Ben Nathan ומורשה תחת רישיון SIL Open Font License 1.1. גופן
                 Frank Ruhl Libre פותח על ידי Yanek Iontef ומורשה תחת אותו רישיון.
@@ -518,7 +531,7 @@
                   href="https://www.netlify.com/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  class="text-blue-600 dark:text-blue-400 hover:underline"
+                  class="text-blue-600 dark:text-blue-400 underline"
                   >Netlify</a
                 >, המספקת אירוח, CDN, HTTPS ותשתית פריסה. כל הזכויות בשירות
                 שייכות ל-Netlify, Inc.
@@ -537,7 +550,7 @@
                   href="https://onesignal.com/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  class="text-blue-600 dark:text-blue-400 hover:underline"
+                  class="text-blue-600 dark:text-blue-400 underline"
                   >OneSignal</a
                 >. ההרשמה להתראות מתבצעת רק לאחר אישור המשתמש בדפדפן. כל
                 הזכויות בשירות שייכות ל-OneSignal, Inc.
@@ -556,12 +569,52 @@
                   href="https://www.paypal.com/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  class="text-blue-600 dark:text-blue-400 hover:underline"
+                  class="text-blue-600 dark:text-blue-400 underline"
                   >PayPal</a
                 >. עיבוד התשלום נעשה כולו באתר PayPal; האתר אינו מקבל ואינו
                 שומר פרטי תשלום. PayPal הוא סימן מסחרי של PayPal, Inc.
               </p>
             </div>
+            <div
+              class="jc-app-only rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5"
+            >
+              <h3 class="text-lg font-bold text-slate-900 dark:text-white">
+                Google Play (תרומות באפליקציה)
+              </h3>
+              <p class="mt-2 leading-7 text-slate-700 dark:text-slate-300">
+                תרומות באפליקציה מתבצעות במערכת התשלומים של Google Play (Google Play
+                Billing). עיבוד התשלום נעשה כולו אצל Google; האפליקציה אינה מקבלת
+                ואינה שומרת פרטי תשלום.
+              </p>
+            </div>
+
+            <div
+              class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5"
+            >
+              <h3 class="text-lg font-bold text-slate-900 dark:text-white">
+                אפליקציית האנדרואיד
+              </h3>
+              <p class="mt-2 leading-7 text-slate-700 dark:text-slate-300">
+                האפליקציה בנויה בטכנולוגיית Trusted Web Activity של Google, באמצעות
+                הספרייה <a
+                  href="https://github.com/GoogleChrome/android-browser-helper"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="text-blue-600 dark:text-blue-400 underline"
+                  >Android Browser Helper</a
+                >
+                (רישיון Apache 2.0). הזמנים בווידג'טים ובסנכרון ליומן מחושבים
+                בספריית <a
+                  href="https://kosherjava.com/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="text-blue-600 dark:text-blue-400 underline"
+                  >KosherJava</a
+                > (LGPL 2.1).
+                Android ו-Google Play הם סימנים מסחריים של Google LLC.
+              </p>
+            </div>
+
           </div>
         </section>
 
@@ -600,7 +653,7 @@
             לבעל האתר בכתובת
             <a
               href="mailto:zstore.ai295@gmail.com"
-              class="text-blue-600 dark:text-blue-400 hover:underline"
+              class="text-blue-600 dark:text-blue-400 underline"
               >zstore.ai295@gmail.com</a
             >
             לצורך בדיקה ועדכון בהתאם.
@@ -615,6 +668,7 @@
         <a href="/synagogues.html" class="hover:text-blue-600 dark:hover:text-blue-400">בתי כנסת ומקוואות</a>
         <a href="/privacy.html" class="hover:text-blue-600 dark:hover:text-blue-400">מדיניות פרטיות</a>
         <a href="/terms.html" class="hover:text-blue-600 dark:hover:text-blue-400">תנאי שימוש</a>
+        <a href="/accessibility.html" class="hover:text-blue-600 dark:hover:text-blue-400">הצהרת נגישות</a>
       </nav>
     </footer>
 

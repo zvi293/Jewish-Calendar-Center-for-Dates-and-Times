@@ -38,6 +38,7 @@ module.exports = {
     "./credits.html",
     "./privacy.html",
     "./terms.html",
+    "./accessibility.html",
     "./script.js",
     "./lux.js",
   ],

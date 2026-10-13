@@ -37,7 +37,7 @@
 | `docs/i18n-plan.md` | תוכנית פרויקט האנגלית + "מצב נוכחי" (מסמך העבודה בין סשנים). חסום מהגשה ב-netlify.toml. |
 | `synagogues.html` | דף בתי כנסת/מקוואות/ציונים. Leaflet מ-`vendor/`, מאגר מקומי `places/*.json`, ואז Overpass ברקע. |
 | `android/` | **אפליקציית האנדרואיד (TWA)** — הקוד בגיט מ-10/2026; **מפתח החתימה, הסיסמה (`android.keystore`, `.keystore-pass`, `KEYSTORE-INFO.txt`) והקבצים הבנויים מוחרגים ב-`.gitignore` — הריפו ציבורי, לעולם לא להכניס אותם**. `/android/*` חסום מהגשה ב-netlify.toml. הווידג'טים: `app/src/main/java/.../widget/` — ראו "ווידג'טים באפליקציה" למטה. `widget.html` הישן נמחק (הפניה 301 לדף הבית). |
-| `credits.html`, `privacy.html`, `terms.html`, `404.html` | דפים סטטיים. |
+| `credits.html`, `privacy.html`, `terms.html`, `accessibility.html`, `404.html` | דפים סטטיים (הצהרת הנגישות — דף נפרד מ-10/2026; `terms.html#nagishut` מפנה אליו). **דף סטטי חדש** — להוסיף ל-`content` ב-`tailwind.config.js`, לרשימה ב-`build-year.mjs` (lastmod), ל-`sitemap.xml`, ל-`llms.txt` ולפוטר של כל הדפים. כשמשנים פיצ׳ר שנוגע במידע/בהרשאות/בשירות חיצוני — לעדכן גם את מדיניות הפרטיות, התנאים והקרדיטים (ותאריך העדכון בהם). |
 | `build-year.mjs` | גלגול שנה עברית אוטומטי בבילד (סמני `LUACH-AUTO:*` ב-`index.html`, `sitemap.xml`). |
 | `build-places.mjs`, `places-src/` | בניית מאגר המקומות (data.gov.il + OSM + `tzaddikim.json` ידני). כותב `PLACES_VER` ל-`synagogues.html`. |
 | `minify.mjs` | מיזעור בבילד בלבד. **בלי `minifyIdentifiers`** — עשרות `onclick=` ב-HTML קוראים לפונקציות גלובליות בשמן. |
@@ -126,6 +126,7 @@ grep -oE '(script|lux|sky|style)\.(js|css)\?v=[0-9]+' index.html sw.js script.js
 - **Nominatim**: לגאוקוד רק `countrycodes=il,ps`; לסנן `religion=jewish` בלבד.
 - **פונט קריאה**: נבחר דרך CSS-attribute בלבד (מפתח אחד, בסיס 25px), `lux.js` מסתנכרן — לא לפצל.
 - **SEO**: אסור Event schema לחגים; `og-image.png` נשאר לצד ה-jpg.
+- **נגישות (10/2026, נבדק ב-axe-core בכל החלונות, בהיר וכהה)**: כל רכיב חדש — ניגודיות 4.5:1 לכתב רגיל בבהיר **ובכהה** (`text-slate-400` על רקע בהיר נכשל — `text-slate-500 dark:text-slate-400`; לבן על `*-500` נכשל — `*-600`/`*-700`); תווית (`aria-label`) לכל כפתור/מתג בלי טקסט; אזור גלילה — `tabindex="0"`; חלון — שם נגיש (כותרת h1–h4, או `DIALOG_NAMES` ב-`lux.js` dialogA11y); קישור בתוך טקסט — קו תחתון. **Escape** סוגר את החלון העליון דרך `history.back()` (המאזין הגלובלי ב-`script.js`, ליד Ctrl+K) — חלון עם מאזין Escape משלו על `document` צריך להיכנס לרשימת הדילוג שם. צבעי ספר ככתב בקורא — דרך `_snInk` (מכהה עד 4.5:1). הצהרת הנגישות (`accessibility.html`) מתארת את המצב — לעדכן אותה כשמשהו משתנה.
 - **סימניות בספרים נשמרות לפי מספר הסעיף ברשימה** (`"תת-ספר|אינדקס|…"`): הוספת סעיף **באמצע** רשימה קיימת מזיזה סימניות — חובה מיגרציה עם דגל חדש (כמו `_snMigrateSectionIndexes2`, דגל `sn-bm3-books1026`, משנה ברורה 10/2026). בלי מיגרציה — רק בסוף הרשימה או בתת-ספר חדש (המפתח לפי `id` של תת-הספר).
 
 ## איך מוצאים דברים ב-`script.js`

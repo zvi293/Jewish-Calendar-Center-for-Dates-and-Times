@@ -8236,16 +8236,16 @@ function buildMonthCalendar() {
     // Show parsha on Shabbat cells
     const parshaEv = evs.find((e) => e.type === "parashat");
     if (parshaEv) {
-      evHtml += `<div class="bg-amber-600 text-white text-[9px] md:text-xs px-1 py-0.5 rounded-md shadow-sm w-full font-bold leading-tight break-words" title="${escapeHtml(parshaEv.name)}">📖 ${escapeHtml(parshaEv.name.replace("Parashat ", ""))}</div>`;
+      evHtml += `<div class="bg-amber-700 text-white text-[9px] md:text-xs px-1 py-0.5 rounded-md shadow-sm w-full font-bold leading-tight break-words" title="${escapeHtml(parshaEv.name)}">📖 ${escapeHtml(parshaEv.name.replace("Parashat ", ""))}</div>`;
     }
     evs.forEach((e) => {
       if (e.type === "parashat") return; // already shown above
       const c =
         {
-          major: "bg-blue-500",
-          fast: "bg-rose-500",
-          moon: "bg-purple-500",
-          "rosh-chodesh": "bg-emerald-500",
+          major: "bg-blue-600",
+          fast: "bg-rose-600",
+          moon: "bg-purple-600",
+          "rosh-chodesh": "bg-emerald-700",
           minor: "bg-slate-500",
         }[e.type] || "bg-slate-500";
       evHtml += `<div class="${c} text-white text-[9px] md:text-xs px-1 py-0.5 rounded-md shadow-sm w-full font-medium leading-tight break-words" title="${escapeHtml(e.name)}">${escapeHtml(e.name.replace("קידוש לבנה - ", ""))}</div>`;
@@ -24267,7 +24267,7 @@ function createFontSizeBar(targetSelector, scrollTargetSelector) {
           <span class="font-btn-group" style="display:inline-flex;align-items:center;gap:0.75rem;flex-wrap:nowrap;flex-shrink:0;"><button onclick="changePrayerFontSize(-10, '${targetSelector}')" style="width:38px;height:38px;border-radius:50%;border:1.5px solid rgba(99,102,241,0.3);background:linear-gradient(135deg,#eef2ff 0%,#e0e7ff 100%);color:#4338ca;font-size:1.25rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(99,102,241,0.15);transition:transform 0.15s ease,box-shadow 0.15s ease;" onmouseover="this.style.transform='scale(1.08)';this.style.boxShadow='0 4px 10px rgba(99,102,241,0.25)';" onmouseout="this.style.transform='';this.style.boxShadow='0 2px 6px rgba(99,102,241,0.15)';" aria-label="הקטן כתב">−</button><button onclick="changePrayerFontSize(10, '${targetSelector}')" style="width:38px;height:38px;border-radius:50%;border:1.5px solid rgba(99,102,241,0.3);background:linear-gradient(135deg,#eef2ff 0%,#e0e7ff 100%);color:#4338ca;font-size:1.25rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(99,102,241,0.15);transition:transform 0.15s ease,box-shadow 0.15s ease;" onmouseover="this.style.transform='scale(1.08)';this.style.boxShadow='0 4px 10px rgba(99,102,241,0.25)';" onmouseout="this.style.transform='';this.style.boxShadow='0 2px 6px rgba(99,102,241,0.15)';" aria-label="הגדל כתב">+</button></span>
           <button type="button" class="rf-btn" onclick="window._openReaderFontPopup()" aria-label="בחירת פונט קריאה" title="בחירת פונט">א</button>
           <button onclick="window._toggleAutoScroll('${scrollTarget}', this)" style="width:38px;height:38px;border-radius:50%;border:1.5px solid rgba(16,185,129,0.35);background:linear-gradient(135deg,#ecfdf5 0%,#d1fae5 100%);color:#047857;font-size:0.95rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(16,185,129,0.18);transition:transform 0.15s ease;" onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform=''" aria-label="התחל גלילה אוטומטית">▶</button>
-          <button class="auto-scroll-speed-btn" onclick="window._cycleAutoScrollSpeed(this)" style="font-size:0.78rem;font-weight:800;color:#047857;min-width:2.4rem;text-align:center;background:rgba(209,250,229,0.85);padding:5px 10px;border-radius:999px;border:1px solid rgba(16,185,129,0.3);cursor:pointer;" aria-label="מהירות גלילה">1x</button>
+          <button class="auto-scroll-speed-btn" onclick="window._cycleAutoScrollSpeed(this)" style="font-size:0.78rem;font-weight:800;color:#065f46;min-width:2.4rem;text-align:center;background:rgba(209,250,229,0.85);padding:5px 10px;border-radius:999px;border:1px solid rgba(16,185,129,0.3);cursor:pointer;" aria-label="מהירות גלילה">1x</button>
         `;
   // סנכרון תצוגת מהירות אחרי הוספה ל-DOM
   setTimeout(function(){ if (window._syncAutoScrollSpeedDisplays) window._syncAutoScrollSpeedDisplays(); }, 0);
@@ -24810,7 +24810,7 @@ function openShirHashirimPage() {
       <button onclick="closeShirHashirimModal()"
         style="background:rgba(255,255,255,0.08);border:none;color:#94a3b8;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.1rem;flex-shrink:0;">✕</button>
     </div>
-    <div id="shir-scroll-area" style="overflow-y:auto;flex:1;background:#ffffff;"></div>`;
+    <div id="shir-scroll-area" tabindex="0" style="overflow-y:auto;flex:1;background:#ffffff;"></div>`;
 
   // Append font size bar
   const fontBar = createFontSizeBar('#shir-scroll-area');
@@ -25253,9 +25253,9 @@ function openBenIshHaiPage() {
     const color = getColor();
     const parshiyot = getParshiyot();
     const TABS = [
-      {label:"שנה ראשונה", mode:"y0", color:"#6366f1"},
-      {label:"שנה שניה",   mode:"y1", color:"#f59e0b"},
-      {label:"דרשות",      mode:"drashot", color:"#10b981"},
+      {label:"שנה ראשונה", mode:"y0", color:"#4f46e5"},
+      {label:"שנה שניה",   mode:"y1", color:"#b45309"},
+      {label:"דרשות",      mode:"drashot", color:"#047857"},
     ];
 
     const tabsEl = document.getElementById("bih-year-bar");
@@ -25551,7 +25551,7 @@ function openBenIshHaiPage() {
       '</div>'+
       '<div id="bih-bm-panel" style="display:none;position:absolute;top:76px;right:12px;left:12px;z-index:50;background:linear-gradient(168deg,#131f45 0%,#0a1330 100%);border:1px solid rgba(232,193,90,0.4);border-radius:1rem;padding:0.8rem 0.9rem;max-height:60vh;overflow-y:auto;direction:rtl;box-shadow:0 18px 48px rgba(0,0,0,0.55);max-width:440px;margin:0 auto;"></div>'+
       '<div style="overflow-y:auto;flex:1;padding:0.75rem 1.25rem 0;">'+
-        '<p style="color:#64748b;font-size:0.72rem;margin:0 0 0.65rem;">לחץ על פרשה לקריאת הטקסט המלא</p>'+
+        '<p style="color:#94a3b8;font-size:0.72rem;margin:0 0 0.65rem;">לחץ על פרשה לקריאת הטקסט המלא</p>'+
         '<div id="bih-grid-content" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:0.5rem;"></div>'+
         '<div style="height:1.5rem;"></div>'+
       '</div>'+
@@ -25577,7 +25577,7 @@ function openBenIshHaiPage() {
         '</span>'+
         '<button type="button" class="rf-btn" onclick="window._openReaderFontPopup()" aria-label="בחירת פונט קריאה" title="בחירת פונט">א</button>'+
         '<button onclick="window._toggleAutoScroll(\'#bih-content-area\', this)" style="width:38px;height:38px;border-radius:50%;border:1.5px solid rgba(16,185,129,0.35);background:linear-gradient(135deg,#ecfdf5 0%,#d1fae5 100%);color:#047857;font-size:0.95rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(16,185,129,0.18);transition:transform 0.15s ease;" onmouseover="this.style.transform=\'scale(1.08)\'" onmouseout="this.style.transform=\'\'" aria-label="התחל גלילה אוטומטית">▶</button>'+
-        '<button class="auto-scroll-speed-btn" onclick="window._cycleAutoScrollSpeed(this)" style="font-size:0.78rem;font-weight:800;color:#047857;min-width:2.4rem;text-align:center;background:rgba(209,250,229,0.85);padding:5px 10px;border-radius:999px;border:1px solid rgba(16,185,129,0.3);cursor:pointer;" aria-label="מהירות גלילה">1x</button>'+
+        '<button class="auto-scroll-speed-btn" onclick="window._cycleAutoScrollSpeed(this)" style="font-size:0.78rem;font-weight:800;color:#065f46;min-width:2.4rem;text-align:center;background:rgba(209,250,229,0.85);padding:5px 10px;border-radius:999px;border:1px solid rgba(16,185,129,0.3);cursor:pointer;" aria-label="מהירות גלילה">1x</button>'+
       '</div>'+
     '</div>'+
 
@@ -26760,7 +26760,7 @@ openTehillimPage = function () {
                 <span class="font-btn-group" style="display:inline-flex;align-items:center;gap:0.75rem;flex-wrap:nowrap;flex-shrink:0;"><button onclick="changePrayerFontSize(-10, '#psalm-text-area')" style="width:38px;height:38px;border-radius:50%;border:1.5px solid rgba(99,102,241,0.3);background:linear-gradient(135deg,#eef2ff 0%,#e0e7ff 100%);color:#4338ca;font-size:1.25rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(99,102,241,0.15);transition:transform 0.15s ease,box-shadow 0.15s ease;" onmouseover="this.style.transform='scale(1.08)';this.style.boxShadow='0 4px 10px rgba(99,102,241,0.25)';" onmouseout="this.style.transform='';this.style.boxShadow='0 2px 6px rgba(99,102,241,0.15)';" aria-label="הקטן כתב">−</button><button onclick="changePrayerFontSize(10, '#psalm-text-area')" style="width:38px;height:38px;border-radius:50%;border:1.5px solid rgba(99,102,241,0.3);background:linear-gradient(135deg,#eef2ff 0%,#e0e7ff 100%);color:#4338ca;font-size:1.25rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(99,102,241,0.15);transition:transform 0.15s ease,box-shadow 0.15s ease;" onmouseover="this.style.transform='scale(1.08)';this.style.boxShadow='0 4px 10px rgba(99,102,241,0.25)';" onmouseout="this.style.transform='';this.style.boxShadow='0 2px 6px rgba(99,102,241,0.15)';" aria-label="הגדל כתב">+</button></span>
                 <button type="button" class="rf-btn" onclick="window._openReaderFontPopup()" aria-label="בחירת פונט קריאה" title="בחירת פונט">א</button>
                 <button onclick="window._toggleAutoScroll('#psalm-text-area', this)" style="width:38px;height:38px;border-radius:50%;border:1.5px solid rgba(16,185,129,0.35);background:linear-gradient(135deg,#ecfdf5 0%,#d1fae5 100%);color:#047857;font-size:0.95rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(16,185,129,0.18);transition:transform 0.15s ease;" onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform=''" aria-label="התחל גלילה אוטומטית">▶</button>
-                <button class="auto-scroll-speed-btn" onclick="window._cycleAutoScrollSpeed(this)" style="font-size:0.78rem;font-weight:800;color:#047857;min-width:2.4rem;text-align:center;background:rgba(209,250,229,0.85);padding:5px 10px;border-radius:999px;border:1px solid rgba(16,185,129,0.3);cursor:pointer;" aria-label="מהירות גלילה">1x</button>
+                <button class="auto-scroll-speed-btn" onclick="window._cycleAutoScrollSpeed(this)" style="font-size:0.78rem;font-weight:800;color:#065f46;min-width:2.4rem;text-align:center;background:rgba(209,250,229,0.85);padding:5px 10px;border-radius:999px;border:1px solid rgba(16,185,129,0.3);cursor:pointer;" aria-label="מהירות גלילה">1x</button>
               </div>
             </div>
           `;
@@ -27285,6 +27285,22 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && document.getElementById("calendar-day-modal")) {
     closeCalendarDay();
     return;
+  }
+  // (10/2026, נגישות) Escape סוגר את החלון/התצוגה העליונים — בדיוק כמו "חזור" (כל החלונות
+  // היסטוריה-בטוחים). חלונות עם מאזין Escape משלהם — לא כאן (אחרת שתי סגירות); בשדה טקסט
+  // עם תוכן — לא סוגרים (המשתמש באמצע הקלדה)
+  if (e.key === "Escape" && _activeModals.length && !window.__popupClosingId) {
+    const top = _activeModals[_activeModals.length - 1];
+    const ae = document.activeElement;
+    const typing = ae && /^(INPUT|TEXTAREA)$/.test(ae.tagName) && ae.value;
+    const topEl = document.getElementById(top);
+    // הילולות — מאזין על document שרץ אחרי זה; דבר התורה למועד — מאזין על החלון עצמו, שכבר
+    // התחיל לסגור (__closing) כשהפוקוס בתוכו
+    if (!typing && !(topEl && topEl.__closing) && !/^(hilulot-modal|hilulot-cal-modal)$/.test(top)) {
+      e.preventDefault();
+      history.back();
+      return;
+    }
   }
   if ((e.ctrlKey || e.metaKey) && e.key === "k") {
     e.preventDefault();
@@ -34320,13 +34336,18 @@ function openSefarimNosafimPage(_pageMode) {
   // ── לוח ברכות הנהנין — נבנה מנתונים מובנים (חיפוש פנימי + כרטיסים) ──
   (function buildBirkotBoard() {
     var C = { hamotzi: "#b45309", mezonot: "#d97706", gefen: "#7c3aed", etz: "#16a34a", adama: "#0d9488", shehakol: "#2563eb", mgas: "#a16207" };
+    // (10/2026, נגישות) צבע הכתב בשבבים — גוון כהה יותר בבהיר ובהיר יותר בכהה (משתני --bbt-* ב-style.css),
+    // כדי לעמוד ביחס ניגודיות 4.5:1; הרקע והמסגרת נשארים בצבע הבסיס
+    var TXT = {};
+    Object.keys(C).forEach(function (k) { TXT[C[k]] = "var(--bbt-" + k + "," + C[k] + ")"; });
+    function tc(c) { return TXT[c] || c; }
     function chip(txt, color) {
-      return "<span style=\"display:inline-block;background:" + color + "18;color:" + color + ";border:1.5px solid " + color + "55;border-radius:999px;padding:0.18rem 0.7rem;font-size:0.82em;font-weight:900;white-space:nowrap;\">" + txt + "</span>";
+      return "<span style=\"display:inline-block;background:" + color + "18;color:" + tc(color) + ";border:1.5px solid " + color + "55;border-radius:999px;padding:0.18rem 0.7rem;font-size:0.82em;font-weight:900;white-space:nowrap;\">" + txt + "</span>";
     }
     // סמל מקרא לחיץ — קפיצה לפרק הברכה
     function jump(k, txt) {
       var color = C[k];
-      return "<button type=\"button\" class=\"bb-jump\" onclick=\"window._bbJump('" + k + "')\" title=\"מעבר לברכת " + txt + "\" style=\"display:inline-block;background:" + color + "18;color:" + color + ";border:1.5px solid " + color + "55;border-radius:999px;padding:0.28rem 0.85rem;font-size:0.85em;font-weight:900;white-space:nowrap;cursor:pointer;font-family:inherit;\">" + txt + "</button>";
+      return "<button type=\"button\" class=\"bb-jump\" onclick=\"window._bbJump('" + k + "')\" title=\"מעבר לברכת " + txt + "\" style=\"display:inline-block;background:" + color + "18;color:" + tc(color) + ";border:1.5px solid " + color + "55;border-radius:999px;padding:0.28rem 0.85rem;font-size:0.85em;font-weight:900;white-space:nowrap;cursor:pointer;font-family:inherit;\">" + txt + "</button>";
     }
     var R = {
       hamotzi: ["הַמּוֹצִיא", C.hamotzi], mezonot: ["בּוֹרֵא מִינֵי מְזוֹנוֹת", C.mezonot],
@@ -34762,7 +34783,7 @@ function openSefarimNosafimPage(_pageMode) {
       "<div class=\"bb-item\" data-s=\"שיעור כזית כזיית ברכה אחרונה שיעורים רביעית בורא נפשות מעין שלוש על המחיה שבעת המינים מים עוגה יין\" style=\"background:#fff;border:1.5px solid rgba(0,0,0,0.07);border-right:5px solid #b45309;border-radius:0.85rem;padding:0.85rem 1rem;margin-bottom:0.55rem;line-height:2;\">" +
         "✦ ברכה אחרונה מברכים רק אם אכל <b>כזית</b> (כ־27 גרם) בתוך כ־4 דקות, או שתה <b>רביעית</b> (כ־81 מ\"ל) בבת אחת.<br>" +
         "✦ <b>ספק ברכות להקל</b> — ובכל ספק אפשר לברך שהכל, ש\"שהכל\" פוטר הכל בדיעבד.<br>" +
-        "✦ סדר קדימה בברכות: המוציא, מזונות, הגפן, העץ, האדמה, שהכל — <button type=\"button\" class=\"bb-jump\" onclick=\"window._bbJump('mgas')\" style=\"display:inline-block;background:" + C.mgas + "18;color:" + C.mgas + ";border:1.5px solid " + C.mgas + "55;border-radius:999px;padding:0.1rem 0.7rem;font-size:0.8em;font-weight:900;cursor:pointer;font-family:inherit;\">🪜 לפרק המלא</button><br>" +
+        "✦ סדר קדימה בברכות: המוציא, מזונות, הגפן, העץ, האדמה, שהכל — <button type=\"button\" class=\"bb-jump\" onclick=\"window._bbJump('mgas')\" style=\"display:inline-block;background:" + C.mgas + "18;color:" + tc(C.mgas) + ";border:1.5px solid " + C.mgas + "55;border-radius:999px;padding:0.1rem 0.7rem;font-size:0.8em;font-weight:900;cursor:pointer;font-family:inherit;\">🪜 לפרק המלא</button><br>" +
         "✦ מאכל עיקר וטפל — מברכים על העיקר ופוטרים את הטפל.<br>" +
         "✦ שתה מים ואכל עוגה — מברך תחילה <b>בורא נפשות</b> ואחר כך <b>מעין שלוש</b>; ואם טעה והקדים מעין שלוש — יברך אחריה בורא נפשות.<br>" +
         "✦ בירך <b>הגפן</b> ושתה יין וגם מים — ברכת <b>מעין שלוש</b> שעל היין פוטרת גם את המים, ואינו מברך בורא נפשות.<br>" +
@@ -35864,6 +35885,22 @@ function openSefarimNosafimPage(_pageMode) {
     }
   };
 
+  // (10/2026, נגישות) צבע הספר ככתב על דף הקריאה (#faf9f6): גוון כהה יותר עד ניגודיות 4.5:1 —
+  // כמה צבעי ספרים (ירוק/טורקיז/כתום) עמדו על 3:1 בלבד. האריחים בספרייה לא משתנים
+  var _snInkCache = {};
+  function _snInk(hex) {
+    if (!/^#[0-9a-f]{6}$/i.test(hex || "")) return hex;
+    if (_snInkCache[hex]) return _snInkCache[hex];
+    var lum = function (c) {
+      var a = c.map(function (v) { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); });
+      return 0.2126 * a[0] + 0.7152 * a[1] + 0.0722 * a[2];
+    };
+    var bgL = lum([250, 249, 246]);
+    var c = [1, 3, 5].map(function (i) { return parseInt(hex.slice(i, i + 2), 16); });
+    for (var k = 0; k < 12 && (bgL + 0.05) / (lum(c) + 0.05) < 4.6; k++) c = c.map(function (v) { return Math.round(v * 0.9); });
+    return (_snInkCache[hex] = "#" + c.map(function (v) { return ("0" + v.toString(16)).slice(-2); }).join(""));
+  }
+
   // כרטיס "הטקסט לא נטען" — כפתור ניסיון חוזר + ניסיון אוטומטי שקט (רק כל עוד הפרק מוצג)
   function _snRenderFailedChapter(chapterDiv, heading, idx, area) {
     var tries = chapterDiv.__snRetries || 0;
@@ -35913,7 +35950,7 @@ function openSefarimNosafimPage(_pageMode) {
     if (!reuseDiv && _snLoadedIdx.has(idx)) return;
     _snLoadedIdx.add(idx);
     var sec = sections[idx];
-    var heading = "<h4 style=\"color:" + _bk.color + ";font-size:1.05rem;font-weight:900;margin:0 0 0.85rem;text-align:center;\">" + (_sbk ? _sbk.he + " — " : "") + sec.he + "</h4>";
+    var heading = "<h4 aria-level=\"3\" style=\"color:" + _snInk(_bk.color) + ";font-size:1.05rem;font-weight:900;margin:0 0 0.85rem;text-align:center;\">" + (_sbk ? _sbk.he + " — " : "") + sec.he + "</h4>";
     var chapterDiv = reuseDiv;
     if (!chapterDiv) {
       chapterDiv = document.createElement("div");
@@ -35971,7 +36008,7 @@ function openSefarimNosafimPage(_pageMode) {
       if (isMBBook) loadingHtml += loadLine("📜", "#1d4ed8", "טוען שולחן ערוך...");
       diburCms.forEach(function(c) { loadingHtml += loadLine(c.emoji || "📖", c.color || "#64748b", "טוען " + c.he + "..."); });
       if (verseCms.length) loadingHtml += loadLine("📖", "#64748b", "טוען פירושים...");
-      chapterDiv.innerHTML = heading + renderParagraphs(he, _bk.color, idx, null, sec.ref, pasukHe) + loadingHtml;
+      chapterDiv.innerHTML = heading + renderParagraphs(he, _snInk(_bk.color), idx, null, sec.ref, pasukHe) + loadingHtml;
       _snSoft();
     }
 
@@ -36069,7 +36106,7 @@ function openSefarimNosafimPage(_pageMode) {
       }
     }
 
-    var parasHtml = renderParagraphs(he, _bk.color, idx, inlineNotes, sec.ref, pasukHe);
+    var parasHtml = renderParagraphs(he, _snInk(_bk.color), idx, inlineNotes, sec.ref, pasukHe);
 
     // ── נושאי כלים — משובצים בתוך טקסט השולחן ערוך לפי דיבור המתחיל ──
     // (בספר משנה ברורה הם כבר שובצו בבלוק השולחן ערוך למעלה)
@@ -36792,7 +36829,7 @@ function openSefarimNosafimPage(_pageMode) {
       "</span>",
         "<button type=\"button\" class=\"rf-btn\" onclick=\"window._openReaderFontPopup()\" aria-label=\"בחירת פונט קריאה\" title=\"בחירת פונט\">א</button>",
         "<button onclick=\"window._toggleAutoScroll('#sn-reader-content', this)\" style=\"width:38px;height:38px;border-radius:50%;border:1.5px solid rgba(16,185,129,0.35);background:linear-gradient(135deg,#ecfdf5 0%,#d1fae5 100%);color:#047857;font-size:0.95rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(16,185,129,0.18);transition:transform 0.15s ease;\" onmouseover=\"this.style.transform='scale(1.08)'\" onmouseout=\"this.style.transform=''\" aria-label=\"התחל גלילה אוטומטית\">▶</button>",
-        "<button class=\"auto-scroll-speed-btn\" onclick=\"window._cycleAutoScrollSpeed(this)\" style=\"font-size:0.78rem;font-weight:800;color:#047857;min-width:2.4rem;text-align:center;background:rgba(209,250,229,0.85);padding:5px 10px;border-radius:999px;border:1px solid rgba(16,185,129,0.3);cursor:pointer;\" aria-label=\"מהירות גלילה\">1x</button>",
+        "<button class=\"auto-scroll-speed-btn\" onclick=\"window._cycleAutoScrollSpeed(this)\" style=\"font-size:0.78rem;font-weight:800;color:#065f46;min-width:2.4rem;text-align:center;background:rgba(209,250,229,0.85);padding:5px 10px;border-radius:999px;border:1px solid rgba(16,185,129,0.3);cursor:pointer;\" aria-label=\"מהירות גלילה\">1x</button>",
         "<span id=\"sn-cm-toolbar\" style=\"display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:0.4rem;\"></span>",
       "</div>",
     "</div>",

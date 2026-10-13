@@ -1179,7 +1179,7 @@
         '<label class="block text-sm font-bold text-slate-500 dark:text-slate-400 mb-2">סרגל הניווט התחתון (מובייל)</label>' +
         '<button type="button" id="lux-nav-edit-btn" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 transition-all flex items-center justify-between gap-3">' +
           '<span class="font-semibold text-sm">📱 עריכת סרגל הניווט</span>' +
-          '<span class="text-slate-400 text-xs">עד ' + MAX_ITEMS + " פריטים · גרירה לסידור</span>" +
+          '<span class="text-slate-500 dark:text-slate-400 text-xs">עד ' + MAX_ITEMS + " פריטים · גרירה לסידור</span>" +
         "</button>";
       anchor.parentElement.insertAdjacentElement("afterend", field);
       field.querySelector("#lux-nav-edit-btn").addEventListener("click", openNavEditor);
@@ -2374,7 +2374,7 @@
       field.innerHTML =
         '<button type="button" id="lux-name-settings-btn" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 transition-all flex items-center justify-between gap-3" style="margin-top:0.75rem;">' +
           '<span class="font-semibold text-sm">✏️ השם שלי בברכה</span>' +
-          '<span style="color:#94a3b8;font-size:0.8rem;">הוספה / שינוי / הסרה</span>' +
+          '<span class="text-slate-500 dark:text-slate-400" style="font-size:0.8rem;">הוספה / שינוי / הסרה</span>' +
         "</button>";
       host.insertAdjacentElement("afterend", field);
       field.querySelector("#lux-name-settings-btn").addEventListener("click", function () {
@@ -3103,7 +3103,7 @@
         '<label class="block text-sm font-bold text-slate-500 dark:text-slate-400 mb-2">תזכורות אישיות</label>' +
         '<button type="button" id="lux-yz-btn" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 transition-all flex items-center justify-between gap-3">' +
           '<span class="font-semibold text-sm">🕯️ יארצייטים ואזכרות</span>' +
-          '<span class="text-slate-400 text-xs">תזכורת אוטומטית</span>' +
+          '<span class="text-slate-500 dark:text-slate-400 text-xs">תזכורת אוטומטית</span>' +
         "</button>";
       anchor.parentElement.insertAdjacentElement("afterend", field);
       field.querySelector("#lux-yz-btn").addEventListener("click", openEditor);
@@ -3166,7 +3166,7 @@
       field.innerHTML =
         '<button type="button" id="lux-ach-btn" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 transition-all flex items-center justify-between gap-3" style="margin-top:0.75rem;">' +
           '<span class="font-semibold text-sm">🏆 ההישגים שלי</span>' +
-          '<span class="text-slate-400 text-xs">תגי זהב</span>' +
+          '<span class="text-slate-500 dark:text-slate-400 text-xs">תגי זהב</span>' +
         "</button>";
       host.insertAdjacentElement("afterend", field);
       field.querySelector("#lux-ach-btn").addEventListener("click", openScreen);
@@ -3586,7 +3586,7 @@
       field.innerHTML =
         '<button type="button" id="lux-tour-btn" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 transition-all flex items-center justify-between gap-3" style="margin-top:0.75rem;">' +
           '<span class="font-semibold text-sm">🧭 סיור מודרך באתר</span>' +
-          '<span class="text-slate-400 text-xs">הכירו את כל הפיצ\'רים</span>' +
+          '<span class="text-slate-500 dark:text-slate-400 text-xs">הכירו את כל הפיצ\'רים</span>' +
         "</button>";
       host.insertAdjacentElement("afterend", field);
       field.querySelector("#lux-tour-btn").addEventListener("click", startTour);
@@ -5430,7 +5430,7 @@
       field.innerHTML =
         '<button type="button" id="lux-dt-btn" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 transition-all flex items-center justify-between gap-3" style="margin-top:0.75rem;">' +
           '<span class="font-semibold text-sm">🔄 המרת תאריכים</span>' +
-          '<span class="text-slate-400 text-xs">עברי ↔ לועזי · בר מצווה</span>' +
+          '<span class="text-slate-500 dark:text-slate-400 text-xs">עברי ↔ לועזי · בר מצווה</span>' +
         "</button>";
       host.insertAdjacentElement("afterend", field);
       field.querySelector("#lux-dt-btn").addEventListener("click", openTool);
@@ -7986,6 +7986,23 @@
      ברגע שאלמנט-שכבה נוסף ל-body: id שמסתיים ב-"-modal" או .lux-sheet-overlay. */
   safe("dialogA11y", function () {
     if (!("MutationObserver" in window)) return;
+    // (10/2026) שם נגיש לחלון: כותרת h1–h4, ואם אין — אלמנט כותרת (‎*title*), ואם
+    // התוכן עוד לא נבנה ברגע ההוספה — ניסיון חוזר; לחלונות בלי כותרת בכלל — שם קבוע לפי id
+    // (בדיקת axe מצאה "dialog בלי שם" בדבר התורה למועד, בפרטי השבת ובמוצאי שבת)
+    var DIALOG_NAMES = {
+      "moad-torah-modal": "דבר תורה למועד",
+      "shabbat-info-modal": "פרטי השבת והחג",
+      "motzei-shabbat-modal": "סדר מוצאי שבת וחג",
+    };
+    function nameDialog(target, overlay, tries) {
+      if (target.hasAttribute("aria-label") || target.hasAttribute("aria-labelledby")) return;
+      var h = target.querySelector("h1, h2, h3, h4") ||
+        target.querySelector("[class*='title'], [id*='title']");
+      var txt = h && (h.textContent || "").replace(/\s+/g, " ").trim();
+      if (txt) { target.setAttribute("aria-label", txt.slice(0, 120)); return; }
+      if (tries < 3) { setTimeout(function () { nameDialog(target, overlay, tries + 1); }, 250); return; }
+      target.setAttribute("aria-label", DIALOG_NAMES[overlay.id] || "חלון");
+    }
     function decorate(el) {
       try {
         if (!el || el.nodeType !== 1 || el.__luxA11yDone) return;
@@ -7995,11 +8012,7 @@
         el.__luxA11yDone = true;
         // מודאל סטטי שכבר מסומן role="dialog" (למשל #sefaria-modal) — משלימים רק שם נגיש
         if (el.getAttribute("role") === "dialog") {
-          if (!el.hasAttribute("aria-label") && !el.hasAttribute("aria-labelledby")) {
-            var h0 = el.querySelector("h1, h2, h3, h4");
-            var t0 = h0 && (h0.textContent || "").replace(/\s+/g, " ").trim();
-            if (t0) el.setAttribute("aria-label", t0.slice(0, 120));
-          }
+          nameDialog(el, el, 0);
           return;
         }
         // היעד: הכרטיס הפנימי אם יש (השכבה החיצונית היא רק רקע), אחרת השכבה עצמה
@@ -8007,11 +8020,7 @@
         if (card.getAttribute("role") && card.getAttribute("role") !== "dialog") return;
         if (!card.getAttribute("role")) card.setAttribute("role", "dialog");
         if (!card.hasAttribute("aria-modal")) card.setAttribute("aria-modal", "true");
-        if (!card.hasAttribute("aria-label") && !card.hasAttribute("aria-labelledby")) {
-          var h = card.querySelector("h1, h2, h3, h4");
-          var txt = h && (h.textContent || "").replace(/\s+/g, " ").trim();
-          if (txt) card.setAttribute("aria-label", txt.slice(0, 120));
-        }
+        nameDialog(card, el, 0);
       } catch (e) {}
     }
     document.querySelectorAll("body > [id$='-modal'], body > .lux-sheet-overlay").forEach(decorate);

@@ -1078,7 +1078,7 @@ function _luxSkyEnsure() {
   if (document.getElementById("lux-sky-js")) return;
   const s = document.createElement("script");
   s.id = "lux-sky-js";
-  s.src = "sky.js?v=8";
+  s.src = "sky.js?v=9";
   s.async = true;
   document.body.appendChild(s);
 }
@@ -13478,7 +13478,7 @@ function buildBirkatHamazonPayload(context) {
     parts.push(hr);
     parts.push(
       p(
-        "בָּרוּךְ אַתָּה יְהֹוָה, אֱלֹהֵֽינוּ מֶֽלֶךְ הָעוֹלָם, הָאֵל הַזָּן אוֹתָֽנוּ וְאֶת־הָעוֹלָם כֻּלּוֹ בְּטוּבוֹ, בְּחֵן בְּחֶֽסֶד בְּרֶֽוַח וּבְרַחֲמִים רַבִּים, נֹתֵ֣ן לֶ֭חֶם לְכָל־בָּשָׂ֑ר כִּ֖י לְעוֹלָ֣ם חַסְדּֽוֹ. וּבְטוּבוֹ הַגָּדוֹל תָּמִיד לֹא חָֽסַר לָֽנוּ, וְאַל־יֶחְסַר לָֽנוּ מָזוֹן תָּמִיד לְעוֹלָם וָעֶד, כִּי הוּא אֵל זָן וּמְפַרְנֵס לַכֹּל וְשֻׁלְחָנוֹ עָרוּךְ לַכֹּל, וְהִתְקִין מִחְיָה וּמָזוֹן לְכָל־בְּרִיּוֹתָיו אֲשֶׁר בָּרָא בְּרַחֲמָיו וּבְרוֹב חֲסָדָיו. כָּאָמוּר, פּוֹתֵ֥חַ אֶת־יָדֶ֑ךָ וּמַשְׂבִּ֖יעַ לְכָל־חַ֣י רָצֽוֹן. בָּרוּךְ אַתָּה יְהֹוָה, הַזָּן אֶת־הַכֹּל:",
+        "בָּרוּךְ אַתָּה יְהֹוָה, אֱלֹהֵֽינוּ מֶֽלֶךְ הָעוֹלָם, הָאֵל הַזָּן אוֹתָֽנוּ וְאֶת־הָעוֹלָם כֻּלּוֹ בְּטוּבוֹ, בְּחֵן בְּחֶֽסֶד בְּרֶֽוַח וּבְרַחֲמִים רַבִּים, נֹתֵ֣ן לֶ֭חֶם לְכָל־בָּשָׂ֑ר כִּ֖י לְעוֹלָ֣ם חַסְדּֽוֹ. וּבְטוּבוֹ הַגָּדוֹל תָּמִיד לֹא חָֽסַר לָֽנוּ, וְאַל־יֶחְסַר לָֽנוּ מָזוֹן תָּמִיד לְעוֹלָם וָעֶד, כִּי הוּא אֵל זָן וּמְפַרְנֵס לַכֹּל וְשֻׁלְחָנוֹ עָרוּךְ לַכֹּל, וְהִתְקִין מִחְיָה וּמָזוֹן לְכָל־בְּרִיּוֹתָיו אֲשֶׁר בָּרָא בְּרַחֲמָיו וּבְרוֹב חֲסָדָיו. כָּאָמוּר, פּוֹתֵ֥חַ אֶת־יָדֶ֑ךָ <small>(יכוון ר״ת שם פא״י שהוא בגימט׳ יאהדונה״י, וכן סא״ל, וס״ת חת״ך)</small> וּמַשְׂבִּ֖יעַ <small>גימט׳ חת״ך</small> לְכָל־חַ֣י רָצֽוֹן <small>יאהדונה״י (יסוד)</small>. בָּרוּךְ אַתָּה יְהֹוָה, הַזָּן אֶת־הַכֹּל:",
       ),
     );
 
@@ -13767,7 +13767,7 @@ function buildBirkatHamazonPayload(context) {
     parts.push(hr);
     parts.push(
       p(
-        "בָּרוּךְ אַתָּה יְהֹוָה אֱלֹהֵֽינוּ מֶֽלֶךְ הָעוֹלָם הַזָּן אֶת־הָעוֹלָם כֻּלּוֹ בְּטוּבוֹ בְּחֵן בְּחֶֽסֶד וּבְרַחֲמִים הוּא נוֹתֵן לֶֽחֶם לְכָל־בָּשָׂר כִּי לְעוֹלָם חַסְדּוֹ וּבְטוּבוֹ הַגָּדוֹל תָּמִיד לֺא־חָסַר לָֽנוּ וְאַל־יֶחְסַר לָֽנוּ מָזוֹן לְעוֹלָם וָעֶד בַּעֲבוּר שְׁמוֹ הַגָּדוֹל כִּי הוּא אֵל זָן וּמְפַרְנֵס לַכֹּל וּמֵטִיב לַכֹּל וּמֵכִין מָזוֹן לְכָל־בְּרִיּוֹתָיו אֲשֶׁר בָּרָא. כָּאָמוּר, פּוֹתֵֽחַ אֶת־יָדֶֽךָ וּמַשְׂבִּֽיעַ לְכָל־חַי רָצוֹן: בָּרוּךְ אַתָּה יְהֹוָה הַזָּן אֶת־הַכֹּל:",
+        "בָּרוּךְ אַתָּה יְהֹוָה אֱלֹהֵֽינוּ מֶֽלֶךְ הָעוֹלָם הַזָּן אֶת־הָעוֹלָם כֻּלּוֹ בְּטוּבוֹ בְּחֵן בְּחֶֽסֶד וּבְרַחֲמִים הוּא נוֹתֵן לֶֽחֶם לְכָל־בָּשָׂר כִּי לְעוֹלָם חַסְדּוֹ וּבְטוּבוֹ הַגָּדוֹל תָּמִיד לֺא־חָסַר לָֽנוּ וְאַל־יֶחְסַר לָֽנוּ מָזוֹן לְעוֹלָם וָעֶד בַּעֲבוּר שְׁמוֹ הַגָּדוֹל כִּי הוּא אֵל זָן וּמְפַרְנֵס לַכֹּל וּמֵטִיב לַכֹּל וּמֵכִין מָזוֹן לְכָל־בְּרִיּוֹתָיו אֲשֶׁר בָּרָא. כָּאָמוּר, פּוֹתֵֽחַ אֶת־יָדֶֽךָ <small>(יכוון ר״ת שם פא״י שהוא בגימט׳ יאהדונה״י, וכן סא״ל, וס״ת חת״ך)</small> וּמַשְׂבִּֽיעַ <small>גימט׳ חת״ך</small> לְכָל־חַי רָצוֹן <small>יאהדונה״י (יסוד)</small>: בָּרוּךְ אַתָּה יְהֹוָה הַזָּן אֶת־הַכֹּל:",
       ),
     );
 
@@ -31538,12 +31538,17 @@ var _DERECH_HASHEM_SECS = [
 
 function openSefarimNosafimPage(_pageMode) {
 
+  // "__index" (10/2026) — בלי חלון ובלי שום שינוי מצב: רק רשימת הספרים, החלקים והקבוצות לחיפוש
+  // בדף הראשי (lux.js smartSearch). חוזר מיד אחרי בניית BOOKS (ראו _snSearchIndex)
+  var _snIndexOnly = _pageMode === "__index";
   // ── Page mode (sefarim | tefilot) — קובע איזה תת-מאגר וכותרת מוצגים ──
   _pageMode = (_pageMode === "tefilot") ? "tefilot" : "sefarim";
-  // חשוף גלובלית — הנעץ הצף (מיקום אחרון) מוסתר בעמוד התפילות
-  window._snPageMode = _pageMode;
-  // פתיחה רגילה — לא במצב "ישיר מהדף הראשי" (_snOpenBookDirect מדליק אותו אחרי הקריאה הזו)
-  window.__snDirectBook = null;
+  if (!_snIndexOnly) {
+    // חשוף גלובלית — הנעץ הצף (מיקום אחרון) מוסתר בעמוד התפילות
+    window._snPageMode = _pageMode;
+    // פתיחה רגילה — לא במצב "ישיר מהדף הראשי" (_snOpenBookDirect מדליק אותו אחרי הקריאה הזו)
+    window.__snDirectBook = null;
+  }
 
   // ── Hebrew numeral helper ──
   function toHN(n) {
@@ -34373,6 +34378,55 @@ function openSefarimNosafimPage(_pageMode) {
     if (yd && yd.sections[168]) yd.sections[168] = { he: "סימן קסט (עם סימן קסח)", ref: "Shulchan_Arukh,_Yoreh_Deah.168" };
   })();
 
+  // ── אינדקס לחיפוש בדף הראשי (10/2026): ספר, תת-ספר (חומש/מסכת/חלק), קבוצת סעיפים ("הלכות
+  // שבת") וסעיף בעל שם ("פרשת נח", "שער הייחוד"). סעיף ששמו מילה + מספר ("סימן קסט", "פרק א",
+  // "דף ב ע״א") לא נכנס — אלפי תוצאות בלי ערך. b/sb/s = מזהה ספר, מזהה תת-ספר, אינדקס סעיף
+  function _snSearchIndex() {
+    var NUM = /^(?:ת*[קרש]?[צפעסנמלכי]?[א-ט]?|ת*[קרש]?ט[וז])$/;
+    var UNIT = /^(?:סימן|סימנים|סעיף|פרק|פרקים|דף|עמוד|הלכה|אות|מאמר|כלל|מצוה|מצווה|פסקה|חלק|משנה|מזמור|יום|שער|תיקון|אגרת|דרוש|דרשה|תורה)$/;
+    var genPart = function(p) {
+      var t = String(p || "").replace(/[״׳"'().,:]/g, " ").trim();
+      if (!t || /\d/.test(t)) return true;
+      var w = t.split(/\s+/);
+      if (w.length === 1) return NUM.test(w[0]);
+      // "פרשת נח" נשאר (נח הוא גם מספר) — רק מילת יחידה + מספרים ("סימן קסט", "דף ב עא")
+      return UNIT.test(w[0]) && w.slice(1).every(function(x){ return NUM.test(x) || x === "עא" || x === "עב"; });
+    };
+    // "פרק טו — ישעיהו", "פרק ב · הלכה ח" — כלליים; "מצוה קכו — שלא לתת לבונה…", "סימן קסח — צורות
+    // האסורות" — יש בהם כותרת, נשארים (כל חלק שאינו מספור ואינו שם הספר/החלק)
+    var generic = function(he, names) {
+      var parts = String(he || "").split(/\s+[—–·-]\s+|,\s+/);
+      return parts.every(function(p){ return genPart(p) || names.indexOf(p.trim()) !== -1; });
+    };
+    var out = [];
+    BOOKS.forEach(function(b) {
+      var cat = CATS.find(function(c){ return c.id === b.cat; });
+      var mode = cat ? cat.mode : "sefarim";
+      var base = { mode: mode, b: b.id, direct: !!b.hiddenInGrid };
+      var add = function(t, sub, k, sb, s) {
+        var e = { t: t, sub: sub, k: k, mode: base.mode, b: base.b, direct: base.direct };
+        if (sb) e.sb = sb;
+        if (typeof s === "number") e.s = s;
+        out.push(e);
+      };
+      add(b.he, "", 0);
+      var secsOf = function(secs, ctx, sb, names) {
+        var seenG = {};
+        (secs || []).forEach(function(sec, i) {
+          if (sec.group && !seenG[sec.group]) { seenG[sec.group] = 1; add(sec.group, ctx, 2, sb, i); }
+          if (!generic(sec.he, sec.group ? names.concat([sec.group]) : names)) add(sec.he, ctx, 3, sb, i);
+        });
+      };
+      (b.subBooks || []).forEach(function(sb) {
+        add(sb.he, b.he, 1, sb.id);
+        secsOf(sb.sections, b.he + " · " + sb.he, sb.id, [b.he, sb.he]);
+      });
+      secsOf(b.sections, b.he, null, [b.he]);
+    });
+    return out;
+  }
+  if (_snIndexOnly) return _snSearchIndex();
+
   // ── מיגרציית סימניות חד-פעמית (09/2026): ספרים שהושלמו מול האינדקס של ספריא ──
   // מפתח סימנייה = "תת-ספר|סעיף[|פסקה][|__LP__]", ומספר הסעיף הוא מקום ברשימה. כשנוספו סעיפים
   // באמצע (הקדמות שהיו חסרות, ליקוטי הלכות וקדושת לוי המלאים, תיקוני הזוהר לפי עמודים) —
@@ -37014,6 +37068,19 @@ function _snOpenBookDirect(bookId) {
   window.__snDirectBook = bookId;
   if (typeof window._snOpenBook === "function") window._snOpenBook(bookId);
 }
+// פתיחה מתוצאת החיפוש בדף הראשי (lux.js smartSearch, 10/2026) — רשומה מ-openSefarimNosafimPage("__index"):
+// ספר, ואם יש — תת-ספר וסעיף (קבוצה כמו "הלכות שבת" נפתחת בסעיף הראשון שלה)
+function _snOpenFromSearch(e) {
+  if (!e || !e.b) return;
+  if (e.direct) _snOpenBookDirect(e.b);
+  else {
+    if (e.mode === "tefilot") openTefilotNosafotPage(); else openSefarimNosafimPage();
+    if (typeof window._snOpenBook === "function") window._snOpenBook(e.b);
+  }
+  if (e.sb && typeof window._snOpenSubBook === "function") window._snOpenSubBook(e.sb);
+  if (typeof e.s === "number" && typeof window._snOpenSection === "function") window._snOpenSection(e.s);
+}
+window._snOpenFromSearch = _snOpenFromSearch;
 function openUshpizinPage() { _snOpenBookDirect("seder-ushpizin"); }
 function openChanukahPage() { _snOpenBookDirect("seder-chanukah"); }
 window.openUshpizinPage = openUshpizinPage;

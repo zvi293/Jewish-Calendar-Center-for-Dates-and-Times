@@ -2431,6 +2431,19 @@
       minchaGedola: "מנחה גדולה", minchaKetana: "מנחה קטנה", plagHaMincha: "פלג המנחה",
       sunset: "שקיעה", tzeit7083deg: "צאת הכוכבים", chatzotNight: "חצות הלילה"
     };
+    // ניקוד, טעמים, גרשיים ומקף — "תנ״ך"/"תנ"ך", "מִשְׁנָה"/"משנה" נמצאים באותו חיפוש
+    function norm(s) {
+      return String(s || "").replace(/[֑-ׇ]/g, "").replace(/[״׳"'`]/g, "").replace(/[־\-]/g, " ").replace(/\s+/g, " ").trim();
+    }
+    // האינדקס נבנה פעם אחת, בחיפוש הראשון — openSefarimNosafimPage("__index") בונה את רשימת הספרים בלי חלון
+    var _bookIdx = null;
+    function bookIdx() {
+      if (_bookIdx) return _bookIdx;
+      try { _bookIdx = (typeof window.openSefarimNosafimPage === "function" && window.openSefarimNosafimPage("__index")) || []; }
+      catch (e) { _bookIdx = []; }
+      if (!Array.isArray(_bookIdx)) _bookIdx = [];
+      return _bookIdx;
+    }
     var panel = document.createElement("div");
     panel.id = "lux-search-panel";
     var wrapEl = input.closest(".relative") || input.parentElement;
@@ -2443,6 +2456,30 @@
       CATALOG.forEach(function (c) {
         if (c.t.indexOf(q) !== -1) out.push({ i: c.i, t: c.t, sub: "", run: c.run });
       });
+      // ספרים, חלקים (חומש/מסכת/חלק) וסעיפים בעלי שם מ"ספרים נוספים" ו"תפילות נוספות" (10/2026)
+      var nq = norm(q);
+      if (nq.length >= 2) {
+        var seen = {};
+        out.forEach(function (o) { seen[norm(o.t)] = 1; });
+        var hits = [];
+        bookIdx().forEach(function (e) {
+          var nt = e.nt || (e.nt = norm(e.t));
+          var at = nt.indexOf(nq);
+          if (at === -1) return;
+          hits.push({ e: e, sc: (at === 0 ? 0 : 10) + e.k });
+        });
+        hits.sort(function (a, b) { return a.sc - b.sc; });
+        hits.forEach(function (h) {
+          var e = h.e, key = norm(e.t) + "|" + e.sub;
+          if (seen[key] || (e.k === 0 && seen[norm(e.t)])) return;
+          seen[key] = 1;
+          out.push({
+            i: e.k === 0 ? (e.mode === "tefilot" ? "🙏" : "📚") : (e.k === 1 ? "📖" : "📑"),
+            t: e.t, sub: e.k === 0 ? (e.mode === "tefilot" ? "תפילות נוספות" : "ספרים נוספים") : e.sub,
+            run: function () { if (typeof window._snOpenFromSearch === "function") window._snOpenFromSearch(e); }
+          });
+        });
+      }
       // זמנים
       var z = window._lastZData;
       if (z && z.times) {
@@ -2457,7 +2494,7 @@
       }
       if (!out.length) { panel.innerHTML = ""; panel.style.display = "none"; return; }
       panel.style.display = "block";
-      panel.innerHTML = out.slice(0, 6).map(function (o, i) {
+      panel.innerHTML = out.slice(0, 8).map(function (o, i) {
         return '<button type="button" class="lux-sp-item" data-i="' + i + '">' +
           '<span class="lux-sp-ico">' + o.i + "</span>" +
           '<span class="lux-sp-txt">' + esc(o.t) + (o.sub ? ' <small>' + esc(o.sub) + "</small>" : "") + "</span>" +

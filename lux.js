@@ -5948,6 +5948,62 @@
           { he: "כף החיים", ordered: true, color: "#0e7490", ref: kafOC }
         ] }
     ];
+    // ── הספרים שנוספו לספרייה ב-10/2026 — היחידות נבנות מאותם נתונים כמו תוכן העניינים בספרייה
+    //    (_KSA_NAMES, _MT_DATA, _CHINUCH_DATA, _EY_DATA, _TANCHUMA_PARASHOT, _DERECH_HASHEM_SECS —
+    //    גלובליים ב-script.js, שנטען לפני lux.js). המזהים נשמרים ב-lux_study_plans_v1 — לא לשנות ──
+    (function () {
+      function listBook(id, he, icon, min, unit, units, items) {
+        return { id: id, he: he, icon: icon, min: min, unit: unit, units: units, count: items.length,
+          ref: function (i) { return items[i][1]; }, label: function (i) { return items[i][0]; } };
+      }
+      function chaps(group, refBase, n, out) {
+        for (var i = 1; i <= n; i++) out.push([group + ", פרק " + heNum(i), refBase + " " + i]);
+        return out;
+      }
+      var add = [];
+      try {
+        add.push(listBook("ksa", "קיצור שולחן ערוך", "📘", 6, "סימן", "סימנים", _KSA_NAMES.map(function (nm, i) {
+          return ["סימן " + heNum(i + 1) + " — " + nm, "Kitzur Shulchan Arukh " + (i + 1)];
+        })));
+        var mt = [];
+        _MT_DATA.forEach(function (g) {
+          g[1].forEach(function (h) {
+            if (!h[2]) mt.push([h[0], "Mishneh Torah, " + h[1]]);
+            else chaps(h[0], "Mishneh Torah, " + h[1], h[2], mt);
+          });
+        });
+        add.push(listBook("mishneh-torah", "משנה תורה לרמב\"ם", "📕", 8, "פרק", "פרקים", mt));
+        var ch = [["הקדמת המחבר", "Sefer HaChinukh, Author's Introduction"], ["איגרת המחבר", "Sefer HaChinukh, Opening Letter by the Author"]], n = 0;
+        _CHINUCH_DATA.forEach(function (p) { p[1].forEach(function (nm) { n++; ch.push(["מצוה " + heNum(n) + " — " + nm, "Sefer HaChinukh " + n]); }); });
+        add.push(listBook("chinuch", "ספר החינוך", "📋", 4, "מצוה", "מצוות", ch));
+        // שערי תשובה — לפי אותיות (52/34/231/22, api/shape) ולא לפי שער: השער השלישי לבדו ארוך מאוד
+        var st = [];
+        [52, 34, 231, 22].forEach(function (cnt, g) {
+          for (var i = 1; i <= cnt; i++) st.push(["השער ה" + ["ראשון", "שני", "שלישי", "רביעי"][g] + " — אות " + heNum(i), "Shaarei Teshuvah " + (g + 1) + ":" + i]);
+        });
+        add.push(listBook("shaarei-teshuva", "שערי תשובה", "🕯️", 2, "אות", "אותיות", st));
+        add.push(listBook("derech-hashem", "דרך ה׳", "🧭", 10, "פרק", "פרקים", _DERECH_HASHEM_SECS.map(function (s) { return [s.he, s.ref]; })));
+        var nh = [["הקדמת בן המחבר", "Nefesh HaChayim, An Introduction by the Author's Son"]];
+        chaps("שער א", "Nefesh HaChayim, Gate I", 22, nh);
+        nh.push(["הגה\"ה מהרי\"ץ", "Nefesh HaChayim, Reb Itzele's Long Annotation"]);
+        chaps("שער ב", "Nefesh HaChayim, Gate II", 18, nh);
+        chaps("שער ג", "Nefesh HaChayim, Gate III", 14, nh);
+        chaps("פרקים (בין שער ג לשער ד)", "Nefesh HaChayim, Chapters", 8, nh);
+        chaps("שער ד", "Nefesh HaChayim, Gate IV", 34, nh);
+        add.push(listBook("nefesh-hachaim", "נפש החיים", "🌬️", 6, "פרק", "פרקים", nh));
+        add.push(listBook("shevet-musar", "שבט מוסר", "🪵", 12, "פרק", "פרקים",
+          chaps("שבט מוסר", "Shevet Musar", 52, [["הקדמת המחבר", "Shevet Musar, Author's Preface"]]).map(function (x, i) { return i ? ["פרק " + heNum(i), x[1]] : x; })));
+        add.push(listBook("kav-hayashar", "קב הישר", "⚖️", 7, "פרק", "פרקים",
+          chaps("קב הישר", "Kav HaYashar", 102, [["הקדמת המחבר", "Kav HaYashar, Author's Preface"]]).map(function (x, i) { return i ? ["פרק " + heNum(i), x[1]] : x; })));
+        var ey = [];
+        _EY_DATA.forEach(function (t) { t[2].forEach(function (c) { ey.push(["מסכת " + t[1] + " — " + c[1], "Ein Yaakov, " + t[0] + " " + c[0]]); }); });
+        add.push(listBook("ein-yaakov", "עין יעקב", "💧", 15, "פרק", "פרקים", ey));
+        add.push(listBook("tanchuma", "מדרש תנחומא", "🌿", 20, "פרשה", "פרשות", _TANCHUMA_PARASHOT.map(function (p) {
+          return ["פרשת " + p[1], "Midrash Tanchuma, " + p[0]];
+        })));
+      } catch (eNew) { add = []; }
+      add.forEach(function (b) { CATALOG.push(b); });
+    })();
     // ── תנ"ך ותלמוד בבלי — נבחרים דרך חלונית-משנה באשף (hidden: לא ברשת הספרים הראשית).
     //    המזהים נשמרים ב-lux_study_plans_v1 — לא לשנות מזהה קיים לעולם ──
     (function () {

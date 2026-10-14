@@ -203,6 +203,13 @@
     Cache-Control = "public, max-age=86400, stale-while-revalidate=604800"
     X-Robots-Tag = "noindex"
 
+# נתוני הספרייה (מיפוי נושאי הכלים לעין יעקב, דרכי הלכה לקיצור שו"ע) — מתבקשים עם ?v=N
+[[headers]]
+  for = "/sefarim-data/*"
+  [headers.values]
+    Cache-Control = "public, max-age=86400, stale-while-revalidate=604800"
+    X-Robots-Tag = "noindex"
+
 # מפות מקור (נוצרות ב-minify.mjs) + המקור הקריא (*.src.js) שהן מצביעות אליו —
 # נטענים רק כש-DevTools פתוח; לא לאינדוקס
 [[headers]]

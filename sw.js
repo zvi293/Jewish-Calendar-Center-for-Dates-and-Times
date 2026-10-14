@@ -1,4 +1,4 @@
-const STATIC_CACHE = "moadim-static-v169";
+const STATIC_CACHE = "moadim-static-v170";
 // מטמון ריצה: תשובות API וקבצים חיצוניים (ספריא, hebcal, פונטים, ספריות CDN)
 // נשמרים אחרי הצפייה הראשונה — כך האתר, התפילות והספרים עובדים גם בלי אינטרנט.
 const RUNTIME_CACHE = "moadim-runtime-v1";
@@ -15,8 +15,8 @@ const STATIC_ASSETS = [
   // חשוב: ה-?v= כאן חייב להיות זהה לזה שב-index.html — כך ההתקנה נענית
   // מ-HTTP cache (בלי הורדה כפולה של ~3MB) והבקשות מהדף פוגעות במטמון
   // בדיוק; סטייה עתידית מכוסה ע"י ה-fallback עם ignoreSearch.
-  "/script.js?v=113",
-  "/lux.js?v=89",
+  "/script.js?v=114",
+  "/lux.js?v=90",
   "/sky.js?v=8",
   "/style.css?v=114",
   "/tailwind.css?v=2",
@@ -363,7 +363,8 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  if (url.pathname.startsWith("/places/") && url.search) {
+  // נתוני הספרייה (sefarim-data/*.json?v=N — מיפוי נושאי הכלים לעין יעקב, דרכי הלכה) — אותו דפוס
+  if ((url.pathname.startsWith("/places/") || url.pathname.startsWith("/sefarim-data/")) && url.search) {
     event.respondWith(placesResponse(request, url));
     return;
   }

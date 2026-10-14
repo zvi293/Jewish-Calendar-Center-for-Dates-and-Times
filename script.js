@@ -31582,12 +31582,12 @@ function openSefarimNosafimPage(_pageMode) {
     if (!_bk || _bk.solo) return "";
     var key = (_sbk ? _sbk.id : "") + "|" + secIdx + "|" + paraIdx;
     var active = _bmHas(_bk.id, key);
-    // תנ"ך (נביאים וכתובים — כל פסקה היא פסוק): אותו אייקון קטן כמו מעל פסוקי החומש (_snVerseBMHtml)
+    // תנ"ך (נביאים וכתובים — כל פסקה היא פסוק): אותו כפתור "סמן/מסומן" כמו מעל פסוקי החומש (_snVerseBMHtml)
     if (_bk.id === "tanakh") {
       var lbl = "פסוק " + toHN(paraIdx + 1);
       return "<div class=\"sn-vbm-row\"><button type=\"button\" class=\"sn-vbm" + (active ? " on" : "") + "\" id=\"sn-parabm-" + secIdx + "-" + paraIdx + "\"" +
         " onclick=\"window._snToggleBMByPara(" + secIdx + "," + paraIdx + ")\" aria-pressed=\"" + active + "\"" +
-        " aria-label=\"סימנייה — " + lbl + "\" title=\"סימנייה — " + lbl + "\">🔖</button></div>";
+        " aria-label=\"סימנייה — " + lbl + "\" title=\"סימנייה — " + lbl + "\">" + (active ? "🔖 מסומן" : "🔖 סמן") + "</button></div>";
     }
     return '<div style="text-align:center;margin:0 0 0.4rem;">' +
       '<button id="sn-parabm-' + secIdx + '-' + paraIdx + '" onclick="window._snToggleBMByPara(' + secIdx + ',' + paraIdx + ')" ' +
@@ -31598,7 +31598,7 @@ function openSefarimNosafimPage(_pageMode) {
       (active ? '🔖 מסומן' : '🔖 סמן') + '</button></div>';
   }
 
-  // סימנייה קטנה מעל כל פסוק (10/2026) — בטווח רב-פרקי (פרשות חומש) ובספר מפרש על פרשה (cmBook).
+  // סימנייה מעל כל פסוק — כפתור "🔖 סמן" / "🔖 מסומן" כמו בכל האתר (10/2026; בקשת המשתמש: תמיד עם כיתוב) — בטווח רב-פרקי (פרשות חומש) ובספר מפרש על פרשה (cmBook).
   // מפתח: "תת-ספר|סעיף|פרק(אינדקס)|פסוק(אינדקס)"; סימניות פרק ישנות ("תת-ספר|סעיף|פרק") עדיין נפתחות
   function _snVerseBMHtml(secIdx, ci, vi, chapNum, vNum) {
     if (!_bk || _bk.solo || typeof secIdx !== "number") return "";
@@ -31606,7 +31606,7 @@ function openSefarimNosafimPage(_pageMode) {
     var lbl = "פרק " + toHN(chapNum) + " פסוק " + toHN(vNum);
     return "<button type=\"button\" class=\"sn-vbm" + (on ? " on" : "") + "\" id=\"sn-vbm-" + secIdx + "-" + ci + "-" + vi + "\"" +
       " onclick=\"window._snToggleBMByVerse(" + secIdx + "," + ci + "," + vi + "," + chapNum + "," + vNum + ")\"" +
-      " aria-pressed=\"" + on + "\" aria-label=\"סימנייה — " + lbl + "\" title=\"סימנייה — " + lbl + "\">🔖</button>";
+      " aria-pressed=\"" + on + "\" aria-label=\"סימנייה — " + lbl + "\" title=\"סימנייה — " + lbl + "\">" + (on ? "🔖 מסומן" : "🔖 סמן") + "</button>";
   }
 
   function renderParagraphs(he, color, secIdx, inlineNotes, secRef, pasukHe) {
@@ -35969,6 +35969,7 @@ function openSefarimNosafimPage(_pageMode) {
     var btn = document.getElementById("sn-parabm-" + secIdx + "-" + paraIdx);
     if (btn && btn.classList.contains("sn-vbm")) {
       btn.classList.toggle("on", wasAdded); btn.setAttribute("aria-pressed", String(wasAdded));
+      btn.textContent = wasAdded ? "🔖 מסומן" : "🔖 סמן";
     } else if (btn) {
       var _dk = document.documentElement.classList.contains("dark");
       btn.style.border = wasAdded ? "1.5px solid " + (_dk ? "#b45309" : "#f59e0b") : "1.5px solid " + (_dk ? "#475569" : "#d1d5db");
@@ -35995,7 +35996,7 @@ function openSefarimNosafimPage(_pageMode) {
     if (_bmHas(_bk.id, key)) { _bmRemove(_bk.id, key); wasAdded = false; }
     else { _bmAdd(_bk.id, key, label, _sbk ? _sbk.he : null); wasAdded = true; }
     var btn = document.getElementById("sn-vbm-" + secIdx + "-" + ci + "-" + vi);
-    if (btn) { btn.classList.toggle("on", wasAdded); btn.setAttribute("aria-pressed", String(wasAdded)); }
+    if (btn) { btn.classList.toggle("on", wasAdded); btn.setAttribute("aria-pressed", String(wasAdded)); btn.textContent = wasAdded ? "🔖 מסומן" : "🔖 סמן"; }
     if (typeof buildBMPanel === "function") buildBMPanel();
     if (typeof buildBookBMPanel === "function") { try { buildBookBMPanel(); } catch(e) {} }
     if (typeof window.showToast === "function") {

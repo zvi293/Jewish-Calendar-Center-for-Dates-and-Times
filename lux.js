@@ -7217,6 +7217,18 @@
     // אמיתי של הפופאפ (חיפוש, סימניות וכו') — מפנים לו מקום: מוסיפים ריפוד
     // שמאלי לשורת-הכותרת שמכילה את הכפתור החופף, כך שכל כפתורי השורה זזים
     // מעט ימינה יחד (פריסת flex מסדרת אותם מחדש ואיש אינו נדרס).
+    // כפתור בתוך תוכן שכבר נגלל (סימניית פסוק/פסקה, כפתור פירוש) רק עובר מתחת ל-X בזמן הגלילה.
+    // עד 10/2026 גם הוא "קיבל מקום": הפסקה כולה קיבלה padding-left קבוע והטקסט נדחק ימינה עד
+    // היציאה מהספר (נמצא בטלפון אחרי גלילה בתנ"ך). שורת כותרת שנגללת עם התוכן — רק כשהמיכל בראש
+    function inScrolledContent(el, modal) {
+      for (var n = el.parentElement; n && n !== modal && n !== document.body; n = n.parentElement) {
+        if (n.scrollTop > 1 && n.scrollHeight > n.clientHeight + 1) {
+          var oy = getComputedStyle(n).overflowY;
+          if (oy === "auto" || oy === "scroll") return true;
+        }
+      }
+      return false;
+    }
     function ensureRoomForX(modal, btn) {
       if (!btn || !btn.isConnected || !modal || !modal.isConnected) return;
       var xr = btn.getBoundingClientRect();
@@ -7229,6 +7241,7 @@
           var r = el.getBoundingClientRect();
           // רק רצועת הראש רלוונטית — אלמנטים שנגללים למטה אינם מוסתרים דרך קבע
           if (r.top > innerHeight * 0.4) return;
+          if (inScrolledContent(el, modal)) return;
           var overlap = !(r.right < xr.left - 4 || r.left > xr.right + 4 ||
                           r.bottom < xr.top - 4 || r.top > xr.bottom + 4);
           if (!overlap) return;

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="watch_face_name">הלוח היהודי</string>
+    <string name="slot_date">תאריך עברי</string>
+    <string name="slot_next">הזמן הבא</string>
+    <string name="slot_right">ימין למטה</string>
+    <string name="slot_left">שמאל למטה</string>
+</resources>

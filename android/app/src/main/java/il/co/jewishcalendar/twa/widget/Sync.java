@@ -32,6 +32,8 @@ public final class Sync {
                 JSONObject j = new JSONObject(msg);
                 if (!"sync".equals(j.optString("t"))) return;
                 if (Prefs.saveSync(app, j)) Updater.updateAll(app);
+                // אפליקציית השעון (1.1.4+) — אותן הגדרות; ערכים שלא השתנו לא יוצרים שינוי ב-Data Layer
+                WearSync.push(app);
                 // עיר/דקות הדלקה/נוסח חדשים — גם היומן מתעדכן (רק אם משהו שמשפיע עליו השתנה)
                 CalSync.onSettingsChanged(app);
             } catch (Throwable t) {

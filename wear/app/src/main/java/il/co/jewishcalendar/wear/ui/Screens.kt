@@ -17,6 +17,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import il.co.jewishcalendar.wear.core.Engine
 import il.co.jewishcalendar.wear.core.Heb
+import il.co.jewishcalendar.wear.core.Levana
+import il.co.jewishcalendar.wear.data.BirkatLevana
 import il.co.jewishcalendar.wear.data.Brachot
 import il.co.jewishcalendar.wear.data.Cities
 import il.co.jewishcalendar.wear.data.MeeinShalosh
@@ -60,6 +62,7 @@ fun HomeScreen(go: (String) -> Unit) {
         if (omer > 0) item { NavRow("🌾", "ספירת העומר", Heb.num(omer), onClick = { go("omer") }) }
         item { ZRow("📖  דף יומי", e.dafMasechet() + " " + e.dafNum()) }
         item { ZRow("📜  תהילים", e.tehillimLabel()) }
+        item { NavRow("🌙", "ברכת הלבנה", levanaShort(e), onClick = { go("levana") }) }
         item { NavRow("🙏", "ברכות קצרות", onClick = { go("brachot") }) }
         item { NavRow("🧭", "כיוון התפילה", onClick = { go("compass") }) }
         item { NavRow("⚙", "הגדרות", onClick = { go("settings") }) }
@@ -198,12 +201,17 @@ fun SettingsScreen(go: (String) -> Unit) {
         }
         item {
             val cs = Settings.candleSetting(c)
-            NavRow("🕯", "הדלקת נרות", if (cs == 0) "לפי העיר (" + Settings.loc(c).candle + ")" else "$cs דק׳", onClick = {
+            NavRow("🕯", "הדלקת נרות", if (cs == 0) (if (Settings.usesPhone(c)) "כמו בטלפון (" else "לפי העיר (") + Settings.loc(c).candle + ")" else "$cs דק׳", onClick = {
                 val o = Settings.CANDLE_OPTIONS
                 save(c) { putInt(Settings.K_CANDLE, o[(o.indexOf(cs) + 1) % o.size]) }; v++
             })
         }
         item { T("לחיצה על שורה מחליפה את הבחירה", size = 11.sp, color = JC.Muted, modifier = Modifier.padding(top = 4.dp)) }
+        item {
+            T(if (Settings.hasPhone(c)) "📱 מסונכרן עם אפליקציית הטלפון: שינוי בטלפון מתעדכן כאן"
+              else "📱 עם אפליקציית \"הלוח היהודי\" בטלפון — ההגדרות של האתר יגיעו לכאן לבד",
+              size = 11.sp, color = JC.Muted, modifier = Modifier.padding(top = 4.dp))
+        }
     }
 }
 
@@ -213,6 +221,15 @@ fun CitiesScreen(back: () -> Unit, askGps: () -> Unit) {
     val cur = Settings.cityId(c)
     ListScreen {
         item { Header("מיקום") }
+        if (Settings.hasPhone(c)) {
+            val on = cur == Settings.PHONE
+            item {
+                ZRow("📱  " + Settings.phoneName(c), if (on) "✓" else "", highlight = on, onClick = {
+                    save(c) { putInt(Settings.K_CITY, Settings.PHONE) }
+                    back()
+                })
+            }
+        }
         item { ZRow("📡  מיקום השעון", if (cur == 0) "✓" else "", highlight = cur == 0, onClick = askGps) }
         Cities.ALL.forEach { city ->
             item {
@@ -262,6 +279,52 @@ fun MeeinScreen(type: String) {
                         MeeinShalosh.Kind.ADD -> T(sg.text, size = 16.sp, color = JC.Add, lineHeight = 27.sp)
                         else -> T(sg.text, size = 16.sp, lineHeight = 27.sp)
                     }
+                }
+            }
+        }
+    }
+}
+
+// ═══════════════════════ ברכת הלבנה ═══════════════════════
+
+/** "יום ג׳ 20/10 · 19:42" — מתי מתחיל / עד מתי (כמו whenShort בווידג'ט של הטלפון). */
+private fun whenShort(e: Engine, ms: Long): String {
+    val cal = java.util.Calendar.getInstance(e.tz)
+    cal.timeInMillis = ms
+    return Heb.weekdayShort(cal.get(java.util.Calendar.DAY_OF_WEEK)) + " " +
+        Heb.gregShort(cal.get(java.util.Calendar.MONTH) + 1, cal.get(java.util.Calendar.DAY_OF_MONTH)) + " · " + Zm.time(e, ms)
+}
+
+/** שורת המצב בדף הבית: "אפשר לברך" / "בעוד 3 ימים". */
+fun levanaShort(e: Engine): String {
+    val st = Levana.status(e)
+    return if (st.state == "before") Zm.inText(st.target - e.now) else "אפשר לברך"
+}
+
+@Composable
+fun LevanaScreen() {
+    val c = LocalContext.current
+    val now = rememberNow()
+    val e = remember(now) { Settings.engine(c, now) }
+    val st = remember(now) { Levana.status(e) }
+    val w = st.w
+    val head = when (st.state) {
+        "before" -> "אפשר לברך בעוד"
+        "open" -> "✓ אפשר לברך עוד"
+        else -> "לדעת מרן אפשר עוד"
+    }
+    ListScreen {
+        item { Header("ברכת הלבנה" + (if (w.month.isNotEmpty()) " · " + w.month else ""), size = 18.sp) }
+        item { ZRow(head, "", highlight = st.state != "before", sub = Zm.inText(st.target - now).removePrefix("בעוד ")) }
+        item { ZRow("מתחילים", "", sub = whenShort(e, w.start)) }
+        item { ZRow("אפשר עד", "", sub = whenShort(e, w.end)) }
+        if (Settings.nusach(c) == "mizrahi") item { ZRow("לדעת מרן עד", "", sub = whenShort(e, w.end15)) }
+        item { T("מברכים כשהלבנה נראית, ובמנהג רוב הקהילות לא בשבת ויום טוב", size = 12.sp, color = JC.Muted, modifier = Modifier.padding(vertical = 4.dp)) }
+        BirkatLevana.TEXT.forEach { sg ->
+            item {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth().padding(horizontal = 2.dp, vertical = 4.dp)) {
+                    if (sg.kind == MeeinShalosh.Kind.NOTE) T(sg.text, size = 12.sp, color = JC.Muted, lineHeight = 18.sp)
+                    else T(sg.text, size = 16.sp, lineHeight = 27.sp)
                 }
             }
         }

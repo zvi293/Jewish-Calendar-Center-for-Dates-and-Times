@@ -1078,7 +1078,7 @@ function _luxSkyEnsure() {
   if (document.getElementById("lux-sky-js")) return;
   const s = document.createElement("script");
   s.id = "lux-sky-js";
-  s.src = "sky.js?v=9";
+  s.src = "sky.js?v=10";
   s.async = true;
   document.body.appendChild(s);
 }
@@ -4177,8 +4177,8 @@ function getLocationCoords() {
   }
   // Default: Petach Tikva (geonameid 293918) — elevation 54m per KosherJava reference
   return {
-    lat: 32.08707,
-    lon: 34.88747,
+    lat: 32.0888,
+    lon: 34.88666,
     tzid: "Asia/Jerusalem",
     elevation: 54,
   };
@@ -4363,6 +4363,20 @@ function computeKosherZmanim(dateObj) {
   }
 }
 
+// פתח תקווה (293918): עד 16/10/2026 הקואורדינטות הקבועות כאן היו 32.08707, 34.88747 — hebcal מחזיר היום
+// 32.0888, 34.88666 (גם בווידג'טים ובשעון). מי שנשמרו אצלו הישנות (ביקור ראשון בעיר ברירת המחדל) מתעדכן פעם אחת.
+(function () {
+  try {
+    var c = JSON.parse(localStorage.getItem("moadim_city_coords") || "null");
+    if (c && c.lat === 32.08707 && c.lon === 34.88747) {
+      c.lat = 32.0888;
+      c.lon = 34.88666;
+      localStorage.setItem("moadim_city_coords", JSON.stringify(c));
+      if (window._cityCoords && window._cityCoords.lat === 32.08707) window._cityCoords = c;
+    }
+  } catch (e) {}
+})();
+
 /* Resolve coordinates from GeoNameId if not yet cached */
 async function ensureCityCoords() {
   if (GEO_LOCATION === "GPS" && GPS_COORDS) return;
@@ -4375,7 +4389,7 @@ async function ensureCityCoords() {
   // עיר ברירת המחדל (פתח תקווה, 293918): הקואורדינטות ידועות מראש וזהות בדיוק
   // לתשובת hebcal (שם אין גובה → 0) — ביקור ראשון לא ממתין לרשת כדי לחשב זמנים
   if (String(GEO_LOCATION) === "293918") {
-    const cityCoords = { lat: 32.08707, lon: 34.88747, tzid: "Asia/Jerusalem", elevation: 0 };
+    const cityCoords = { lat: 32.0888, lon: 34.88666, tzid: "Asia/Jerusalem", elevation: 0 };
     try { localStorage.setItem("moadim_city_coords", JSON.stringify(cityCoords)); } catch (e) {}
     window._cityCoords = cityCoords;
     return;

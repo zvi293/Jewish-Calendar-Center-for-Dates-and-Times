@@ -1,0 +1,275 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  פני השעון "הלוח היהודי" (Watch Face Format 1 — Wear OS 4 ומעלה). אפליקציה נפרדת בלי קוד, כמו שגוגל
+  מחייבת; את הנתונים (תאריך עברי, הזמן הבא, שבת) היא מקבלת מהמשבצות של אפליקציית השעון
+  (il.co.jewishcalendar.twa — wear/app/.../complication). בלי האפליקציה — המשבצות חוזרות לנתוני המערכת.
+  עיצוב כמו בשאר הלוח: זהב על שחור (OLED), התאריך בפרנק רוהל, השעה ב-Assistant.
+-->
+<WatchFace width="450" height="450">
+  <Metadata key="CLOCK_TYPE" value="DIGITAL" />
+  <Metadata key="PREVIEW_TIME" value="10:08:32" />
+  <Scene backgroundColor="#ff000000">
+
+    <!-- טבעת זהב דקה ומגן דוד קטן למעלה -->
+    <PartDraw x="0" y="0" width="450" height="450">
+      <Variant mode="AMBIENT" target="alpha" value="90" />
+      <Ellipse x="7" y="7" width="436" height="436">
+        <Stroke color="#8CE2BE5A" thickness="2" />
+      </Ellipse>
+    </PartDraw>
+    <PartImage x="207" y="24" width="36" height="36">
+      <Variant mode="AMBIENT" target="alpha" value="120" />
+      <Image resource="jc_star" />
+    </PartImage>
+
+    <!-- 0: תאריך עברי (ושם היום / היום המיוחד) -->
+    <ComplicationSlot slotId="0" x="45" y="64" width="360" height="84" displayName="slot_date"
+        supportedTypes="LONG_TEXT SHORT_TEXT EMPTY" isCustomizable="TRUE">
+      <DefaultProviderPolicy defaultSystemProvider="DAY_AND_DATE" defaultSystemProviderType="SHORT_TEXT"
+          primaryProvider="il.co.jewishcalendar.twa/il.co.jewishcalendar.wear.complication.HebDateComplication"
+          primaryProviderType="LONG_TEXT" />
+      <BoundingBox x="0" y="0" width="360" height="84" />
+      <Complication type="LONG_TEXT">
+        <PartText x="0" y="0" width="360" height="30">
+          <Variant mode="AMBIENT" target="alpha" value="0" />
+          <Text align="CENTER" ellipsis="TRUE">
+            <Font family="assistant_semibold" size="20" color="#FFA7B3C4">
+              <Template><![CDATA[%s]]><Parameter expression="[COMPLICATION.TITLE]" /></Template>
+            </Font>
+          </Text>
+        </PartText>
+        <PartText x="0" y="30" width="360" height="52">
+          <Text align="CENTER" ellipsis="TRUE">
+            <Font family="frl_bold" size="36" color="#FFE2BE5A">
+              <Template><![CDATA[%s]]><Parameter expression="[COMPLICATION.TEXT]" /></Template>
+            </Font>
+          </Text>
+        </PartText>
+      </Complication>
+      <Complication type="SHORT_TEXT">
+        <PartText x="0" y="30" width="360" height="52">
+          <Text align="CENTER" ellipsis="TRUE">
+            <Font family="frl_bold" size="34" color="#FFE2BE5A">
+              <Template><![CDATA[%s %s]]><Parameter expression="[COMPLICATION.TEXT]" /><Parameter expression="[COMPLICATION.TITLE]" /></Template>
+            </Font>
+          </Text>
+        </PartText>
+      </Complication>
+    </ComplicationSlot>
+
+    <!-- השעה -->
+    <DigitalClock x="0" y="146" width="450" height="146">
+      <TimeText format="hh:mm" hourFormat="SYNC_TO_DEVICE" align="CENTER" x="0" y="0" width="450" height="146">
+        <Font family="assistant_bold" size="132" color="#FFF1F5F9" />
+      </TimeText>
+    </DigitalClock>
+
+    <!-- 1: הזמן הבא ("סוף תפילה 10:08") -->
+    <ComplicationSlot slotId="1" x="55" y="290" width="340" height="52" displayName="slot_next"
+        supportedTypes="SHORT_TEXT LONG_TEXT EMPTY" isCustomizable="TRUE">
+      <DefaultProviderPolicy defaultSystemProvider="SUNRISE_SUNSET" defaultSystemProviderType="SHORT_TEXT"
+          primaryProvider="il.co.jewishcalendar.twa/il.co.jewishcalendar.wear.complication.NextZmanComplication"
+          primaryProviderType="SHORT_TEXT" />
+      <BoundingBox x="0" y="0" width="340" height="52" />
+      <Complication type="SHORT_TEXT">
+        <PartDraw x="0" y="0" width="340" height="52">
+          <Variant mode="AMBIENT" target="alpha" value="0" />
+          <RoundRectangle x="0" y="0" width="340" height="52" cornerRadiusX="26" cornerRadiusY="26">
+            <Fill color="#FF3A2E10" />
+          </RoundRectangle>
+        </PartDraw>
+        <PartText x="10" y="0" width="320" height="52">
+          <Text align="CENTER" ellipsis="TRUE">
+            <Font family="assistant_bold" size="28" color="#FFFCE7A8">
+              <Template><![CDATA[%s %s]]><Parameter expression="[COMPLICATION.TITLE]" /><Parameter expression="[COMPLICATION.TEXT]" /></Template>
+            </Font>
+          </Text>
+        </PartText>
+      </Complication>
+      <Complication type="LONG_TEXT">
+        <PartDraw x="0" y="0" width="340" height="52">
+          <Variant mode="AMBIENT" target="alpha" value="0" />
+          <RoundRectangle x="0" y="0" width="340" height="52" cornerRadiusX="26" cornerRadiusY="26">
+            <Fill color="#FF3A2E10" />
+          </RoundRectangle>
+        </PartDraw>
+        <PartText x="12" y="0" width="316" height="52">
+          <Text align="CENTER" ellipsis="TRUE">
+            <Font family="assistant_bold" size="24" color="#FFFCE7A8">
+              <Template><![CDATA[%s]]><Parameter expression="[COMPLICATION.TEXT]" /></Template>
+            </Font>
+          </Text>
+        </PartText>
+      </Complication>
+    </ComplicationSlot>
+
+    <!-- 2: שבת (הדלקה / צאת) — ימין למטה -->
+    <ComplicationSlot slotId="2" x="229" y="350" width="122" height="66" displayName="slot_right"
+        supportedTypes="SHORT_TEXT EMPTY" isCustomizable="TRUE">
+      <DefaultProviderPolicy defaultSystemProvider="DATE" defaultSystemProviderType="SHORT_TEXT"
+          primaryProvider="il.co.jewishcalendar.twa/il.co.jewishcalendar.wear.complication.ShabbatComplication"
+          primaryProviderType="SHORT_TEXT" />
+      <BoundingBox x="0" y="0" width="122" height="66" />
+      <Complication type="SHORT_TEXT">
+        <PartDraw x="0" y="0" width="122" height="66">
+          <Variant mode="AMBIENT" target="alpha" value="0" />
+          <RoundRectangle x="0" y="0" width="122" height="66" cornerRadiusX="22" cornerRadiusY="22">
+            <Fill color="#FF1B2438" />
+          </RoundRectangle>
+        </PartDraw>
+        <Condition>
+          <Expressions>
+            <Expression name="hasTitle"><![CDATA[[COMPLICATION.TITLE] != null]]></Expression>
+            <Expression name="hasIcon"><![CDATA[[COMPLICATION.MONOCHROMATIC_IMAGE] != null]]></Expression>
+          </Expressions>
+          <Compare expression="hasTitle">
+            <PartText x="4" y="4" width="114" height="34">
+              <Text align="CENTER" ellipsis="TRUE">
+                <Font family="assistant_bold" size="27" color="#FFF1F5F9">
+                  <Template><![CDATA[%s]]><Parameter expression="[COMPLICATION.TEXT]" /></Template>
+                </Font>
+              </Text>
+            </PartText>
+            <PartText x="4" y="36" width="114" height="26">
+              <Text align="CENTER" ellipsis="TRUE">
+                <Font family="assistant_semibold" size="18" color="#FFE2BE5A">
+                  <Template><![CDATA[%s]]><Parameter expression="[COMPLICATION.TITLE]" /></Template>
+                </Font>
+              </Text>
+            </PartText>
+          </Compare>
+          <Compare expression="hasIcon">
+            <PartImage x="47" y="6" width="28" height="28" tintColor="#FFE2BE5A">
+              <Image resource="[COMPLICATION.MONOCHROMATIC_IMAGE]" />
+            </PartImage>
+            <PartText x="4" y="32" width="114" height="32">
+              <Text align="CENTER" ellipsis="TRUE">
+                <Font family="assistant_bold" size="24" color="#FFF1F5F9">
+                  <Template><![CDATA[%s]]><Parameter expression="[COMPLICATION.TEXT]" /></Template>
+                </Font>
+              </Text>
+            </PartText>
+          </Compare>
+          <Default>
+            <PartText x="4" y="14" width="114" height="38">
+              <Text align="CENTER" ellipsis="TRUE">
+                <Font family="assistant_bold" size="27" color="#FFF1F5F9">
+                  <Template><![CDATA[%s]]><Parameter expression="[COMPLICATION.TEXT]" /></Template>
+                </Font>
+              </Text>
+            </PartText>
+          </Default>
+        </Condition>
+      </Complication>
+    </ComplicationSlot>
+
+    <!-- 3: לבחירה (ברירת מחדל: סוללה; אפשר לבחור ספירת העומר) — שמאל למטה -->
+    <ComplicationSlot slotId="3" x="99" y="350" width="122" height="66" displayName="slot_left"
+        supportedTypes="SHORT_TEXT RANGED_VALUE EMPTY" isCustomizable="TRUE">
+      <DefaultProviderPolicy defaultSystemProvider="WATCH_BATTERY" defaultSystemProviderType="SHORT_TEXT" />
+      <BoundingBox x="0" y="0" width="122" height="66" />
+      <Complication type="SHORT_TEXT">
+        <PartDraw x="0" y="0" width="122" height="66">
+          <Variant mode="AMBIENT" target="alpha" value="0" />
+          <RoundRectangle x="0" y="0" width="122" height="66" cornerRadiusX="22" cornerRadiusY="22">
+            <Fill color="#FF1B2438" />
+          </RoundRectangle>
+        </PartDraw>
+        <Condition>
+          <Expressions>
+            <Expression name="hasTitle"><![CDATA[[COMPLICATION.TITLE] != null]]></Expression>
+            <Expression name="hasIcon"><![CDATA[[COMPLICATION.MONOCHROMATIC_IMAGE] != null]]></Expression>
+          </Expressions>
+          <Compare expression="hasTitle">
+            <PartText x="4" y="4" width="114" height="34">
+              <Text align="CENTER" ellipsis="TRUE">
+                <Font family="assistant_bold" size="27" color="#FFF1F5F9">
+                  <Template><![CDATA[%s]]><Parameter expression="[COMPLICATION.TEXT]" /></Template>
+                </Font>
+              </Text>
+            </PartText>
+            <PartText x="4" y="36" width="114" height="26">
+              <Text align="CENTER" ellipsis="TRUE">
+                <Font family="assistant_semibold" size="18" color="#FFE2BE5A">
+                  <Template><![CDATA[%s]]><Parameter expression="[COMPLICATION.TITLE]" /></Template>
+                </Font>
+              </Text>
+            </PartText>
+          </Compare>
+          <Compare expression="hasIcon">
+            <PartImage x="47" y="6" width="28" height="28" tintColor="#FFE2BE5A">
+              <Image resource="[COMPLICATION.MONOCHROMATIC_IMAGE]" />
+            </PartImage>
+            <PartText x="4" y="32" width="114" height="32">
+              <Text align="CENTER" ellipsis="TRUE">
+                <Font family="assistant_bold" size="24" color="#FFF1F5F9">
+                  <Template><![CDATA[%s]]><Parameter expression="[COMPLICATION.TEXT]" /></Template>
+                </Font>
+              </Text>
+            </PartText>
+          </Compare>
+          <Default>
+            <PartText x="4" y="14" width="114" height="38">
+              <Text align="CENTER" ellipsis="TRUE">
+                <Font family="assistant_bold" size="27" color="#FFF1F5F9">
+                  <Template><![CDATA[%s]]><Parameter expression="[COMPLICATION.TEXT]" /></Template>
+                </Font>
+              </Text>
+            </PartText>
+          </Default>
+        </Condition>
+      </Complication>
+      <Complication type="RANGED_VALUE">
+        <PartDraw x="0" y="0" width="122" height="66">
+          <Variant mode="AMBIENT" target="alpha" value="0" />
+          <RoundRectangle x="0" y="0" width="122" height="66" cornerRadiusX="22" cornerRadiusY="22">
+            <Fill color="#FF1B2438" />
+          </RoundRectangle>
+        </PartDraw>
+        <Condition>
+          <Expressions>
+            <Expression name="hasTitle"><![CDATA[[COMPLICATION.TITLE] != null]]></Expression>
+            <Expression name="hasIcon"><![CDATA[[COMPLICATION.MONOCHROMATIC_IMAGE] != null]]></Expression>
+          </Expressions>
+          <Compare expression="hasTitle">
+            <PartText x="4" y="4" width="114" height="34">
+              <Text align="CENTER" ellipsis="TRUE">
+                <Font family="assistant_bold" size="27" color="#FFF1F5F9">
+                  <Template><![CDATA[%s]]><Parameter expression="[COMPLICATION.TEXT]" /></Template>
+                </Font>
+              </Text>
+            </PartText>
+            <PartText x="4" y="36" width="114" height="26">
+              <Text align="CENTER" ellipsis="TRUE">
+                <Font family="assistant_semibold" size="18" color="#FFE2BE5A">
+                  <Template><![CDATA[%s]]><Parameter expression="[COMPLICATION.TITLE]" /></Template>
+                </Font>
+              </Text>
+            </PartText>
+          </Compare>
+          <Compare expression="hasIcon">
+            <PartImage x="47" y="6" width="28" height="28" tintColor="#FFE2BE5A">
+              <Image resource="[COMPLICATION.MONOCHROMATIC_IMAGE]" />
+            </PartImage>
+            <PartText x="4" y="32" width="114" height="32">
+              <Text align="CENTER" ellipsis="TRUE">
+                <Font family="assistant_bold" size="24" color="#FFF1F5F9">
+                  <Template><![CDATA[%s]]><Parameter expression="[COMPLICATION.TEXT]" /></Template>
+                </Font>
+              </Text>
+            </PartText>
+          </Compare>
+          <Default>
+            <PartText x="4" y="14" width="114" height="38">
+              <Text align="CENTER" ellipsis="TRUE">
+                <Font family="assistant_bold" size="27" color="#FFF1F5F9">
+                  <Template><![CDATA[%s]]><Parameter expression="[COMPLICATION.TEXT]" /></Template>
+                </Font>
+              </Text>
+            </PartText>
+          </Default>
+        </Condition>
+      </Complication>
+    </ComplicationSlot>
+  </Scene>
+</WatchFace>

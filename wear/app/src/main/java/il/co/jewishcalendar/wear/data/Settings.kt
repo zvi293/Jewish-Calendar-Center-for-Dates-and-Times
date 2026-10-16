@@ -12,17 +12,27 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 
 /**
- * ההגדרות של השעון — נשמרות בשעון עצמו (בלי סנכרון מהטלפון בשלב הזה).
- * ברירת המחדל כמו באתר: פתח תקווה, עדות המזרח, מג"א.
+ * ההגדרות של השעון — נשמרות בשעון עצמו. כשאפליקציית הטלפון (1.1.4+) שולחת את ההגדרות של האתר
+ * (sync/PhoneSync) — הטלפון קובע: עיר/קואורדינטות, נוסח, שיטה ודקות ההדלקה מוחלפים, ואפשר לשנות בשעון
+ * עד השינוי הבא בטלפון. ברירת המחדל (בלי טלפון) כמו באתר: פתח תקווה, עדות המזרח, מג"א.
  */
 object Settings {
     private const val FILE = "jc_wear"
-    const val K_CITY = "city"          // geonameid מתוך Cities, או 0 = מיקום השעון
+    const val K_CITY = "city"          // geonameid מתוך Cities, 0 = מיקום השעון, -1 = המיקום מהטלפון
     const val K_GPS_LAT = "gps_lat"
     const val K_GPS_LON = "gps_lon"
     const val K_NUSACH = "nusach"      // mizrahi | sfard | ashkenaz — המפתחות של האתר
     const val K_METHOD = "method"      // MGA | GRA
-    const val K_CANDLE = "candle"      // 0 = לפי העיר (40/20/18)
+    const val K_CANDLE = "candle"      // 0 = לפי העיר (40/20/18; מהטלפון — הדקות של האתר)
+    // המיקום האחרון שהגיע מהטלפון (נשמר גם כשבוחרים עיר אחרת — כדי שאפשר יהיה לחזור אליו)
+    const val K_PH_NAME = "ph_name"
+    const val K_PH_LAT = "ph_lat"
+    const val K_PH_LON = "ph_lon"
+    const val K_PH_ELEV = "ph_elev"
+    const val K_PH_TZ = "ph_tz"
+    const val K_PH_CANDLE = "ph_candle"
+    const val K_PH_SIG = "ph_sig"      // חתימת ההודעה האחרונה שהוחלה — אותה הודעה לא דורסת שוב בחירה בשעון
+    const val PHONE = -1
 
     val NUSACH_NAMES = linkedMapOf("mizrahi" to "עדות המזרח", "sfard" to "ספרד", "ashkenaz" to "אשכנז")
     val METHOD_NAMES = linkedMapOf("MGA" to "מגן אברהם", "GRA" to "הגר״א")
@@ -36,9 +46,15 @@ object Settings {
     fun candleSetting(c: Context) = prefs(c).getInt(K_CANDLE, 0)
 
     fun usesGps(c: Context) = cityId(c) == 0 && prefs(c).contains(K_GPS_LAT)
+    fun hasPhone(c: Context) = prefs(c).contains(K_PH_LAT)
+    fun usesPhone(c: Context) = cityId(c) == PHONE && hasPhone(c)
+    fun phoneName(c: Context) = prefs(c).getString(K_PH_NAME, "")?.ifBlank { null } ?: "מהטלפון"
 
-    fun locationName(c: Context): String =
-        if (usesGps(c)) "מיקום השעון" else (Cities.byId(cityId(c)) ?: Cities.byId(Cities.DEFAULT_ID)!!).name
+    fun locationName(c: Context): String = when {
+        usesPhone(c) -> phoneName(c)
+        usesGps(c) -> "מיקום השעון"
+        else -> (Cities.byId(cityId(c)) ?: Cities.byId(Cities.DEFAULT_ID)!!).name
+    }
 
     /** המיקום והשיטה לחישוב — אותו מבנה כמו בווידג'טים של הטלפון (Loc). */
     fun loc(c: Context): Loc {
@@ -46,6 +62,12 @@ object Settings {
         val nusach = nusach(c)
         val method = method(c)
         val candleSet = candleSetting(c)
+        if (usesPhone(c)) {
+            val ph = p.getInt(K_PH_CANDLE, 20)
+            return Loc(phoneName(c), p.getFloat(K_PH_LAT, 0f).toDouble(), p.getFloat(K_PH_LON, 0f).toDouble(),
+                p.getFloat(K_PH_ELEV, 0f).toDouble(), p.getString(K_PH_TZ, "Asia/Jerusalem") ?: "Asia/Jerusalem",
+                if (candleSet > 0) candleSet else ph, nusach, method, true)
+        }
         if (usesGps(c)) {
             val lat = p.getFloat(K_GPS_LAT, 0f).toDouble()
             val lon = p.getFloat(K_GPS_LON, 0f).toDouble()

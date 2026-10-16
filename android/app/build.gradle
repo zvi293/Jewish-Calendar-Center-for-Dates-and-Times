@@ -55,11 +55,12 @@ android {
     namespace "il.co.jewishcalendar.twa"
     defaultConfig {
         applicationId "il.co.jewishcalendar.twa"
-        // 23 (אנדרואיד 6): ספריית התשלומים של Play (billing 1.2.0 / PBL 8.3) דורשת אותו; כרום ממילא לא תומך ב-5
-        minSdkVersion 23
+        // 24 (אנדרואיד 7) מ-1.1.4: "ההגנה האוטומטית" של Play (פעילה בחשבון) דוחה קובץ עם minSdk נמוך מ-24
+        // (הכרעת המשתמש 16/10/2026 — לא לכבות את ההגנה). לפני כן 23 — billing 1.2.0 / PBL 8.3.
+        minSdkVersion 24
         targetSdkVersion 36
-        versionCode 14
-        versionName "1.1.3"
+        versionCode 15
+        versionName "1.1.4"
 
         // The name for the application
         resValue "string", "appName", twaManifest.name
@@ -216,5 +217,7 @@ dependencies {
         implementation 'com.kosherjava:zmanim:2.5.0'
         // תרומה באפליקציה דרך Google Play Billing (Play Billing Library 8.3) — PaymentActivity/PaymentService במניפסט
         implementation 'com.google.androidbrowserhelper:billing:1.2.0'
+        // סנכרון ההגדרות לאפליקציית השעון (Wear Data Layer, widget/WearSync.java)
+        implementation 'com.google.android.gms:play-services-wearable:19.0.0'
     
 }

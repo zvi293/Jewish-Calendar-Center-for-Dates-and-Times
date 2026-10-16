@@ -1,0 +1,28 @@
+// פני השעון "הלוח היהודי" — Watch Face Format (משאבים בלבד, בלי קוד). גוגל מחייבת שפני שעון יהיו
+// אפליקציה נפרדת (Play דוחה חבילה שיש בה גם פני שעון וגם קוד), ולכן applicationId משלה ודף חנות משלה.
+// את הנתונים היא מקבלת מהמשבצות של אפליקציית השעון (:app — il.co.jewishcalendar.twa).
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'il.co.jewishcalendar.watchface'
+    compileSdk 36
+
+    defaultConfig {
+        applicationId 'il.co.jewishcalendar.watchface'
+        // WFF גרסה 1 = Wear OS 4 (API 33) ומעלה
+        minSdk 33
+        targetSdk 36
+        versionCode 1
+        versionName '1.0.0'
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled true
+            // לא להסיר משאבים — הם כל פני השעון
+            shrinkResources false
+        }
+    }
+}

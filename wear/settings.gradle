@@ -14,3 +14,5 @@ dependencyResolutionManagement {
 }
 rootProject.name = "jewish-calendar-wear"
 include ':app'
+// פני השעון (Watch Face Format) — אפליקציה נפרדת בלי קוד, il.co.jewishcalendar.watchface
+include ':watchface'

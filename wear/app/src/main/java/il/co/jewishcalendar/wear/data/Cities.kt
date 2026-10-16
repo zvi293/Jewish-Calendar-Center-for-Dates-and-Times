@@ -13,7 +13,7 @@ object Cities {
     val ALL: List<City> = listOf(
         City(281184, "ירושלים", 31.76904, 35.21633, 0.0, "Asia/Jerusalem", true),
         City(295514, "בני ברק", 32.08074, 34.8338, 0.0, "Asia/Jerusalem", true),
-        City(293918, "פתח תקווה", 32.08707, 34.88747, 0.0, "Asia/Jerusalem", true),
+        City(293918, "פתח תקווה", 32.0888, 34.88666, 0.0, "Asia/Jerusalem", true),
         City(293397, "תל אביב", 32.08088, 34.78057, 0.0, "Asia/Jerusalem", true),
         City(294801, "חיפה", 32.81303, 34.99928, 0.0, "Asia/Jerusalem", true),
         City(295530, "באר שבע", 31.25181, 34.7913, 0.0, "Asia/Jerusalem", true),

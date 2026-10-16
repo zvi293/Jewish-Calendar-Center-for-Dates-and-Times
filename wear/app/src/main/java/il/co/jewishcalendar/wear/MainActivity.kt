@@ -23,6 +23,7 @@ import il.co.jewishcalendar.wear.ui.HomeScreen
 import il.co.jewishcalendar.wear.ui.MeeinPickScreen
 import il.co.jewishcalendar.wear.ui.MeeinScreen
 import il.co.jewishcalendar.wear.ui.JcTheme
+import il.co.jewishcalendar.wear.ui.LevanaScreen
 import il.co.jewishcalendar.wear.ui.OmerScreen
 import il.co.jewishcalendar.wear.ui.SettingsScreen
 import il.co.jewishcalendar.wear.ui.ShabbatScreen
@@ -42,6 +43,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // הגדרות מהטלפון שהגיעו כשהשירות לא רץ (למשל מיד אחרי ההתקנה)
+        il.co.jewishcalendar.wear.sync.PhoneSync.pull(this)
         val open = intent?.getStringExtra("open")
         setContent {
             JcTheme {
@@ -57,6 +60,7 @@ class MainActivity : ComponentActivity() {
                         composable("meein") { MeeinPickScreen { nav.navigate(it) } }
                         composable("meein/{type}") { MeeinScreen(it.arguments?.getString("type") ?: "mezonot") }
                         composable("compass") { CompassScreen() }
+                        composable("levana") { LevanaScreen() }
                         composable("settings") { SettingsScreen { nav.navigate(it) } }
                         composable("cities") {
                             CitiesScreen(back = { nav.popBackStack() }, askGps = {

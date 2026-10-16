@@ -53,7 +53,7 @@
   try { mobile = matchMedia("(max-width: 768px), (pointer: coarse)").matches; } catch (e) {}
 
   /* ── מיקום: GPS שאושר > עיר שנבחרה > פתח תקווה (אותם מפתחות כמו script.js) ── */
-  var LAT = 32.08707, LNG = 34.88747, PHI = LAT * RAD, LW = -LNG * RAD;
+  var LAT = 32.0888, LNG = 34.88666, PHI = LAT * RAD, LW = -LNG * RAD;
   function readLoc() {
     var lat = null, lng = null;
     try {
@@ -66,7 +66,7 @@
         if (c && isFinite(c.lat) && isFinite(c.lon)) { lat = +c.lat; lng = +c.lon; }
       }
     } catch (e) {}
-    if (lat === null) { lat = 32.08707; lng = 34.88747; }
+    if (lat === null) { lat = 32.0888; lng = 34.88666; }
     var changed = lat !== LAT || lng !== LNG;
     LAT = lat; LNG = lng; PHI = LAT * RAD; LW = -LNG * RAD;
     return changed;

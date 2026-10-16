@@ -32,17 +32,17 @@
         <service android:name=".tile.ZmanimTile" android:exported="true" android:label="@string/tile_zmanim"
             android:icon="@drawable/ic_jc" android:permission="com.google.android.wearable.permission.BIND_TILE_PROVIDER">
             <intent-filter><action android:name="androidx.wear.tiles.action.BIND_TILE_PROVIDER" /></intent-filter>
-            <meta-data android:name="androidx.wear.tiles.PREVIEW" android:resource="@mipmap/ic_launcher" />
+            <meta-data android:name="androidx.wear.tiles.PREVIEW" android:resource="@drawable/tile_preview_zmanim" />
         </service>
         <service android:name=".tile.ShabbatTile" android:exported="true" android:label="@string/tile_shabbat"
             android:icon="@drawable/ic_jc" android:permission="com.google.android.wearable.permission.BIND_TILE_PROVIDER">
             <intent-filter><action android:name="androidx.wear.tiles.action.BIND_TILE_PROVIDER" /></intent-filter>
-            <meta-data android:name="androidx.wear.tiles.PREVIEW" android:resource="@mipmap/ic_launcher" />
+            <meta-data android:name="androidx.wear.tiles.PREVIEW" android:resource="@drawable/tile_preview_shabbat" />
         </service>
         <service android:name=".tile.OmerTile" android:exported="true" android:label="@string/tile_omer"
             android:icon="@drawable/ic_jc" android:permission="com.google.android.wearable.permission.BIND_TILE_PROVIDER">
             <intent-filter><action android:name="androidx.wear.tiles.action.BIND_TILE_PROVIDER" /></intent-filter>
-            <meta-data android:name="androidx.wear.tiles.PREVIEW" android:resource="@mipmap/ic_launcher" />
+            <meta-data android:name="androidx.wear.tiles.PREVIEW" android:resource="@drawable/tile_preview_omer" />
         </service>
 
         <!-- ═══ Complications — משבצות על פני השעון ═══ -->
@@ -69,6 +69,13 @@
             <intent-filter><action android:name="android.support.wearable.complications.ACTION_COMPLICATION_UPDATE_REQUEST" /></intent-filter>
             <meta-data android:name="android.support.wearable.complications.SUPPORTED_TYPES" android:value="SHORT_TEXT,LONG_TEXT" />
             <meta-data android:name="android.support.wearable.complications.UPDATE_PERIOD_SECONDS" android:value="3600" />
+        </service>
+        <!-- סנכרון ההגדרות מאפליקציית הטלפון (Wear Data Layer, sync/PhoneSync.kt) -->
+        <service android:name=".sync.PhoneSyncService" android:exported="true">
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.DATA_CHANGED" />
+                <data android:scheme="wear" android:host="*" android:pathPrefix="/jc" />
+            </intent-filter>
         </service>
     </application>
 </manifest>

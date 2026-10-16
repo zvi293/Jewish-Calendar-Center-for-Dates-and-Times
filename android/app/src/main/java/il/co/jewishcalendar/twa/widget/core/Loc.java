@@ -32,7 +32,7 @@ public final class Loc {
 
     /** ברירת המחדל של האתר (עיר 293918 — אותן קואורדינטות שהאתר שומר, גובה 0). */
     public static Loc defaults() {
-        return new Loc("פתח תקווה", 32.08707, 34.88747, 0, "Asia/Jerusalem", 20, "mizrahi", "MGA", false);
+        return new Loc("פתח תקווה", 32.0888, 34.88666, 0, "Asia/Jerusalem", 20, "mizrahi", "MGA", false);
     }
 
     public TimeZone timeZone() {

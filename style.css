@@ -7525,7 +7525,7 @@ body.lux-erev #prayer-grid-wrap > :not(#lux-erev-grid) { display: none !importan
   font-size: 1.35rem;
   line-height: 1;
   background: radial-gradient(circle at 35% 30%, rgba(255, 234, 170, 0.28), rgba(255, 190, 80, 0.10) 60%, transparent 100%);
-  border: 1px solid rgba(242, 217, 138, 0.35);
+  border: 1px solid rgba(242, 217, 138, 0.65); /* טבעת זהב ברורה (16/10/2026) */
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 0 14px rgba(251, 191, 36, 0.12);
   transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
@@ -7815,7 +7815,7 @@ body:not(.lux-erev) .prayer-btn .prayer-icon {
   border-radius: 50%;
   font-size: 1.3rem;
   background: radial-gradient(circle at 35% 28%, rgba(191, 219, 254, 0.22), rgba(99, 102, 241, 0.10) 55%, rgba(232, 193, 90, 0.06) 100%);
-  border: 1px solid rgba(191, 219, 254, 0.25);
+  border: 1px solid rgba(232, 193, 90, 0.6); /* טבעת זהב קבועה בכל שעה ובכל ערכה (16/10/2026, בקשת המשתמש) */
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 0 14px rgba(99, 102, 241, 0.12);
   transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.25s ease, box-shadow 0.25s ease;
 }
@@ -7836,7 +7836,7 @@ body:not(.lux-erev) .prayer-btn.prayer-cta-highlight {
 }
 body:not(.lux-erev) .prayer-btn.prayer-cta-highlight .prayer-icon {
   background: radial-gradient(circle at 35% 28%, rgba(253, 230, 138, 0.32), rgba(251, 191, 36, 0.12) 55%, transparent 100%);
-  border-color: rgba(251, 191, 36, 0.5);
+  border-color: rgba(251, 191, 36, 0.7);
 }
 
 /* ── 4א. פופאפ ספרים/תפילות נוספות — כרטיסי ספרים יוקרתיים ── */
@@ -9993,14 +9993,21 @@ html.lux-sky.lux-sky-nogl[data-sky="dusk"] body::before { background: linear-gra
    (אבני החן) בגרדיאנט המקורי; הדשבורד ובאנר ההלכה (.glass-card) כמו במקור. רק תחת html.lux-sky,
    רק main/footer; חלונות ופופאפים לשלב הבא.
    ═══════════════════════════════════════════════════════ */
-/* יום — "תכלת שמיים" (16/10/2026, נבחר מסקיצה א/ב/ג): לבן-כחלחל 62%→50% שמתמזג עם הרקיע וכתב כחול-לילה.
-   עד אז לבן 20% — בטלפון (בלי טשטוש) הכתב והאייקונים נבלעו מול נוף העיר הכהה ("לא רואים מספיק טוב").
+/* יום — "Liquid Glass" (16/10/2026 ערב, גרסה א' מסקיצה של 30%/42%/16%): גוף שקוף 24%→30%, שוליים
+   מוארים כמו עדשה (46% בקצה + זוהר פנימי), ברק אלכסוני וקווי אור בארבעת הצדדים; במחשב טשטוש חזק
+   עם רוויה (הרקיע נשקף בצבעו). הכתב כחול-לילה כמו קודם. היסטוריה: עד 16/10 בצהריים לבן 20% —
+   בטלפון הכתב נבלע מול נוף העיר; "תכלת שמיים" 62%→50% — "לבן לי מדי", נראה חלבי (בעיקר בשבת).
    --skyc-tint הוא גרדיאנט — תמיד השכבה האחרונה ב-background (לא background-color). */
 html.lux-sky {
-  --skyc-tint: linear-gradient(180deg, rgba(242, 247, 255, 0.62) 0%, rgba(226, 236, 252, 0.5) 100%);
-  --skyc-gloss: linear-gradient(160deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.06) 45%, rgba(255, 255, 255, 0) 100%);
+  --skyc-tint: radial-gradient(130% 120% at 50% 45%, rgba(255, 255, 255, 0.24) 0%, rgba(255, 255, 255, 0.285) 60%, rgba(255, 255, 255, 0.46) 100%);
+  --skyc-gloss: linear-gradient(125deg, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0.14) 18%, rgba(255, 255, 255, 0) 42%, rgba(255, 255, 255, 0) 72%, rgba(255, 255, 255, 0.16) 92%, rgba(255, 255, 255, 0.3) 100%);
   --skyc-edge: rgba(201, 153, 58, 0.45);
-  --skyc-shadow: 0 16px 42px -16px rgba(10, 22, 60, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  --skyc-shadow: 0 12px 32px -14px rgba(10, 22, 60, 0.42),
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.45),
+    inset 1px 0 0 rgba(255, 255, 255, 0.35),
+    inset -1px 0 0 rgba(255, 255, 255, 0.35),
+    inset 0 0 18px rgba(255, 255, 255, 0.28);
   --skyc-halo: none; /* ביום בלי הילה: זוהר/הרמה סביב אותיות כהות נראו כהכפלה מטושטשת */
   --skyc-ink: #0a1630; --skyc-ink2: #13244a; --skyc-ink3: #2a3b60;
   --skyc-field: rgba(248, 251, 255, 0.8); --skyc-field-edge: rgba(201, 153, 58, 0.3);
@@ -10051,6 +10058,20 @@ html.lux-sky .lux-seas-card {
   html.lux-sky .lux-seas-card {
     backdrop-filter: blur(18px) saturate(1.35);
     -webkit-backdrop-filter: blur(18px) saturate(1.35);
+  }
+  /* Liquid Glass ביום: טשטוש חזק + רוויה + הבהרה קלה, גם לגריד התפילות ולפאנל השבת (במחשב בלבד —
+     בטלפון אין backdrop-filter בכוונה: ריצוד וגלילה תקועה) */
+  html.lux-sky[data-sky="day"] main > nav[class~="bg-white"],
+  html.lux-sky[data-sky="day"] main .event-card,
+  html.lux-sky[data-sky="day"] #lux-pearl,
+  html.lux-sky[data-sky="day"] .lux-track-card,
+  html.lux-sky[data-sky="day"] .lux-plan-empty,
+  html.lux-sky[data-sky="day"] .lux-plan-card,
+  html.lux-sky[data-sky="day"] #lux-shana-entry,
+  html.lux-sky[data-sky="day"] body .prayer-btn,
+  html.lux-sky[data-sky="day"] #lux-erev-panel {
+    backdrop-filter: blur(22px) saturate(1.9) brightness(1.06);
+    -webkit-backdrop-filter: blur(22px) saturate(1.9) brightness(1.06);
   }
 }
 /* כרטיסי האירועים: גוון עדין לפי סוג (הפס הצבעוני בצד נשאר) */
@@ -10201,6 +10222,7 @@ html.lux-sky[data-sky="day"] body .prayer-btn:not(.lux-erev-btn) {
   background: var(--skyc-gloss), var(--skyc-tint);
   border-color: rgba(161, 118, 42, 0.75);
 }
+html.lux-sky[data-sky="day"] body .prayer-btn:not(.lux-erev-btn):not(.prayer-cta-highlight) { box-shadow: var(--skyc-shadow) !important; }
 html.lux-sky[data-sky="day"] body .prayer-btn.prayer-cta-highlight:not(.lux-erev-btn) {
   background: var(--skyc-gloss), linear-gradient(170deg, rgba(251, 191, 36, 0.2) 0%, rgba(251, 191, 36, 0.06) 100%), var(--skyc-tint);
 }
@@ -10297,8 +10319,9 @@ html.lux-sky[data-sky="day"] .lux-erev-btn {
   box-shadow: var(--skyc-shadow) !important;
 }
 html.lux-sky[data-sky="day"] .lux-erev-btn .prayer-label { color: var(--skyc-ink); font-weight: 800; text-shadow: none; }
+html.lux-sky[data-sky="day"] .lux-erev-btn .lux-erev-ico { border-color: rgba(176, 128, 40, 0.7); }
 html.lux-sky[data-sky="day"] .lux-erev-btn.lux-erev-hot {
-  background: var(--skyc-gloss), linear-gradient(170deg, rgba(251, 191, 36, 0.24) 0%, rgba(168, 85, 247, 0.1) 100%), var(--skyc-tint) !important;
+  background: var(--skyc-gloss), linear-gradient(170deg, rgba(251, 191, 36, 0.2) 0%, rgba(168, 85, 247, 0.06) 100%), var(--skyc-tint) !important;
   border-color: rgba(161, 118, 42, 0.9) !important;
   animation: none;
 }

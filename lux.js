@@ -530,7 +530,8 @@
     var CM_FILTER = { acceptNode: function (n) {
       if (n.nodeType !== 1) return NodeFilter.FILTER_ACCEPT;
       // גם בלי אייקון הסימנייה שמעל כל פסוק (.sn-vbm) — כדי שהיסטי הסימון השמורים לא יזוזו
-      return n.classList && (n.classList.contains("chok-cm-blk") || n.classList.contains("sn-vbm")) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_SKIP;
+      // וגם בלי פירוש צמוד-פסוק בקורא הספרים (.sn-cm-note — רש"י, ברטנורא): הדלקת מפרש לא מזיזה את הסימון
+      return n.classList && (n.classList.contains("chok-cm-blk") || n.classList.contains("sn-cm-note") || n.classList.contains("sn-vbm")) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_SKIP;
     } };
     function textNodes(block) {
       var out = [], w = document.createTreeWalker(block, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, CM_FILTER);
@@ -627,7 +628,7 @@
       if (!enabled()) return;
       if (!e.target.closest) return;
       // לא מסמנים בלחיצה על כפתורים/קישורים/פירושים מוטמעים (גם שולי בלוק הפירוש עצמו)
-      if (e.target.closest("button, a, input, select, textarea, label, [onclick], [class*='chok-rashi'], .chok-cm-blk")) return;
+      if (e.target.closest("button, a, input, select, textarea, label, [onclick], [class*='chok-rashi'], .chok-cm-blk, .sn-cm-note")) return;
       var block = e.target.closest(BLOCK_SEL);
       if (!block) return;
       var ar = areaOf(block);

@@ -618,6 +618,10 @@
       .shema-kav .shk-r { margin: 0.12rem 0; }
       .shema-kav .shk-k { color: #1e3a8a; font-weight: 800; white-space: nowrap; }
       .shema-kav .shk-n { font-size: 0.86em; opacity: 0.8; }
+      /* קריאת שמע שעל המיטה, אנא בכח: "ליל ה" ו"בלחש:" כחול וקטן; "ברוך שם" שחור וקטן, בלי תיבה */
+      .prayer-richtext .shema-lbl { color: #1d4ed8; font-size: 0.7em; font-weight: 700; }
+      .prayer-richtext .shema-baruch { font-size: 0.62em; }
+      .prayer-richtext .shema-baruch .shema-lbl { font-size: 1em; }
       .shema-kav .shk-p { margin-top: 0.45rem; padding-top: 0.4rem; border-top: 1px dashed rgba(37,99,235,0.22); }
       .shema-kav .shk-name {
         display: inline-block; white-space: nowrap; font-weight: 700;
@@ -9216,6 +9220,7 @@ html.dark .prayer-supplement li {
   color: #bfdbfe !important;
 }
 html.dark .prayer-supplement strong { color: #dbeafe; }
+html.dark .prayer-richtext .shema-lbl { color: #93c5fd; }
 html.dark .shema-kav .shk-h,
 html.dark .shema-kav .shk-k { color: #dbeafe; }
 html.dark .shema-kav .shk-p { border-top-color: rgba(147,197,253,0.28); }
@@ -9938,15 +9943,19 @@ html.lux-sky.lux-sky-nogl[data-sky="dusk"] body::before { background: linear-gra
    (אבני החן) בגרדיאנט המקורי; הדשבורד ובאנר ההלכה (.glass-card) כמו במקור. רק תחת html.lux-sky,
    רק main/footer; חלונות ופופאפים לשלב הבא.
    ═══════════════════════════════════════════════════════ */
+/* יום — "תכלת שמיים" (16/10/2026, נבחר מסקיצה א/ב/ג): לבן-כחלחל 62%→50% שמתמזג עם הרקיע וכתב כחול-לילה.
+   עד אז לבן 20% — בטלפון (בלי טשטוש) הכתב והאייקונים נבלעו מול נוף העיר הכהה ("לא רואים מספיק טוב").
+   --skyc-tint הוא גרדיאנט — תמיד השכבה האחרונה ב-background (לא background-color). */
 html.lux-sky {
-  --skyc-tint: rgba(255, 255, 255, 0.2);
-  --skyc-gloss: linear-gradient(160deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.03) 48%, rgba(255, 255, 255, 0) 100%);
+  --skyc-tint: linear-gradient(180deg, rgba(242, 247, 255, 0.62) 0%, rgba(226, 236, 252, 0.5) 100%);
+  --skyc-gloss: linear-gradient(160deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.06) 45%, rgba(255, 255, 255, 0) 100%);
   --skyc-edge: rgba(201, 153, 58, 0.45);
-  --skyc-shadow: 0 14px 40px -14px rgba(5, 11, 26, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  --skyc-shadow: 0 16px 42px -16px rgba(10, 22, 60, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.85);
   --skyc-halo: none; /* ביום בלי הילה: זוהר/הרמה סביב אותיות כהות נראו כהכפלה מטושטשת */
-  --skyc-ink: #0f172a; --skyc-ink2: #334155; --skyc-ink3: #475569;
-  --skyc-field: rgba(255, 255, 255, 0.55); --skyc-field-edge: rgba(201, 153, 58, 0.3);
+  --skyc-ink: #0a1630; --skyc-ink2: #13244a; --skyc-ink3: #2a3b60;
+  --skyc-field: rgba(248, 251, 255, 0.8); --skyc-field-edge: rgba(201, 153, 58, 0.3);
 }
+html.lux-sky[data-sky="day"] { --skyc-edge: rgba(176, 128, 40, 0.75); --skyc-field-edge: rgba(176, 128, 40, 0.45); }
 /* לילה / דמדומים: גוון כחול-לילה 45% ואותיות בהירות. עד 13/10/2026 — 24%: בטלפון (בלי טשטוש)
    הכוכבים ואורות העיר עברו חדים מאחורי הכתב ("קשה לקרוא"); 45% נבחר מסקיצה של 24/45/60 */
 html.lux-sky:not([data-sky="day"]) {
@@ -10040,7 +10049,7 @@ html.lux-sky main .chip:not(.active) { background: var(--skyc-field) !important;
 /* כפתורים/תגיות/תיבת הלבנה/תיבת האייקון — רקע משלהם, בלי הילה; קריאים בכל שעה */
 html.lux-sky main :is(.event-card button, .event-card .ev-countdown, .lux-tc-badge, .chip, #mainSearch, .lux-plan-plus, .lux-seas-card, .lv-details) { text-shadow: none; }
 html.lux-sky .lv-details { background: rgba(255, 255, 255, 0.84) !important; border-color: rgba(201, 153, 58, 0.3) !important; color: #1e293b; margin-top: 0.8rem; }
-html.lux-sky main .event-card .w-14 { background: rgba(255, 255, 255, 0.82) !important; }
+html.lux-sky main .event-card .w-14 { background: rgba(255, 255, 255, 0.96) !important; }
 html.lux-sky:not([data-sky="day"]) main .event-card .w-14 { background: rgba(255, 255, 255, 0.14) !important; border-color: rgba(255, 255, 255, 0.3) !important; }
 /* הפוטר: קישורים עגולים */
 html.lux-sky footer a[class~="bg-white"] { background: var(--skyc-field) !important; border-color: var(--skyc-field-edge) !important; color: var(--skyc-ink2) !important; }
@@ -10051,6 +10060,13 @@ html.lux-sky footer a[class~="bg-white"] { background: var(--skyc-field) !import
    הדף הראשי (מול הנוף הכהה בתחתית המסך בלי זכוכית לא ראו את הכתב); בלילה כל האפורים של Tailwind שם
    הופכים לבהירים (לפי טוקן מדויק) עם צל כהה, ביום כהים יותר ובלי צל. */
 html.lux-sky main .lux-tracks-title { color: #7a4f0e; text-shadow: none; }
+/* 16/10: ביום הכותרת על גלולה בהירה — בטלפון "סדר הלימוד האישי שלי" יושבת על קו הרקיע של העיר */
+html.lux-sky[data-sky="day"] main .lux-tracks-title {
+  display: inline-flex; align-items: center; gap: 0.35rem;
+  padding: 0.3rem 0.95rem; border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72); border: 1px solid rgba(176, 128, 40, 0.6);
+  box-shadow: 0 4px 14px -4px rgba(5, 11, 26, 0.35); color: #6b430b;
+}
 html.lux-sky:not([data-sky="day"]) main .lux-tracks-title { color: #f2d98a; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6), 0 0 12px rgba(0, 0, 0, 0.45); }
 /* כרטיסי הלימוד היומי ביום: תיאור ותג חזקים יותר על זכוכית מעל שמיים בהירים */
 html.lux-sky[data-sky="day"] .lux-tc-ref { color: var(--skyc-ink, #0f172a); font-weight: 700; } /* 04/10: היה #334155 — "תכהה אותו" */
@@ -10129,7 +10145,7 @@ html.lux-sky[data-sky="day"] .prayer-btn:not(.lux-erev-btn) .prayer-label {
 }
 /* 04/10: גם שני המודגשים (תפילות/ספרים נוספים) בשחור ביום — הזהב הכהה עדיין לא נראה מספיק ("שיהיה שחור") */
 html.lux-sky[data-sky="day"] .prayer-btn.prayer-cta-highlight:not(.lux-erev-btn) .prayer-label { color: var(--skyc-ink, #0f172a) !important; }
-/* ביום הכרטיס עצמו באותה זכוכית צלולה של כרטיסי הדף הראשי (לבן 20% + ברק — הרמה שאושרה) ומסגרת זהב כהה יותר:
+/* ביום הכרטיס עצמו באותה זכוכית צלולה של כרטיסי הדף הראשי (--skyc-tint + ברק; מ-16/10 "תכלת שמיים") ומסגרת זהב כהה יותר:
    בלי זה הכתב הכהה נבלע כשהגריד המורחב יורד אל רצועת הנוף הכהה בתחתית השמיים (בטלפון תמיד). */
 html.lux-sky[data-sky="day"] body .prayer-btn:not(.lux-erev-btn) {
   background: var(--skyc-gloss), var(--skyc-tint);
@@ -10140,7 +10156,7 @@ html.lux-sky[data-sky="day"] body .prayer-btn.prayer-cta-highlight:not(.lux-erev
 }
 @media (hover: hover) {
   html.lux-sky[data-sky="day"] body .prayer-btn:not(.lux-erev-btn):hover {
-    background: var(--skyc-gloss), rgba(255, 255, 255, 0.32);
+    background: var(--skyc-gloss), linear-gradient(180deg, rgba(250, 252, 255, 0.78) 0%, rgba(236, 243, 254, 0.66) 100%);
     border-color: rgba(161, 118, 42, 0.95);
   }
 }
@@ -10151,6 +10167,15 @@ html.lux-sky[data-sky="day"] #prayer-more-btn {
   color: var(--skyc-ink, #0f172a) !important;
   font-weight: 800;
   text-shadow: none;
+  /* 16/10: רקע בהיר — הגלולה הכהה-שקופה נראתה עכורה על הרקיע */
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.85), rgba(255, 248, 232, 0.7)) !important;
+  border-color: rgba(176, 128, 40, 0.75) !important;
+}
+/* 16/10: עיגולי האייקונים בגריד (וגם בכפתורי ערב שבת) ביום — לבנים עם טבעת זהב, האימוג'י בולט */
+html.lux-sky[data-sky="day"] .prayer-btn .prayer-icon {
+  background: radial-gradient(circle at 35% 28%, #ffffff 0%, rgba(240, 246, 255, 0.9) 55%, rgba(191, 219, 254, 0.75) 100%) !important;
+  border: 1px solid rgba(176, 128, 40, 0.6) !important;
+  box-shadow: 0 3px 10px rgba(90, 60, 15, 0.2), inset 0 1px 0 #ffffff !important;
 }
 
 /* 04/10: סדר הלימוד האישי ביום — "לא רואים כל כך את הכתב": התיאור האפור והטקסטים בזהב חיוור
@@ -10169,7 +10194,7 @@ html.lux-sky[data-sky="day"] .lux-plan-del { color: #6b5320; }
    ✦ שמיים חיים — שבתות וחגים (01/10/2026)
    (1) מצב ערב שבת/חג (lux.js §45): הפאנל, הספירה לאחור וכפתורי "לכבוד שבת" — באותו מקום ותוכן,
        מעלות השחר של ערב השבת/החג ועד הצאת; המראה מותאם לשמיים. ביום (רקיע בהיר) — זכוכית צלולה כמו כרטיסי הדף
-       שאושרו (לבן 20% + ברק) וכתב כהה / זהב כהה בלי הילה; בלילה ובדמדומים — העיצוב המקורי (כתב
+       שאושרו (--skyc-tint + ברק) וכתב כהה / זהב כהה בלי הילה; בלילה ובדמדומים — העיצוב המקורי (כתב
        בהיר וזהב זוהר) על גוון כחול-לילה קל. גם הספירה הרגילה לכניסת שבת (לפני מצב הערב) קריאה ביום.
    (2) בלי WebGL (html.lux-sky-nogl): הגרדיאנט לפי שלב היום מקבל את גוון המועד (sky.js כותב data-fest).
    ═══════════════════════════════════════════════════════ */
@@ -10213,7 +10238,7 @@ html.lux-sky[data-sky="day"] #countdown-event-type,
 html.lux-sky[data-sky="day"] body.lux-erev #countdown-label,
 html.lux-sky[data-sky="day"] body.lux-erev #countdown-event-type { color: var(--skyc-ink) !important; font-weight: 800; text-shadow: none; }
 /* "לכבוד שבת קודש" וכפתורי הערב */
-html.lux-sky[data-sky="day"] .lux-erev-grid-head { color: #7a4f0e; text-shadow: none; }
+html.lux-sky[data-sky="day"] .lux-erev-grid-head { color: #7a4f0e; text-shadow: none; background: rgba(255, 255, 255, 0.72); border-radius: 999px; padding: 0.3rem 1rem; border: 1px solid rgba(176, 128, 40, 0.55); }
 html.lux-sky[data-sky="day"] .lux-erev-grid-head::before { background: linear-gradient(90deg, transparent, rgba(161, 118, 42, 0.8)); }
 html.lux-sky[data-sky="day"] .lux-erev-grid-head::after { background: linear-gradient(90deg, rgba(161, 118, 42, 0.8), transparent); }
 html.lux-sky[data-sky="day"] .lux-erev-btn {
@@ -10233,7 +10258,7 @@ html.lux-sky[data-sky="day"] body.lux-erev-chag .lux-erev-btn.lux-erev-hot {
 html.lux-sky[data-sky="day"] .lux-erev-btn.lux-erev-hot .prayer-label { color: #7a4f0e; }
 @media (hover: hover) {
   html.lux-sky[data-sky="day"] .lux-erev-btn:hover {
-    background: var(--skyc-gloss), rgba(255, 255, 255, 0.34) !important;
+    background: var(--skyc-gloss), linear-gradient(180deg, rgba(250, 252, 255, 0.78) 0%, rgba(236, 243, 254, 0.66) 100%) !important;
     border-color: rgba(161, 118, 42, 0.95) !important;
   }
 }

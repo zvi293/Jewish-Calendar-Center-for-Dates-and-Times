@@ -10245,12 +10245,9 @@ html.lux-sky[data-sky="day"] #prayer-more-btn {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.85), rgba(255, 248, 232, 0.7)) !important;
   border-color: rgba(176, 128, 40, 0.75) !important;
 }
-/* 16/10: עיגולי האייקונים בגריד (וגם בכפתורי ערב שבת) ביום — לבנים עם טבעת זהב, האימוג'י בולט */
-html.lux-sky[data-sky="day"] .prayer-btn .prayer-icon {
-  background: radial-gradient(circle at 35% 28%, #ffffff 0%, rgba(240, 246, 255, 0.9) 55%, rgba(191, 219, 254, 0.75) 100%) !important;
-  border: 1px solid rgba(176, 128, 40, 0.6) !important;
-  box-shadow: 0 3px 10px rgba(90, 60, 15, 0.2), inset 0 1px 0 #ffffff !important;
-}
+/* עיגולי האייקונים בגריד ביום — שקופים (הרקע המקורי) עם טבעת זהב כהה יותר. 16/10 בצהריים היו לבנים —
+   "אני רוצה שהוא יהיה שקוף תמיד" (16/10 ערב) */
+html.lux-sky[data-sky="day"] .prayer-btn .prayer-icon { border-color: rgba(176, 128, 40, 0.7) !important; }
 
 /* 04/10: סדר הלימוד האישי ביום — "לא רואים כל כך את הכתב": התיאור האפור והטקסטים בזהב חיוור
    (סטטיסטיקה, קצב, ימי השבוע, "עוד סדר") כהים יותר ומודגשים יותר על הזכוכית הצלולה. */

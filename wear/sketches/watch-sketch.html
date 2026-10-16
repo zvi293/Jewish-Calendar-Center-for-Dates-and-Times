@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>הלוח היהודי לשעון — סקיצה</title>
+<style>
+@font-face{font-family:A;font-weight:400;src:url(../../android/app/src/main/res/font/assistant_regular.ttf)}
+@font-face{font-family:A;font-weight:600;src:url(../../android/app/src/main/res/font/assistant_semibold.ttf)}
+@font-face{font-family:A;font-weight:700;src:url(../../android/app/src/main/res/font/assistant_bold.ttf)}
+@font-face{font-family:A;font-weight:800;src:url(../../android/app/src/main/res/font/assistant_extrabold.ttf)}
+@font-face{font-family:F;font-weight:700;src:url(../../android/app/src/main/res/font/frl_bold.ttf)}
+@font-face{font-family:F;font-weight:900;src:url(../../android/app/src/main/res/font/frl_black.ttf)}
+:root{--gold:#E2BE5A;--gold2:#B8902E;--ink:#F1F5F9;--mut:#94A3B8;--card:#1B2438;--card2:#232F49;--bg:#05070D}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0B1120;color:var(--ink);font-family:A,sans-serif;padding:28px 16px 40px}
+h1{font-family:F;font-weight:900;color:var(--gold);text-align:center;font-size:34px}
+.lead{text-align:center;color:var(--mut);font-size:15px;margin:6px 0 26px}
+h2{font-family:F;font-weight:700;color:var(--gold);font-size:22px;margin:30px 0 4px;text-align:center}
+.sub{color:var(--mut);text-align:center;font-size:14px;margin-bottom:16px}
+.row{display:flex;flex-wrap:wrap;gap:26px;justify-content:center}
+.item{width:300px;text-align:center}
+.cap{margin-top:10px;font-size:14px;color:#CBD5E1;line-height:1.45}
+.cap b{color:var(--gold)}
+/* השעון */
+.w{width:300px;height:300px;border-radius:50%;background:var(--bg);position:relative;overflow:hidden;
+  box-shadow:0 0 0 10px #1E2533,0 0 0 12px #3A4356,0 14px 30px #0008;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.w.sq{border-radius:22%}
+.time{position:absolute;top:14px;left:0;right:0;text-align:center;font-size:13px;color:#CBD5E1;font-weight:600}
+.k{font-size:12.5px;color:var(--mut)}
+.big{font-size:44px;font-weight:800;letter-spacing:.5px;line-height:1}
+.gold{color:var(--gold)}
+.lbl{font-size:17px;font-weight:700}
+.chip{background:var(--card);border-radius:22px;padding:7px 14px;font-size:14px;font-weight:600;width:76%;display:flex;justify-content:space-between;align-items:center;margin:3px 0}
+.chip.g{background:linear-gradient(90deg,#3A2E10,#5A4518);color:#FCE7A8}
+.chip span:last-child{font-weight:800;direction:ltr}
+.btn{background:var(--card2);border-radius:20px;padding:7px 12px;font-size:13.5px;font-weight:700;margin-top:6px;color:var(--gold)}
+.ring{position:absolute;inset:6px;border-radius:50%;border:4px solid #1E293B}
+.arc{position:absolute;inset:6px;border-radius:50%;border:4px solid transparent;border-top-color:var(--gold);border-right-color:var(--gold);transform:rotate(-20deg)}
+.fr{font-family:F;font-weight:700}
+.lines div{font-size:15px;margin:2px 0}
+.dots{display:flex;gap:5px;justify-content:center;margin-top:8px}
+.dots i{width:6px;height:6px;border-radius:50%;background:#475569}.dots i.on{background:var(--gold)}
+/* פני שעון עם complications */
+.face .hand{position:absolute;left:50%;top:50%;transform-origin:0 0}
+.cx{position:absolute;width:76px;height:76px;border-radius:50%;background:#111827;border:2px solid #2B3448;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:12px;line-height:1.15}
+.cx b{font-size:15px;color:var(--ink)}
+.cx .t{color:var(--gold);font-weight:700;font-size:11.5px}
+.long{position:absolute;bottom:40px;left:50%;transform:translateX(-50%);background:#111827;border:2px solid #2B3448;border-radius:18px;padding:5px 14px;font-size:13px;white-space:nowrap}
+.dig{font-size:56px;font-weight:800;line-height:1;margin-top:-24px}
+.list{width:80%;max-height:200px;overflow:hidden;-webkit-mask:linear-gradient(transparent,#000 14%,#000 86%,transparent)}
+.zr{display:flex;justify-content:space-between;padding:6px 10px;border-radius:14px;font-size:14px;margin:3px 0;background:var(--card)}
+.zr.now{background:#3A2E10;color:#FCE7A8}
+.zr span:last-child{font-weight:800;direction:ltr}
+.comp{width:150px;height:150px;border-radius:50%;border:3px solid #334155;position:relative;margin-top:6px}
+.comp .n{position:absolute;top:4px;left:50%;transform:translateX(-50%);font-size:11px;color:var(--mut)}
+.needle{position:absolute;left:50%;top:50%;width:6px;height:64px;background:linear-gradient(var(--gold),#7A5C14);border-radius:3px;transform-origin:50% 100%;transform:translate(-50%,-100%) rotate(118deg)}
+.hub{position:absolute;left:50%;top:50%;width:14px;height:14px;border-radius:50%;background:var(--gold);transform:translate(-50%,-50%)}
+.txt{font-size:16px;line-height:1.6;width:78%;text-align:center}
+.note{max-width:820px;margin:30px auto 0;background:#111A2E;border:1px solid #26324D;border-radius:16px;padding:16px 18px;font-size:14.5px;line-height:1.7;color:#CBD5E1}
+.note b{color:var(--gold)}
+</style>
+</head>
+<body>
+<h1>הלוח היהודי · לשעון</h1>
+<div class="lead">סקיצה ראשונה · נתונים לדוגמה: יום שישי, ה׳ בחשוון תשפ״ז, פתח תקווה · כל המסכים בעברית, מימין לשמאל</div>
+
+<h2>1. על פני השעון (Complications)</h2>
+<div class="sub">משבצות שמוסיפים לכל פני שעון קיימים, גם לאלה של סמסונג ופיקסל</div>
+<div class="row">
+  <div class="item">
+    <div class="w face">
+      <div class="dig">14:12</div>
+      <div class="k" style="margin-top:4px">יום שישי · 16 באוקטובר</div>
+      <div class="cx" style="top:34px;right:46px"><span class="t">הדלקה</span><b>17:23</b><span class="k">בעוד 3:11</span></div>
+      <div class="cx" style="top:34px;left:46px"><span class="t">תאריך</span><b>ה׳ חשוון</b><span class="k">תשפ״ז</span></div>
+      <div class="long"><span class="gold">שקיעה</span> 17:43 · <span class="gold">צאת</span> 18:01</div>
+    </div>
+    <div class="cap"><b>עגול קצר:</b> הזמן הבא עם ספירה לאחור, תאריך עברי, ספירת העומר. <b>שורה ארוכה:</b> שני הזמנים הבאים.</div>
+  </div>
+  <div class="item">
+    <div class="w face">
+      <div class="ring"></div><div class="arc"></div>
+      <div class="dig">21:40</div>
+      <div class="k" style="margin-top:4px">מוצאי יו״ט · אביב</div>
+      <div class="cx" style="top:34px;right:46px"><span class="t">עומר</span><b>כ״ג</b><span class="k">לעומר</span></div>
+      <div class="cx" style="top:34px;left:46px"><span class="t">חצות</span><b>00:38</b><span class="k">הלילה</span></div>
+      <div class="long"><span class="gold">שעה זמנית</span> 3 מתוך 12 בלילה</div>
+    </div>
+    <div class="cap"><b>טבעת התקדמות:</b> החלק שעבר מהיום או מהלילה (שעון הלכתי). כך זה נראה בימי העומר.</div>
+  </div>
+</div>
+
+<h2>2. Tiles — החלקה מפני השעון</h2>
+<div class="sub">מסך אחד לכל נושא, מתעדכן לבד בגבולות הזמנים</div>
+<div class="row">
+  <div class="item">
+    <div class="w">
+      <div class="time">14:12</div>
+      <div class="k">הזמן הבא · בעוד 3:11</div>
+      <div class="lbl gold" style="margin-top:2px">הדלקת נרות</div>
+      <div class="big" style="margin:4px 0 8px">17:23</div>
+      <div class="chip"><span>שקיעה</span><span>17:43</span></div>
+      <div class="chip"><span>צאת הכוכבים</span><span>18:01</span></div>
+      <div class="chip"><span>חצות הלילה</span><span>23:38</span></div>
+    </div>
+    <div class="cap"><b>זמני היום:</b> הזמן הבא גדול ומתחתיו שלושת הבאים. לחיצה פותחת את כל הרשימה.</div>
+  </div>
+  <div class="item">
+    <div class="w">
+      <div class="time">14:12</div>
+      <div class="fr gold" style="font-size:22px">שבת פרשת נח</div>
+      <div class="k" style="margin:2px 0 10px">ו׳ בחשוון · שבת מברכים כסלו</div>
+      <div class="chip g"><span>🕯️ הדלקה · ו׳</span><span>17:23</span></div>
+      <div class="chip"><span>צאת השבת · ש׳</span><span>18:21</span></div>
+      <div class="k" style="margin-top:8px">עוד 3 שעות ו-11 דקות</div>
+    </div>
+    <div class="cap"><b>שבת וחג:</b> פרשה, שבת מיוחדת, הדלקה וצאת. בחג — אותו מבנה עם שם החג.</div>
+  </div>
+  <div class="item">
+    <div class="w">
+      <div class="time">21:40</div>
+      <div class="k">הלילה סופרים</div>
+      <div class="fr gold" style="font-size:40px;line-height:1.1">כ״ג</div>
+      <div class="lbl">לעומר</div>
+      <div class="txt" style="font-size:13.5px;margin-top:6px">שהם שלושה שבועות ושני ימים</div>
+      <div class="btn">לספירה עם הברכה</div>
+    </div>
+    <div class="cap"><b>ספירת העומר:</b> מופיע בימי הספירה. מחוץ לעונה — כמה ימים נשארו.</div>
+  </div>
+</div>
+
+<h2>3. האפליקציה בשעון</h2>
+<div class="sub">רשימה אחת שגוללים בטבעת / בכתר, ולחיצה על כל שורה פותחת מסך</div>
+<div class="row">
+  <div class="item">
+    <div class="w">
+      <div class="time">14:12</div>
+      <div class="fr gold" style="font-size:24px;margin-top:10px">ה׳ בחשוון תשפ״ז</div>
+      <div class="k">יום שישי · ערב שבת פרשת נח</div>
+      <div class="chip g" style="margin-top:10px"><span>הדלקת נרות</span><span>17:23</span></div>
+      <div class="k">בעוד 3 שעות ו-11 דק׳</div>
+      <div class="chip" style="margin-top:6px"><span>⏱ זמני היום</span><span>›</span></div>
+      <div class="dots"><i class="on"></i><i></i><i></i><i></i></div>
+    </div>
+    <div class="cap"><b>ראשי:</b> התאריך, היום המיוחד והזמן הבא. גוללים למטה לשאר.</div>
+  </div>
+  <div class="item">
+    <div class="w">
+      <div class="time">14:12</div>
+      <div class="lbl gold" style="margin-bottom:6px">זמני היום</div>
+      <div class="list">
+        <div class="zr"><span>מנחה גדולה</span><span>11:56</span></div>
+        <div class="zr"><span>מנחה קטנה</span><span>14:58</span></div>
+        <div class="zr now"><span>הדלקת נרות</span><span>17:23</span></div>
+        <div class="zr"><span>שקיעה</span><span>17:43</span></div>
+        <div class="zr"><span>צאת הכוכבים</span><span>18:01</span></div>
+        <div class="zr"><span>חצות הלילה</span><span>23:38</span></div>
+      </div>
+    </div>
+    <div class="cap"><b>זמני היום:</b> כל הזמנים, עם הזמן הבא מודגש. מג״א / הגר״א — לפי ההגדרה.</div>
+  </div>
+  <div class="item">
+    <div class="w">
+      <div class="time">14:12</div>
+      <div class="list" style="max-height:230px">
+        <div class="zr"><span>🕯️ שבת פרשת נח</span><span>17:23</span></div>
+        <div class="zr"><span>🎉 חנוכה</span><span>בעוד 49 י׳</span></div>
+        <div class="zr"><span>📖 דף יומי</span><span>ב״ק נ״ב</span></div>
+        <div class="zr"><span>📜 תהילים</span><span>כג-כח</span></div>
+        <div class="zr"><span>🙏 ברכות קצרות</span><span>›</span></div>
+        <div class="zr"><span>🧭 מצפן לירושלים</span><span>›</span></div>
+        <div class="zr"><span>⚙️ הגדרות</span><span>›</span></div>
+      </div>
+    </div>
+    <div class="cap"><b>המשך הרשימה:</b> שבת, המועד הקרוב, לימוד היום, ברכות, מצפן והגדרות.</div>
+  </div>
+</div>
+<div class="row" style="margin-top:26px">
+  <div class="item">
+    <div class="w">
+      <div class="time">14:12</div>
+      <div class="lbl gold">כיוון התפילה</div>
+      <div class="comp"><span class="n">צ</span><div class="needle"></div><div class="hub"></div></div>
+      <div class="k" style="margin-top:6px">ירושלים · 47 ק״מ</div>
+    </div>
+    <div class="cap"><b>מצפן:</b> המחט מצביעה להר הבית, כמו המצפן באתר. רטט קל כשמכוונים.</div>
+  </div>
+  <div class="item">
+    <div class="w">
+      <div class="time">14:12</div>
+      <div class="fr gold" style="font-size:19px;margin-bottom:6px">אשר יצר</div>
+      <div class="txt">בָּרוּךְ אַתָּה ה׳ אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, אֲשֶׁר יָצַר אֶת הָאָדָם בְּחָכְמָה…</div>
+    </div>
+    <div class="cap"><b>ברכות קצרות:</b> אשר יצר, בורא נפשות, מעין שלוש, תפילת הדרך, ספירת העומר, ברכת הלבנה. מנוקד וממורכז.</div>
+  </div>
+  <div class="item">
+    <div class="w">
+      <div class="time">14:12</div>
+      <div class="lbl gold" style="margin-bottom:6px">הגדרות</div>
+      <div class="chip"><span>מיקום</span><span style="direction:rtl">פתח תקווה</span></div>
+      <div class="chip"><span>נוסח</span><span style="direction:rtl">עדות המזרח</span></div>
+      <div class="chip"><span>שיטה</span><span style="direction:rtl">מג״א</span></div>
+      <div class="chip"><span>הדלקה</span><span style="direction:rtl">20 דק׳</span></div>
+    </div>
+    <div class="cap"><b>הגדרות בשעון עצמו:</b> עיר מרשימה או מיקום השעון, נוסח, שיטה ודקות הדלקה.</div>
+  </div>
+</div>
+
+<h2>4. מסך מרובע</h2>
+<div class="sub">אותם מסכים מתארגנים גם בשעון מרובע</div>
+<div class="row">
+  <div class="item">
+    <div class="w sq">
+      <div class="time">14:12</div>
+      <div class="k">הזמן הבא · בעוד 3:11</div>
+      <div class="lbl gold">הדלקת נרות</div>
+      <div class="big" style="margin:4px 0 8px">17:23</div>
+      <div class="chip"><span>שקיעה</span><span>17:43</span></div>
+      <div class="chip"><span>צאת הכוכבים</span><span>18:01</span></div>
+    </div>
+    <div class="cap">Tile זמני היום בשעון מרובע.</div>
+  </div>
+</div>
+
+<div class="note">
+<b>העיצוב:</b> רקע שחור (חוסך סוללה במסך OLED), זהב של האתר, כותרות בפרנק ריהל וכתב באסיסטנט, כמו באתר ובווידג׳טים.<br>
+<b>החישוב:</b> בשעון עצמו, בלי אינטרנט, באותו מנוע שנבדק מול האתר עבור הווידג׳טים (KosherJava, הפרש של עד שנייה).<br>
+<b>נפרד מהטלפון ומהאתר:</b> פרויקט משלו (<code>wear/</code>) עם הגדרות משלו. סנכרון הגדרות מהטלפון — שלב מאוחר יותר, רק אם תרצה.<br>
+<b>הנתונים כאן לדוגמה בלבד.</b> הזמנים האמיתיים יופיעו בצילומי המסך מהאמולטור.
+</div>
+</body>
+</html>

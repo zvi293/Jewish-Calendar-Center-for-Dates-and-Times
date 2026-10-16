@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">הלוח היהודי</string>
+    <string name="tile_zmanim">זמני היום</string>
+    <string name="tile_shabbat">שבת וחג</string>
+    <string name="tile_omer">ספירת העומר</string>
+    <string name="c_next">הזמן הבא</string>
+    <string name="c_date">תאריך עברי</string>
+    <string name="c_omer">ספירת העומר</string>
+    <string name="c_shabbat">הדלקת נרות וצאת שבת</string>
+</resources>

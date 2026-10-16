@@ -386,7 +386,8 @@
       return;
     }
     var rem = Math.max(0, tg.scrollHeight - tg.clientHeight - tg.scrollTop);
-    var pps = (sp && sp[st.speed]) || 17;
+    // כל מהירות — גם ערך מהסלייד (למשל 1.2x) שאין לו מפתח ב-_AUTO_SCROLL_SPEEDS
+    var pps = (window._autoScrollPxPerSec && window._autoScrollPxPerSec(st.speed)) || (sp && sp[st.speed]) || 17;
     var txt = etaFmt(Math.ceil(rem / pps));
     if (eta._t !== txt) { eta._t = txt; eta.lastChild.textContent = txt; }
     if (!eta._on) { eta._on = true; eta.classList.add("on"); }

@@ -4240,7 +4240,57 @@ html.dark .lux-sel-foot { background: #111c33; border-top-color: rgba(255, 255, 
 }
 /* כפתור מהירות הגלילה בכל הקוראים: רוחב קבוע שמכיל גם "0.5x"/"1.5x"/"2.5x" — אחרת הכפתור
    מתרחב ב-8px בכל החלפה והסרגל כולו זז. !important גובר על min-width:2.4rem שב-style הפנימי */
-.auto-scroll-speed-btn { min-width: 3rem !important; }
+.auto-scroll-speed-btn { min-width: 3rem !important; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: manipulation; }
+/* סלייד מהירות הגלילה — נפתח בלחיצה ארוכה על כפתור המהירות (script.js, openSpeedSlider; 10/2026).
+   רקע שקוף שתופס נגיעה בחוץ (הטקסט ממשיך להיראות ולגלול מאחור), וכרטיס קטן ליד הכפתור. */
+#as-speed-pop { position: fixed; inset: 0; z-index: 100500; }
+#as-speed-pop .as-sp-bd { position: absolute; inset: 0; background: transparent; touch-action: none; }
+#as-speed-pop .as-sp-card {
+  position: fixed;
+  width: min(320px, calc(100vw - 32px));
+  box-sizing: border-box;
+  padding: 12px 16px 10px;
+  border-radius: 18px;
+  background: #ffffff;
+  color: #1e293b;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.25);
+  text-align: center;
+  font-family: inherit;
+}
+#as-speed-pop .as-sp-head { display: flex; align-items: baseline; justify-content: center; gap: 10px; margin-bottom: 6px; }
+#as-speed-pop .as-sp-title { font-size: 0.9rem; font-weight: 700; color: #334155; }
+#as-speed-pop .as-sp-val { font-size: 1.35rem; font-weight: 900; color: #047857; min-width: 3.2rem; direction: ltr; font-variant-numeric: tabular-nums; }
+#as-speed-pop .as-sp-range {
+  -webkit-appearance: none; appearance: none;
+  display: block; width: 100%; height: 36px; margin: 0; background: transparent; cursor: pointer; touch-action: none;
+  --as-sp-fill: 0%;
+}
+#as-speed-pop .as-sp-range::-webkit-slider-runnable-track {
+  height: 8px; border-radius: 999px;
+  background: linear-gradient(to right, #10b981 0, #10b981 var(--as-sp-fill), #d1fae5 var(--as-sp-fill), #d1fae5 100%);
+}
+#as-speed-pop .as-sp-range::-moz-range-track { height: 8px; border-radius: 999px; background: #d1fae5; }
+#as-speed-pop .as-sp-range::-moz-range-progress { height: 8px; border-radius: 999px; background: #10b981; }
+#as-speed-pop .as-sp-range::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 28px; height: 28px; margin-top: -10px; border-radius: 50%;
+  background: #ffffff; border: 3px solid #047857; box-shadow: 0 2px 6px rgba(4, 120, 87, 0.35);
+}
+#as-speed-pop .as-sp-range::-moz-range-thumb {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: #ffffff; border: 3px solid #047857; box-shadow: 0 2px 6px rgba(4, 120, 87, 0.35);
+}
+#as-speed-pop .as-sp-range:focus-visible { outline: 2px solid #047857; outline-offset: 2px; border-radius: 8px; }
+#as-speed-pop .as-sp-scale { display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: 600; color: #475569; margin-top: 2px; }
+html.dark #as-speed-pop .as-sp-card { background: #1e293b; color: #e2e8f0; border-color: rgba(52, 211, 153, 0.4); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); }
+html.dark #as-speed-pop .as-sp-title { color: #cbd5e1; }
+html.dark #as-speed-pop .as-sp-val { color: #34d399; }
+html.dark #as-speed-pop .as-sp-scale { color: #94a3b8; }
+html.dark #as-speed-pop .as-sp-range::-webkit-slider-runnable-track {
+  background: linear-gradient(to right, #10b981 0, #10b981 var(--as-sp-fill), #334155 var(--as-sp-fill), #334155 100%);
+}
+html.dark #as-speed-pop .as-sp-range::-moz-range-track { background: #334155; }
 /* כפתורי גופן בתחתית הקורא — ליד הגלילה האוטומטית */
 .lux-sel-fbtn {
   width: 40px;

@@ -23756,6 +23756,24 @@ window.openDonationModal = function() {
   // ואחרי 3x חוזר ל-0.5x; כל פתיחה חדשה מתחילה ב-1x.
   var LEVELS = [0.5, 1, 1.5, 2, 2.5, 3];
   var SPEEDS = { 0.5: 10, 1: 17, 1.5: 25, 2: 30, 2.5: 35, 3: 40 };
+  // מהירות רציפה (10/2026): לחיצה ארוכה על כפתור המהירות פותחת סלייד של 0.3x–4x בקפיצות של 0.1.
+  // המהירויות הקבועות נשארות בדיוק כמו ב-SPEEDS; ביניהן — המשך הקו (1.2x ≈ 20px/s), מתחת ל-0.5x —
+  // יחסי (0.3x = 6), ומעל 3x — עד 60px/s ב-4x. לולאת הגלילה (step) אחת לכל המהירויות: אותו מיקום
+  // וירטואלי ואותה השלמת תת-פיקסל — ולכן גם מהירות מהסלייד לא מרצדת.
+  var SLIDE_MIN = 0.3, SLIDE_MAX = 4, SLIDE_MAX_PX = 60;
+  function pxPerSecFor(s) {
+    if (SPEEDS[s]) return SPEEDS[s];
+    s = +s;
+    if (!(s > 0)) return SPEEDS[1];
+    var lo = LEVELS[0], hi = LEVELS[LEVELS.length - 1];
+    if (s < lo) return SPEEDS[lo] * s / lo;
+    if (s > hi) return SPEEDS[hi] + (Math.min(s, SLIDE_MAX) - hi) * (SLIDE_MAX_PX - SPEEDS[hi]) / (SLIDE_MAX - hi);
+    for (var i = 1; i < LEVELS.length; i++) {
+      var a = LEVELS[i - 1], b = LEVELS[i];
+      if (s <= b) return SPEEDS[a] + (s - a) * (SPEEDS[b] - SPEEDS[a]) / (b - a);
+    }
+    return SPEEDS[1];
+  }
 
   var ICON_PLAY  = '▶';
   var ICON_PAUSE = '⏸';
@@ -23770,7 +23788,7 @@ window.openDonationModal = function() {
     lastT: 0,           // חותמת זמן של הפריים הקודם
     pos: null,          // מיקום גלילה "וירטואלי" עשרוני (null = להתיישר ל-scrollTop בפריים הבא)
     lastTop: 0,         // scrollTop כפי שהדפדפן החזיר אחרי הכתיבה האחרונה שלנו
-    speed: 1,           // מהירות נוכחית (אחת מ-LEVELS) — מאופסת ל-1x בכל פתיחה חדשה
+    speed: 1,           // מהירות נוכחית (מ-LEVELS, או כל ערך 0.3–4 מהסלייד) — מאופסת ל-1x בכל פתיחה חדשה
     lastTargetKey: null, // מזהה הסלקטור האחרון — לזיהוי "פתיחה חדשה"
     subOn: []           // התוכן שעליו מוחלת השלמת התת-פיקסל כרגע (applySub): [אלמנט, transform, will-change קודמים]
   };
@@ -23941,7 +23959,7 @@ window.openDonationModal = function() {
     if (dt < 0) dt = 0;
     if (dt > 0.25) dt = 0.016;
 
-    var pxPerSec = SPEEDS[state.speed] || SPEEDS[1];
+    var pxPerSec = pxPerSecFor(state.speed);
     var tgt = state.target;
     // מיקום וירטואלי עשרוני: הדפדפן מעגל את scrollTop לפיקסל המסך *הקרוב* (גם כלפי מעלה).
     // בעבר נצברה "שארית" מול scrollTop וכל עיגול כלפי מעלה אבד — 1x רץ בפועל 30px/s במקום 17,
@@ -24024,17 +24042,115 @@ window.openDonationModal = function() {
   };
 
   window._cycleAutoScrollSpeed = function(/*btn*/) {
-    state.speed = LEVELS[(LEVELS.indexOf(state.speed) + 1) % LEVELS.length];
+    // מהירות מהסלייד (למשל 1.2x) — הלחיצה הרגילה ממשיכה לקבועה הבאה בתור (1.5x); אחרי 3x — 0.5x
+    var i = LEVELS.indexOf(state.speed), nx = LEVELS[0];
+    if (i !== -1) nx = LEVELS[(i + 1) % LEVELS.length];
+    else for (var k = 0; k < LEVELS.length; k++) if (LEVELS[k] > state.speed) { nx = LEVELS[k]; break; }
+    state.speed = nx;
     syncSpeedDisplays();
     notifyChange();
     if (window._btnToastVal) window._btnToastVal("מהירות גלילה: " + state.speed + "x");
   };
+
+  // ── סלייד מהירות: לחיצה ארוכה על כפתור המהירות (טלפון ומחשב) — 10/2026 ──
+  // לחיצה רגילה = מחזור הקבועות כמו תמיד. לחיצה ארוכה (450ms בלי תזוזה) פותחת חלונית קטנה ליד
+  // הכפתור עם סלייד 0.3x–4x; הגרירה משנה את המהירות מיד גם תוך כדי גלילה (step קורא את
+  // state.speed בכל פריים — בלי קפיצה). הקליק שמגיע בהרמת האצבע נבלע — לא מחליף מהירות.
+  // החלונית היסטוריה-בטוחה (pushModalState + _popupHideHandlers): "חזור"/Escape/נגיעה בחוץ סוגרים
+  // רק אותה, והקורא נשאר פתוח. המהירות לא נשמרת — פתיחה חדשה חוזרת ל-1x כמו בלחיצה רגילה.
+  var SP_POP = 'as-speed-pop', LP_MS = 450;
+  var lp = null, lpSwallow = 0;
+  function setSliderSpeed(v) {
+    v = Math.round(Math.min(SLIDE_MAX, Math.max(SLIDE_MIN, +v || 1)) * 10) / 10;
+    if (v === state.speed) return;
+    state.speed = v;
+    syncSpeedDisplays();
+    notifyChange();
+  }
+  function hideSpeedSlider() {
+    var w = document.getElementById(SP_POP);
+    if (w) w.remove();
+  }
+  window._popupHideHandlers && (window._popupHideHandlers[SP_POP] = hideSpeedSlider);
+  function closeSpeedSlider() {
+    if (window._popupHistoryClose) window._popupHistoryClose(SP_POP); else hideSpeedSlider();
+  }
+  function openSpeedSlider(btn) {
+    if (document.getElementById(SP_POP)) return;
+    var w = document.createElement('div');
+    w.id = SP_POP;
+    w.innerHTML =
+      '<div class="as-sp-bd"></div>' +
+      '<div class="as-sp-card" role="dialog" aria-label="מהירות גלילה">' +
+        '<div class="as-sp-head"><span class="as-sp-title">מהירות גלילה</span><b class="as-sp-val"></b></div>' +
+        '<input type="range" class="as-sp-range" dir="ltr" min="' + SLIDE_MIN + '" max="' + SLIDE_MAX + '" step="0.1" aria-label="מהירות גלילה">' +
+        '<div class="as-sp-scale" dir="ltr"><span><bdi>' + SLIDE_MIN + 'x</bdi> · איטי</span><span>מהיר · <bdi>' + SLIDE_MAX + 'x</bdi></span></div>' +
+      '</div>';
+    document.body.appendChild(w);
+    var card = w.lastChild, range = card.querySelector('.as-sp-range'), val = card.querySelector('.as-sp-val');
+    function show() {
+      var t = state.speed + 'x';
+      val.textContent = t;
+      range.setAttribute('aria-valuetext', t);
+      // מילוי המסילה עד הידית (צבע) — דרך משתנה, בלי לצייר מחדש את הדף
+      range.style.setProperty('--as-sp-fill', ((state.speed - SLIDE_MIN) / (SLIDE_MAX - SLIDE_MIN) * 100).toFixed(1) + '%');
+    }
+    range.value = Math.min(SLIDE_MAX, Math.max(SLIDE_MIN, state.speed));
+    show();
+    range.addEventListener('input', function () { setSliderSpeed(range.value); show(); });
+    w.firstChild.addEventListener('pointerdown', function (e) { e.preventDefault(); closeSpeedSlider(); });
+    // מיקום: מעל הכפתור כשהוא בחצי התחתון של המסך, אחרת מתחתיו; ממורכז אליו ונשאר בתוך המסך
+    var r = btn.getBoundingClientRect(), vw = window.innerWidth, vh = window.innerHeight;
+    var cw = card.offsetWidth, ch = card.offsetHeight;
+    var left = Math.max(12, Math.min(vw - cw - 12, r.left + r.width / 2 - cw / 2));
+    var top = (r.top + r.height / 2 > vh / 2) ? r.top - ch - 10 : r.bottom + 10;
+    card.style.left = left + 'px';
+    card.style.top = Math.max(12, Math.min(vh - ch - 12, top)) + 'px';
+    if (typeof pushModalState === 'function') pushModalState(SP_POP);
+  }
+  function lpCancel() { if (lp) { clearTimeout(lp.t); lp = null; } }
+  function speedBtnOf(e) { return e.target && e.target.closest ? e.target.closest('.auto-scroll-speed-btn') : null; }
+  document.addEventListener('pointerdown', function (e) {
+    if (e.button > 0) return;
+    var b = speedBtnOf(e);
+    if (!b) return;
+    lpCancel();
+    var cur = { b: b, x: e.clientX, y: e.clientY, id: e.pointerId };
+    cur.t = setTimeout(function () {
+      if (lp !== cur) return;
+      lp = null;
+      if (!b.isConnected) return;
+      lpSwallow = Infinity; // עד הרמת האצבע — ואז עוד רגע לקליק שהדפדפן שולח
+      try { if (navigator.vibrate) navigator.vibrate(12); } catch (eV) {}
+      openSpeedSlider(b);
+    }, LP_MS);
+    lp = cur;
+  }, true);
+  document.addEventListener('pointermove', function (e) {
+    if (lp && lp.id === e.pointerId && Math.abs(e.clientX - lp.x) + Math.abs(e.clientY - lp.y) > 12) lpCancel();
+  }, true);
+  function lpEnd() {
+    lpCancel();
+    if (lpSwallow === Infinity) lpSwallow = Date.now() + 500;
+  }
+  document.addEventListener('pointerup', lpEnd, true);
+  document.addEventListener('pointercancel', lpEnd, true);
+  document.addEventListener('click', function (e) {
+    if (Date.now() > lpSwallow) return;
+    if (!speedBtnOf(e) && !(e.target && e.target.closest && e.target.closest('#' + SP_POP))) return;
+    lpSwallow = 0;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+  }, true);
+  // לחיצה ארוכה בטלפון לא פותחת תפריט/בחירת טקסט על הכפתור
+  document.addEventListener('contextmenu', function (e) { if (speedBtnOf(e)) e.preventDefault(); }, true);
 
   window._syncAutoScrollSpeedDisplays = syncSpeedDisplays;
 
   // חשיפה לתאימות אחורה / דיבאג
   window._autoScrollState = state;
   window._AUTO_SCROLL_SPEEDS = SPEEDS;
+  window._autoScrollPxPerSec = pxPerSecFor; // פיקסלים לשנייה לכל מהירות, גם מהסלייד (זמן הסיום ב-lux.js)
   // עצירה חיצונית (תוכן עניינים קופץ למקום אחר — הגלילה האוטומטית לא נלחמת בקפיצה)
   window._stopAutoScroll = function() {
     if (!state.rafId) return;

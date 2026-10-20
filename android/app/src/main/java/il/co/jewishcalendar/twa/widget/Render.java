@@ -198,7 +198,9 @@ final class Render {
             RemoteViews row = new RemoteViews(c.getPackageName(), R.layout.wb_zrow);
             row.setTextViewText(R.id.lbl, r.label);
             row.setTextViewTextSize(R.id.lbl, android.util.TypedValue.COMPLEX_UNIT_SP, (i == 0 ? 15f : 14f) * s);
-            row.setTextViewText(R.id.sub, compact ? "" : r.sub);
+            // 10/2026: מוצגת רק השיטה שנבחרה בהגדרות (Engine.rowsOf), ולכן אין עוד
+            // צורך בתווית "מג״א"/"הגר״א" כאן — והרוחב שהתפנה שומר על השעה בשורה
+            row.setTextViewText(R.id.sub, "");
             row.setTextViewText(R.id.tag, r.tag);
             row.setTextViewText(R.id.time, time(e, r.ms));
             row.setTextViewTextSize(R.id.time, android.util.TypedValue.COMPLEX_UNIT_SP, (i == 0 ? 17f : 15f) * s);

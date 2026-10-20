@@ -155,6 +155,12 @@ public class ConfigActivity extends Activity {
             RemoteViews rv = Render.build(this, kind, widgetId, wh[0], wh[1], e, style);
             View v = rv.apply(this, pv);
             pv.addView(v, new FrameLayout.LayoutParams(dp(wh[0]), dp(wh[1]), Gravity.CENTER));
+            // 10/2026: התצוגה המקדימה היא ה-RemoteViews האמיתי, וה-PendingIntent שבתוכו
+            // פתח את האפליקציה במקום לבחור סגנון. שכבה שקופה מעליה בולעת את המגע
+            // ומעבירה אותו לכרטיס — כך לחיצה על התצוגה בוחרת את הסגנון.
+            View shield = new View(this);
+            shield.setOnClickListener(x -> select(style));
+            pv.addView(shield, new FrameLayout.LayoutParams(-1, -1));
         } catch (Throwable t) {
             pv.addView(text(name, 16, Color.WHITE, R.font.frl_bold), new FrameLayout.LayoutParams(-1, dp(140)));
         }

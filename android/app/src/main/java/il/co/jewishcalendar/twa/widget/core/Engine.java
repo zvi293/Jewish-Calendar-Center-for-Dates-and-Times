@@ -258,15 +258,22 @@ public final class Engine {
         add(r, "alot", fastMinor ? "עלות השחר · תחילת הצום" : "עלות השחר", null, z.alot, fastMinor);
         add(r, "talit", "טלית ותפילין", null, z.misheyakir, false);
         add(r, "netz", "הנץ החמה", null, z.sunrise, false);
-        add(r, "shmaMGA", "סוף ק״ש", "מג״א", z.shmaMGA, false);
-        add(r, "shmaGRA", "סוף ק״ש", "הגר״א", z.shmaGRA, false);
-        add(r, "tfilaMGA", "סוף תפילה", "מג״א", z.tfilaMGA, false);
-        add(r, "tfilaGRA", "סוף תפילה", "הגר״א", z.tfilaGRA, false);
+        // 10/2026: רק השיטה שנבחרה בהגדרות (loc.method). עד כה הוצגו גם מג"א וגם
+        // הגר"א של אותו זמן — כפילות מבלבלת אצל מי שכבר בחר שיטה אחת.
+        // ה-sub ("מג״א"/"הגר״א") נשאר ברשומה בשביל ווידג'טים שיש בהם מקום להציגו.
+        boolean mga = !"GRA".equals(loc.method);
+        if (mga) {
+            add(r, "shmaMGA", "סוף ק״ש", "מג״א", z.shmaMGA, false);
+            add(r, "tfilaMGA", "סוף תפילה", "מג״א", z.tfilaMGA, false);
+        } else {
+            add(r, "shmaGRA", "סוף ק״ש", "הגר״א", z.shmaGRA, false);
+            add(r, "tfilaGRA", "סוף תפילה", "הגר״א", z.tfilaGRA, false);
+        }
         add(r, "chatzot", "חצות היום", null, z.chatzot, false);
         add(r, "minchaG", "מנחה גדולה", null, z.minchaGedola, false);
         add(r, "minchaK", "מנחה קטנה", null, z.minchaKetana, false);
-        add(r, "plagMGA", "פלג המנחה", "מג״א", z.plag, false);
-        add(r, "plagGRA", "פלג המנחה", "הגר״א", z.plagGRA, false);
+        if (mga) add(r, "plagMGA", "פלג המנחה", "מג״א", z.plag, false);
+        else add(r, "plagGRA", "פלג המנחה", "הגר״א", z.plagGRA, false);
 
         boolean holyToday = isHoly(jc), holyTomorrow = isHoly(jcNext);
         boolean ykTomorrow = jcNext.getYomTovIndex() == JewishCalendar.YOM_KIPPUR;

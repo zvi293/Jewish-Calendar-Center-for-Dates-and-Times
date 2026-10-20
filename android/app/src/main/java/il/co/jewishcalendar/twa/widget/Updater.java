@@ -120,6 +120,7 @@ final class Updater {
     }
 
     static void schedule(Context c) {
+        PhoneCal.watch(c);
         AlarmManager am = (AlarmManager) c.getSystemService(Context.ALARM_SERVICE);
         if (am == null) return;
         if (!anyWidgets(c)) {

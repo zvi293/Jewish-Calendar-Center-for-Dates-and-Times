@@ -264,6 +264,16 @@
             </intent-filter>
         </activity>
 
+        <!-- ווידג'ט "לוח שנה" עם האירועים מיומן הטלפון: חלון היום, ועדכון כשהיומן משתנה (PhoneCal) -->
+        <activity android:name=".widget.DayActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.Material.Dialog.NoActionBar" />
+        <service android:name=".widget.PhoneCal$Job"
+            android:permission="android.permission.BIND_JOB_SERVICE"
+            android:exported="false" />
+
         <receiver android:name=".widget.SysReceiver" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />

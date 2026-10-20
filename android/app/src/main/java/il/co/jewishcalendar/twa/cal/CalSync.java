@@ -64,7 +64,7 @@ public final class CalSync {
     private static final int DAYS_BACK = 7, DAYS_AHEAD = 400;
     static final int JOB_ID = 7301;
     /** הסימן שבסוף התיאור של כל אירוע שלנו. */
-    static final String MARK = "— הלוח היהודי · jewishcalendar.co.il";
+    public static final String MARK = "— הלוח היהודי · jewishcalendar.co.il";
 
     /** הקטגוריות — מפתח ותווית (מסך ההגדרות). כולן פעילות כברירת מחדל (בקשת המשתמש). */
     static final String[][] CATS = {

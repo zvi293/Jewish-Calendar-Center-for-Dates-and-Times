@@ -4,6 +4,7 @@
     <application>
         <activity android:name="il.co.jewishcalendar.twa.widget.GalleryActivity" android:exported="true" android:theme="@android:style/Theme.Material.NoActionBar" />
         <activity android:name="il.co.jewishcalendar.twa.widget.PinActivity" android:exported="true" android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+        <activity android:name="il.co.jewishcalendar.twa.widget.SeedCalActivity" android:exported="true" android:theme="@android:style/Theme.Translucent.NoTitleBar" />
         <activity android:name="il.co.jewishcalendar.twa.widget.ZDumpActivity" android:exported="true" android:theme="@android:style/Theme.Translucent.NoTitleBar" />
     </application>
 </manifest>

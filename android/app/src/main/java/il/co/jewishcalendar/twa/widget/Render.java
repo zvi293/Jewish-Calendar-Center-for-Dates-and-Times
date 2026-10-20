@@ -894,6 +894,9 @@ final class Render {
     // ראשי חודשים ותעניות — רקע עדין ושם המועד (כשיש מקום). חיצים למעבר בין חודשים (W.MonthCal),
     // לחיצה על יום פותחת את הלוח באתר באותו יום (?open=calendar&d=), ולחיצה על הכותרת —
     // את הלוח באתר (או חזרה לחודש הנוכחי אחרי מעבר בחיצים).
+    // האירועים שלי מיומן הטלפון (PhoneCal, כשהמשתמש הדליק בהגדרות הווידג'ט): נקודה בצבע היומן
+    // מתחת לכל יום שיש בו אירוע, ובגודל שיש בו מקום — רשימת האירועים הקרובים מתחת לחודש
+    // (לחיצה פותחת את האירוע ביומן). אז לחיצה על יום פותחת את חלון היום (DayActivity).
 
     private static final int FAST_C = 0xFFFCA5A5;
 
@@ -919,7 +922,7 @@ final class Render {
     }
 
     /** שם קצר של המועד לתא ביום (או null). */
-    private static String monthCellLabel(JewishCalendar jc) {
+    static String monthCellLabel(JewishCalendar jc) {
         switch (jc.getYomTovIndex()) {
             case JewishCalendar.ROSH_HASHANA: return "ר״ה";
             case JewishCalendar.EREV_ROSH_HASHANA: return "ערב ר״ה";
@@ -980,6 +983,24 @@ final class Render {
         String[] gm = {"ינואר", "פברואר", "מרץ", "אפריל", "מאי", "יוני", "יולי", "אוגוסט", "ספטמבר", "אוקטובר", "נובמבר", "דצמבר"};
         float s = clamp(Math.min(w / 340f, h / 330f), 0.8f, 1.35f);
 
+        // האירועים מיומן הטלפון — החודש המוצג, וגם 45 יום קדימה מהיום לרשימה
+        boolean pc = PhoneCal.active(c);
+        List<PhoneCal.Ev> evs = java.util.Collections.emptyList();
+        long ed1 = PhoneCal.epochDay(ty, tm, 1), edToday = PhoneCal.epochDay(e.y, e.m, e.d);
+        java.util.Map<Long, List<Integer>> dots = new java.util.HashMap<>();
+        if (pc) {
+            long from = Math.min(PhoneCal.dayStart(ty, tm, 1), PhoneCal.dayStart(e.y, e.m, e.d)) - Engine.DAY;
+            long to = Math.max(PhoneCal.dayStart(ty, tm, days) + 2 * Engine.DAY, e.now + 46 * Engine.DAY);
+            evs = PhoneCal.load(c, from, to);
+            for (PhoneCal.Ev v : evs) {
+                for (long dd = Math.max(v.day0, ed1); dd <= Math.min(v.day1, ed1 + days - 1); dd++) {
+                    List<Integer> cs = dots.get(dd);
+                    if (cs == null) dots.put(dd, cs = new java.util.ArrayList<>());
+                    if (cs.size() < 3 && !cs.contains(v.color)) cs.add(v.color);
+                }
+            }
+        }
+
         // כותרת: [→ חודש קודם] [לועזי + עברי] [← חודש הבא] — בימין לשמאל: הקודם בימין, הבא בשמאל (כמו באתר).
         // חצים רגילים ולא ‹ ›: אלה מתהפכים אוטומטית בטקסט מימין לשמאל (נמדד 10/2026)
         RemoteViews hd = Ui.hbox(c);
@@ -1020,7 +1041,26 @@ final class Render {
 
         // הרשת — שורות במשקל שווה; התאים מחוץ לחודש ריקים
         float headerDp = 54 * s + (off != 0 ? 34 : 0) + 22;
-        float rowH = Math.max(18, (h - 16 - headerDp) / weeks);
+        // הרשימה מתחת לחודש: רק כשנשאר מקום ושורות החודש עדיין מציגות את התאריך העברי (≥ 36dp)
+        List<PhoneCal.Ev> upcoming = new java.util.ArrayList<>();
+        if (pc) {
+            for (PhoneCal.Ev v : evs) {
+                boolean show = off == 0 ? v.day1 >= edToday && (v.allDay || v.end > e.now)
+                        : v.day1 >= ed1 && v.day0 <= ed1 + days - 1;
+                if (show) upcoming.add(v);
+            }
+        }
+        float lineDp = 17 * Math.min(s, 1.15f), listHead = 24;
+        int listN = 0;
+        boolean listEmptyLine = false;
+        if (pc && w >= 200) {
+            float room = h - 16 - headerDp - weeks * 36f - listHead;
+            int fits = (int) Math.floor(room / lineDp);
+            listN = Math.max(0, Math.min(Math.min(4, fits), upcoming.size()));
+            listEmptyLine = upcoming.isEmpty() && fits >= 1;
+        }
+        float listDp = listN > 0 || listEmptyLine ? listHead + Math.max(1, listN) * lineDp : 0;
+        float rowH = Math.max(18, (h - 16 - headerDp - listDp) / weeks);
         float gSp = clamp(rowH * 0.34f, 10.5f, 19f), hSp = clamp(rowH * 0.21f, 8.5f, 12.5f), evSp = clamp(rowH * 0.18f, 8f, 11f);
         boolean showHeb = rowH >= 28, showEv = rowH >= 44 && w >= 250;
         for (int r = 0; r < weeks; r++) {
@@ -1061,16 +1101,61 @@ final class Render {
                     if (fast) cell.setTextColor(R.id.ev, FAST_C);
                     else if (parashaOnly) cell.setTextColor(R.id.ev, Ui.MUTED); // פרשת השבוע
                 }
+                List<Integer> dcs = dots.get(ed1 + day - 1);
+                if (dcs != null) {
+                    SpannableStringBuilder db = new SpannableStringBuilder();
+                    for (int dc : dcs) {
+                        int st = db.length();
+                        db.append("●");
+                        db.setSpan(new ForegroundColorSpan(dc), st, db.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    }
+                    cell.setViewVisibility(R.id.dt, View.VISIBLE);
+                    cell.setTextViewText(R.id.dt, db);
+                    cell.setTextViewTextSize(R.id.dt, android.util.TypedValue.COMPLEX_UNIT_SP, clamp(rowH * 0.13f, 6.5f, 9f));
+                }
                 if (today) cell.setInt(R.id.cell, "setBackgroundResource", R.drawable.wcell_today);
                 else if (evt) cell.setInt(R.id.cell, "setBackgroundResource", R.drawable.wcell_evt);
                 String iso = ty + "-" + (tm < 10 ? "0" : "") + tm + "-" + (day < 10 ? "0" : "") + day;
-                cell.setOnClickPendingIntent(R.id.cell, Ui.open(c, id, "calendar&d=" + iso));
-                cell.setContentDescription(R.id.cell, day + " · " + Heb.dayOfMonth(jc) + (label != null ? " · " + label : ""));
+                cell.setOnClickPendingIntent(R.id.cell, pc ? DayActivity.pending(c, id, ty, tm, day) : Ui.open(c, id, "calendar&d=" + iso));
+                cell.setContentDescription(R.id.cell, day + " · " + Heb.dayOfMonth(jc) + (label != null ? " · " + label : "")
+                        + (dcs != null ? " · יש אירועים ביומן" : ""));
                 row.addView(BOX, cell);
             }
             root.addView(C, row);
         }
+        if (listDp > 0) monthList(c, root, t, upcoming, listN, edToday, e.now, off == 0, lineDp);
         return root;
+    }
+
+    /** רשימת האירועים הקרובים מיומן הטלפון — מתחת לחודש. */
+    private static void monthList(Context c, RemoteViews root, Ui.Theme t, List<PhoneCal.Ev> list, int n,
+                                  long edToday, long now, boolean fromToday, float lineDp) {
+        root.addView(C, Ui.gap(c, 4));
+        RemoteViews head = Ui.line(c, Ui.B, fromToday ? "האירועים הקרובים שלי" : "האירועים שלי בחודש הזה", 11.5f, t.gold);
+        head.setOnClickPendingIntent(R.id.t, PendingIntent.getActivity(c, 0x5C01,
+                PhoneCal.openDay(PhoneCal.dayStartOf(edToday)), PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE));
+        root.addView(C, head);
+        root.addView(C, Ui.gap(c, 2));
+        if (n == 0) {
+            root.addView(C, Ui.line(c, Ui.R_, "אין אירועים קרובים ביומן", 11.5f, Ui.MUTED));
+            return;
+        }
+        float sp = clamp(lineDp * 0.72f, 11f, 13.5f);
+        TimeZone tz = TimeZone.getDefault();
+        for (int i = 0; i < n; i++) {
+            PhoneCal.Ev v = list.get(i);
+            RemoteViews r = new RemoteViews(c.getPackageName(), R.layout.wb_erow);
+            r.setTextColor(R.id.dot, v.color);
+            r.setTextViewText(R.id.lbl, v.title);
+            r.setTextViewTextSize(R.id.lbl, android.util.TypedValue.COMPLEX_UNIT_SP, sp);
+            String when = PhoneCal.when(v, edToday, now, tz);
+            r.setTextViewText(R.id.time, when);
+            r.setTextViewTextSize(R.id.time, android.util.TypedValue.COMPLEX_UNIT_SP, sp - 1);
+            r.setOnClickPendingIntent(R.id.row, PendingIntent.getActivity(c, (int) ((0x5C10L + v.eventId * 13 + v.begin / 60000) & 0x7fffffff),
+                    PhoneCal.openEvent(v), PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE));
+            r.setContentDescription(R.id.row, v.title + " · " + when);
+            root.addView(C, r);
+        }
     }
 
     // ═══════════════════════ 16. הילולת היום ═══════════════════════

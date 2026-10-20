@@ -1,0 +1,8 @@
+<!-- ווידג'ט "לוח שנה": שורה ברשימת האירועים מיומן הטלפון — נקודה בצבע היומן, כותרת (מתקצרת) ומתי (Render.month) -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/row"
+    android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical"
+    android:layoutDirection="rtl" android:paddingStart="4dp" android:paddingEnd="4dp" android:paddingTop="2dp" android:paddingBottom="2dp">
+    <TextView android:id="@+id/dot" android:layout_width="wrap_content" android:layout_height="wrap_content" android:paddingEnd="5dp" android:fontFamily="sans-serif" android:textColor="#FFFFFF" android:textSize="11sp" android:includeFontPadding="false" android:text="●" />
+    <TextView android:id="@+id/lbl" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:fontFamily="sans-serif-medium" android:textColor="#FFFFFF" android:textSize="12sp" android:includeFontPadding="false" android:maxLines="1" android:ellipsize="end" android:textDirection="anyRtl" android:shadowColor="#73000A28" android:shadowRadius="3" android:shadowDy="1" />
+    <TextView android:id="@+id/time" android:layout_width="wrap_content" android:layout_height="wrap_content" android:paddingStart="6dp" android:fontFamily="sans-serif" android:textColor="#D9FFFFFF" android:textSize="11sp" android:includeFontPadding="false" android:maxLines="1" android:textDirection="rtl" android:shadowColor="#73000A28" android:shadowRadius="3" android:shadowDy="1" />
+</LinearLayout>

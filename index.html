@@ -33,6 +33,7 @@
         window.__jcInApp = true;
         document.documentElement.classList.add("jc-app");
         try { sessionStorage.setItem("moadim_in_app", "1"); } catch (e) {}
+        if (window.__jcLockZoom) window.__jcLockZoom();
       };
       try {
         if (String(document.referrer || "").indexOf("android-app://il.co.jewishcalendar.twa") === 0 ||
@@ -43,6 +44,8 @@
     </script>
     <style>
       html.jc-app .jc-web-pay { display: none !important; }
+      /* באפליקציה — בלי צביטה (יחד עם user-scalable=no ב-viewport): גלילה כן, הגדלה לא */
+      html.jc-app { touch-action: pan-x pan-y; }
       html.jc-app.jc-play .jc-play-pay { display: block !important; }
       /* תוכן תרומה שקיים רק באפליקציה (Google Play) — למשל בחלון "צור קשר"; באתר ובאפליקציה בלי מוצרים מוסתר */
       html:not(.jc-play) .jc-play-only { display: none !important; }
@@ -95,6 +98,16 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, viewport-fit=cover"
     />
+    <script>
+      // באפליקציה (TWA / WebView) — בלי הגדלה והקטנה בצביטה (בקשת המשתמש 20/10/2026): בקוראים יש
+      // כפתורי +/− לגודל הכתב, ובהגדרות "גודל כיתוב" לכל הדף. באתר בדפדפן הצביטה נשארת (נגישות).
+      // נקרא גם מ-__jcMarkApp — כשהזיהוי מגיע מאוחר (הודעת הגשר מהאפליקציה).
+      window.__jcLockZoom = function () {
+        var m = document.querySelector('meta[name="viewport"]');
+        if (m && m.content.indexOf("user-scalable") < 0) m.content += ", maximum-scale=1, user-scalable=no";
+      };
+      if (window.__jcInApp) window.__jcLockZoom();
+    </script>
     <script>
       // גודל הכיתוב מההגדרות — לפני הציור הראשון (עד 10/2026 הוחל רק כש-script.js נטען, והדף כולו
       // קפץ). כל הדף בנוי ב-rem, אז הגדלת גופן הבסיס מגדילה הכול — ובטלפון צר הדף "מתכווץ" לרוחב
@@ -502,7 +515,7 @@
          הכותרת "קפצה" באמצע מסך הפתיחה בטלפון. -->
     <link rel="preload" href="/fonts/frank-ruhl-libre-hebrew.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="/fonts.css?v=1" />
-    <link rel="stylesheet" href="style.css?v=122" />
+    <link rel="stylesheet" href="style.css?v=123" />
     <!-- בלי ציור ראשון של "חצי הירו": הסקריפט של באנר היום (לפני ה-h1) גורם למפרסר לפנות
          את התור, ו-Chrome צייר את ההירו חלקי — ואז קו הגל שבתחתיתו קפץ למטה (CLS). כאן
          הציור הראשון מחכה עד שכל ההירו נפרסר (עד #main-content — מילישניות בודדות).
@@ -519,8 +532,8 @@
     <!-- הקוד הראשי יורד מוקדם (preload) אך מוזרק ומתבצע רק אחרי הציור הראשון —
          ראו הטוען בסוף ה-body. ה-?v= כאן חייב להיות זהה לזה שבטוען וב-sw.js.
          fetchpriority=low: שלא יתחרו ברוחב-הפס עם ה-CSS החוסם (FCP) — כמו defer. -->
-    <link rel="preload" href="script.js?v=126" as="script" fetchpriority="low" />
-    <link rel="preload" href="lux.js?v=94" as="script" fetchpriority="low" />
+    <link rel="preload" href="script.js?v=127" as="script" fetchpriority="low" />
+    <link rel="preload" href="lux.js?v=95" as="script" fetchpriority="low" />
 
     <!-- OneSignal Web Push SDK -->
     <script>
@@ -940,6 +953,16 @@
             ></path>
           </svg>
           <span data-i18n-key="cal_btn">לוח שנה חודשי</span>
+        </button>
+
+        <!-- ══════ קריאת המגילה — אסתר בפורים ובשושן פורים, איכה בט' באב; מהלילה ועד צאת היום (script.js updateMegillahBtn) ══════ -->
+        <button
+          id="btn-megillah"
+          onclick="openMegillahPage(this.dataset.kind)"
+          class="hidden mx-auto mb-4 bg-white/10 hover:bg-white/20 border border-white/30 text-white px-8 py-3 rounded-2xl font-bold transition-all items-center justify-center gap-2 backdrop-blur-md opacity-0"
+        >
+          <span aria-hidden="true">📜</span>
+          <span id="btn-megillah-label">קריאת המגילה</span>
         </button>
 
         <!-- ══════ כפתור מוצאי שבת וחג ══════ -->
@@ -2876,8 +2899,8 @@
           // כבר מצוירים מתחת למסך הפתיחה ואנימציית הכניסה מתוזמנת לדהייתו. בהיר/כהה לא טוענים אותו.
           // אותו ?v= כמו ב-_luxSkyEnsure (script.js) וב-sw.js.
           if (document.documentElement.classList.contains("lux-sky")) addScript("sky.js?v=10", { id: "lux-sky-js" });
-          addScript("script.js?v=126");
-          addScript("lux.js?v=94");
+          addScript("script.js?v=127");
+          addScript("lux.js?v=95");
         }
         function afterFirstPaint() {
           // rAF אחד (רץ ממש לפני ציור הפריים הראשון) ואז setTimeout(0) — משימה

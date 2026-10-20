@@ -983,8 +983,11 @@
 .lv-state.lv-open { color: #dcfce7; background: rgba(22, 163, 74, 0.34); border-color: rgba(74, 222, 128, 0.55); }
 .lv-state.lv-grace { color: #fde68a; background: rgba(217, 119, 6, 0.22); border-color: rgba(251, 191, 36, 0.5); }
 /* רוחב מפורש: בתוך עמודת flex (align-items:flex-start) רוחב "לפי התוכן" היה מכווץ את התיבות */
-.lv-timer { display: flex; flex-wrap: nowrap; gap: 0.22rem; margin-top: 0.3rem; width: 100%; max-width: 9.6rem; direction: rtl; }
+/* סדר הספירה כמו בשעון (בקשת המשתמש 20/10/2026): ימים משמאל, שניות מימין — direction:ltr על השורה בלבד,
+   התוויות בעברית בתוך כל תיבה נשארות rtl */
+.lv-timer { display: flex; flex-wrap: nowrap; gap: 0.22rem; margin-top: 0.3rem; width: 100%; max-width: 9.6rem; direction: ltr; }
 .lv-seg {
+  direction: rtl;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1301,6 +1304,7 @@ details.group summary .text-blue-500 {
 
 /* ── כפתורי CTA בהירו — לוח שנה / בתי כנסת / מוצאי שבת ── */
 #btn-open-calendar,
+#btn-megillah,
 #btn-motzei-shabbat {
   background: linear-gradient(150deg, rgba(36, 81, 184, 0.5) 0%, rgba(12, 21, 48, 0.6) 100%) !important;
   border: 1px solid rgba(232, 193, 90, 0.45) !important;
@@ -1309,6 +1313,7 @@ details.group summary .text-blue-500 {
 }
 @media (hover: hover) {
   #btn-open-calendar:hover,
+  #btn-megillah:hover,
   #btn-motzei-shabbat:hover {
     border-color: rgba(242, 217, 138, 0.8) !important;
     box-shadow: 0 10px 32px rgba(5, 11, 26, 0.5), 0 0 24px rgba(232, 193, 90, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
@@ -7188,6 +7193,10 @@ html.dark .cnp-foot { color: #64748b; }
   color: inherit;
 }
 html.dark ::highlight(lux-mark) { background-color: rgba(250, 204, 21, 0.45); }
+/* סדר מוצאי שבת וחג — כרטיס כהה עם כתב לבן: השורה המסומנת בצהוב מלא וכתב כהה (לבן על צהוב לא קריא) */
+#motzei-tab-content::highlight(lux-mark),
+#motzei-tab-content *::highlight(lux-mark) { background-color: rgba(253, 224, 71, 0.92); color: #111827; }
+#motzei-tab-content .lux-mark-hl { color: #111827 !important; }
 
 /* ══════════════════════════════════════════════════════════════
    מצב ערב שבת / ערב חג (lux.js §45) — שלוש שעות לפני הדלקת נרות

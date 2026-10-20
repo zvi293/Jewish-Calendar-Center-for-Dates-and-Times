@@ -482,7 +482,7 @@
       "#sefaria-modal-content", "#chok-israel-modal-content", "#sn-reader-content",
       "#psalm-text-area", "#bih-content-area", "#shir-scroll-area",
       "#lux-sel-area", "#lux-tr-area", "#prayer-modal-body", "#lux-pl-area",
-      "#prayer-modal .modal-body"
+      "#prayer-modal .modal-body", "#motzei-tab-content"
     ];
     // [id^='bih-h-'] — הלכות הבן איש חי מרונדרות כ-div ולא כפסקאות;
     // .daf-line — קטעי הדף היומי (span בתצוגת בלוק)
@@ -811,7 +811,13 @@
       // קוראי lux (סליחות / מסלולים / סדר לימוד) — סדר אחיד 09/2026: [כותרות ימין][✕ שמאל]; המרקר ראשון = קצה ימין
       { area: "#lux-sel-area", dark: true, resolve: function () { var h = document.querySelector("#lux-selichot-reader .lux-sel-head"); return h ? { row: h, ref: h, where: "afterbegin" } : null; } },
       { area: "#lux-tr-area",  dark: true, resolve: function () { var h = document.querySelector("#lux-track-reader .lux-sel-head");    return h ? { row: h, ref: h, where: "afterbegin" } : null; } },
-      { area: "#lux-pl-area",  dark: true, resolve: function () { var h = document.querySelector("#lux-plan-reader .lux-sel-head");     return h ? { row: h, ref: h, where: "afterbegin" } : null; } }
+      { area: "#lux-pl-area",  dark: true, resolve: function () { var h = document.querySelector("#lux-plan-reader .lux-sel-head");     return h ? { row: h, ref: h, where: "afterbegin" } : null; } },
+      // סדר מוצאי שבת וחג (10/2026) — כותרת כהה; ה-✕ בפינה השמאלית, המרקר מולו בפינה הימנית
+      { area: "#motzei-tab-content", dark: true, resolve: function () {
+          var c = document.getElementById("motzei-card");
+          var h = c && c.firstElementChild;
+          return h ? { row: h, ref: h, where: "afterbegin", style: "position:absolute;top:8px;right:10px;z-index:1;" } : null;
+        } }
       // שיר השירים (#shir-scroll-area) הושמט בכוונה — הפסוקים הם span-ים בלי בלוקים, המרקר לא פעיל שם בפועל.
     ];
     function makeBtn(entry, spot) {

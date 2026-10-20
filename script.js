@@ -80,11 +80,46 @@ const _JC_OWN_PROXY = [
   ["https://he.wikisource.org/", "/wikisource-api/"],
   ["https://benyehuda.org/", "/benyehuda-api/"],
 ];
+// רשת מסוננת (20/10/2026): הסינון הכשר יושב ב-SIM ולא בדפדפן — Qin F22 Pro עם כרום רץ כ-TWA רגיל
+// (בלי jc-wv), hebcal נחסם, והדשבורד הציג "אין חיבור — מוצגים הנתונים השמורים". לכן אצל כולם:
+// בקשה ישירה שנכשלה ברמת הרשת (חסימה/CORS/timeout) → אותה בקשה דרך הפרוקסי שלנו; אם הוא ענה —
+// נזכרים לשבוע (moadim_via_own) וכל הבקשות עוברות ישר דרכו. בלי חיבור בכלל שניהם נכשלים ושום דבר לא נשמר.
+const _JC_OWN_KEY = "moadim_via_own";
+function _jcOwnOn() {
+  if (window.__jcWebView) return true;
+  if (location.protocol !== "https:") return false;
+  try {
+    const t = +localStorage.getItem(_JC_OWN_KEY) || 0;
+    return t > 0 && Date.now() - t < 7 * 864e5;
+  } catch (e) {
+    return false;
+  }
+}
+function _jcOwnLearn() {
+  try { localStorage.setItem(_JC_OWN_KEY, String(Date.now())); } catch (e) {}
+}
+function _jcOwnUrl(url) {
+  for (const [from, to] of _JC_OWN_PROXY) if (url.indexOf(from) === 0) return location.origin + to + url.slice(from.length);
+  return null;
+}
 function _jcViaOwn(url) {
   url = String(url);
-  if (!window.__jcWebView) return url;
-  for (const [from, to] of _JC_OWN_PROXY) if (url.indexOf(from) === 0) return location.origin + to + url.slice(from.length);
-  return url;
+  if (!_jcOwnOn()) return url;
+  return _jcOwnUrl(url) || url;
+}
+// fetch לשירות חיצוני עם מעבר אוטומטי לפרוקסי שלנו (ראו למעלה); timeout נפרד לכל ניסיון
+function _jcFetch(url, timeoutMs) {
+  url = String(url);
+  const go = (u) => fetch(u, { signal: AbortSignal.timeout(timeoutMs || 20000) });
+  const own = location.protocol === "https:" ? _jcOwnUrl(url) : null;
+  if (!own || _jcOwnOn()) return go(_jcViaOwn(url));
+  return go(url).catch((err) => {
+    if (navigator.onLine === false) throw err;
+    return go(own).then((res) => {
+      if (res.ok) _jcOwnLearn();
+      return res;
+    }, () => { throw err; });
+  });
 }
 
 // בקשת רשת אחת לכתובת (בקשות מקבילות לאותה כתובת חולקות אותה) — נכתבת למטמון
@@ -105,7 +140,7 @@ function _hebcalNetRequest(url, cacheKey, timeoutMs) {
     API_INFLIGHT_CACHE.set(url, sreq);
     return sreq;
   }
-  const request = fetch(_jcViaOwn(url), { signal: AbortSignal.timeout(timeoutMs) })
+  const request = _jcFetch(url, timeoutMs)
     .then((res) =>
       res.json().then((data) => {
         // תשובת שגיאה (4xx/5xx עם גוף JSON) מוחזרת למבקש כמו קודם (הקוראים בודקים
@@ -501,8 +536,8 @@ function _sefariaCandidates(url) {
   const m = String(url).match(/^https:\/\/www\.sefaria\.org(?:\.il)?(\/api\/.*)$/);
   if (!m) return [String(url)];
   const path = m[1];
-  // טלפון כשר — רק דרך הדומיין שלנו (ראו _jcViaOwn)
-  if (window.__jcWebView && location.protocol === "https:") return [location.origin + "/sefaria-api" + path.slice(4)];
+  // טלפון כשר / רשת מסוננת — רק דרך הדומיין שלנו (ראו _jcOwnOn)
+  if (_jcOwnOn() && location.protocol === "https:") return [location.origin + "/sefaria-api" + path.slice(4)];
   const list = ["https://www.sefaria.org" + path];
   // הפרוקסי קיים רק באתר המפורסם (Netlify) — בשרת פיתוח מקומי הוא סתם 404
   if (location.protocol === "https:") list.push(location.origin + "/sefaria-api" + path.slice(4));
@@ -521,6 +556,7 @@ function _sefariaJson(url, opts) {
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   const run = (async () => {
     let lastErr = null;
+    let directThrew = false; // ספריא הישירה נכשלה ברמת הרשת (לא 429/5xx) — חסימה אפשרית
     for (let round = 0; round < rounds; round++) {
       if (round) await wait(1500 * round);
       for (let i = 0; i < cands.length; i++) {
@@ -543,10 +579,14 @@ function _sefariaJson(url, opts) {
           // 4xx עם JSON = תשובה אמיתית של ספריא ("אין טקסט/אין ספר כזה") — מוחזרת כמו שהיא
           let data;
           try { data = await res.json(); } catch (eJ) { lastErr = eJ; continue; } // דף HTML (אתגר/חסימה/404 של פרוקסי)
-          if (data && typeof data === "object") return data;
+          if (data && typeof data === "object") {
+            if (directThrew && cands[i].indexOf(location.origin + "/sefaria-api/") === 0) _jcOwnLearn();
+            return data;
+          }
           lastErr = new Error("Sefaria bad payload");
         } catch (e) {
           if (outer && outer.aborted) throw e;
+          if (i === 0) directThrew = true;
           lastErr = e;
         } finally {
           clearTimeout(timer);
@@ -4504,9 +4544,9 @@ async function ensureCityCoords() {
   try {
     const now = new Date();
     const todayIso = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-    const res = await fetch(
-      _jcViaOwn(`https://www.hebcal.com/zmanim?cfg=json&geonameid=${GEO_LOCATION}&date=${todayIso}`),
-      { signal: AbortSignal.timeout(8000) },
+    const res = await _jcFetch(
+      `https://www.hebcal.com/zmanim?cfg=json&geonameid=${GEO_LOCATION}&date=${todayIso}`,
+      8000,
     );
     const data = await res.json();
     if (data.location) {
@@ -4571,7 +4611,7 @@ function _offlineAheadRefresh() {
   const s = _isoLocalDate(today);
   const e = _isoLocalDate(end);
   const getJson = (u) =>
-    fetch(_jcViaOwn(u), { signal: AbortSignal.timeout(20000) }).then((r) => {
+    _jcFetch(u, 20000).then((r) => {
       if (!r.ok) throw new Error("HTTP " + r.status);
       return r.json();
     });
@@ -13025,11 +13065,11 @@ function cleanWikisourceHtml(rawHtml) {
 
 async function fetchWikisourcePrayer(query) {
   const searchUrl = `https://he.wikisource.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*`;
-  const searchData = await fetch(_jcViaOwn(searchUrl)).then((response) => response.json());
+  const searchData = await _jcFetch(searchUrl, 20000).then((response) => response.json());
   const title = searchData?.query?.search?.[0]?.title;
   if (!title) throw new Error(`No Wikisource result for ${query}`);
   const parseUrl = `https://he.wikisource.org/w/api.php?action=parse&page=${encodeURIComponent(title)}&prop=text&formatversion=2&format=json&origin=*`;
-  const parseData = await fetch(_jcViaOwn(parseUrl)).then((response) => response.json());
+  const parseData = await _jcFetch(parseUrl, 20000).then((response) => response.json());
   const html = parseData?.parse?.text;
   if (!html) throw new Error(`No Wikisource HTML for ${title}`);
   return {

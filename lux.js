@@ -26,6 +26,18 @@
     try { fn(); } catch (e) { try { console.warn("[lux] " + name + ":", e); } catch (_) {} }
   }
 
+  // גודל הכתב הנוכחי מהאחסון המשותף (moadim_prayer_font_size).
+  // 10/2026: קוראי lux (סליחות / מסלולים / סדר לימוד) קראו את הערך פעם אחת בבניית
+  // הקורא ושמרו אותו במשתנה — אם המשתמש שינה גודל בקורא אחר בזמן שהקורא הזה פתוח
+  // ברקע, לחיצה על +/- כאן זינקה מהערך הישן (ולכן "הכתב קופץ ל-60 ואז גדל").
+  // לכן קוראים את הערך העדכני לפני כל שינוי, והקפיצה תמיד 10% מהגודל שרואים.
+  function luxFsNow(fallback) {
+    var v = parseInt(localStorage.getItem("moadim_prayer_font_size"), 10);
+    if (isNaN(v) || v < 60 || v > 200) v = fallback;
+    if (isNaN(v) || v < 60 || v > 200) v = 100;
+    return Math.round(v / 10) * 10;
+  }
+
   /* ── 1. רקע הירו לפי שעת היום + נרות ערב שבת ─────────────────── */
   safe("timeOfDay", function () {
     var hero = document.getElementById("hero-section");
@@ -2481,9 +2493,12 @@
     var wrapEl = input.closest(".relative") || input.parentElement;
     wrapEl.insertAdjacentElement("afterend", panel);
 
-    function search(q) {
+    // איסוף ההתאמות החכמות (תפילות, כלים, ספרים, חלקים, סעיפים וזמנים) — מופרד
+    // מהרינדור, כדי שגם חלון החיפוש בספרים (script.js, _snSearchRun) יוכל להציג
+    // אותן בראש התוצאות לצד התוצאות מתוך טקסט הספרים (10/2026)
+    function collect(q) {
       q = (q || "").trim();
-      if (q.length < 1) { panel.innerHTML = ""; panel.style.display = "none"; return; }
+      if (q.length < 1) return [];
       var out = [];
       CATALOG.forEach(function (c) {
         if (c.t.indexOf(q) !== -1) out.push({ i: c.i, t: c.t, sub: "", run: c.run });
@@ -2524,6 +2539,12 @@
           }
         });
       }
+      return out;
+    }
+    window._luxSmartMatches = collect;
+
+    function search(q) {
+      var out = collect(q);
       if (!out.length) { panel.innerHTML = ""; panel.style.display = "none"; return; }
       panel.style.display = "block";
       panel.innerHTML = out.slice(0, 8).map(function (o, i) {
@@ -3830,8 +3851,8 @@
       if (fs < 60 || fs > 200) fs = 100;
       function applyFs() { var _fsAnc = (applyFs._user && window._fontScrollAnchorCapture) ? window._fontScrollAnchorCapture(area) : null; area.style.setProperty("font-size", (fs / 100) * 25 + "px", "important"); if (_fsAnc && window._fontScrollAnchorRestore) window._fontScrollAnchorRestore(_fsAnc); try { localStorage.setItem("moadim_prayer_font_size", fs); } catch (_) {} if (window._btnToastVal && applyFs._user) window._btnToastVal("גודל כתב: " + fs + "%"); applyFs._user = false; }
       applyFs();
-      ov.querySelector("#lux-sel-fplus").addEventListener("click", function () { fs = Math.min(200, fs + 10); applyFs._user = true; applyFs(); });
-      ov.querySelector("#lux-sel-fminus").addEventListener("click", function () { fs = Math.max(60, fs - 10); applyFs._user = true; applyFs(); });
+      ov.querySelector("#lux-sel-fplus").addEventListener("click", function () { fs = Math.min(200, luxFsNow(fs) + 10); applyFs._user = true; applyFs(); });
+      ov.querySelector("#lux-sel-fminus").addEventListener("click", function () { fs = Math.max(60, luxFsNow(fs) - 10); applyFs._user = true; applyFs(); });
       ov.querySelector(".lux-sel-close").addEventListener("click", function () { luxModalClose("lux-selichot-reader"); });
 
       if (nus.byDay) {
@@ -5671,8 +5692,8 @@
       if (fs < 60 || fs > 200) fs = 100;
       function applyFs() { var _fsAnc = (applyFs._user && window._fontScrollAnchorCapture) ? window._fontScrollAnchorCapture(area) : null; area.style.setProperty("font-size", (fs / 100) * 25 + "px", "important"); if (_fsAnc && window._fontScrollAnchorRestore) window._fontScrollAnchorRestore(_fsAnc); try { localStorage.setItem("moadim_prayer_font_size", fs); } catch (_) {} if (window._btnToastVal && applyFs._user) window._btnToastVal("גודל כתב: " + fs + "%"); applyFs._user = false; }
       applyFs();
-      ov.querySelector("#lux-tr-fplus").addEventListener("click", function () { fs = Math.min(200, fs + 10); applyFs._user = true; applyFs(); });
-      ov.querySelector("#lux-tr-fminus").addEventListener("click", function () { fs = Math.max(60, fs - 10); applyFs._user = true; applyFs(); });
+      ov.querySelector("#lux-tr-fplus").addEventListener("click", function () { fs = Math.min(200, luxFsNow(fs) + 10); applyFs._user = true; applyFs(); });
+      ov.querySelector("#lux-tr-fminus").addEventListener("click", function () { fs = Math.max(60, luxFsNow(fs) - 10); applyFs._user = true; applyFs(); });
       ov.querySelector(".lux-sel-close").addEventListener("click", function () { luxModalClose("lux-track-reader"); });
       var doneBtn = ov.querySelector("#lux-tr-done");
       if (trackState(key).last === todayStr()) { doneBtn.classList.add("lux-tr-done-on"); doneBtn.textContent = "✓ הושלם היום"; }
@@ -6204,8 +6225,8 @@
       if (fs < 60 || fs > 200) fs = 100;
       function applyFs() { var _fsAnc = (applyFs._user && window._fontScrollAnchorCapture) ? window._fontScrollAnchorCapture(area) : null; area.style.setProperty("font-size", (fs / 100) * 25 + "px", "important"); if (_fsAnc && window._fontScrollAnchorRestore) window._fontScrollAnchorRestore(_fsAnc); try { localStorage.setItem("moadim_prayer_font_size", fs); } catch (_) {} if (window._btnToastVal && applyFs._user) window._btnToastVal("גודל כתב: " + fs + "%"); applyFs._user = false; }
       applyFs();
-      ov.querySelector("#lux-pl-fplus").addEventListener("click", function () { fs = Math.min(200, fs + 10); applyFs._user = true; applyFs(); });
-      ov.querySelector("#lux-pl-fminus").addEventListener("click", function () { fs = Math.max(60, fs - 10); applyFs._user = true; applyFs(); });
+      ov.querySelector("#lux-pl-fplus").addEventListener("click", function () { fs = Math.min(200, luxFsNow(fs) + 10); applyFs._user = true; applyFs(); });
+      ov.querySelector("#lux-pl-fminus").addEventListener("click", function () { fs = Math.max(60, luxFsNow(fs) - 10); applyFs._user = true; applyFs(); });
       ov.querySelector(".lux-sel-close").addEventListener("click", function () { luxModalClose("lux-plan-reader"); });
       var doneBtn = ov.querySelector("#lux-pl-done");
       if (doneToday) doneBtn.classList.add("lux-tr-done-on");

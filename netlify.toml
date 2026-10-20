@@ -128,6 +128,28 @@
   status = 200
   force = true
 
+# ── מצב טלפון כשר (20/10/2026) ──
+# באפליקציה שנפתחת ב-WebView (טלפון בלי כרום, html.jc-wv) מסננים כמו נטספארק מאשרים
+# דומיין אחד — ולכן שם כל בקשה לשירות חיצוני עוברת דרכנו (script.js → _jcViaOwn,
+# ספריא דרך /sefaria-api/ למעלה). שאר המשתמשים פונים ישירות למקור — אין רוחב פס נוסף.
+[[redirects]]
+  from = "/hebcal-api/*"
+  to = "https://www.hebcal.com/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/wikisource-api/*"
+  to = "https://he.wikisource.org/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/benyehuda-api/*"
+  to = "https://benyehuda.org/:splat"
+  status = 200
+  force = true
+
 # ── כותרות אבטחה לכל האתר ──
 # CSP מצומצם במכוון: frame-ancestors (מונע clickjacking), base-uri, object-src,
 # form-action — הגנות אמיתיות בלי סיכון שבירה. CSP מלא עם script-src אינו מעשי

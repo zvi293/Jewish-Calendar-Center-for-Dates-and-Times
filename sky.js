@@ -1421,6 +1421,10 @@
   }
   var resizeT = 0;
   window.addEventListener("resize", function () { clearTimeout(resizeT); resizeT = setTimeout(layout, 150); });
+  // מיקום הגלילה נקרא רק בגלילה — קריאת scrollY בכל פריים כפתה פריסה של כל הדף בזמן הטעינה (עד 135ms לפריים, CPU ×4)
+  var scrollYc = 0;
+  try { scrollYc = window.scrollY || 0; } catch (e) {}
+  window.addEventListener("scroll", function () { scrollYc = window.scrollY || 0; }, { passive: true });
 
   /* ── מצב הזמן ── */
   var mode = "live", sim = 0, tw = null, play = null, fixedMs = null;
@@ -1527,7 +1531,7 @@
     var mRel = Math.atan2(Math.sin(mp.azS), Math.cos(mp.azS)), mW = smooth(-2 * RAD, 8 * RAD, mp.alt) * (1 - follow);
     var drift = reduce ? 0 : .02 * Math.sin(t / 38000), pDrift = reduce ? 0 : .008 * Math.sin(t / 53000);
     var yaw = Math.PI + clamp(relAz * view.K, -.6, .6) * follow + clamp(mRel * view.KM, -.45, .45) * mW + par[0] + drift; // סיבוב מוגבל (עד ~34°/26°) — החומות המוארות נשארות בתצוגה גם כשהשמש/הירח בצד
-    var sc = 0; try { sc = clamp((window.scrollY || 0) / H, 0, 3); } catch (e) {}
+    var sc = clamp(scrollYc / H, 0, 3);
     var pitch = par[1] + pDrift - sc * .02;
 
     // שלושת הכוכבים הראשונים — ננעלים בשמיים (יחסית למצלמה) ברגע שמתחילים להופיע

@@ -2536,6 +2536,13 @@ html.lux-js #resultsGrid .event-card.lux-in {
   }
 }
 
+/* ── ביצועים בפתיחה (20/10/2026): כרטיסי המועדים (112 כרטיסים, ~28,000px בטלפון) לא נפרסים
+   כל עוד הם רחוקים מהמסך (כמו #seo-about ב-index.html). נמדד בטלפון מדומה (CPU ×4, טעינה
+   חוזרת): פריסה 1.4–2.1 → 0.9–1.4 שנ', חישוב סגנונות 1.5–2.0 → 0.4–0.6 שנ'. ‏"auto" = הגובה
+   האמיתי נזכר אחרי הציור הראשון. קפיצה לכרטיס רחוק (גלגל השנה) — קודם ‎.cv-off‎ על הרשימה (lux.js). */
+#resultsGrid > .event-card { content-visibility: auto; contain-intrinsic-size: auto 300px; }
+#resultsGrid.cv-off > .event-card { content-visibility: visible; }
+
 /* ── גל אור (ripple) ── */
 .prayer-btn, .chip, .nav-action-btn, .nav-donate-btn, .zman-card {
   position: relative;

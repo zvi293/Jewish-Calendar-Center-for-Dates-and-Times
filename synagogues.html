@@ -16,7 +16,16 @@
           );
         }
       } catch (e) {}
+      // מצב טלפון כשר (20/10/2026, ראו index.html — __jcMarkApp): באפליקציה שנפתחה ב-WebView רק הדומיין שלנו —
+      // רשימה מהמאגר המקומי (places/*.json) בלי מפה (אריחי OpenStreetMap), בלי Overpass ובלי Nominatim
+      try {
+        if (sessionStorage.getItem("moadim_in_app") === "1" && /; wv\)/.test(navigator.userAgent || "")) {
+          window.__jcWebView = true;
+          document.documentElement.classList.add("jc-wv");
+        }
+      } catch (e) {}
     </script>
+    <style>html.jc-wv #view-map-btn { display: none !important; }</style>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>בתי כנסת ומקוואות באזור | הלוח היהודי</title>
     <meta
@@ -1400,6 +1409,7 @@
       // Returns a string like "רחוב הקונגרס 9, פתח תקווה" or just the city name
       // when street info isn't available. Returns null on failure.
       async function reverseGeocode(lat, lon) {
+        if (window.__jcWebView) return null; // טלפון כשר — בלי Nominatim (ממילא אין שם GPS)
         try {
           const url = "https://nominatim.openstreetmap.org/reverse"
                     + "?lat=" + encodeURIComponent(lat)
@@ -2324,7 +2334,7 @@
         const cachedExtras = loadCachedResults(tab, radius, lat, lon) || [];
         const shownFirst = mergeItems(base, cachedExtras, tab);
         // Overpass בהפסקה (היה 429 ב-15 הדק' האחרונות) והמאגר המקומי זמין — בלי שאילתה חיה
-        const liveEnabled = !(localAll && overpassPaused());
+        const liveEnabled = !(localAll && overpassPaused()) && !window.__jcWebView; // טלפון כשר — רק המאגר המקומי
         let hasCacheShown = false;
         let renderedSig = "";
         const sigOf = (list) => list.length + "|" + list.filter((it) => !it.local)
@@ -2601,7 +2611,7 @@
       }
 
       function setViewMode(mode) {
-        viewMode = mode === "map" ? "map" : "list";
+        viewMode = mode === "map" && !window.__jcWebView ? "map" : "list"; // טלפון כשר — תמיד רשימה
         try { localStorage.setItem(LS_VIEW_KEY, viewMode); } catch (e) {}
         const lb = document.getElementById("view-list-btn");
         const mb = document.getElementById("view-map-btn");

@@ -71,6 +71,22 @@ const HEBCAL_REVALIDATE_MS = 60 * 60 * 1000;
   } catch (_) {}
 })();
 
+// מצב טלפון כשר (html.jc-wv / window.__jcWebView, index.html): מסננים כמו נטספארק מאשרים דומיין אחד,
+// ולכן שם כל בקשה לשירות חיצוני עוברת דרך jewishcalendar.co.il (פרוקסי ב-netlify.toml). שאר המשתמשים —
+// ישירות למקור, בלי שינוי (בלי עלות רוחב פס ב-Netlify). ספריא — ב-_sefariaCandidates.
+const _JC_OWN_PROXY = [
+  ["https://www.hebcal.com/", "/hebcal-api/"],
+  ["https://hebcal.com/", "/hebcal-api/"],
+  ["https://he.wikisource.org/", "/wikisource-api/"],
+  ["https://benyehuda.org/", "/benyehuda-api/"],
+];
+function _jcViaOwn(url) {
+  url = String(url);
+  if (!window.__jcWebView) return url;
+  for (const [from, to] of _JC_OWN_PROXY) if (url.indexOf(from) === 0) return location.origin + to + url.slice(from.length);
+  return url;
+}
+
 // בקשת רשת אחת לכתובת (בקשות מקבילות לאותה כתובת חולקות אותה) — נכתבת למטמון
 function _hebcalNetRequest(url, cacheKey, timeoutMs) {
   if (API_INFLIGHT_CACHE.has(url)) return API_INFLIGHT_CACHE.get(url);
@@ -89,7 +105,7 @@ function _hebcalNetRequest(url, cacheKey, timeoutMs) {
     API_INFLIGHT_CACHE.set(url, sreq);
     return sreq;
   }
-  const request = fetch(url, { signal: AbortSignal.timeout(timeoutMs) })
+  const request = fetch(_jcViaOwn(url), { signal: AbortSignal.timeout(timeoutMs) })
     .then((res) =>
       res.json().then((data) => {
         // תשובת שגיאה (4xx/5xx עם גוף JSON) מוחזרת למבקש כמו קודם (הקוראים בודקים
@@ -485,6 +501,8 @@ function _sefariaCandidates(url) {
   const m = String(url).match(/^https:\/\/www\.sefaria\.org(?:\.il)?(\/api\/.*)$/);
   if (!m) return [String(url)];
   const path = m[1];
+  // טלפון כשר — רק דרך הדומיין שלנו (ראו _jcViaOwn)
+  if (window.__jcWebView && location.protocol === "https:") return [location.origin + "/sefaria-api" + path.slice(4)];
   const list = ["https://www.sefaria.org" + path];
   // הפרוקסי קיים רק באתר המפורסם (Netlify) — בשרת פיתוח מקומי הוא סתם 404
   if (location.protocol === "https:") list.push(location.origin + "/sefaria-api" + path.slice(4));
@@ -1078,7 +1096,7 @@ function _luxSkyEnsure() {
   if (document.getElementById("lux-sky-js")) return;
   const s = document.createElement("script");
   s.id = "lux-sky-js";
-  s.src = "sky.js?v=10";
+  s.src = "sky.js?v=11";
   s.async = true;
   document.body.appendChild(s);
 }
@@ -4487,7 +4505,7 @@ async function ensureCityCoords() {
     const now = new Date();
     const todayIso = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
     const res = await fetch(
-      `https://www.hebcal.com/zmanim?cfg=json&geonameid=${GEO_LOCATION}&date=${todayIso}`,
+      _jcViaOwn(`https://www.hebcal.com/zmanim?cfg=json&geonameid=${GEO_LOCATION}&date=${todayIso}`),
       { signal: AbortSignal.timeout(8000) },
     );
     const data = await res.json();
@@ -4553,7 +4571,7 @@ function _offlineAheadRefresh() {
   const s = _isoLocalDate(today);
   const e = _isoLocalDate(end);
   const getJson = (u) =>
-    fetch(u, { signal: AbortSignal.timeout(20000) }).then((r) => {
+    fetch(_jcViaOwn(u), { signal: AbortSignal.timeout(20000) }).then((r) => {
       if (!r.ok) throw new Error("HTTP " + r.status);
       return r.json();
     });
@@ -6410,6 +6428,7 @@ async function renderNextMoedTimes(e) {
 /* שם עיר משוער מקואורדינטות GPS (Nominatim) — משמש את useGPS ואת רענון המיקום האוטומטי.
    מוגבל ל-8 שניות: ברשת חלשה לא ממתינים לשם (הזמנים מתעדכנים גם בלעדיו) */
 async function _gpsReverseGeocode(lat, lon) {
+  if (window.__jcWebView) return null; // טלפון כשר — רק הדומיין שלנו (ממילא אין שם GPS)
   try {
     const opts = { headers: { "Accept": "application/json" } };
     if (typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout === "function") {
@@ -13006,11 +13025,11 @@ function cleanWikisourceHtml(rawHtml) {
 
 async function fetchWikisourcePrayer(query) {
   const searchUrl = `https://he.wikisource.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*`;
-  const searchData = await fetch(searchUrl).then((response) => response.json());
+  const searchData = await fetch(_jcViaOwn(searchUrl)).then((response) => response.json());
   const title = searchData?.query?.search?.[0]?.title;
   if (!title) throw new Error(`No Wikisource result for ${query}`);
   const parseUrl = `https://he.wikisource.org/w/api.php?action=parse&page=${encodeURIComponent(title)}&prop=text&formatversion=2&format=json&origin=*`;
-  const parseData = await fetch(parseUrl).then((response) => response.json());
+  const parseData = await fetch(_jcViaOwn(parseUrl)).then((response) => response.json());
   const html = parseData?.parse?.text;
   if (!html) throw new Error(`No Wikisource HTML for ${title}`);
   return {
@@ -24488,6 +24507,8 @@ const READER_FONTS = [
   { id: "alef", he: "אלף", desc: "Alef — מודרני ואוורירי", fam: "'Alef', 'Frank Ruhl Libre', sans-serif", gf: "Alef:wght@400;700" },
   { id: "tinos", he: "טינוס", desc: "Tinos — סריף עדין בסגנון ספרותי", fam: "'Tinos', 'Frank Ruhl Libre', serif", gf: "Tinos:wght@400;700" },
 ];
+// טלפון כשר (__jcWebView) — רק הגופן המקומי: Google Fonts הוא דומיין חיצוני שהמסנן חוסם
+if (window.__jcWebView) for (let i = READER_FONTS.length - 1; i >= 0; i--) if (READER_FONTS[i].gf) READER_FONTS.splice(i, 1);
 function _getReaderFontId() {
   var v = null;
   try { v = localStorage.getItem(READER_FONT_KEY); } catch (e) {}
@@ -32225,9 +32246,11 @@ function openSefarimNosafimPage(_pageMode) {
           "https://api.allorigins.win/raw?url=",
           "https://api.codetabs.com/v1/proxy/?quest="
         ];
+        // טלפון כשר — רק דרך הדומיין שלנו (פרוקסי /benyehuda-api/ ב-netlify.toml), בלי פרוקסי של צד שלישי
+        if (window.__jcWebView) proxies = [""];
         for (var pi = 0; pi < proxies.length; pi++) {
           try {
-            var pUrl = proxies[pi] + encodeURIComponent(byUrl);
+            var pUrl = proxies[pi] ? proxies[pi] + encodeURIComponent(byUrl) : _jcViaOwn(byUrl);
             var rp = await fetch(pUrl, opts);
             if (!rp.ok) continue;
             var htmlTxt = await rp.text();

@@ -29,9 +29,17 @@
       // לא ב-localStorage: ה-TWA חולק את האחסון עם כרום, והאתר בדפדפן היה "חושב" שהוא האפליקציה.
       // באפליקציה עצמה התרומה עוברת ב-Google Play (script.js, _openPlayDonation): כשהמוצרים זמינים נוסף
       // html.jc-play, וכפתור התרומה בסרגל (jc-play-pay) חוזר להופיע.
+      // מצב טלפון כשר (20/10/2026): בטלפון בלי כרום האפליקציה נפתחת ב-WebView (ה-UA מכיל "; wv)";
+      // ה-TWA רץ בכרום אמיתי ולא מקבל את זה). מסננים כמו נטספארק מאשרים דומיין אחד — ולכן תחת
+      // html.jc-wv / window.__jcWebView כל הרשת עוברת דרך jewishcalendar.co.il (פרוקסי ב-netlify.toml).
+      // כל פיצ'ר לטלפון כשר — רק תחת הדגל הזה, כדי לא לגעת בשאר המשתמשים.
       window.__jcMarkApp = function () {
         window.__jcInApp = true;
         document.documentElement.classList.add("jc-app");
+        if (/; wv\)/.test(navigator.userAgent || "")) {
+          window.__jcWebView = true;
+          document.documentElement.classList.add("jc-wv");
+        }
         try { sessionStorage.setItem("moadim_in_app", "1"); } catch (e) {}
         if (window.__jcLockZoom) window.__jcLockZoom();
       };
@@ -46,6 +54,10 @@
       html.jc-app .jc-web-pay { display: none !important; }
       /* באפליקציה — בלי צביטה (יחד עם user-scalable=no ב-viewport): גלילה כן, הגדלה לא */
       html.jc-app { touch-action: pan-x pan-y; }
+      /* באפליקציה — בלי סימני דפדפן: בלי הבהוב הכחול במגע (‎:where = בלי משקל, כך שהזהב של 4129 ב-style.css נשאר)
+         ובלי גרירת קישור/תמונה. תפריט הלחיצה הארוכה על קישור/תמונה נחסם ב-lux.js (appFeel) */
+      :where(html.jc-app, html.jc-app *) { -webkit-tap-highlight-color: transparent; }
+      html.jc-app a, html.jc-app img { -webkit-user-drag: none; }
       html.jc-app.jc-play .jc-play-pay { display: block !important; }
       /* תוכן תרומה שקיים רק באפליקציה (Google Play) — למשל בחלון "צור קשר"; באתר ובאפליקציה בלי מוצרים מוסתר */
       html:not(.jc-play) .jc-play-only { display: none !important; }
@@ -515,7 +527,7 @@
          הכותרת "קפצה" באמצע מסך הפתיחה בטלפון. -->
     <link rel="preload" href="/fonts/frank-ruhl-libre-hebrew.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="/fonts.css?v=1" />
-    <link rel="stylesheet" href="style.css?v=123" />
+    <link rel="stylesheet" href="style.css?v=124" />
     <!-- בלי ציור ראשון של "חצי הירו": הסקריפט של באנר היום (לפני ה-h1) גורם למפרסר לפנות
          את התור, ו-Chrome צייר את ההירו חלקי — ואז קו הגל שבתחתיתו קפץ למטה (CLS). כאן
          הציור הראשון מחכה עד שכל ההירו נפרסר (עד #main-content — מילישניות בודדות).
@@ -532,8 +544,8 @@
     <!-- הקוד הראשי יורד מוקדם (preload) אך מוזרק ומתבצע רק אחרי הציור הראשון —
          ראו הטוען בסוף ה-body. ה-?v= כאן חייב להיות זהה לזה שבטוען וב-sw.js.
          fetchpriority=low: שלא יתחרו ברוחב-הפס עם ה-CSS החוסם (FCP) — כמו defer. -->
-    <link rel="preload" href="script.js?v=127" as="script" fetchpriority="low" />
-    <link rel="preload" href="lux.js?v=95" as="script" fetchpriority="low" />
+    <link rel="preload" href="script.js?v=128" as="script" fetchpriority="low" />
+    <link rel="preload" href="lux.js?v=96" as="script" fetchpriority="low" />
 
     <!-- OneSignal Web Push SDK -->
     <script>
@@ -550,7 +562,7 @@
       // מתג ההתראות (script.js → requestNotificationPermission). מבקר חדש לא
       // מוריד אותו כלל — פחות JS בטעינה ואפס קוקיז צד-ג' לפני הסכמה.
       window.__loadOneSignal = function () {
-        if (window.__oneSignalLoading) return;
+        if (window.__oneSignalLoading || window.__jcWebView) return; // ב-WebView (טלפון כשר) אין פוש — ובלי דומיין חיצוני
         window.__oneSignalLoading = true;
         var s = document.createElement("script");
         s.src = "https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js";
@@ -2898,9 +2910,9 @@
           // "שמיים חיים" (ברירת המחדל, 10/2026): sky.js קטן ועצמאי ונטען לפני script.js — כך השמיים
           // כבר מצוירים מתחת למסך הפתיחה ואנימציית הכניסה מתוזמנת לדהייתו. בהיר/כהה לא טוענים אותו.
           // אותו ?v= כמו ב-_luxSkyEnsure (script.js) וב-sw.js.
-          if (document.documentElement.classList.contains("lux-sky")) addScript("sky.js?v=10", { id: "lux-sky-js" });
-          addScript("script.js?v=127");
-          addScript("lux.js?v=95");
+          if (document.documentElement.classList.contains("lux-sky")) addScript("sky.js?v=11", { id: "lux-sky-js" });
+          addScript("script.js?v=128");
+          addScript("lux.js?v=96");
         }
         function afterFirstPaint() {
           // rAF אחד (רץ ממש לפני ציור הפריים הראשון) ואז setTimeout(0) — משימה

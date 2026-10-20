@@ -322,6 +322,27 @@
     }, { passive: true });
   });
 
+  /* ── 5ב. תחושת אפליקציה (20/10/2026) — רק באפליקציה (html.jc-app), האתר בדפדפן לא משתנה:
+     לחיצה ארוכה על קישור/תמונה/כפתור לא פותחת את תפריט כרום ("פתח בכרטיסייה חדשה / שמור תמונה"),
+     ומתגי ההגדרות מקבלים את אותו רטט קצר כמו שאר הכפתורים (5). שדות קלט וטקסט מסומן — כרגיל. */
+  safe("appFeel", function () {
+    var inApp = function () { return document.documentElement.classList.contains("jc-app"); };
+    document.addEventListener("contextmenu", function (e) {
+      if (!inApp()) return;
+      var t = e.target;
+      if (!t || !t.closest || t.closest('input, textarea, [contenteditable="true"]')) return;
+      try { if (String(window.getSelection() || "").trim()) return; } catch (_) {}
+      if (t.closest("a, img, button, [role='button'], [onclick]")) e.preventDefault();
+    }, true);
+    document.addEventListener("click", function (e) {
+      if (!inApp() || !navigator.vibrate) return;
+      var t = e.target;
+      if (t && t.closest && t.closest('#settings-modal button, #settings-modal [role="switch"], #settings-modal input[type="checkbox"]')) {
+        try { navigator.vibrate(8); } catch (_) {}
+      }
+    }, { passive: true });
+  });
+
   /* ── 6. קונפטי זהב — פתיחת ספירת העומר ולחיצת "ברכתי" בלבנה ───── */
   function luxConfetti() {
     try {
@@ -1535,6 +1556,9 @@
                 // חג מאוחד ("סוכות") מוצא את הכרטיס של יומו הראשון ("סוכות א׳")
                 if (cards[j].textContent.trim().indexOf(ev.name) === 0) {
                   var card = cards[j].closest(".event-card");
+                  // כרטיסים רחוקים לא נפרסים (content-visibility) — בלי זה הגלילה מחושבת לפי גובה משוער ומחטיאה
+                  var grid = document.getElementById("resultsGrid");
+                  if (grid) grid.classList.add("cv-off");
                   card.classList.add("lux-in");
                   card.scrollIntoView({ behavior: "smooth", block: "center" });
                   card.classList.remove("lux-card-flash");
@@ -4714,6 +4738,8 @@
     function injectCardFonts() {
       if (fontsInjected) return cardFontsPromise;
       fontsInjected = true;
+      // טלפון כשר — בלי Google Fonts (דומיין חיצוני); הכרטיס בגופני האתר
+      if (window.__jcWebView) { cardFontsLoaded = true; cardFontsPromise = Promise.resolve(); return cardFontsPromise; }
       cardFontsPromise = new Promise(function (resolve) {
         var done = function () { cardFontsLoaded = true; resolve(); };
         try {

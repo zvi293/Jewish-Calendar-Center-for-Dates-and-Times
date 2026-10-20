@@ -53,6 +53,7 @@ import il.co.jewishcalendar.twa.widget.Sync;
 import com.google.androidbrowserhelper.trusted.SessionStore;
 import com.google.androidbrowserhelper.trusted.SharedPreferencesTokenStore;
 import com.google.androidbrowserhelper.trusted.TwaLauncher;
+import com.google.androidbrowserhelper.trusted.TwaProviderPicker;
 import com.google.androidbrowserhelper.trusted.splashscreens.SplashScreenStrategy;
 
 
@@ -99,9 +100,20 @@ public class LauncherActivity
 
     @Override
     protected boolean shouldLaunchImmediately() {
-        if (Sync.siteLoaded(this) || hasInternet(this)) return true;
+        // בלי TWA (טלפון כשר בלי כרום) — KosherWebActivity מגיש את האתר הארוז, אין צורך במסך
+        if (Sync.siteLoaded(this) || hasInternet(this) || !twaAvailable()) return true;
         offlineGate = true;
         return false;
+    }
+
+    /** יש דפדפן שתומך ב-TWA (אחרת הספרייה קוראת ל-getFallbackStrategy). */
+    private boolean twaAvailable() {
+        try {
+            return TwaProviderPicker.pickProvider(getPackageManager()).launchMode
+                    == TwaProviderPicker.LaunchMode.TRUSTED_WEB_ACTIVITY;
+        } catch (Throwable t) {
+            return true;
+        }
     }
 
     /** חיבור שעובד בפועל (כולל אימות של המערכת — לא רק Wi-Fi בלי אינטרנט). */
@@ -361,11 +373,29 @@ public class LauncherActivity
 
     @Override
     protected Uri getLaunchingUrl() {
-        // Get the original launch Url.
-        Uri uri = super.getLaunchingUrl();
+        // קיצורי הדרך באייקון (shortcuts.xml) נושאים כתובת יחסית ("/?open=zmanim"). הספרייה מקבלת רק https
+        // ומחזירה במקומה את דף הבית — לכן משלימים כאן לכתובת מלאה של האתר.
+        Uri data = getIntent() != null ? getIntent().getData() : null;
+        if (data != null && data.getScheme() == null && data.toString().startsWith("/")) {
+            return KosherWebActivity.resolve(data);
+        }
+        return super.getLaunchingUrl();
+    }
 
-        
-
-        return uri;
+    /*
+     * ── טלפונים כשרים (10/2026) ──
+     * בלי דפדפן שתומך ב-TWA (נטספארק/רימון חוסמים את כרום) — KosherWebActivity שלנו במקום
+     * WebViewFallbackActivity של הספרייה: האתר ארוז באפליקציה ונפתח גם בלי אינטרנט, קישורים חיצוניים
+     * יוצאים מהאפליקציה. CLEAR_TOP|SINGLE_TOP — ווידג'ט/קיצור כשהמסך כבר פתוח טוען את הכתובת באותו WebView.
+     */
+    @Override
+    protected TwaLauncher.FallbackStrategy getFallbackStrategy() {
+        return (context, builder, providerPackage, completionCallback) -> {
+            Intent i = new Intent(context, KosherWebActivity.class);
+            i.setData(builder.getUri());
+            i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+            context.startActivity(i);
+            if (completionCallback != null) completionCallback.run();
+        };
     }
 }

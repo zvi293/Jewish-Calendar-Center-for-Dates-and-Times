@@ -39,7 +39,7 @@ def twaManifest = [
     // - short_name: Shorter string used if |name| is too long.
     // - url: Absolute path of the URL to launch the app with (e.g '/create').
     // - icon: Name of the resource in the drawable folder to use as an icon.
-    shortcuts: [[name:'תהילים', short_name:'תהילים', url:'/?open=tehillim', icon:'shortcut_0'],[name:'זמני היום', short_name:'זמנים', url:'/?open=zmanim', icon:'shortcut_1'],[name:'לוח שנה חודשי', short_name:'לוח שנה', url:'/?open=calendar', icon:'shortcut_2'],[name:'ספרים נוספים', short_name:'ספרים', url:'/?open=sefarim', icon:'shortcut_3']],
+    shortcuts: [[name:'זמני היום', short_name:'זמנים', url:'/?open=zmanim', icon:'shortcut_0'],[name:'דף יומי', short_name:'דף יומי', url:'/?open=daf', icon:'shortcut_1'],[name:'שחרית', short_name:'שחרית', url:'/?open=shacharit', icon:'shortcut_2'],[name:'ברכת המזון', short_name:'ברכת המזון', url:'/?open=bentching', icon:'shortcut_3']],
     // The duration of fade out animation in milliseconds to be played when removing splash screen.
     splashScreenFadeOutDuration: 300,
     generatorApp: 'bubblewrap-cli', // Application that generated the Android Project
@@ -59,8 +59,8 @@ android {
         // (הכרעת המשתמש 16/10/2026 — לא לכבות את ההגנה). לפני כן 23 — billing 1.2.0 / PBL 8.3.
         minSdkVersion 24
         targetSdkVersion 36
-        versionCode 15
-        versionName "1.1.4"
+        versionCode 16
+        versionName "1.1.5"
 
         // The name for the application
         resValue "string", "appName", twaManifest.name
@@ -204,6 +204,69 @@ task generateShorcutsFile {
 }
 
 preBuild.dependsOn(generateShorcutsFile)
+
+/*
+ * ── האתר ארוז באפליקציה (טלפונים כשרים, 10/2026) ──
+ * KosherWebActivity מגיש את הקבצים האלה כשאין חיבור (או שהטעינה נכשלה) — כך האתר נפתח בטלפון בלי כרום
+ * גם בפתיחה הראשונה בלי אינטרנט. מועתק משורש הריפו בכל בנייה ל-src/main/assets/site/ (מוחרג ב-.gitignore),
+ * ולא נוגע ב-TWA הרגיל. versions.txt — כל "קובץ?v=N" שהאתר הארוז מפנה אליו: בקשות של ה-Service Worker של
+ * האתר מוגשות מהנכסים רק באותה גרסה בדיוק (אחרת עותק ישן היה נכנס למטמון שלו תחת גרסה חדשה).
+ */
+// -PsiteRoot=<תיקייה> — לארוז עותק אחר של האתר (למשל git archive של ה-HEAD, כשבתיקייה יש עבודה באמצע)
+task copySiteAssets {
+    def siteRoot = project.hasProperty('siteRoot') ? file(project.property('siteRoot')) : rootProject.projectDir.parentFile
+    def outDir = file("$projectDir/src/main/assets/site")
+    doLast {
+        project.delete(outDir)
+        outDir.mkdirs()
+        def files = ['index.html', 'script.js', 'lux.js', 'sky.js', 'style.css', 'tailwind.css', 'fonts.css',
+                     'kosher-zmanim-0.9.0.min.js', 'site.webmanifest', 'synagogues.html'] as Set
+        // אייקונים/תמונות/גופנים ש-index.html וה-webmanifest מפנים אליהם
+        def refRe = ~/(?:href|src)"?\s*[=:]\s*"\/?([A-Za-z0-9_.\/-]+\.(?:png|svg|webp|jpg|ico|woff2?|css|js))(?:\?[^"]*)?"/
+        ['index.html', 'site.webmanifest'].each { n ->
+            (new File(siteRoot, n).getText('UTF-8') =~ refRe).each { m -> files << m[1] }
+        }
+        files.each { n ->
+            def src = new File(siteRoot, n)
+            if (!src.isFile()) {
+                if (n == 'index.html' || n == 'script.js') throw new GradleException("copySiteAssets: missing $n")
+                logger.warn("copySiteAssets: skip missing $n")
+                return
+            }
+            def dst = new File(outDir, n)
+            dst.parentFile.mkdirs()
+            dst.bytes = src.bytes
+        }
+        // places/ — מאגר בתי הכנסת/מקוואות/ציונים (synagogues.html ברשימה בלי מפה במצב jc-wv)
+        ['fonts', 'sefarim-data', 'prayers', 'places'].each { d ->
+            def src = new File(siteRoot, d)
+            if (src.isDirectory()) project.copy { from src; into new File(outDir, d) }
+        }
+        def verRe = ~/([A-Za-z0-9_.\/-]+\.(?:js|css|json|webmanifest|png|svg|webp))\?v=(\d+)/
+        def versions = new TreeSet<String>()
+        // גם גרסה מקבוע: "x.json?v=" + X_VER, ו-"/places/" + name + ".json?v=" + PLACES_VER (כל הקבצים בתיקייה)
+        def constRe = ~/["']\/?([A-Za-z0-9_.\/-]+\.(?:js|css|json))\?v=["']\s*\+\s*([A-Za-z_\$][\w\$]*)/
+        def dirRe = ~/["']\/?([A-Za-z0-9_\/-]+)\/["']\s*\+\s*[\w\$.]+\s*\+\s*["'](\.(?:js|css|json))\?v=["']\s*\+\s*([A-Za-z_\$][\w\$]*)/
+        ['index.html', 'script.js', 'lux.js', 'sky.js', 'site.webmanifest', 'synagogues.html'].each { n ->
+            def f = new File(outDir, n)
+            if (!f.isFile()) return
+            def text = f.getText('UTF-8')
+            def constVal = { String id ->
+                def m = (text =~ (/\b/ + java.util.regex.Pattern.quote(id) + /\s*=\s*["']?(\w+)["']?\s*[;,\n]/))
+                m.find() ? m.group(1) : null
+            }
+            (text =~ verRe).each { m -> versions << (m[1].replaceFirst('^/', '') + '?v=' + m[2]) }
+            (text =~ constRe).each { m -> def v = constVal(m[2]); if (v) versions << (m[1].replaceFirst('^/', '') + '?v=' + v) }
+            (text =~ dirRe).each { m ->
+                def v = constVal(m[3]); def dir = new File(outDir, m[1])
+                if (v && dir.isDirectory()) dir.eachFile { ff -> if (ff.name.endsWith(m[2])) versions << (m[1] + '/' + ff.name + '?v=' + v) }
+            }
+        }
+        new File(outDir, 'versions.txt').setText(versions.join('\n') + '\n', 'UTF-8')
+        logger.lifecycle("copySiteAssets: from $siteRoot — ${outDir.listFiles().length} entries, ${versions.size()} versioned refs")
+    }
+}
+preBuild.dependsOn(copySiteAssets)
 
 repositories {
     

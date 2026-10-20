@@ -32,6 +32,8 @@
         <uses-permission android:name="android.permission.WRITE_CALENDAR"/>
         <!-- פתיחה ראשונה בלי אינטרנט: בדיקת חיבור והמתנה לו (LauncherActivity) -->
         <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+        <!-- רטט בלחיצה (navigator.vibrate) במצב WebView לטלפונים כשרים — הרשאה רגילה, בלי חלון -->
+        <uses-permission android:name="android.permission.VIBRATE"/>
     
 
     
@@ -170,8 +172,13 @@
 
         <activity android:name="com.google.androidbrowserhelper.trusted.FocusActivity" />
 
-        <activity android:name="com.google.androidbrowserhelper.trusted.WebViewFallbackActivity"
-            android:configChanges="orientation|screenSize" />
+        <!-- טלפונים כשרים (בלי כרום): במקום WebViewFallbackActivity של הספרייה — LauncherActivity.getFallbackStrategy -->
+        <activity android:name=".KosherWebActivity"
+            android:exported="false"
+            android:theme="@style/KosherWebTheme"
+            android:screenOrientation="userPortrait"
+            android:windowSoftInputMode="adjustResize"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|keyboard|uiMode|density" />
 
         <provider
             android:name="androidx.core.content.FileProvider"

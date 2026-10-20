@@ -3,4 +3,10 @@
      עם הסמל — בלי זה המערכת מציגה מסך לבן ריק (שכבת החזית של הסמל המותאם שקופה). -->
 <resources>
     <style name="LauncherTheme" parent="@android:style/Theme.Translucent.NoTitleBar" />
+    <!-- KosherWebActivity (טלפונים כשרים): רקע כחול-לילה עד הציור הראשון של האתר, בלי הבזק לבן -->
+    <style name="KosherWebTheme" parent="@android:style/Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/backgroundColor</item>
+        <item name="android:statusBarColor">@color/colorPrimary</item>
+        <item name="android:navigationBarColor">@color/navigationColor</item>
+    </style>
 </resources>

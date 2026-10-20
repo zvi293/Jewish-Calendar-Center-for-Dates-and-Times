@@ -102,9 +102,83 @@ public class LauncherActivity
     protected boolean shouldLaunchImmediately() {
         // בלי TWA (טלפון כשר בלי כרום) — KosherWebActivity מגיש את האתר הארוז, אין צורך במסך
         if (Sync.siteLoaded(this) || hasInternet(this) || !twaAvailable()) return true;
+        // רשת שאנדרואיד לא אימת (מסננת) — בודקים בעצמנו אם האתר עונה, עד 3 שניות (מתחת למסך הפתיחה)
+        if (hasUnvalidatedNetwork(this) && probeSiteBlocking(3000)) return true;
         offlineGate = true;
         return false;
     }
+
+    /*
+     * ── רשת מסוננת (20/10/2026) ──
+     * אנדרואיד מסמן רשת כ"מאומתת" רק אם כתובת הבדיקה של גוגל/היצרן (connectivitycheck…/generate_204)
+     * עונה. בסינון כשר (נטספארק/רימון ב-SIM) היא לפעמים חסומה — האינטרנט עובד, אבל VALIDATED לא נדלק,
+     * והאפליקציה נתקעה על "צריך אינטרנט בפתיחה הראשונה" (ו-KosherWebActivity הגיש מהנכסים).
+     * לכן כשיש רשת עם INTERNET בלי VALIDATED — בודקים בעצמנו שהאתר שלנו עונה; תשובה = יש חיבור.
+     */
+    private static volatile long siteOkAt;
+    private static final long SITE_OK_MS = 10 * 60 * 1000L;
+
+    /** יש רשת שמתיימרת לאינטרנט, אבל אנדרואיד לא אימת אותה. */
+    static boolean hasUnvalidatedNetwork(Context c) {
+        try {
+            ConnectivityManager cm = (ConnectivityManager) c.getSystemService(Context.CONNECTIVITY_SERVICE);
+            if (cm == null) return false;
+            Network n = cm.getActiveNetwork();
+            NetworkCapabilities nc = n == null ? null : cm.getNetworkCapabilities(n);
+            return nc != null && nc.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                    && !nc.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED);
+        } catch (Throwable t) {
+            return false;
+        }
+    }
+
+    /** בקשת HEAD לאתר (חוסמת — רק מחוץ ל-main thread). כל תשובת HTTP מהשרת = יש חיבור. */
+    static boolean probeSite() {
+        java.net.HttpURLConnection con = null;
+        try {
+            con = (java.net.HttpURLConnection) new java.net.URL(SITE_ORIGIN + "/").openConnection();
+            con.setRequestMethod("HEAD");
+            con.setConnectTimeout(4000);
+            con.setReadTimeout(4000);
+            con.setUseCaches(false);
+            con.setInstanceFollowRedirects(false);
+            int code = con.getResponseCode();
+            boolean ok = code > 0 && code < 500;
+            if (ok) siteOkAt = System.currentTimeMillis();
+            return ok;
+        } catch (Throwable t) {
+            return false;
+        } finally {
+            if (con != null) con.disconnect();
+        }
+    }
+
+    /** probeSite ברקע עם המתנה מוגבלת — לקריאה מה-main thread בפתיחה. */
+    static boolean probeSiteBlocking(long waitMs) {
+        final boolean[] ok = {false};
+        Thread th = new Thread(() -> ok[0] = probeSite(), "jc-probe");
+        th.start();
+        try {
+            th.join(waitMs);
+        } catch (InterruptedException ignored) {
+        }
+        return ok[0];
+    }
+
+    /** probeSite ברקע; onOk רץ ב-thread של הבדיקה. */
+    static void probeSiteAsync(Runnable onOk) {
+        if (probing) return; // onCapabilitiesChanged נקרא שוב ושוב — בדיקה אחת בכל רגע
+        probing = true;
+        new Thread(() -> {
+            try {
+                if (probeSite() && onOk != null) onOk.run();
+            } finally {
+                probing = false;
+            }
+        }, "jc-probe").start();
+    }
+
+    private static volatile boolean probing;
 
     /** יש דפדפן שתומך ב-TWA (אחרת הספרייה קוראת ל-getFallbackStrategy). */
     private boolean twaAvailable() {
@@ -124,8 +198,10 @@ public class LauncherActivity
             Network n = cm.getActiveNetwork();
             if (n == null) return false;
             NetworkCapabilities nc = cm.getNetworkCapabilities(n);
-            return nc != null && nc.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-                    && nc.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED);
+            if (nc == null || !nc.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)) return false;
+            // מאומתת ע"י אנדרואיד, או שהאתר שלנו ענה לאחרונה (רשת מסוננת — ראו probeSite)
+            return nc.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+                    || System.currentTimeMillis() - siteOkAt < SITE_OK_MS;
         } catch (Throwable t) {
             return true; // בספק — פותחים כרגיל
         }
@@ -189,8 +265,15 @@ public class LauncherActivity
         retry.setBackground(pill);
         retry.setPadding(dp(36), dp(12), dp(36), dp(12));
         retry.setOnClickListener(v -> {
-            if (hasInternet(this)) leaveOfflineGate();
-            else gateStatus.setText("עדיין אין חיבור — האפליקציה תיפתח לבד כשהחיבור יחזור.");
+            if (hasInternet(this)) { leaveOfflineGate(); return; }
+            gateStatus.setText("בודק חיבור…");
+            probeSiteAsync(null);
+            // התשובה מהבדיקה העצמית — אחרי עד 5 שניות (עברה = leaveOfflineGate, אחרת ההודעה הרגילה)
+            gateStatus.postDelayed(() -> {
+                if (!offlineGate) return;
+                if (hasInternet(this)) leaveOfflineGate();
+                else gateStatus.setText("עדיין אין חיבור — האפליקציה תיפתח לבד כשהחיבור יחזור.");
+            }, 5000);
         });
         lp = new LinearLayout.LayoutParams(-2, -2);
         lp.topMargin = dp(26);
@@ -207,9 +290,12 @@ public class LauncherActivity
             netCallback = new ConnectivityManager.NetworkCallback() {
                 @Override
                 public void onCapabilitiesChanged(Network network, NetworkCapabilities nc) {
-                    if (nc.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-                            && nc.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)) {
+                    if (!nc.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)) return;
+                    if (nc.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)) {
                         runOnUiThread(() -> leaveOfflineGate());
+                    } else {
+                        // רשת מסוננת — אנדרואיד לא יאמת אותה לעולם; בודקים בעצמנו
+                        probeSiteAsync(() -> runOnUiThread(() -> leaveOfflineGate()));
                     }
                 }
             };

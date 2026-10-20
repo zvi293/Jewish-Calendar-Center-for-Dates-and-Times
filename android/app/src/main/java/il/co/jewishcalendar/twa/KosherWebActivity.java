@@ -91,6 +91,8 @@ public class KosherWebActivity extends Activity {
         }
 
         online = LauncherActivity.hasInternet(this);
+        // רשת מסוננת שאנדרואיד לא אימת — בודקים בעצמנו שהאתר עונה (אחרת היינו מגישים מהנכסים)
+        if (!online && LauncherActivity.hasUnvalidatedNetwork(this)) online = LauncherActivity.probeSiteBlocking(3000);
         watchNetwork();
         installServiceWorkerClient(getApplicationContext());
 
@@ -369,8 +371,11 @@ public class KosherWebActivity extends Activity {
             netCallback = new ConnectivityManager.NetworkCallback() {
                 @Override
                 public void onCapabilitiesChanged(Network network, NetworkCapabilities nc) {
-                    online = nc.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-                            && nc.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED);
+                    if (!nc.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)) { online = false; return; }
+                    if (nc.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)) { online = true; return; }
+                    // רשת מסוננת — VALIDATED לא יידלק; האתר ענה לאחרונה או עונה עכשיו = יש חיבור
+                    online = LauncherActivity.hasInternet(KosherWebActivity.this);
+                    if (!online) LauncherActivity.probeSiteAsync(() -> online = true);
                 }
 
                 @Override

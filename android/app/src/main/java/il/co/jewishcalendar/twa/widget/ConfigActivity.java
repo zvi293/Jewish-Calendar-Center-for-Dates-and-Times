@@ -167,11 +167,31 @@ public class ConfigActivity extends Activity {
         pv.setBackground(wall);
         pv.setPadding(dp(8), dp(8), dp(8), dp(8));
         float[] wh = previewSize();
+        // "לוח שנה": 7 עמודות לא נכנסות ברוחב של חצי מסך — המספרים הדו-ספרתיים נחתכו ("1" במקום "12").
+        // לכן הוא נבנה בגודל האמיתי שלו (4×4) ומוקטן כתמונה — מיניאטורה נאמנה של מה שיופיע במסך הבית.
+        float rw = wh[0], rh = wh[1], scale = 1f;
+        if (kind == W.Kind.MONTH) {
+            int[] cells = Updater.defaultCells(kind);
+            rw = cells[0] * 90 - 8;
+            rh = cells[1] * 120 - 8;
+            scale = Math.min(1f, wh[0] / rw);
+            wh[1] = rh * scale;
+        }
         try {
             Engine e = new Engine(Prefs.loc(this), System.currentTimeMillis());
-            RemoteViews rv = Render.build(this, kind, widgetId, wh[0], wh[1], e, style);
+            RemoteViews rv = Render.build(this, kind, widgetId, rw, rh, e, style);
             View v = rv.apply(this, pv);
-            pv.addView(v, new FrameLayout.LayoutParams(dp(wh[0]), dp(wh[1]), Gravity.CENTER));
+            if (scale < 1f) {
+                FrameLayout box = new FrameLayout(this);
+                box.addView(v, new FrameLayout.LayoutParams(dp(rw), dp(rh), Gravity.TOP | Gravity.LEFT));
+                v.setPivotX(0);
+                v.setPivotY(0);
+                v.setScaleX(scale);
+                v.setScaleY(scale);
+                pv.addView(box, new FrameLayout.LayoutParams(dp(rw * scale), dp(rh * scale), Gravity.CENTER));
+            } else {
+                pv.addView(v, new FrameLayout.LayoutParams(dp(wh[0]), dp(wh[1]), Gravity.CENTER));
+            }
             // 10/2026: התצוגה המקדימה היא ה-RemoteViews האמיתי, וה-PendingIntent שבתוכו
             // פתח את האפליקציה במקום לבחור סגנון. שכבה שקופה מעליה בולעת את המגע
             // ומעבירה אותו לכרטיס — כך לחיצה על התצוגה בוחרת את הסגנון.

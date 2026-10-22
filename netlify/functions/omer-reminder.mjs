@@ -10,6 +10,11 @@
 // מאוחר יותר. מחוץ לימי העומר — בדיקת תקינות בלבד: בקשה ל-OneSignal בלי נמענים (מאמתת את
 // המפתח, לא שולחת לאף אחד), כדי שאפשר לבדוק עכשיו עם "Run now" בממשק של Netlify.
 //
+// חנוכה (10/2026): באותה ריצה, בכל ערב של שמונת לילות חנוכה — תזכורת להדלקת נר חנוכה, לאותם
+// מנויים (מתג אחד בהגדרות: "תזכורות: ספירת העומר ונר חנוכה"). השעה לפי ירושלים, באותו מנגנון:
+// ביום חול — בשקיעה; בערב שבת — שעה לפני השקיעה (לפני הדלקת נרות שבת); במוצאי שבת — 17 דק'
+// אחרי צאת הכוכבים (אחרי הבדלה). העומר וחנוכה לא חופפים לעולם.
+//
 // המפתח: משתנה סביבה ONESIGNAL_REST_API_KEY בהגדרות האתר ב-Netlify (סוד — לא בקוד).
 
 import { createHash } from "node:crypto";
@@ -21,6 +26,7 @@ const SITE = "https://jewishcalendar.co.il";
 const TZ = "Asia/Jerusalem";
 const JLM = { lat: 31.778, lon: 35.2354 };
 const TZEIT_ZENITH = 90 + 7.083;
+const SUNSET_ZENITH = 90.833; // שקיעה נראית (רדיוס השמש + שבירת אור)
 const DAY = 86400000;
 const SEFIROT = ["חסד", "גבורה", "תפארת", "נצח", "הוד", "יסוד", "מלכות"];
 
@@ -42,6 +48,15 @@ function omerCountOf(d) {
   if (month === "Nisan" && day >= 16) return day - 15;
   if (month === "Iyar") return 15 + day;
   if (month === "Sivan" && day <= 5) return 44 + day;
+  return 0;
+}
+
+// לילה X של חנוכה שמתחיל בערב שלפני היום האזרחי d (כ"ה כסלו = 1 … ב'/ג' טבת = 8), אחרת 0
+function chanukahNightOf(d) {
+  for (let back = 0; back < 8; back++) {
+    const h = hebOf(new Date(d.getTime() - back * DAY));
+    if (h.month === "Kislev" && h.day === 25) return back + 1;
+  }
   return 0;
 }
 
@@ -130,6 +145,35 @@ export function plan(now = new Date()) {
   };
 }
 
+// תזכורת נר חנוכה של הערב (בלי רשת) — מיוצא לבדיקה מקומית
+const CH_NIGHTS = ["", "נר ראשון", "שני נרות", "שלושה נרות", "ארבעה נרות", "חמישה נרות", "שישה נרות", "שבעה נרות", "שמונה נרות"];
+export function chanukahPlan(now = new Date()) {
+  const today = jlmToday(now);
+  const tomorrow = new Date(today.getTime() + DAY);
+  const night = chanukahNightOf(tomorrow);
+  const date = today.toISOString().slice(0, 10);
+  if (!night) return { date, skip: "not-chanukah" };
+  const dow = today.getUTCDay();
+  let at, when;
+  if (dow === 5) {
+    // ערב שבת — לפני הדלקת נרות שבת (בירושלים 40 דק' לפני השקיעה; בשאר הערים 18–20)
+    at = new Date(sunsetAt(today, SUNSET_ZENITH, JLM).getTime() - 60 * 60000);
+    when = "erev-shabbat";
+  } else if (dow === 6) {
+    // מוצאי שבת — אחרי צאת השבת וההבדלה
+    at = new Date(sunsetAt(today, TZEIT_ZENITH, JLM).getTime() + 17 * 60000);
+    when = "motzash";
+  } else {
+    at = sunsetAt(today, SUNSET_ZENITH, JLM);
+    when = "shkia";
+  }
+  at = new Date(Math.ceil(at.getTime() / 60000) * 60000);
+  const body = when === "erev-shabbat"
+    ? `הערב — ${CH_NIGHTS[night]}. מדליקים לפני הדלקת נרות שבת. לחצו לברכות ולסדר ההדלקה`
+    : `הערב מדליקים ${CH_NIGHTS[night]} — לחצו לברכות ולסדר ההדלקה`;
+  return { date, night, when, time: hhmm(at), title: "🕎 הדלקת נר חנוכה", body };
+}
+
 async function oneSignal(key, payload) {
   const res = await fetch("https://api.onesignal.com/notifications?c=push", {
     method: "POST",
@@ -151,6 +195,27 @@ export default async () => {
   }
   const p = plan();
 
+  if (p.skip === "not-omer") {
+    const c = chanukahPlan();
+    if (!c.skip) {
+      const rc = await oneSignal(key, {
+        included_segments: ["Total Subscriptions"],
+        headings: { en: c.title, he: c.title },
+        contents: { en: c.body, he: c.body },
+        url: SITE + "/?open=chanukah",
+        chrome_web_icon: SITE + "/icon-192.png",
+        chrome_web_badge: SITE + "/notif-badge.png",
+        web_push_topic: "chanukah",
+        delayed_option: "timezone",
+        delivery_time_of_day: c.time,
+        throttle_rate_per_minute: 0,
+        idempotency_key: idemKey("chanukah-" + c.date),
+      });
+      console.log(`[chanukah] ${c.date}: לילה ${c.night} (${c.when}), שליחה ${c.time} — HTTP ${rc.status}`, JSON.stringify(rc.json));
+      return new Response(rc.status < 300 ? "ok" : "error", { status: rc.status < 300 ? 200 : 500 });
+    }
+  }
+
   if (p.skip) {
     if (p.skip === "not-omer") {
       // בדיקת תקינות בלבד: מסנן שאף מנוי לא עונה עליו — שום הודעה לא נשלחת
@@ -160,7 +225,7 @@ export default async () => {
       });
       // מפתח תקין: 200 עם "All included players are not subscribed"; מפתח שגוי — 4xx
       const keyOk = r.status < 300;
-      console.log(`[omer] ${p.date}: מחוץ לימי העומר. בדיקת מפתח: ${keyOk ? "תקין" : "נדחה"} (HTTP ${r.status})`, JSON.stringify(r.json));
+      console.log(`[omer] ${p.date}: מחוץ לימי העומר וחנוכה. בדיקת מפתח: ${keyOk ? "תקין" : "נדחה"} (HTTP ${r.status})`, JSON.stringify(r.json));
       return new Response(keyOk ? "ok" : "key rejected", { status: keyOk ? 200 : 500 });
     }
     console.log(`[omer] ${p.date}: יום ${p.count} — ${p.skip}, אין שליחה`);

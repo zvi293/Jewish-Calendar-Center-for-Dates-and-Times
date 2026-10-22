@@ -44,9 +44,14 @@ final class Ui {
         final String style;   // sky | glass
         final String phase;   // night | dawn | day | dusk
         final int gold;
+        final int opacity;    // אטימות הרקע 0–100 (Prefs.opacity)
         Theme(String style, String phase) {
+            this(style, phase, 100);
+        }
+        Theme(String style, String phase, int opacity) {
             this.style = style;
             this.phase = phase;
+            this.opacity = Math.max(0, Math.min(100, opacity));
             this.gold = "night".equals(phase) || "dusk".equals(phase) ? GOLD_NIGHT : GOLD_DAY;
         }
         boolean sky() {
@@ -67,11 +72,15 @@ final class Ui {
         else if ("dawn".equals(t.phase)) bg = R.drawable.wbg_sky_dawn;
         else if ("dusk".equals(t.phase)) bg = R.drawable.wbg_sky_dusk;
         else bg = R.drawable.wbg_sky_night;
-        // הרקע על השורש עצמו: המתאר המעוגל שלו חותך את הכוכבים והגבעות (clipToOutline, אנדרואיד 12+)
-        rv.setInt(android.R.id.background, "setBackgroundResource", bg);
-        boolean stars = t.sky() && !"day".equals(t.phase);
+        // הרקע — תמונה בשכבה התחתונה (w_bg) ולא רקע השורש, כדי שסליידר השקיפות (10/2026) יוכל
+        // להחליש אותה (setImageAlpha) בלי לגעת בטקסט. לשורש נשאר רקע מעוגל שקוף (wbg_clip) —
+        // המתאר שלו חותך את הרקע, הכוכבים והגבעות לפינות (clipToOutline, אנדרואיד 12+)
+        int a = Math.round(255 * t.opacity / 100f);
+        rv.setImageViewResource(R.id.w_bg, bg);
+        rv.setInt(R.id.w_bg, "setImageAlpha", a);
+        boolean stars = t.sky() && !"day".equals(t.phase) && t.opacity > 0;
         rv.setViewVisibility(R.id.w_stars, stars ? View.VISIBLE : View.GONE);
-        if (stars) rv.setInt(R.id.w_stars, "setImageAlpha", "night".equals(t.phase) ? 200 : 90);
+        if (stars) rv.setInt(R.id.w_stars, "setImageAlpha", Math.round(("night".equals(t.phase) ? 200 : 90) * t.opacity / 100f));
         // באנדרואיד 11 ומטה אין חיתוך לפינות בווידג'טים — הגבעות היו יוצאות מרובעות
         if (t.sky() && hills && Build.VERSION.SDK_INT >= 31) {
             int h;
@@ -80,7 +89,8 @@ final class Ui {
             else if ("dusk".equals(t.phase)) h = R.drawable.whills_dusk;
             else h = R.drawable.whills_night;
             rv.setImageViewResource(R.id.w_hills, h);
-            rv.setViewVisibility(R.id.w_hills, View.VISIBLE);
+            rv.setInt(R.id.w_hills, "setImageAlpha", a);
+            rv.setViewVisibility(R.id.w_hills, t.opacity > 0 ? View.VISIBLE : View.GONE);
         }
         return rv;
     }
@@ -317,6 +327,9 @@ final class Ui {
         if (liveCountdown(c) && left < 24 * 3600000L && left > 0) {
             RemoteViews v = new RemoteViews(c.getPackageName(), R.layout.wb_chrono);
             v.setTextViewText(R.id.pre, pre);
+            boolean noPre = pre == null || pre.isEmpty();
+            v.setViewVisibility(R.id.pre, noPre ? View.GONE : View.VISIBLE);
+            v.setViewVisibility(R.id.pre_gap, noPre ? View.GONE : View.VISIBLE);
             v.setTextViewTextSize(R.id.pre, TypedValue.COMPLEX_UNIT_SP, sp);
             v.setTextViewTextSize(R.id.ch, TypedValue.COMPLEX_UNIT_SP, sp);
             v.setChronometer(R.id.ch, SystemClock.elapsedRealtime() + left, null, true);
@@ -328,7 +341,8 @@ final class Ui {
             }
             return v;
         }
-        return chip(c, pre + " " + il.co.jewishcalendar.twa.widget.core.Heb.duration(left), sp, t, gold);
+        String d = il.co.jewishcalendar.twa.widget.core.Heb.duration(left);
+        return chip(c, pre == null || pre.isEmpty() ? d : pre + " " + d, sp, t, gold);
     }
 
     // ── לחיצות ──

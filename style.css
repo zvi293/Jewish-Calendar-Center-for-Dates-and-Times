@@ -953,6 +953,18 @@
         font-style: normal;
         font-weight: 700;
       }
+      /* הכוונות של "פותח את ידך" (אשרי וברכת המזון) ו"רחל" שאחרי "לכל חי רצון" — 10/2026:
+         בבורדו כמו התוספות (pr-add) ומעט קטנות יותר; מילות ההוראה (יכוון, ר"ת, גימט', וכן) — קטנות עוד יותר */
+      .pr-kav.pr-kav-pa,
+      .holy-text-style .pr-kav.pr-kav-pa,
+      .prayer-richtext .pr-kav.pr-kav-pa,
+      #sn-reader-content .pr-kav.pr-kav-pa,
+      #sefaria-modal-content .pr-kav.pr-kav-pa,
+      #psalm-text-area .pr-kav.pr-kav-pa {
+        color: #9f1239;
+        font-size: 0.72em;
+      }
+      .pr-kav.pr-kav-pa .pr-kav-w { color: inherit; font-size: 0.82em; }
       .prayer-richtext .seasonal-block strong {
         color: #1d4ed8;
         font-size: 0.9em;
@@ -5003,6 +5015,9 @@ body.lux-shabbat-scene-on #countdown-display {
   stroke-width: 1;
 }
 .lux-hc-mark-past { fill: rgba(148, 163, 184, 0.45); }
+/* שעון רגיל (10/2026): מחוג הדקות דק, ושעת הזמן מתחת לשמו */
+.lux-hc-hand-min { stroke-width: 2.6; opacity: 0.9; }
+.lux-hc-mktime { font-size: 7.5px; font-weight: 700; }
 .lux-hc-mklbl {
   fill: rgba(122, 92, 26, 0.95);
   font-size: 8.5px;
@@ -5306,6 +5321,31 @@ html.dark .lux-se-txt small { color: #94a3b8; }
 .sd-book { display: block; text-align: center; }
 .sd-chb { --sd: #b45309; --sd-d: #92400e; --sd-bg: rgba(180, 83, 9, 0.08); --sd-bd: rgba(180, 83, 9, 0.3); }
 .sd-zb { --sd: #0e7490; --sd-d: #155e75; --sd-bg: rgba(14, 116, 144, 0.08); --sd-bd: rgba(14, 116, 144, 0.3); }
+/* תפילות המועדים — כל השנה (script.js _moadAllHtml, 10/2026): כרטיס לכל מועד עם כפתורי התפילות
+   והסדרים שלו. ממורכז כמו כל טקסט קריאה; הכפתורים נשברים לשורות (flex-wrap) בכל רוחב */
+.moad-all { text-align: center; }
+.moad-intro { font-size: 0.62em; color: #475569; line-height: 1.9; margin: 0 auto 1.1rem; max-width: 34rem; }
+.moad-card {
+  margin: 0 auto 1rem; padding: 0.85rem 0.8rem 0.95rem; max-width: 40rem;
+  border: 1px solid rgba(79, 70, 229, 0.18); border-radius: 1rem;
+  background: linear-gradient(180deg, rgba(238, 242, 255, 0.85), rgba(255, 255, 255, 0.9));
+}
+.moad-card h2 { margin: 0 0 0.2rem; font-size: 0.86em; font-weight: 900; color: #312e81; }
+.moad-note { margin: 0 0 0.65rem; font-size: 0.56em; color: #64748b; line-height: 1.7; }
+.moad-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.4rem; }
+.moad-btn {
+  font: 800 0.95rem/1.3 Assistant, system-ui, sans-serif; padding: 0.45rem 0.9rem; border-radius: 999px;
+  border: 1.5px solid rgba(79, 70, 229, 0.35); background: #fff; color: #3730a3; cursor: pointer;
+  min-height: 40px;
+}
+.moad-btn:active { transform: scale(0.96); }
+.moad-btn-x { border-color: rgba(180, 83, 9, 0.35); color: #92400e; background: #fffbeb; }
+html.dark .moad-intro, html.dark .moad-note { color: #94a3b8; }
+html.dark .moad-card { background: rgba(30, 41, 59, 0.7); border-color: rgba(129, 140, 248, 0.3); }
+html.dark .moad-card h2 { color: #c7d2fe; }
+html.dark .moad-btn { background: rgba(15, 23, 42, 0.7); color: #c7d2fe; border-color: rgba(129, 140, 248, 0.45); }
+html.dark .moad-btn-x { background: rgba(69, 26, 3, 0.45); color: #fcd34d; border-color: rgba(251, 191, 36, 0.4); }
+
 .sd-hero {
   display: block;
   text-align: center;
@@ -9533,6 +9573,13 @@ html.dark #sn-reader-content .pr-kav,
 html.dark #sefaria-modal-content .pr-kav,
 html.dark #psalm-text-area .pr-kav { color: #c4b5fd; }
 html.dark .pr-kav .pr-kav-w { color: #67e8f9; }
+html.dark .pr-kav.pr-kav-pa,
+html.dark .holy-text-style .pr-kav.pr-kav-pa,
+html.dark .prayer-richtext .pr-kav.pr-kav-pa,
+html.dark #sn-reader-content .pr-kav.pr-kav-pa,
+html.dark #sefaria-modal-content .pr-kav.pr-kav-pa,
+html.dark #psalm-text-area .pr-kav.pr-kav-pa,
+html.dark .pr-kav.pr-kav-pa .pr-kav-w { color: #fda4af; }
 html.dark .kad-wrap { color: #e2e8f0; }
 html.dark .kad-intro,
 html.dark .kad-src { background: rgba(148, 163, 184, 0.1); border-right-color: #94a3b8; color: #cbd5e1; }

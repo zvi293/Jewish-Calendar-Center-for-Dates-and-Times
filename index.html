@@ -48,10 +48,14 @@
             sessionStorage.getItem("moadim_in_app") === "1") window.__jcMarkApp();
         // סנכרון ליומן הטלפון — האפליקציה (1.1.3+) מודיעה דרך הגשר שהיא תומכת (lux.js appBridge, "caps")
         if (sessionStorage.getItem("moadim_cal_sync") === "1") document.documentElement.classList.add("jc-cal-sync");
+        if (sessionStorage.getItem("moadim_rem") === "1") document.documentElement.classList.add("jc-rem");
       } catch (e) {}
     </script>
     <style>
       html.jc-app .jc-web-pay { display: none !important; }
+      /* באפליקציה — בלי בלוק התוכן ל-SEO/GEO (10/2026): גוגל סורק את האתר ולא את התצוגה באפליקציה,
+         כך שאין בו תועלת שם. הפוטר (קישורי פרטיות/תנאים/נגישות וקרדיט Zstore AI) נשאר */
+      html.jc-app #seo-about { display: none !important; }
       /* באפליקציה — בלי צביטה (יחד עם user-scalable=no ב-viewport): גלילה כן, הגדלה לא */
       html.jc-app { touch-action: pan-x pan-y; }
       /* באפליקציה — בלי סימני דפדפן: בלי הבהוב הכחול במגע (‎:where = בלי משקל, כך שהזהב של 4129 ב-style.css נשאר)
@@ -64,6 +68,7 @@
       /* בלוח החודשי: באפליקציה שתומכת בסנכרון ליומן הטלפון — כפתור הסנכרון במקום הורדת הקובץ (ICS) */
       html.jc-cal-sync .jc-ics-dl { display: none !important; }
       html:not(.jc-cal-sync) .jc-cal-sync-only { display: none !important; }
+      html:not(.jc-rem) .jc-rem-only, html.jc-rem .jc-rem-web { display: none !important; }
       .jc-cal-sync-only { white-space: nowrap; }
       html.lux-ew-360 .jc-cal-sync-only { white-space: normal; } /* מסך צר / כיתוב גדול — נשבר לשורה */
     </style>
@@ -527,7 +532,7 @@
          הכותרת "קפצה" באמצע מסך הפתיחה בטלפון. -->
     <link rel="preload" href="/fonts/frank-ruhl-libre-hebrew.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="/fonts.css?v=1" />
-    <link rel="stylesheet" href="style.css?v=128" />
+    <link rel="stylesheet" href="style.css?v=130" />
     <!-- בלי ציור ראשון של "חצי הירו": הסקריפט של באנר היום (לפני ה-h1) גורם למפרסר לפנות
          את התור, ו-Chrome צייר את ההירו חלקי — ואז קו הגל שבתחתיתו קפץ למטה (CLS). כאן
          הציור הראשון מחכה עד שכל ההירו נפרסר (עד #main-content — מילישניות בודדות).
@@ -544,8 +549,8 @@
     <!-- הקוד הראשי יורד מוקדם (preload) אך מוזרק ומתבצע רק אחרי הציור הראשון —
          ראו הטוען בסוף ה-body. ה-?v= כאן חייב להיות זהה לזה שבטוען וב-sw.js.
          fetchpriority=low: שלא יתחרו ברוחב-הפס עם ה-CSS החוסם (FCP) — כמו defer. -->
-    <link rel="preload" href="script.js?v=133" as="script" fetchpriority="low" />
-    <link rel="preload" href="lux.js?v=97" as="script" fetchpriority="low" />
+    <link rel="preload" href="script.js?v=139" as="script" fetchpriority="low" />
+    <link rel="preload" href="lux.js?v=104" as="script" fetchpriority="low" />
 
     <!-- OneSignal Web Push SDK -->
     <script>
@@ -2273,6 +2278,11 @@
         class="p-4 md:p-6 pb-3 md:pb-4 border-b flex justify-between items-center flex-shrink-0"
         style="border-color:rgba(0,0,0,0.08);background:#faf9f6;"
       >
+        <!-- קבוצת הכפתורים בצד ימין: המרקר 🖍️ (מוזרק ע"י lux.js לתחילתה) ומיד אחריו תוכן העניינים ☰ —
+             קפיצה לתורה / נביאים / כתובים / משנה / גמרא / זוהר / הלכה (10/2026) -->
+        <div id="chok-head-actions" style="display:flex;align-items:center;gap:0.5rem;flex-shrink:0;">
+          <button type="button" class="toc-nav-btn" onclick="window._chokGoToSections()" style="background:rgba(0,0,0,0.06);border:none;color:#64748b;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.15rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;" title="תוכן העניינים" aria-label="תוכן העניינים">☰</button>
+        </div>
         <h2
           id="chok-israel-modal-title"
           class="text-xl md:text-2xl font-black text-slate-800 text-right"
@@ -2584,7 +2594,7 @@
               <span
                 class="font-bold text-slate-800 dark:text-white"
                 data-i18n-key="notif_settings_title"
-                >התראות ספירת העומר</span
+                >תזכורות: ספירת העומר ונר חנוכה</span
               >
               <div id="notif-master-control" class="notification-toggle-row">
                 <span
@@ -2596,7 +2606,7 @@
                   id="notif-master-toggle"
                   type="button"
                   role="switch"
-                  aria-label="התראות ספירת העומר"
+                  aria-label="תזכורות: ספירת העומר ונר חנוכה"
                   aria-checked="false"
                   onclick="toggleNotificationsMaster()"
                   class="relative inline-flex h-6 w-11 items-center rounded-full bg-slate-300 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500/30"
@@ -2613,6 +2623,7 @@
               class="text-sm text-slate-600 dark:text-slate-300"
             >
               תזכורת לספירה בכל ערב בצאת הכוכבים, בימי ספירת העומר.
+              ובשמונת לילות חנוכה — תזכורת להדלקת הנר בשקיעה (בערב שבת — שעה לפני השקיעה, במוצאי שבת — אחרי צאת השבת).
             </p>
           </div>
 
@@ -2911,8 +2922,8 @@
           // כבר מצוירים מתחת למסך הפתיחה ואנימציית הכניסה מתוזמנת לדהייתו. בהיר/כהה לא טוענים אותו.
           // אותו ?v= כמו ב-_luxSkyEnsure (script.js) וב-sw.js.
           if (document.documentElement.classList.contains("lux-sky")) addScript("sky.js?v=11", { id: "lux-sky-js" });
-          addScript("script.js?v=133");
-          addScript("lux.js?v=97");
+          addScript("script.js?v=139");
+          addScript("lux.js?v=104");
         }
         function afterFirstPaint() {
           // rAF אחד (רץ ממש לפני ציור הפריים הראשון) ואז setTimeout(0) — משימה

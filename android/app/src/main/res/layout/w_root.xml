@@ -3,7 +3,10 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:layoutDirection="rtl"
+    android:background="@drawable/wbg_clip"
     android:clipToOutline="true">
+    <!-- הרקע (שמיים / זכוכית) — תמונה ולא רקע השורש, כדי שסליידר השקיפות יחליש אותה בלבד (Ui.root) -->
+    <ImageView android:id="@+id/w_bg" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="fitXY" android:importantForAccessibility="no" />
     <ImageView android:id="@+id/w_stars" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="centerCrop" android:src="@drawable/wstars" android:visibility="gone" android:importantForAccessibility="no" />
     <ImageView android:id="@+id/w_hills" android:layout_width="match_parent" android:layout_height="46dp" android:layout_gravity="bottom" android:scaleType="fitXY" android:visibility="gone" android:importantForAccessibility="no" />
     <LinearLayout android:id="@+id/w_content" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:layoutDirection="rtl" />

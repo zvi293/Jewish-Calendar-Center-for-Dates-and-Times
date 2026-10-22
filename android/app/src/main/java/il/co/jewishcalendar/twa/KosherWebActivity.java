@@ -219,7 +219,10 @@ public class KosherWebActivity extends Activity {
 
     private static void markApp(WebView view, String url) {
         if (url == null || !isSite(Uri.parse(url))) return;
-        view.evaluateJavascript("try{sessionStorage.setItem('moadim_in_app','1')}catch(e){}"
+        // moadim_rem — תזכורת ביומן הטלפון (ReminderActivity): ב-WebView אין ערוץ "caps" של TWA,
+        // והאפליקציה הזו עצמה כבר תומכת בזה
+        view.evaluateJavascript("try{sessionStorage.setItem('moadim_in_app','1');sessionStorage.setItem('moadim_rem','1')}catch(e){}"
+                + "document.documentElement.classList.add('jc-rem');"
                 + "if(window.__jcMarkApp)window.__jcMarkApp();", null);
     }
 

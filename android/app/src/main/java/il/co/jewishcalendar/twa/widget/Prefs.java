@@ -161,8 +161,20 @@ final class Prefs {
         return sp(c).contains("style_" + widgetId);
     }
 
+    // ── אטימות הרקע (10/2026): 100 = רגיל, 0 = שקוף לגמרי (הטקסט נשאר). לשני הסגנונות ──
+
+    static int opacity(Context c, int widgetId) {
+        int v = sp(c).getInt("op_" + widgetId, sp(c).getInt("op_default", 100));
+        return Math.max(0, Math.min(100, v));
+    }
+
+    static void setOpacity(Context c, int widgetId, int op) {
+        op = Math.max(0, Math.min(100, op));
+        sp(c).edit().putInt("op_" + widgetId, op).putInt("op_default", op).apply();
+    }
+
     static void forget(Context c, int widgetId) {
-        sp(c).edit().remove("style_" + widgetId).remove("mon_off_" + widgetId).remove("mon_at_" + widgetId).apply();
+        sp(c).edit().remove("style_" + widgetId).remove("op_" + widgetId).remove("mon_off_" + widgetId).remove("mon_at_" + widgetId).apply();
     }
 
     // ── ווידג'ט "לוח שנה": החודש שמוצג (ביחס לחודש הנוכחי) ──

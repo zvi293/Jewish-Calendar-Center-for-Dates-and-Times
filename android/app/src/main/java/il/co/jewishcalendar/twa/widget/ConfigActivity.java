@@ -16,6 +16,7 @@ import android.widget.LinearLayout;
 import android.widget.RemoteViews;
 import android.widget.CheckBox;
 import android.widget.ScrollView;
+import android.widget.SeekBar;
 import android.widget.Switch;
 import android.widget.TextView;
 
@@ -40,6 +41,10 @@ public class ConfigActivity extends Activity {
     private W.Kind kind = W.Kind.DATE;
     private String chosen = Prefs.STYLE_SKY;
     private FrameLayout cardSky, cardGlass;
+    // סליידר השקיפות (10/2026): אטימות הרקע 0–100, לשני הסגנונות; התצוגות המקדימות נבנות מחדש בכל שינוי
+    private int opacity = 100;
+    private FrameLayout pvSky, pvGlass;
+    private TextView opLabel;
     // ווידג'ט "לוח שנה": האירועים שלי מיומן הטלפון (PhoneCal) — נשמר רק ב"שמירה"
     private boolean pcOn;
     private final Set<Long> pcHidden = new HashSet<>();
@@ -67,6 +72,7 @@ public class ConfigActivity extends Activity {
             }
         }
         chosen = Prefs.hasStyle(this, widgetId) ? Prefs.style(this, widgetId) : Prefs.sp(this).getString("style_default", Prefs.STYLE_SKY);
+        opacity = Prefs.opacity(this, widgetId);
         getWindow().setStatusBarColor(NAVY);
         getWindow().setNavigationBarColor(NAVY);
         setContentView(buildUi());
@@ -128,6 +134,7 @@ public class ConfigActivity extends Activity {
         row.addView(g, new LinearLayout.LayoutParams(dp(12), 1));
         row.addView(cardGlass, new LinearLayout.LayoutParams(0, -2, 1));
         col.addView(row);
+        col.addView(opacityCard(), new LinearLayout.LayoutParams(-1, -2));
         if (kind == W.Kind.MONTH) col.addView(phoneCalCard(), new LinearLayout.LayoutParams(-1, -2));
 
         View sp = new View(this);
@@ -166,6 +173,25 @@ public class ConfigActivity extends Activity {
         wall.setCornerRadius(dp(14));
         pv.setBackground(wall);
         pv.setPadding(dp(8), dp(8), dp(8), dp(8));
+        if (Prefs.STYLE_SKY.equals(style)) pvSky = pv; else pvGlass = pv;
+        float[] wh = fillPreview(pv, style, name);
+        // גובה קבוע: בגובה wrap_content התצוגה של "לוח שנה" נמדדה פי 2 מהווידג'ט (נמדד 10/2026)
+        // ודחפה את שם הסגנון, את הגדרות היומן ואת כפתור השמירה אל מחוץ למסך
+        inner.addView(pv, new LinearLayout.LayoutParams(-1, dp(wh[1] + 16)));
+        TextView n = text(name, 17, Color.WHITE, R.font.assistant_extrabold);
+        n.setPadding(0, dp(10), 0, dp(2));
+        inner.addView(n);
+        inner.addView(text(desc, 12, 0xFF94A3B8, R.font.assistant_regular));
+        card.addView(inner);
+        card.setTag(style);
+        card.setOnClickListener(v -> select(style));
+        card.setClickable(true);
+        return card;
+    }
+
+    /** התצוגה המקדימה עצמה (ה-RemoteViews האמיתי) — נבנית מחדש גם כשהשקיפות משתנה. */
+    private float[] fillPreview(FrameLayout pv, String style, String name) {
+        pv.removeAllViews();
         float[] wh = previewSize();
         // "לוח שנה": 7 עמודות לא נכנסות ברוחב של חצי מסך — המספרים הדו-ספרתיים נחתכו ("1" במקום "12").
         // לכן הוא נבנה בגודל האמיתי שלו (4×4) ומוקטן כתמונה — מיניאטורה נאמנה של מה שיופיע במסך הבית.
@@ -179,7 +205,7 @@ public class ConfigActivity extends Activity {
         }
         try {
             Engine e = new Engine(Prefs.loc(this), System.currentTimeMillis());
-            RemoteViews rv = Render.build(this, kind, widgetId, rw, rh, e, style);
+            RemoteViews rv = Render.build(this, kind, widgetId, rw, rh, e, style, opacity);
             View v = rv.apply(this, pv);
             if (scale < 1f) {
                 FrameLayout box = new FrameLayout(this);
@@ -201,18 +227,56 @@ public class ConfigActivity extends Activity {
         } catch (Throwable t) {
             pv.addView(text(name, 16, Color.WHITE, R.font.frl_bold), new FrameLayout.LayoutParams(-1, dp(140)));
         }
-        // גובה קבוע: בגובה wrap_content התצוגה של "לוח שנה" נמדדה פי 2 מהווידג'ט (נמדד 10/2026)
-        // ודחפה את שם הסגנון, את הגדרות היומן ואת כפתור השמירה אל מחוץ למסך
-        inner.addView(pv, new LinearLayout.LayoutParams(-1, dp(wh[1] + 16)));
-        TextView n = text(name, 17, Color.WHITE, R.font.assistant_extrabold);
-        n.setPadding(0, dp(10), 0, dp(2));
-        inner.addView(n);
-        inner.addView(text(desc, 12, 0xFF94A3B8, R.font.assistant_regular));
-        card.addView(inner);
-        card.setTag(style);
-        card.setOnClickListener(v -> select(style));
-        card.setClickable(true);
+        return wh;
+    }
+
+    /** "שקיפות הרקע" — 0% = הרקע הרגיל, 100% = רק הכיתוב על הטפט. */
+    private View opacityCard() {
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
+        card.setPadding(dp(16), dp(12), dp(16), dp(10));
+        GradientDrawable bg = new GradientDrawable();
+        bg.setCornerRadius(dp(18));
+        bg.setColor(0x0FFFFFFF);
+        bg.setStroke(dp(1), 0x33F2D98A);
+        card.setBackground(bg);
+        LinearLayout.LayoutParams top = new LinearLayout.LayoutParams(-1, -2);
+        top.topMargin = dp(4);
+        card.setLayoutParams(top);
+        opLabel = text("", 16, Color.WHITE, R.font.assistant_extrabold);
+        opLabel.setGravity(Gravity.START);
+        card.addView(opLabel);
+        SeekBar sb = new SeekBar(this);
+        sb.setMax(100);
+        sb.setProgress(100 - opacity);
+        sb.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
+        sb.setThumbTintList(ColorStateList.valueOf(GOLD));
+        sb.setProgressTintList(ColorStateList.valueOf(0xFFE0B74F));
+        sb.setProgressBackgroundTintList(ColorStateList.valueOf(0x4DFFFFFF));
+        sb.setContentDescription("שקיפות הרקע של הווידג'ט");
+        sb.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override public void onProgressChanged(SeekBar s, int p, boolean fromUser) {
+                opacity = 100 - p;
+                updateOpLabel();
+                if (pvSky != null) fillPreview(pvSky, Prefs.STYLE_SKY, "שמיים חיים");
+                if (pvGlass != null) fillPreview(pvGlass, Prefs.STYLE_GLASS, "זכוכית");
+            }
+            @Override public void onStartTrackingTouch(SeekBar s) {}
+            @Override public void onStopTrackingTouch(SeekBar s) {}
+        });
+        LinearLayout.LayoutParams sp = new LinearLayout.LayoutParams(-1, dp(40));
+        sp.topMargin = dp(4);
+        card.addView(sb, sp);
+        TextView d = text("גוררים כדי לראות יותר מהטפט מאחורי הווידג'ט — הכיתוב נשאר כמו שהוא", 12.5f, 0xFF94A3B8, R.font.assistant_regular);
+        d.setGravity(Gravity.START);
+        card.addView(d);
+        updateOpLabel();
         return card;
+    }
+
+    private void updateOpLabel() {
+        if (opLabel != null) opLabel.setText("שקיפות הרקע: " + (100 - opacity) + "%");
     }
 
     /** גודל התצוגה המקדימה (dp) — מוקטן כך ששני כרטיסים ייכנסו זה ליד זה. */
@@ -353,6 +417,7 @@ public class ConfigActivity extends Activity {
             PhoneCal.setHidden(this, pcHidden);
         }
         Prefs.setStyle(this, widgetId, chosen);
+        Prefs.setOpacity(this, widgetId, opacity);
         // ההגדרה של האירועים אחת לכל ווידג'טי החודש — מעדכנים את כולם
         if (kind == W.Kind.MONTH) {
             for (int other : Updater.ids(this, W.Kind.MONTH)) Updater.update(this, AppWidgetManager.getInstance(this), kind, other);

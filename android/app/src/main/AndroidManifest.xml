@@ -246,6 +246,20 @@
                 <data android:scheme="jewishcalendar" android:host="calendar-sync" />
             </intent-filter>
         </activity>
+        <!-- תזכורת ביומן הטלפון (1.1.9): מחלון היום באתר (intent://reminder?…) ומחלון היום של הווידג'ט -->
+        <activity android:name=".cal.ReminderActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:taskAffinity=""
+            android:windowSoftInputMode="adjustResize"
+            android:theme="@android:style/Theme.Material.Dialog.NoActionBar">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="jewishcalendar" android:host="reminder" />
+            </intent-filter>
+        </activity>
         <service android:name=".cal.CalJob"
             android:permission="android.permission.BIND_JOB_SERVICE"
             android:exported="false" />

@@ -31,11 +31,15 @@ final class Render {
     private Render() {}
 
     static RemoteViews build(Context c, W.Kind k, int id, float w, float h, Engine e) {
-        return build(c, k, id, w, h, e, Prefs.style(c, id));
+        return build(c, k, id, w, h, e, Prefs.style(c, id), Prefs.opacity(c, id));
     }
 
     static RemoteViews build(Context c, W.Kind k, int id, float w, float h, Engine e, String style) {
-        Ui.Theme t = new Ui.Theme(style, e.skyPhase());
+        return build(c, k, id, w, h, e, style, Prefs.opacity(c, id));
+    }
+
+    static RemoteViews build(Context c, W.Kind k, int id, float w, float h, Engine e, String style, int opacity) {
+        Ui.Theme t = new Ui.Theme(style, e.skyPhase(), opacity);
         switch (k) {
             case ZMANIM: return zmanim(c, id, w, h, e, t);
             case NEXT: return next(c, id, w, h, e, t);
@@ -216,7 +220,7 @@ final class Render {
                         row.setChronometerCountDown(R.id.cd, true);
                     } else {
                         row.setViewVisibility(R.id.cdtxt, View.VISIBLE);
-                        row.setTextViewText(R.id.cdtxt, "בעוד " + Heb.duration(left));
+                        row.setTextViewText(R.id.cdtxt, Heb.duration(left));
                     }
                 }
             } else {
@@ -249,7 +253,7 @@ final class Render {
             hb.addView(BOX, Ui.gap(c, 6));
             RemoteViews tcol = Ui.vboxWrap(c);
             tcol.addView(BOX, Ui.text(c, Ui.XB, time(e, n.ms), w < 200 ? 22 : 26, Ui.WHITE, android.view.Gravity.END, 1, 1));
-            if (w >= 230) tcol.addView(BOX, Ui.countdown(c, e.now, n.ms, "בעוד", 11, t, false));
+            if (w >= 230) tcol.addView(BOX, Ui.countdown(c, e.now, n.ms, "", 11, t, false));
             hb.addView(BOX, tcol);
             root.addView(C, hb);
             return root;
@@ -265,7 +269,7 @@ final class Render {
         main.addView(BOX, Ui.gap(c, 4));
         main.addView(BOX, Ui.line(c, Ui.XB, time(e, n.ms), 40 * s, Ui.WHITE));
         main.addView(BOX, Ui.gap(c, 6));
-        main.addView(BOX, Ui.countdown(c, e.now, n.ms, "בעוד", 12.5f * s, t, false));
+        main.addView(BOX, Ui.countdown(c, e.now, n.ms, "", 12.5f * s, t, false));
         main.addView(BOX, Ui.space(c));
         if (!wide && up.size() > 1 && h >= 170) {
             Engine.Row a = up.get(1);
@@ -805,7 +809,7 @@ final class Render {
             ncol.addView(BOX, Ui.line(c, Ui.XB, rowName(n), fit(rowName(n), 14 * s, inner(w) / 2 - 6, 1), Ui.WHITE));
             ncol.addView(BOX, Ui.line(c, Ui.XB, time(e, n.ms), 27 * s, Ui.WHITE));
             ncol.addView(BOX, Ui.gap(c, 2));
-            ncol.addView(BOX, Ui.countdown(c, e.now, n.ms, "בעוד", 11.5f * s, t, false));
+            ncol.addView(BOX, Ui.countdown(c, e.now, n.ms, "", 11.5f * s, t, false));
         }
         ncol.addView(BOX, Ui.space(c));
         ncol.setOnClickPendingIntent(BOX, Ui.open(c, id, "zmanim"));

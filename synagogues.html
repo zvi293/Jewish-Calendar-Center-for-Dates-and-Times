@@ -519,6 +519,27 @@
         box-shadow: 0 0 16px rgba(251, 191, 36, 0.25);
       }
 
+      /* ── תג "גרסת בטא" באלכסון על הכותרת הגדולה ── */
+      .title-beta-wrap { position: relative; display: inline-block; padding: 0 0.4rem; }
+      .title-beta {
+        position: absolute;
+        top: -0.55rem;
+        left: -1.6rem;
+        transform: rotate(-14deg);
+        padding: 0.12rem 0.55rem;
+        border-radius: 0.4rem;
+        border: 1px solid rgba(251, 191, 36, 0.6);
+        background: linear-gradient(135deg, #b45309, #78350f);
+        color: #fef3c7;
+        font-size: 0.66rem;
+        font-weight: 800;
+        line-height: 1.5;
+        white-space: nowrap;
+        cursor: pointer;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.35), 0 0 10px rgba(251, 191, 36, 0.18);
+      }
+      @media (max-width: 420px) { .title-beta { left: -1.1rem; top: -0.7rem; font-size: 0.6rem; } }
+
       /* ── פופאפ "גרסת בטא" ── */
       #beta-popup {
         position: fixed;
@@ -631,9 +652,14 @@
     <main class="max-w-3xl mx-auto px-4 pt-6">
       <!-- ══════ Title ══════ -->
       <div class="text-center mb-6">
-        <h2 id="page-title" class="text-3xl md:text-4xl font-extrabold gradient-title mb-2">
-          בתי כנסת באזורך
-        </h2>
+        <!-- תג "גרסת בטא" באלכסון על הכותרת הגדולה (10/2026, במקום הפופאפ שקפץ בכל כניסה).
+             מחוץ ל-h2 — switchTab מחליף את הטקסט שלו ב-textContent -->
+        <div class="title-beta-wrap">
+          <h2 id="page-title" class="text-3xl md:text-4xl font-extrabold gradient-title mb-2">
+            בתי כנסת באזורך
+          </h2>
+          <button type="button" class="title-beta" onclick="openBetaPopup()" aria-label="גרסת בטא — לחצו לפרטים">גרסת בטא</button>
+        </div>
         <p id="page-subtitle" class="text-slate-300/80 text-sm">
           מצא את המקומות הקרובים אליך ונווט אליהם בלחיצה
         </p>
@@ -697,8 +723,8 @@
           <div id="city-pick-msg" style="display:none;"></div>
         </div>
 
-        <!-- Radius row -->
-        <div>
+        <!-- Radius row — מוסתרת כשנבחר יישוב (אז מוצגים כל המקומות ביישוב, בלי רדיוס) -->
+        <div id="radius-row">
           <div class="text-xs text-slate-400 mb-2">רדיוס חיפוש:</div>
           <div class="flex flex-wrap gap-2" id="radius-chips">
             <button class="radius-chip" data-r="1" type="button">1 ק"מ</button>
@@ -947,6 +973,57 @@
       let userLat = null;
       let userLon = null;
       let lastResults = [];
+      // ── מצב "לפי יישוב" (10/2026) ──
+      // כשנבחר יישוב: מוצגים כל המקומות שבו (בלי כפתורי רדיוס), והמרחק בכרטיס נמדד מהמיקום
+      // האמיתי של המשתמש (ה-GPS האחרון, נשמר בנפרד מהיישוב שנבחר). "עדכן מיקום" מחזיר לרדיוס.
+      let manualCity = null;
+      const LS_MYLOC_KEY = "shulMikve_myLoc_v1";
+      const CITY_LIVE_RADIUS_KM = 8; // אזור החיפוש החי (Overpass) סביב מרכז היישוב
+      let myLat = null, myLon = null;
+      try {
+        const m = JSON.parse(localStorage.getItem(LS_MYLOC_KEY) || "null");
+        if (m && typeof m.lat === "number" && typeof m.lon === "number") { myLat = m.lat; myLon = m.lon; }
+        else {
+          const c = JSON.parse(localStorage.getItem(LS_LOC_KEY) || "null");
+          if (c && !c.manual && typeof c.lat === "number") { myLat = c.lat; myLon = c.lon; }
+        }
+      } catch (e) {}
+      function rememberMyLocation(lat, lon) {
+        myLat = lat; myLon = lon;
+        try { localStorage.setItem(LS_MYLOC_KEY, JSON.stringify({ lat, lon, ts: Date.now() })); } catch (e) {}
+      }
+      function syncRadiusRow() {
+        const r = document.getElementById("radius-row");
+        if (r) r.style.display = manualCity ? "none" : "";
+      }
+      // "ב<יישוב>" או "ברדיוס N ק"מ" — לכותרת התוצאות ולהודעות
+      function scopeText(radius) {
+        return manualCity ? "ב" + manualCity : "ברדיוס " + radius + " ק\"מ";
+      }
+      // האם המקום שייך ליישוב: לפי שם היישוב במאגר (כשיש), ובלי שם — לפי מרכז היישוב הקרוב ביותר
+      const _looseCity = (s) => _normCityName(s).replace(/יי/g, "י").replace(/וו/g, "ו");
+      function cityHas(cityName, cities, la, lo, c) {
+        if (c) return _looseCity(c) === _looseCity(cityName);
+        if (!cities || !cities.length) return false;
+        let best = null, bestD = Infinity;
+        for (let i = 0; i < cities.length; i++) {
+          const d = haversineKm(la, lo, cities[i][1], cities[i][2]);
+          if (d < bestD) { bestD = d; best = cities[i][0]; }
+        }
+        return bestD <= 6 && _looseCity(best) === _looseCity(cityName);
+      }
+      // מיקום אמיתי ברקע (רק אם כבר אושר — בלי חלון בקשה), כדי להציג מרחק במצב יישוב
+      function refreshMyLocationQuiet() {
+        if (window.__jcWebView || !("geolocation" in navigator) || !navigator.permissions) return;
+        navigator.permissions.query({ name: "geolocation" }).then((st) => {
+          if (st.state !== "granted") return;
+          navigator.geolocation.getCurrentPosition((pos) => {
+            const moved = myLat == null ? Infinity : haversineKm(myLat, myLon, pos.coords.latitude, pos.coords.longitude);
+            rememberMyLocation(pos.coords.latitude, pos.coords.longitude);
+            if (manualLocation && manualCity && moved > 0.2) fetchAndRender();
+          }, () => {}, { enableHighAccuracy: false, timeout: 12000, maximumAge: 1000 * 60 * 10 });
+        }, () => {});
+      }
       // Race-condition guard: every fetchAndRender call increments this.
       // Async callbacks check that their captured gen still matches before mutating DOM.
       let fetchGen = 0;
@@ -1365,8 +1442,7 @@
         p.addEventListener("pointerdown", function (e) {
           if (e.target === p) closeBetaPopup();
         });
-        // נפתח אחרי שהעמוד צויר, בכל כניסה
-        setTimeout(openBetaPopup, 450);
+        // 10/2026: לא נפתח יותר אוטומטית בכניסה — רק בלחיצה על התג בסרגל העליון או על התג שבכותרת
       })();
 
 
@@ -1387,6 +1463,7 @@
           const payload = { lat, lon, ts: Date.now() };
           if (address && typeof address === "string") payload.address = address;
           localStorage.setItem(LS_LOC_KEY, JSON.stringify(payload));
+          rememberMyLocation(lat, lon);
           localStorage.setItem(LS_PERMISSION_KEY, "1");
         } catch(e) {}
       }
@@ -1470,6 +1547,8 @@
           const { lat, lon } = await requestGeolocation();
           rememberLocationApproval();
           manualLocation = false; // מיקום GPS אמיתי מחליף יישוב שנבחר ידנית
+          manualCity = null;
+          syncRadiusRow();
           userLat = lat; userLon = lon;
           // Save coords immediately so app works even if reverse geocoding fails
           saveLocationCache(lat, lon, null);
@@ -1717,6 +1796,9 @@
       }
       function setManualLocation(name, lat, lon) {
         manualLocation = true;
+        manualCity = name || null;
+        syncRadiusRow();
+        refreshMyLocationQuiet();
         userLat = lat; userLon = lon;
         try {
           localStorage.setItem(LS_LOC_KEY, JSON.stringify({ lat, lon, ts: Date.now(), address: name, manual: true }));
@@ -2173,10 +2255,11 @@
         const shown = applyMikvahFilter(items, t);
         if (shown.length === 0) {
           const filtered = t === "mikvah" && mikvahFilter && items && items.length;
+          const cityMode = !!(manualLocation && manualCity);
           setStatus(
             filtered
-              ? "לא נמצאו מקוואות שמתאימים לסינון שנבחר ברדיוס " + currentRadiusKm + " ק\"מ.\nנסה להרחיב את הרדיוס או לבחור \"הכל\"."
-              : "לא נמצאו " + noun + " ברדיוס " + currentRadiusKm + " ק\"מ.\nנסה להרחיב את רדיוס החיפוש.",
+              ? "לא נמצאו מקוואות שמתאימים לסינון שנבחר " + scopeText(currentRadiusKm) + ".\n" + (cityMode ? "נסה לבחור \"הכל\"." : "נסה להרחיב את הרדיוס או לבחור \"הכל\".")
+              : "לא נמצאו " + noun + " " + scopeText(currentRadiusKm) + "." + (cityMode ? "" : "\nנסה להרחיב את רדיוס החיפוש."),
             false
           );
           if (typeof viewMode !== "undefined" && viewMode === "map") renderMap(items);
@@ -2186,9 +2269,12 @@
 
         const header = document.createElement("div");
         header.className = "text-slate-300/80 text-sm mb-2 px-1";
+        const cityMode = !!(manualLocation && manualCity);
+        // במצב יישוב בלי מיקום ידוע של המשתמש — אין "מרחק ממני" להציג
+        const showDist = !cityMode || myLat != null;
         header.textContent = "נמצאו " + shown.length.toLocaleString("he-IL") + " " + noun +
-                             " ברדיוס " + currentRadiusKm + " ק\"מ" +
-                             (shown.length > _renderLimit ? " · מוצגים " + _renderLimit + " הקרובים" : "");
+                             " " + scopeText(currentRadiusKm) +
+                             (shown.length > _renderLimit ? " · מוצגים " + _renderLimit + (showDist ? " הקרובים" : " הראשונים") : "");
         out.appendChild(header);
 
         shown.slice(0, _renderLimit).forEach((it, idx) => {
@@ -2214,9 +2300,9 @@
           const dist = document.createElement("div");
           dist.className = "item-distance";
           // מיקום משוער (מרכז היישוב) — "כ-0 מ'" לא אומר כלום; מתחת לחצי ק"מ מציגים טווח
-          dist.textContent = "מרחק: " + (approx && it.distanceKm < 0.5 ? "פחות מחצי ק\"מ"
+          dist.textContent = (cityMode ? "מרחק ממך: " : "מרחק: ") + (approx && it.distanceKm < 0.5 ? "פחות מחצי ק\"מ"
             : (approx ? "כ-" : "") + formatDistance(it.distanceKm));
-          left.appendChild(dist);
+          if (showDist) left.appendChild(dist);
           if (approx) {
             const n = document.createElement("div");
             n.className = "approx-note";
@@ -2319,8 +2405,16 @@
         if (userLat == null || userLon == null) return;
         const myGen = ++fetchGen;
         const tab = currentTab; // snapshot for use throughout this run
-        const radius = currentRadiusKm;
+        const city = manualLocation ? manualCity : null;
+        const radius = city ? CITY_LIVE_RADIUS_KM : currentRadiusKm;
         const lat = userLat, lon = userLon;
+        // מרחק בכרטיס: במצב יישוב — מהמיקום האמיתי של המשתמש (אם ידוע), אחרת ממרכז היישוב
+        const dLat = city && myLat != null ? myLat : lat, dLon = city && myLat != null ? myLon : lon;
+        const cities = city ? await loadPlaces("cities") : null;
+        if (myGen !== fetchGen) return;
+        const inScope = city
+          ? (la, lo, c) => haversineKm(lat, lon, la, lo) <= CITY_LIVE_RADIUS_KM * 2 && cityHas(city, cities, la, lo, c)
+          : (la, lo) => haversineKm(lat, lon, la, lo) <= radius + 0.05;
         const noun = tab === "shul" ? "בתי כנסת"
                   : tab === "mikvah" ? "מקוואות"
                   : "ציוני צדיקים";
@@ -2329,9 +2423,11 @@
         const localAll = await loadPlaces(tab);
         if (myGen !== fetchGen) return;
         const base = localAll
-          ? localAll.map((x) => localToItem(x, lat, lon)).filter((it) => it.distanceKm <= radius + 0.05)
+          ? localAll.filter((x) => inScope(x.la, x.lo, x.c)).map((x) => localToItem(x, dLat, dLon))
           : [];
-        const cachedExtras = loadCachedResults(tab, radius, lat, lon) || [];
+        const cacheR = city ? "city" : radius;
+        const cachedExtras = (loadCachedResults(tab, cacheR, lat, lon) || [])
+          .map((it) => Object.assign({}, it, { distanceKm: haversineKm(dLat, dLon, it.lat, it.lon) }));
         const shownFirst = mergeItems(base, cachedExtras, tab);
         // Overpass בהפסקה (היה 429 ב-15 הדק' האחרונות) והמאגר המקומי זמין — בלי שאילתה חיה
         const liveEnabled = !(localAll && overpassPaused()) && !window.__jcWebView; // טלפון כשר — רק המאגר המקומי
@@ -2347,12 +2443,12 @@
           hasCacheShown = true;
         } else if (localAll) {
           lastResults = [];
-          setStatus("לא נמצאו " + noun + " ברדיוס " + radius + " ק\"מ." +
-            (liveEnabled ? "\nבודק מקורות נוספים…" : "\nנסה להרחיב את רדיוס החיפוש."), liveEnabled);
+          setStatus("לא נמצאו " + noun + " " + scopeText(radius) + "." +
+            (liveEnabled ? "\nבודק מקורות נוספים…" : (city ? "" : "\nנסה להרחיב את רדיוס החיפוש.")), liveEnabled);
         } else {
           const statusMsg = tab === "shul"
-            ? "מחפש " + noun + " ברדיוס " + radius + " ק\"מ…"
-            : "מחפש " + noun + " ברדיוס " + radius + " ק\"מ…\nהחיפוש עשוי להימשך עד 30 שניות.";
+            ? "מחפש " + noun + " " + scopeText(radius) + "…"
+            : "מחפש " + noun + " " + scopeText(radius) + "…\nהחיפוש עשוי להימשך עד 30 שניות.";
           setStatus(statusMsg);
         }
 
@@ -2382,7 +2478,7 @@
               }
             }
             if (allElements.length > 0) {
-              liveItems = parseElements(allElements, lat, lon, tab).filter((it) => it.distanceKm <= radius + 0.05);
+              liveItems = parseElements(allElements, dLat, dLon, tab).filter((it) => inScope(it.lat, it.lon, null));
               const merged = mergeItems(base, liveItems, tab);
               if (myGen !== fetchGen) return;
               const sig = sigOf(merged);
@@ -2412,7 +2508,7 @@
           // At least one query succeeded — the fresh live picture replaces the cached extras
           const merged = mergeItems(base, liveItems, tab);
           const extras = merged.filter((it) => !it.local);
-          saveCachedResults(tab, radius, lat, lon, extras);
+          saveCachedResults(tab, cacheR, lat, lon, extras);
           if (sigOf(merged) !== renderedSig) {
             lastResults = merged;
             if (merged.length) renderResults(merged, tab, { quiet: true });
@@ -2421,7 +2517,7 @@
             // Queries OK but genuinely empty (e.g., too-small radius).
             lastResults = [];
             setStatus(
-              "לא נמצאו " + noun + " ברדיוס " + radius + " ק\"מ.\nנסה להרחיב את רדיוס החיפוש.",
+              "לא נמצאו " + noun + " " + scopeText(radius) + "." + (city ? "" : "\nנסה להרחיב את רדיוס החיפוש."),
               false
             );
           }
@@ -2431,7 +2527,7 @@
             // המאגר המקומי מוצג — הוא מקור הנתונים העיקרי, אין צורך באזהרה
           } else if (localAll) {
             setStatus(
-              "לא נמצאו " + noun + " ברדיוס " + radius + " ק\"מ.\nנסה להרחיב את רדיוס החיפוש.",
+              "לא נמצאו " + noun + " " + scopeText(radius) + "." + (city ? "" : "\nנסה להרחיב את רדיוס החיפוש."),
               false
             );
           } else {
@@ -2708,6 +2804,9 @@
         if (cached && cached.manual) {
           // יישוב שנבחר ידנית בביקור קודם
           manualLocation = true;
+          manualCity = cached.address || null;
+          syncRadiusRow();
+          refreshMyLocationQuiet();
           userLat = cached.lat;
           userLon = cached.lon;
           updateLocationLabel(cached.lat, cached.lon, cached.address || "", true);

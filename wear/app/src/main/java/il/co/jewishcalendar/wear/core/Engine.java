@@ -265,8 +265,8 @@ public final class Engine {
         add(r, "chatzot", "חצות היום", null, z.chatzot, false);
         add(r, "minchaG", "מנחה גדולה", null, z.minchaGedola, false);
         add(r, "minchaK", "מנחה קטנה", null, z.minchaKetana, false);
-        add(r, "plagMGA", "פלג המנחה", "מג״א", z.plag, false);
-        add(r, "plagGRA", "פלג המנחה", "הגר״א", z.plagGRA, false);
+        // פלג המנחה — תמיד לפי הגר"א (הנץ–שקיעה), גם בשיטת מג"א, כמו באתר (בקשת המשתמש 10/2026)
+        add(r, "plag", "פלג המנחה", "הגר״א", z.plagGRA, false);
 
         boolean holyToday = isHoly(jc), holyTomorrow = isHoly(jcNext);
         boolean ykTomorrow = jcNext.getYomTovIndex() == JewishCalendar.YOM_KIPPUR;

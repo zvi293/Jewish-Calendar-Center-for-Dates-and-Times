@@ -22,7 +22,8 @@ public final class Sync {
      * היכולות של גרסת האפליקציה הזו (1.1.3+) — נשלחת אחרי HELLO. cal = סנכרון אוטומטי ליומן
      * הטלפון: בלוח החודשי של האתר כפתור "ליומן הטלפון" מחליף את הורדת הקובץ (index.html: jc-cal-sync).
      */
-    public static final String CAPS = "{\"t\":\"caps\",\"cal\":1}";
+    // rem: תזכורת ביומן הטלפון מחלון היום באתר (ReminderActivity, 1.1.9) — האתר מציג את הטופס רק כשיש
+    public static final String CAPS = "{\"t\":\"caps\",\"cal\":1,\"rem\":1}";
 
     public static void onMessage(Context c, String msg) {
         if (msg == null || msg.length() > 2_000_000 || !msg.startsWith("{")) return;

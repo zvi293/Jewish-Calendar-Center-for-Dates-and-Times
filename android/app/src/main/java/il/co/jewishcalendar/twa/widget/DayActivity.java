@@ -167,9 +167,13 @@ public class DayActivity extends Activity {
         list.measure(View.MeasureSpec.makeMeasureSpec(dp(400), View.MeasureSpec.AT_MOST), View.MeasureSpec.UNSPECIFIED);
         col.addView(sv, new LinearLayout.LayoutParams(-1, Math.min(maxH, Math.max(list.getMeasuredHeight(), dp(24)))));
 
+        // תזכורת חדשה ליום הזה — נכתבת ליומן הטלפון עם התראה (ReminderActivity, 1.1.9)
+        TextView rem = button("🔔 הוספת תזכורת ליום הזה", false);
+        rem.setOnClickListener(v -> launch(il.co.jewishcalendar.twa.cal.ReminderActivity.forDay(this, y, m, d)));
+        col.addView(rem, lp(-1, dp(44), 16));
         TextView open = button("פתיחה ביומן הטלפון", true);
         open.setOnClickListener(v -> launch(PhoneCal.openDay(start)));
-        col.addView(open, lp(-1, dp(48), 18));
+        col.addView(open, lp(-1, dp(48), 10));
         TextView site = button("בלוח השנה של הלוח היהודי", false);
         site.setOnClickListener(v -> {
             String iso = y + "-" + (m < 10 ? "0" : "") + m + "-" + (d < 10 ? "0" : "") + d;

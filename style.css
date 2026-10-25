@@ -7753,7 +7753,9 @@ body.lux-erev-chag .lux-erev-tag { color: rgba(191, 219, 254, 0.72); }
   font-size: 1.02rem;
   text-shadow: 0 0 14px rgba(251, 191, 36, 0.5);
 }
-.lux-erev-entered {
+/* רק השורה בלוח — lux.js מוסיף את אותה מחלקה גם ל-<body> (מצב "נכנסה השבת"), ועד 25/10/2026 הכלל חל על כל הדף:
+   הדף ירד 9.6px וכל טקסט בלי צבע ומשקל משלו קיבל משקל 800 וזוהר זהב */
+div.lux-erev-entered {
   margin-top: 0.6rem;
   color: #fde68a;
   font-weight: 800;
@@ -10658,7 +10660,7 @@ html.lux-sky[data-sky="day"] .lux-erev-orn::before { background: linear-gradient
 html.lux-sky[data-sky="day"] .lux-erev-orn::after { background: linear-gradient(90deg, rgba(161, 118, 42, 0.85), transparent); }
 html.lux-sky[data-sky="day"] .lux-erev-times span { background: var(--skyc-field); border-color: rgba(161, 118, 42, 0.5); color: var(--skyc-ink); box-shadow: none; }
 html.lux-sky[data-sky="day"] .lux-erev-times b,
-html.lux-sky[data-sky="day"] .lux-erev-entered { color: #7a4f0e; text-shadow: none; }
+html.lux-sky[data-sky="day"] div.lux-erev-entered { color: #7a4f0e; text-shadow: none; }
 /* הספירה לאחור — רגילה ובמצב ערב שבת. ביום — רקע שמנת כמעט אטום כמו גלולות "הדלקת נרות/הבדלה"
    שבפאנל: הספירה יושבת בדרך כלל בתחתית המסך מול הנוף הכהה, ועל זכוכית 20% הכתב הכהה לא נראה (13/10/2026) */
 html.lux-sky[data-sky="day"] #shabbat-countdown-bar,

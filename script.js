@@ -28195,7 +28195,14 @@ function shareEventWhatsApp(name, dateStr, heb, ev) {
 const _origRenderForWA = window.render;
 window.render = function (filter, search) {
   _origRenderForWA(filter, search);
-  // Inject WhatsApp button into each card after render
+  // הכפתור נכנס גם אחרי החלק השני של הרינדור (מהכרטיס ה-25 — בטיימר של render, שנקבע לפני זה). עד 25/10/2026
+  // רק 24 הכרטיסים הראשונים קיבלו "שתף בוואטסאפ"
+  _injectWaButtons();
+  setTimeout(_injectWaButtons, 0);
+  requestAnimationFrame(setupCardObserver);
+};
+// Inject WhatsApp button into each card after render
+function _injectWaButtons() {
   document.querySelectorAll(".event-card").forEach((card) => {
     if (card.querySelector(".wa-btn")) return; // already added
     const btnRow = card.querySelector(".flex.md\\:flex-col");
@@ -28217,8 +28224,7 @@ window.render = function (filter, search) {
       btnRow.appendChild(waBtn);
     } catch (_) {}
   });
-  requestAnimationFrame(setupCardObserver);
-};
+}
 
 // ═══════════════════════════════════════════════════════
 // ✦  SCROLL-TO-TOP FAB

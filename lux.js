@@ -355,6 +355,38 @@
     }, { passive: true });
   });
 
+  /* ── 5ג. העתקת טקסט בשלוש הקשות (25/10/2026, בקשת המשתמש) ──
+     כל האתר חסום לסימון (style.css: user-select:none — שלא תיפתח בחירה בלחיצה ארוכה). שלוש הקשות/לחיצות
+     מהירות בתוך אזור קריאה (ספר/תפילה) מפעילות העתקה — html.lux-copy, ואז לחיצה ארוכה (טלפון) או גרירה
+     (מחשב) מסמנת טקסט כרגיל; עוד שלוש — מבטלות. בטלפון ובמחשב כאחד, כבוי כברירת מחדל, ולא נשמר בכלל:
+     כל יציאה וכניסה מחדש (גם רענון) מבטלת. */
+  safe("copyMode", function () {
+    var AREAS = "#sefaria-modal-content, #chok-israel-modal-content, #sn-reader-content, #psalm-text-area, " +
+      "#bih-content-area, #shir-scroll-area, #lux-sel-area, #lux-tr-area, #prayer-modal-body, #lux-pl-area, " +
+      "#motzei-tab-content, #hilulot-modal, #moad-torah-modal, #omer-modal-text";
+    var de = document.documentElement;
+    var taps = [];
+    document.addEventListener("pointerup", function (e) {
+      if (e.pointerType === "mouse" ? e.button !== 0 : e.pointerType !== "touch") return;
+      var t = e.target;
+      if (!t || !t.closest || !t.closest(AREAS)) { taps = []; return; }
+      if (t.closest("a, button, input, textarea, select, [role='button'], [onclick]")) { taps = []; return; }
+      var now = Date.now(), last = taps[taps.length - 1];
+      if (last && (now - last.t > 450 || Math.abs(e.clientX - last.x) > 40 || Math.abs(e.clientY - last.y) > 40)) taps = [];
+      taps.push({ t: now, x: e.clientX, y: e.clientY });
+      if (taps.length < 3) return;
+      taps = [];
+      var on = !de.classList.contains("lux-copy");
+      de.classList.toggle("lux-copy", on);
+      if (!on) { try { window.getSelection().removeAllRanges(); } catch (_) {} }
+      try { if (navigator.vibrate) navigator.vibrate(on ? [10, 40, 10] : 10); } catch (_) {}
+      if (on && typeof window._btnToastVal === "function") window._btnToastVal(e.pointerType === "mouse"
+        ? "📋 העתקה הופעלה — גררו את העכבר על הטקסט כדי לסמן"
+        : "📋 העתקה הופעלה — לחיצה ארוכה על הטקסט מסמנת אותו");
+      else if (!on && typeof window._btnToastOff === "function") window._btnToastOff("📋 העתקה");
+    }, { passive: true, capture: true });
+  });
+
   /* ── 6. קונפטי זהב — פתיחת ספירת העומר ולחיצת "ברכתי" בלבנה ───── */
   function luxConfetti() {
     try {
@@ -2186,6 +2218,8 @@
         var z = document.getElementById("halacha-banner");
         if (z) z.scrollIntoView({ behavior: "smooth", block: "center" });
       },
+      // ?open=compass — כפתור המצפן בווידג'ט "זמני היום" (אפליקציה 1.2.0, 25/10/2026)
+      compass: function () { if (typeof window.openCompass === "function") window.openCompass(); },
       plan: function () {
         // ?open=plan&plan=<id> — פתיחת סדר לימוד מסוים (הקורא שלו)
         var ps = jget("lux_study_plans_v1", []);
@@ -2630,6 +2664,9 @@
         if (left > 0 && left <= 30 * 60000 && (!show || ms < show.ms)) show = { ms: ms, l: c.l, k: c.k, iso: iso };
       });
       var el = document.getElementById("lux-crit-pill");
+      // באפליקציה, בערב שבת/חג מחצות ועד ההדלקה — בלי תזכורות זמנים (erevShabbatMode → __luxErevQuiet)
+      if (show && document.documentElement.classList.contains("jc-app") &&
+          typeof window.__luxErevQuiet === "function" && window.__luxErevQuiet()) show = null;
       if (!show) { if (el) el.remove(); return; }
       var dKey = "lux_crit_" + show.k + "_" + luxTodayIso();
       try { if (sessionStorage.getItem(dKey)) return; } catch (e) {}
@@ -7494,6 +7531,14 @@
       }
       return { none: true };
     }
+    // ערב שבת/חג מחצות היום ועד הדלקת הנרות (25/10/2026, בקשת המשתמש): באפליקציה לא קופצות
+    // תזכורות זמנים ("שקיעת החמה בעוד…" — criticalZman) — רק הספירה לכניסת השבת/החג נשארת
+    window.__luxErevQuiet = function () {
+      var now = new Date(), hb = holyBlock(now);
+      if (!hb || hb.none || hb.entered || !hb.candles) return false;
+      var c = hb.candles, ch = zmanOf(new Date(c.getFullYear(), c.getMonth(), c.getDate()), "chatzot");
+      return !!ch && now >= ch && now < c;
+    };
     // גיבוי כשזמני האתר עוד לא זמינים: עלות השחר של יום ההדלקה (או 13 שעות לפניה)
     function leadStart(t) {
       var a = zmanOf(new Date(t.getFullYear(), t.getMonth(), t.getDate()), "alotHaShachar");

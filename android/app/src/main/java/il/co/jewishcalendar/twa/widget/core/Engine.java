@@ -330,6 +330,20 @@ public final class Engine {
         return all;
     }
 
+    /**
+     * ערב שבת/חג מחצות היום ועד הדלקת הנרות — שורת ההדלקה, אחרת null (בקשת המשתמש 25/10/2026):
+     * בזמן הזה ווידג'ט "זמני היום" סופר לאחור רק לכניסת השבת/החג ולא לזמן הבא.
+     * יום טוב שחל בערב שבת לא נחשב — היום עצמו כבר קדוש.
+     */
+    public Row erevCandle() {
+        Day z = day(0), next = day(1);
+        if (z.candle == null || z.chatzot == null) return null;
+        if (isHoly(z.jc) || !isHoly(next.jc)) return null;
+        if (now < z.chatzot || now >= z.candle) return null;
+        boolean yk = next.jc.getYomTovIndex() == JewishCalendar.YOM_KIPPUR;
+        return new Row("candle", yk ? "הדלקת נרות · כניסת הצום" : "הדלקת נרות", null, z.candle, true);
+    }
+
     public Row nextZman() {
         List<Row> u = upcoming(2);
         return u.isEmpty() ? null : u.get(0);

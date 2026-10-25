@@ -182,6 +182,11 @@ final class Render {
         // כותרת
         RemoteViews hd = Ui.hbox(c);
         hd.addView(BOX, Ui.word(c, Ui.FRLB, "זמני היום", 17 * s, t.gold));
+        // כפתור מצפן קטן ליד הכותרת — פותח את המצפן באתר (?open=compass; 1.2.0, 25/10/2026)
+        hd.addView(BOX, Ui.gap(c, 6));
+        RemoteViews cb = new RemoteViews(c.getPackageName(), R.layout.wb_cbtn);
+        cb.setOnClickPendingIntent(R.id.img, Ui.open(c, id, "compass"));
+        hd.addView(BOX, cb);
         hd.addView(BOX, Ui.hspace(c));
         JewishCalendar hj = e.hebNow();
         String city = e.loc.name.isEmpty() ? "" : e.loc.name;
@@ -196,6 +201,13 @@ final class Render {
         float rowH = (28 * s + 1) * fs, firstH = 36 * s * fs;
         int rows = Math.max(1, 1 + (int) Math.floor((avail - firstH) / rowH));
         List<Engine.Row> list = e.upcoming(Math.min(rows, 16));
+        // ערב שבת/חג מחצות ועד ההדלקה: שורת הדלקת הנרות ראשונה, והספירה לאחור רק אליה (25/10/2026)
+        Engine.Row erev = e.erevCandle();
+        if (erev != null) {
+            for (int i = list.size() - 1; i >= 0; i--) if ("candle".equals(list.get(i).key)) list.remove(i);
+            list.add(0, erev);
+            while (list.size() > Math.max(1, Math.min(rows, 16))) list.remove(list.size() - 1);
+        }
         boolean live = Ui.liveCountdown(c);
         for (int i = 0; i < list.size(); i++) {
             Engine.Row r = list.get(i);

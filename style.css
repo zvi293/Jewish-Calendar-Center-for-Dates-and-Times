@@ -17,6 +17,16 @@
         -webkit-touch-callout: default;
       }
 
+      /* העתקה מאזורי הקריאה (25/10/2026, lux.js copyMode): בטלפון ובמחשב — רק אחרי שלוש הקשות/לחיצות
+         (html.lux-copy). כפתורים בתוך הטקסט נשארים לא-ניתנים לסימון */
+      html.lux-copy :is(#sefaria-modal-content, #chok-israel-modal-content, #sn-reader-content, #psalm-text-area,
+        #bih-content-area, #shir-scroll-area, #lux-sel-area, #lux-tr-area, #prayer-modal-body, #lux-pl-area,
+        #motzei-tab-content, #hilulot-modal, #moad-torah-modal, #omer-modal-text) :not(button):not(button *) {
+        -webkit-user-select: text;
+        user-select: text;
+        -webkit-touch-callout: default;
+      }
+
       body {
         font-family: "Assistant", sans-serif;
         transition:
@@ -809,22 +819,33 @@
         color: #334155;
       }
       .kad-src { margin: 1.8rem 0 0; font-size: 0.74em; }
+      /* כותרת כל קדיש — כמו כותרות הסעיפים בתפילות (גופן ספר, כחול, קו זהב מתחת; 25/10/2026) */
       .kad-h {
-        color: #0f172a;
-        font-size: 1.22em;
+        text-align: center;
+        color: #1e3a8a;
+        font-family: var(--lux-serif);
+        font-size: 1.4em;
         font-weight: 900;
-        margin: 2.1rem 0 0.7rem;
-        padding-bottom: 0.45rem;
-        border-bottom: 2px solid #475569;
+        letter-spacing: 0.03em;
+        margin: 2.3rem auto 0.8rem;
+      }
+      .kad-h::after {
+        content: "";
+        display: block;
+        width: 5.5rem;
+        height: 2px;
+        margin: 0.4rem auto 0;
+        border-radius: 999px;
+        background: linear-gradient(90deg, transparent, rgba(180, 130, 40, 0.65), transparent);
       }
       .kad-when {
         background: #f8fafc;
         border: 1px solid #e2e8f0;
         border-radius: 0.6rem;
-        padding: 0.7rem 0.9rem;
+        padding: 0.55rem 0.8rem;
         margin: 0 0 1rem;
-        font-size: 0.78em;
-        line-height: 1.95;
+        font-size: 0.66em;
+        line-height: 1.85;
         color: #475569;
       }
       .kad-p { margin: 0 0 1.1rem; line-height: 2.3; }
@@ -1154,6 +1175,37 @@
 .levana-phrase-lev {
   color: #0d9488 !important;
 }
+/* מונה חזרות (25/10/2026): "לב טהור" ×7 בסוף הפסוק, "בסימן טוב" ×3 בסוף התיבה הכתומה.
+   ב-rem — לא גדל עם כתב הקורא, כדי שלא ישבור את השורה */
+.lev-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  vertical-align: middle;
+  margin-inline-start: 0.35rem;
+  padding: 0.22rem 0.75rem;
+  border-radius: 999px;
+  border: 1.5px solid rgba(13, 148, 136, 0.45);
+  background: rgba(13, 148, 136, 0.08);
+  color: #0f766e;
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 800;
+  line-height: 1.3;
+  cursor: pointer;
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+}
+.lev-count:active { transform: scale(0.94); }
+.lev-count.done { background: #0d9488; border-color: #0d9488; color: #fff; }
+.levana-siman-tov-box .lev-count { border-color: rgba(217, 119, 6, 0.5); background: rgba(245, 158, 11, 0.12); color: #b45309; }
+.levana-siman-tov-box .lev-count.done { background: #d97706; border-color: #d97706; color: #fff; }
+.lev-count-row { text-align: center; margin: 0.2rem 0 0.4rem; }
+html.dark .lev-count { color: #5eead4; border-color: rgba(94, 234, 212, 0.45); background: rgba(94, 234, 212, 0.08); }
+html.dark .levana-siman-tov-box .lev-count { color: #fcd34d; border-color: rgba(252, 211, 77, 0.45); background: rgba(252, 211, 77, 0.08); }
+html.dark .lev-count.done, html.dark .levana-siman-tov-box .lev-count.done { color: #0f172a; }
 .levana-blessed-wrap {
   text-align: center;
   margin: 1.6rem 0 0.6rem;
@@ -9583,7 +9635,7 @@ html.dark .pr-kav.pr-kav-pa .pr-kav-w { color: #fda4af; }
 html.dark .kad-wrap { color: #e2e8f0; }
 html.dark .kad-intro,
 html.dark .kad-src { background: rgba(148, 163, 184, 0.1); border-right-color: #94a3b8; color: #cbd5e1; }
-html.dark .kad-h { color: #f1f5f9; border-bottom-color: #94a3b8; }
+html.dark .kad-h { color: #93c5fd; }
 html.dark .kad-when { background: rgba(148, 163, 184, 0.08); border-color: rgba(148, 163, 184, 0.25); color: #cbd5e1; }
 html.dark .kad-step { color: #94a3b8; }
 html.dark .pr-occ-tog {

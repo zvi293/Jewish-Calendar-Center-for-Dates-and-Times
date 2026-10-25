@@ -25,8 +25,23 @@
         }
       } catch (e) {}
     </script>
-    <style>html.jc-wv #view-map-btn { display: none !important; }</style>
+    <style>
+      html.jc-wv #view-map-btn { display: none !important; }
+      /* באפליקציה — בלי הגדלת הדף בצביטה, כמו בדף הראשי (25/10/2026). המפה עצמה ממשיכה להתקרב
+         בצביטה: Leaflet מטפל במגע בעצמו (touch-action:none על המפה) */
+      html.jc-app { touch-action: pan-x pan-y; }
+    </style>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      // באפליקציה (TWA / WebView) — אותו סימון שהדף הראשי שומר ב-sessionStorage (moadim_in_app)
+      try {
+        if (sessionStorage.getItem("moadim_in_app") === "1") {
+          document.documentElement.classList.add("jc-app");
+          var _vp = document.querySelector('meta[name="viewport"]');
+          if (_vp) _vp.content += ", maximum-scale=1, user-scalable=no";
+        }
+      } catch (e) {}
+    </script>
     <title>בתי כנסת ומקוואות באזור | הלוח היהודי</title>
     <meta
       name="description"

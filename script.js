@@ -23838,7 +23838,9 @@ async function getFullPrayerContent(key) {
     // תאריך התצוגה — תוספות תלויות-תקופה (עשי"ת, טל ומטר) מתחלפות גם בלי שינוי באירועי היום
     dateIso: context.displayDate ? context.displayDate.toDateString() : "",
   });
-  if (PRAYER_HTML_CACHE.has(cacheKey)) return PRAYER_HTML_CACHE.get(cacheKey);
+  // קריאת שמע תלויה גם בשעה (לפני חצות הלילה ולפני עלות השחר — הוידוי במוצ"ש/יו"ט/ר"ח), ומפתח המטמון לא יודע
+  // אותה: פתיחה לפני חצות ושוב אחריה באותו ביקור הגישה את הנוסח של לפני חצות. הבנייה מקומית וזולה — בלי מטמון.
+  if (key !== "shema" && PRAYER_HTML_CACHE.has(cacheKey)) return PRAYER_HTML_CACHE.get(cacheKey);
 
   const fallbackEntry = PRAYER_DB[key];
   let sourcePriority = PRAYER_SOURCE_PRIORITY[key] || "wikisource-first";

@@ -5691,8 +5691,9 @@ async function fetchLiveCalendarData() {
         // For moon events keep them visible until the window *closes* (endDate),
         // not just until it opens (date). For all other events use date as usual.
         const compareDate = e.type === "moon" && e.endDate ? e.endDate : e.date;
+        // תאריך בלי שעה ("2026-09-21") — יום מקומי; new Date() מפרש אותו כחצות UTC, ובאמריקה זה יום קודם
         return (
-          new Date(compareDate).setHours(0, 0, 0, 0) >= dateForHebcal.getTime()
+          parseLocalDate(compareDate).setHours(0, 0, 0, 0) >= dateForHebcal.getTime()
         );
       })
       .sort((a, b) => new Date(a.date) - new Date(b.date));
@@ -5809,7 +5810,7 @@ function injectSephardicSelichot(list) {
         return /^Rosh Hashana \d{4}$/i.test(x.titleStr || "") || x.name === "ראש השנה א'";
       })
       .forEach(function (rh) {
-        var d = new Date(rh.date);
+        var d = parseLocalDate(rh.date);
         if (isNaN(d)) return;
         d.setDate(d.getDate() - 29);
         var iso =

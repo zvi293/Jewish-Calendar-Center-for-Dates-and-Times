@@ -549,7 +549,7 @@
     <!-- הקוד הראשי יורד מוקדם (preload) אך מוזרק ומתבצע רק אחרי הציור הראשון —
          ראו הטוען בסוף ה-body. ה-?v= כאן חייב להיות זהה לזה שבטוען וב-sw.js.
          fetchpriority=low: שלא יתחרו ברוחב-הפס עם ה-CSS החוסם (FCP) — כמו defer. -->
-    <link rel="preload" href="script.js?v=143" as="script" fetchpriority="low" />
+    <link rel="preload" href="script.js?v=144" as="script" fetchpriority="low" />
     <link rel="preload" href="lux.js?v=107" as="script" fetchpriority="low" />
 
     <!-- OneSignal Web Push SDK -->
@@ -2923,7 +2923,7 @@
           // כבר מצוירים מתחת למסך הפתיחה ואנימציית הכניסה מתוזמנת לדהייתו. בהיר/כהה לא טוענים אותו.
           // אותו ?v= כמו ב-_luxSkyEnsure (script.js) וב-sw.js.
           if (document.documentElement.classList.contains("lux-sky")) addScript("sky.js?v=11", { id: "lux-sky-js" });
-          addScript("script.js?v=143");
+          addScript("script.js?v=144");
           addScript("lux.js?v=107");
         }
         function afterFirstPaint() {

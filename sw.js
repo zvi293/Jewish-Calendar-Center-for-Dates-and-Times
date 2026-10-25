@@ -1,4 +1,4 @@
-const STATIC_CACHE = "moadim-static-v205";
+const STATIC_CACHE = "moadim-static-v206";
 // מטמון ריצה: תשובות API וקבצים חיצוניים (ספריא, hebcal, פונטים, ספריות CDN)
 // נשמרים אחרי הצפייה הראשונה — כך האתר, התפילות והספרים עובדים גם בלי אינטרנט.
 const RUNTIME_CACHE = "moadim-runtime-v1";
@@ -15,7 +15,7 @@ const STATIC_ASSETS = [
   // חשוב: ה-?v= כאן חייב להיות זהה לזה שב-index.html — כך ההתקנה נענית
   // מ-HTTP cache (בלי הורדה כפולה של ~3MB) והבקשות מהדף פוגעות במטמון
   // בדיוק; סטייה עתידית מכוסה ע"י ה-fallback עם ignoreSearch.
-  "/script.js?v=140",
+  "/script.js?v=141",
   "/lux.js?v=106",
   "/sky.js?v=11",
   "/style.css?v=132",

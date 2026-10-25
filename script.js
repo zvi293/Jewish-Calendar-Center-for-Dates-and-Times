@@ -1538,7 +1538,9 @@ function _levanaMoladTrad(w) {
   const t = new Date(w.molad + _LV_JLMT_MS);
   const secMs = t.getUTCSeconds() * 1000 + t.getUTCMilliseconds();
   const chalakim = Math.round(secMs / (10000 / 3)); // חלק = 3⅓ שניות
-  return `יום ${_LV_WD[t.getUTCDay()]} ${t.getUTCHours()}:${_lvPad(t.getUTCMinutes())}${chalakim ? ` ו-${chalakim} חלקים` : ""}`;
+  // חלק אחד — "וחלק אחד" (לא "ו-1 חלקים")
+  const chStr = chalakim === 1 ? " וחלק אחד" : chalakim ? ` ו-${chalakim} חלקים` : "";
+  return `יום ${_LV_WD[t.getUTCDay()]} ${t.getUTCHours()}:${_lvPad(t.getUTCMinutes())}${chStr}`;
 }
 
 // ── מונה ספירה לאחור: מקטעים מתויגים (ימים · שעות · דקות · שניות) — כל מספר
@@ -6488,6 +6490,12 @@ async function renderNextMoedTimes(e) {
   const el = document.getElementById("stat-next-times");
   if (!el) return;
   try {
+    // יום השואה ויום הזיכרון מסווגים "fast" (צבע וסינון ברשימה), אבל הם לא צום:
+    // בלי "כניסת הצום / יציאת הצום" ובלי ספירה לסיום הצום
+    if (/Shoah|Zikaron|יום השואה|יום הזי?כרון/.test((e.titleStr || "") + " " + (e.name || ""))) {
+      el.innerHTML = `<span class="opacity-80">🕯️ היום</span>`;
+      return;
+    }
     const isFast =
       e.type === "fast" || /צום|תענית|כיפור|באב/.test(e.name || "");
     // חגים ללא כניסה/יציאה (פורים, חנוכה, חול המועד) — מציגים "היום"

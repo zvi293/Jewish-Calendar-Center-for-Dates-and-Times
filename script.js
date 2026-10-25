@@ -6485,14 +6485,20 @@ async function fetchHolidayTimes(name, dateStr, elementId) {
   }
 }
 
+/* יום השואה ויום הזיכרון מסווגים "fast" (צבע וסינון ברשימה), אבל הם לא צום: בכל מקום שמציג
+   "צום" — זמני כניסה/יציאה, ספירה לסיום הצום, "צום קל ומועיל" — בודקים קודם את זה.
+   אותו ביטוי גם ב-lux.js (dayBanner, buildSlides) וב-index.html (הבאנר המוקדם). */
+function _isMemorialDayEv(e) {
+  return !!e && /Shoah|Zikaron|יום השואה|יום הזי?כרון/.test((e.titleStr || "") + " " + (e.name || ""));
+}
+
 /* ── כרטיסיית "המועד הבא": ביום המועד מציגים זמני כניסה/יציאה ── */
 async function renderNextMoedTimes(e) {
   const el = document.getElementById("stat-next-times");
   if (!el) return;
   try {
-    // יום השואה ויום הזיכרון מסווגים "fast" (צבע וסינון ברשימה), אבל הם לא צום:
-    // בלי "כניסת הצום / יציאת הצום" ובלי ספירה לסיום הצום
-    if (/Shoah|Zikaron|יום השואה|יום הזי?כרון/.test((e.titleStr || "") + " " + (e.name || ""))) {
+    // ימי זיכרון — בלי "כניסת הצום / יציאת הצום" ובלי ספירה לסיום הצום
+    if (_isMemorialDayEv(e)) {
       el.innerHTML = `<span class="opacity-80">🕯️ היום</span>`;
       return;
     }
@@ -8096,11 +8102,13 @@ function render(filter = "all", search = "") {
     const dateDisplay = `${ui.weekdayNames[_cardDate.getDay()]} | ${formatLocalizedDate(_cardDate, { day: "2-digit", month: "2-digit", year: "numeric" })} | <span class="text-slate-800 dark:text-slate-200 font-bold">${getHebrewDateString(lvWin ? _cardDate : new Date(e.date))}</span>`;
 
     let extraTimesHtml = "";
+    // ימי זיכרון (type "fast") — בלי זמני צום ובלי ספירה לסיום הצום
     const _isFastEv =
-      e.type === "fast" ||
-      /צום|תענית|כיפור|באב|Tzom|Ta'anit|Tish'a|Tisha/.test(
-        (e.name || "") + " " + (e.titleStr || ""),
-      );
+      !_isMemorialDayEv(e) &&
+      (e.type === "fast" ||
+        /צום|תענית|כיפור|באב|Tzom|Ta'anit|Tish'a|Tisha/.test(
+          (e.name || "") + " " + (e.titleStr || ""),
+        ));
     if (_isFastEv) {
       const elId = `fast-times-${e.date}`;
       extraTimesHtml = `<div id="${elId}" class="mt-3 flex flex-wrap gap-2 text-xs" aria-live="polite">מחשב זמני צום...</div>`;

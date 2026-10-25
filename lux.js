@@ -2711,6 +2711,8 @@
       var tStr = today.getFullYear() + "-" + String(today.getMonth() + 1).padStart(2, "0") + "-" + String(today.getDate()).padStart(2, "0");
       for (var i = 0; i < evs.length; i++) {
         if (evs[i].date === tStr) {
+          // יום השואה ויום הזיכרון מסווגים "fast" אבל אינם צום (כמו _isMemorialDayEv ב-script.js)
+          if (evs[i].type === "fast" && /Shoah|Zikaron|יום השואה|יום הזי?כרון/.test((evs[i].titleStr || "") + " " + (evs[i].name || ""))) { msg = "🕯️ היום: " + evs[i].name; break; }
           if (evs[i].type === "fast") { msg = "🕯️ היום: " + evs[i].name + " — צום קל ומועיל"; break; }
           if (evs[i].type === "major") { msg = "✨ היום: " + evs[i].name + " — חג שמח!"; break; }
         }
@@ -4086,6 +4088,10 @@
       25: 'קיט (עד צ"ו)', 26: 'קיט (מצ"ז)', 27: "קכ-קלד", 28: "קלה-קלט", 29: "קמ-קמד", 30: "קמה-קנ"
     };
 
+    // יום השואה ויום הזיכרון (type "fast") — כמו _isMemorialDayEv ב-script.js
+    function isMemorialEv(e) {
+      return /Shoah|Zikaron|יום השואה|יום הזי?כרון/.test((e.titleStr || "") + " " + (e.name || ""));
+    }
     function buildSlides() {
       var slides = [];
       var h = new Date().getHours();
@@ -4131,6 +4137,13 @@
             cls: "lux-st-holiday",
             html: '<div class="lux-st-big">' + (e.icon || "✨") + "</div><h2>" + esc(e.name) + "</h2>" +
                   '<p class="lux-st-line">היום! חג שמח ומבורך 🎉</p>'
+          });
+        } else if (e.type === "fast" && isMemorialEv(e)) {
+          // יום השואה ויום הזיכרון מסווגים "fast" אבל אינם צום
+          slides.push({
+            cls: "lux-st-selichot",
+            html: '<div class="lux-st-big">' + (e.icon || "🕯️") + "</div><h2>" + esc(e.name) + "</h2>" +
+                  '<p class="lux-st-line">יהי זכרם ברוך 🕯️</p>'
           });
         } else if (e.type === "fast") {
           slides.push({
@@ -4301,7 +4314,8 @@
         slides.push({
           cls: "lux-st-holiday",
           html: '<div class="lux-st-big">' + (ev.icon || "✨") + "</div><h2>" + esc(ev.name) + "</h2>" +
-                '<p class="lux-st-line">' + (days === 0 ? "היום! 🎉" : "בעוד <b>" + days + "</b> ימים") + "</p>" +
+                // צום (גם יום כיפור) ויום זיכרון — "היום" בלי 🎉
+                '<p class="lux-st-line">' + (days === 0 ? (ev.type === "fast" ? "היום" : "היום! 🎉") : "בעוד <b>" + days + "</b> ימים") + "</p>" +
                 '<p class="lux-st-sub">' + luxParseDate(ev.date).toLocaleDateString("he-IL", { weekday: "long", day: "numeric", month: "long" }) + "</p>"
         });
       }

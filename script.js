@@ -2598,10 +2598,13 @@ async function openSefariaModal(hebTitle, enRef, opts) {
     });
 
   _sefCont.__uxSoftAt = _uxPhMark();
+  // אסימון בקשה: תשובה מאוחרת של פתיחה קודמת לא דורסת את התוכן של הפתיחה החדשה (census א61)
+  const _sefTok = (window.__sefReqTok = (window.__sefReqTok || 0) + 1);
   try {
     const data = await fetchHebcalWithCache(
       `https://www.sefaria.org/api/texts/${cleanRef}?context=0`,
     );
+    if (_sefTok !== window.__sefReqTok) return;
     let textHtml = "";
     if (isDaf && data.he && data.he.length > 0) {
       // דף יומי: מצב מיוחד — פירושים בתוך הטקסט + סימון שורה במרקר
@@ -2642,6 +2645,7 @@ async function openSefariaModal(hebTitle, enRef, opts) {
     applyPrayerFontSize("#sefaria-modal-content");
     _uxSoftFirst(_sefCont);
   } catch (e) {
+    if (_sefTok !== window.__sefReqTok) return;
     _sefCont.__uxSoftAt = null;
     document.getElementById("sefaria-modal-content").innerHTML = _isOfflineNow()
       ? _offlineMsgHtml(isDaf ? "הדף היומי הזה" : "הטקסט הזה")
@@ -3268,6 +3272,8 @@ function _shmikraOnkelosRef(torahRef, dataRef) {
 
 async function openShnayimMikraModal(hebTitle, enRef) {
   if (!enRef) return;
+  // אותו חלון — תשובה מאוחרת של openSefariaModal קודם לא תדרוס את שניים מקרא (census א61)
+  window.__sefReqTok = (window.__sefReqTok || 0) + 1;
   const parshaName = _sefariaRefNormalize(enRef).replace(/^Parashat\s+/, "").replace(/ /g, "_");
 
   const m = document.getElementById("sefaria-modal");

@@ -3208,17 +3208,29 @@
       return tbl[n] || n;
     }
     // מציאת התאריך הלועזי הקרוב של יארצייט (סריקת 400 יום קדימה)
+    // census א35: "אדר א'/ב'" בשנה פשוטה — אדר של השנה הזו (לא קפיצה לאדר ב' של שנה הבאה); ל' בחודש שהשנה יש
+    // בו כ"ט ימים — כ"ט באותו חודש עם הערה (missing30), ולא בלי תאריך ובלי תזכורת
     function nextDate(item) {
-      var exact = null, adarFallback = null;
-      for (var i = 0; i < 400; i++) {
-        var d = new Date(Date.now() + i * 86400000);
-        if (hebDayNum(d) !== item.d) continue;
-        var m = normM(hebMonthName(d));
-        var target = normM(item.m);
-        if (m === target && !exact) { exact = { date: d, days: i }; break; }
-        if (target.indexOf("אדר") === 0 && m.indexOf("אדר") === 0 && !adarFallback) adarFallback = { date: d, days: i };
+      var target = normM(item.m);
+      function scan(day) {
+        var exact = null, adarFallback = null;
+        for (var i = 0; i < 400; i++) {
+          var d = new Date(Date.now() + i * 86400000);
+          if (hebDayNum(d) !== day) continue;
+          var m = normM(hebMonthName(d));
+          if (m === target && !exact) { exact = { date: d, days: i }; break; }
+          // שנה פשוטה ("אדר" בלי א'/ב') — כל יארצייט של אדר נופל בו
+          if (m === "אדר" && target.indexOf("אדר") === 0) { exact = { date: d, days: i }; break; }
+          if (target.indexOf("אדר") === 0 && m.indexOf("אדר") === 0 && !adarFallback) adarFallback = { date: d, days: i };
+        }
+        return exact || adarFallback;
       }
-      return exact || adarFallback;
+      var r = scan(item.d);
+      if (!r && item.d === 30) {
+        r = scan(29);
+        if (r) r.missing30 = true;
+      }
+      return r;
     }
     function items() { return jget(KEY, []); }
     function openEditor() {
@@ -3245,7 +3257,7 @@
           ? arr.map(function (x, i) {
               var nd = nextDate(x);
               // "היום"/"מחר" — לא "בעוד 0/1 ימים" (census א30)
-              var when = nd ? nd.date.toLocaleDateString("he-IL", { day: "numeric", month: "long" }) + (nd.days === 0 ? " (היום)" : nd.days === 1 ? " (מחר)" : " (בעוד " + nd.days + " ימים)") : "";
+              var when = nd ? nd.date.toLocaleDateString("he-IL", { day: "numeric", month: "long" }) + (nd.days === 0 ? " (היום)" : nd.days === 1 ? " (מחר)" : " (בעוד " + nd.days + " ימים)") + (nd.missing30 ? ' — השנה אין ל׳ בחודש; יש נוהגים בכ״ט ויש בא׳ בחודש הבא' : "") : "";
               return '<div class="lux-nm-row"><span>' + esc(x.n) + " — " + toHebDayStr(x.d) + " ב" + esc(x.m) + (when ? " <small>" + when + "</small>" : "") + '</span><button type="button" data-i="' + i + '" aria-label="מחק">🗑️</button></div>';
             }).join("")
           : '<p class="lux-sheet-note" style="opacity:0.7;">אין עדיין תאריכים שמורים</p>';

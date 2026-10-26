@@ -1344,7 +1344,8 @@
     gl.enable(gl.BLEND); gl.blendFuncSeparate(gl.ONE, gl.ONE_MINUS_SRC_ALPHA, gl.ZERO, gl.ONE_MINUS_SRC_ALPHA);
     if (F.deco > .01 && F.decoK) {
       if (dKey !== F.decoK + "|" + RW + "x" + RH) buildDeco(F.decoK);
-      var sy = 0; try { sy = window.scrollY || 0; } catch (e) {}
+      // מהערך השמור באירוע הגלילה (scrollYc) — קריאת scrollY בכל פריים כופה פריסה (census א97)
+      var sy = scrollYc;
       if (dTex && sy < dH + 10) {
         gl.useProgram(fD);
         gl.bindBuffer(gl.ARRAY_BUFFER, quadBuf); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);

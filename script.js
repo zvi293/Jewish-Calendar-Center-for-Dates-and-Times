@@ -1805,7 +1805,8 @@ function _levanaFillPrayerTimes(root) {
     }
     box.__lvKey = st.key;
   } catch (e) {
-    box.innerHTML = "";
+    // חריגה בחישוב — טקסט נפילה ולא באנר ריק (census א75)
+    box.innerHTML = '<div class="lv-prayer-title">🌙 זמן ברכת הלבנה</div><p style="margin:0.3rem 0 0;font-size:0.8rem;opacity:0.8;">לא ניתן לחשב כרגע את זמני החודש — מברכים מליל ז׳ אחרי המולד ועד אמצע החודש.</p>';
     return;
   }
   if (_levanaPrayerTicker) clearInterval(_levanaPrayerTicker);

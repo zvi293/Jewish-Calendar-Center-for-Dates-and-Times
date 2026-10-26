@@ -5436,7 +5436,13 @@ async function fetchLiveCalendarData() {
           // דיוק: חישוב הדלקת נרות לפי KosherZmanim אם הספרייה זמינה
           try {
             const kzC = computeKosherZmanim(new Date(candleItem.date));
-            if (kzC && kzC.times && kzC.times.candleLighting) {
+            const kzSunset = kzC && kzC.times && kzC.times.sunset ? new Date(kzC.times.sunset) : null;
+            // ערב החג הוא שבת או יום טוב (יו"ט במוצאי שבת, ליל ב' של ר"ה): hebcal מחזיר הדלקה בצאת —
+            // מדליקים מאש קיימת אחרי צאת השבת/החג (כמו הבדלה, tzeit 7.083°), לא "שקיעה פחות X" שלפני הצאת.
+            // עד 10/2026 הוצגה כאן שעת הדלקה לפני צאת השבת (census א4א). כמו Engine.java בווידג'טים
+            if (kzSunset && candleDate > kzSunset && kzC.times.tzeit7083deg) {
+              candleDate = new Date(kzC.times.tzeit7083deg);
+            } else if (kzC && kzC.times && kzC.times.candleLighting) {
               candleDate = new Date(kzC.times.candleLighting);
             }
           } catch (e2) {}

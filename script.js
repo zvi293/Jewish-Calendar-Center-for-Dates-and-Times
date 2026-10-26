@@ -9314,7 +9314,7 @@ function openShabbatInfoModal() {
     ? `
             <div style="border-top:1px solid rgba(255,255,255,0.1);padding-top:16px;">
               <div style="font-size:0.78rem;color:rgba(255,255,255,0.5);margin-bottom:8px;">פרשת השבוע</div>
-              <button onclick="window._shabbatInfoGoTo(function(){${eTitle ? `openSefariaModal('${parasha.replace(/'/g, "\'")}','${eTitle.replace(/'/g, "\'")}')` : `(window._openShabbatParasha||function(){})();`}})"
+              <button onclick="window._shabbatInfoGoTo(function(){${eTitle ? `openSefariaModal('${parasha.replace(/'/g, "\\'")}','${eTitle.replace(/'/g, "\\'")}')` : `(window._openShabbatParasha||function(){})();`}})"
                 style="background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;border-radius:12px;padding:10px 20px;color:#fff;font-size:1rem;font-weight:700;cursor:pointer;width:100%;display:flex;align-items:center;justify-content:center;gap:8px;">
                 <span>📖</span><span>${parasha}</span>
               </button>
@@ -32213,7 +32213,8 @@ document.addEventListener("keydown", (e) => {
         text: "דברי תורה על חודש " + month + " יתווספו בקרוב.",
         icon: "🌙",
       };
-    openTorahPopup([item], "חודש " + month, "דבר תורה לחודש ");
+    // הכותרת = קידומת + שם: "דבר תורה ל" + "חודש <חודש>" — עד 10/2026 "דבר תורה לחודש חודש …" (census א10)
+    openTorahPopup([item], "חודש " + month, "דבר תורה ל");
   };
   // כותרת המשנה בכפתור "דבר תורה לחודש" בדף הראשי — החודש שהכפתור פותח (אותו חישוב)
   function _fillMonthTorahBtn() {

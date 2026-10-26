@@ -38239,7 +38239,9 @@ function openSefarimNosafimPage(_pageMode) {
       if (sig.aborted) return;
       var book = t.book;
       if (t.hardcoded) {
-        var txt = (book.intro + " " + book.content).replace(/<[^>]*>/g, "");
+        // intro/content שהם פונקציה (סדר מוצאי שבת) — הטקסט שהיא מחזירה, לא קוד הפונקציה (census א52)
+        var _val = function (v) { try { return typeof v === "function" ? v() : (v || ""); } catch (e) { return ""; } };
+        var txt = (_val(book.intro) + " " + _val(book.content)).replace(/<[^>]*>/g, "");
         if (_snSmartMatch(_snNormalize(txt), words)) {
           total++;
           if (re) re.appendChild(resultCard(book.color, book.he, _snSmartSnip(txt, words), function() {

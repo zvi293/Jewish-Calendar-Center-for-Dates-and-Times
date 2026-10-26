@@ -33216,24 +33216,57 @@ function openSefarimNosafimPage(_pageMode) {
     return true;
   }
   // יצירת קטע עם הדגשה של כל מילות החיפוש
+  // הקטע בתוצאת החיפוש: ההתאמה בטקסט המנורמל (בלי ניקוד), והתצוגה מהטקסט עם הניקוד — מפה ממיקום
+  // מנורמל למיקום בטקסט המוצג; בלי התאמה — 80 התווים הראשונים בלי תגים (חיתוך באמצע תגית שבר HTML) (census א53)
   function _snSmartSnip(rawText, words) {
-    var norm = _snNormalize(rawText);
+    var disp = String(rawText || "").replace(/<[^>]*>/g, " ");
+    var norm = "", map = [], sp = true;
+    for (var j = 0; j < disp.length; j++) {
+      var ch = disp.charAt(j);
+      if (/[֑-ֽֿ-ׇ]/.test(ch)) continue;
+      if (/[ \s]/.test(ch)) { if (sp) continue; ch = " "; sp = true; } else sp = false;
+      norm += ch.toLowerCase(); map.push(j);
+    }
     var i = -1, hitWord = "";
     for (var k = 0; k < words.length; k++) {
       var p = norm.indexOf(words[k]);
       if (p >= 0 && (i < 0 || p < i)) { i = p; hitWord = words[k]; }
     }
-    if (i < 0) return rawText.slice(0, 80) + "...";
+    if (i < 0) {
+      var plain = disp.replace(/[ \s]+/g, " ").trim();
+      return plain.slice(0, 80) + "...";
+    }
     // חלון סביב המופע הראשון — רחב מספיק כדי שגם שאר המילים ייכנסו לרוב
     var s = Math.max(0, i - 45), e = Math.min(norm.length, i + hitWord.length + 110);
-    var snip = norm.slice(s, e);
-    // הדגשת כל המילים, לא רק הראשונה
-    words.forEach(function(w) {
-      var esc = w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      snip = snip.replace(new RegExp(esc, "gi"),
-        "<mark style=\"background:#fde68a;border-radius:3px;padding:0 2px;font-weight:800;\">$&</mark>");
+    // סוף מופע בטקסט המוצג — כולל סימני הניקוד שאחרי האות האחרונה
+    var dEnd = function (n) {
+      if (n >= map.length) return disp.length;
+      var d = map[n - 1] + 1;
+      while (d < disp.length && /[֑-ֽֿ-ׇ]/.test(disp.charAt(d))) d++;
+      return d;
+    };
+    var ds = map[s], de = dEnd(e);
+    // הדגשת כל המילים, לא רק הראשונה — טווחים במוצג
+    var marks = [];
+    words.forEach(function (w) {
+      if (!w) return;
+      var from = s;
+      while (true) {
+        var q = norm.indexOf(w, from);
+        if (q < 0 || q >= e) break;
+        marks.push([map[q], dEnd(Math.min(q + w.length, e))]);
+        from = q + w.length;
+      }
     });
-    return (s > 0 ? "…" : "") + snip + (e < norm.length ? "…" : "");
+    marks.sort(function (a, b) { return a[0] - b[0]; });
+    var out = "", pos = ds;
+    marks.forEach(function (m) {
+      if (m[0] < pos) return;
+      out += disp.slice(pos, m[0]) + "<mark style=\"background:#fde68a;border-radius:3px;padding:0 2px;font-weight:800;\">" + disp.slice(m[0], m[1]) + "</mark>";
+      pos = m[1];
+    });
+    out += disp.slice(pos, de);
+    return (s > 0 ? "…" : "") + out.replace(/[ \s]+/g, " ") + (e < norm.length ? "…" : "");
   }
   // התאמה ברמת פסקה: כל מילות החיפוש חייבות להופיע יחד באותה פסקה.
   // מחזיר את הפסקה התואמת הראשונה, או null.

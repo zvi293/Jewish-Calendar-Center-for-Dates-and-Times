@@ -4258,8 +4258,10 @@
         });
       }
       // פרשה ודף יומי — עם כפתורים ישירים ללימוד
-      var parsha = ((document.getElementById("stat-parasha") || {}).textContent || "").trim();
-      var daf = ((document.getElementById("daf-yomi-text") || {}).textContent || "").trim();
+      // בלי ערכי הטעינה ("פרשת...", "מחשב...", "--") — לא נתון אמיתי (census א46)
+      var _real = function (s) { return s && !/^(פרשת\.\.\.|מחשב\.\.\.|--|--:--)$/.test(s) && !/\.\.\.$/.test(s) ? s : ""; };
+      var parsha = _real(((document.getElementById("stat-parasha") || {}).textContent || "").trim());
+      var daf = _real(((document.getElementById("daf-yomi-text") || {}).textContent || "").trim());
       if (parsha || daf) {
         slides.push({
           cls: "lux-st-torah",

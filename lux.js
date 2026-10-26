@@ -2168,7 +2168,8 @@
       // כתיבה רק בשינוי — רץ גם בכל חזרה לאפליקציה; innerHTML זהה = ציור מחדש מיותר באותו רגע
       var html = "🔥 רצף לימוד: <b>" + s.count + " ימים</b>";
       if (el.innerHTML !== html) el.innerHTML = html;
-      el.title = "נכנסת ללימוד (תהילים / דף יומי / חוק לישראל) " + s.count + " ימים ברצף";
+      // כל המקורות שנספרים (record): תהילים, דף יומי, חוק לישראל, בן איש חי והספרייה (census א47)
+      el.title = "נכנסת ללימוד (תהילים / דף יומי / חוק לישראל / בן איש חי / ספרים) " + s.count + " ימים ברצף";
     }
     // מעקב: תהילים, ספרים, ודף יומי/חוק לישראל
     ["openTehillimPage", "openBenIshHaiPage", "openChokLeIsraelModal", "openSefarimNosafimPage"].forEach(function (fn) {

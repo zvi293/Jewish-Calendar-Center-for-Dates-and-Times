@@ -6464,11 +6464,36 @@ async function computeHolidayWindow(name, dateStr) {
       new Date(resPrev.times.sunset).getTime() - offsetMin * 60000,
     ).toISOString();
   }
-  const start = startIso ? new Date(startIso) : null;
-  const end = resCurr.times.tzeit7083deg
+  let start = startIso ? new Date(startIso) : null;
+  let end = resCurr.times.tzeit7083deg
     ? new Date(resCurr.times.tzeit7083deg)
     : null;
-  return { start, end };
+  // יום טוב — לפי כל רצף הימים הקדושים ולא לפי יום אזרחי אחד (census א4ב; כמו occasionAt ב-Engine.java):
+  // כניסה — ערב היום הראשון של היו"ט; כשהערב הוא שבת (חג ביום ראשון) — מאש קיימת בצאת השבת, לא באמצע השבת.
+  // יציאה — צאת היום הקדוש האחרון ברצף, כולל שבת צמודה (חג שנגמר בשישי — במוצאי שבת). ר"ה ב' — כניסה בצאת ר"ה א'.
+  let endsShabbat = false;
+  try {
+    const K = window.KosherZmanim;
+    const jcOf = (d) => { const jc = new K.JewishCalendar(new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12)); try { jc.setInIsrael(true); } catch (e) {} return jc; };
+    const isYT = (d) => jcOf(d).isYomTovAssurBemelacha();
+    const isHoly = (d) => { const jc = jcOf(d); return jc.getDayOfWeek() === 7 || jc.isYomTovAssurBemelacha(); };
+    const addD = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+    if (K && K.JewishCalendar && isYT(holidayDay)) {
+      let first = holidayDay;
+      while (isYT(addD(first, -1))) first = addD(first, -1);
+      let last = holidayDay;
+      while (isHoly(addD(last, 1))) last = addD(last, 1);
+      const eve = addD(first, -1);
+      const kzEve = computeKosherZmanim(eve);
+      const kzLast = computeKosherZmanim(last);
+      const s = kzEve && kzEve.times && (isHoly(eve) ? kzEve.times.tzeit7083deg : kzEve.times.candleLighting);
+      const e2 = kzLast && kzLast.times && kzLast.times.tzeit7083deg;
+      if (s) start = new Date(s);
+      if (e2) end = new Date(e2);
+      endsShabbat = jcOf(last).getDayOfWeek() === 7;
+    }
+  } catch (e) {}
+  return { start, end, endsShabbat };
 }
 
 async function fetchHolidayTimes(name, dateStr, elementId) {
@@ -6484,7 +6509,7 @@ async function fetchHolidayTimes(name, dateStr, elementId) {
         el.innerHTML = `<span class="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-lg border border-blue-200 dark:border-blue-800">${ui.holidayEnter}: <strong dir="ltr">${startStr}</strong></span> <span class="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-lg border border-blue-200 dark:border-blue-800">${ui.holidayExit}: <strong dir="ltr">${endStr}</strong></span>`;
         return;
       }
-      el.innerHTML = `<span class="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-lg border border-blue-200 dark:border-blue-800">כניסת החג: <strong dir="ltr">${startStr}</strong></span> <span class="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-lg border border-blue-200 dark:border-blue-800">יציאת החג: <strong dir="ltr">${endStr}</strong></span>`;
+      el.innerHTML = `<span class="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-lg border border-blue-200 dark:border-blue-800">כניסת החג: <strong dir="ltr">${startStr}</strong></span> <span class="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-lg border border-blue-200 dark:border-blue-800">${win.endsShabbat ? "יציאת השבת והחג" : "יציאת החג"}: <strong dir="ltr">${endStr}</strong></span>`;
     }
   } catch (err) {
     const el = document.getElementById(elementId);
@@ -6520,7 +6545,7 @@ async function renderNextMoedTimes(e) {
       ? await computeFastWindow(e.name, e.date)
       : await computeHolidayWindow(e.name, e.date);
     const enterLabel = isFast ? "כניסת הצום" : "כניסת החג";
-    const exitLabel = isFast ? "יציאת הצום" : "יציאת החג";
+    const exitLabel = isFast ? "יציאת הצום" : win.endsShabbat ? "יציאת השבת והחג" : "יציאת החג";
     const startStr = win.start ? formatLocalizedTime(win.start) : "--:--";
     const endStr = win.end ? formatLocalizedTime(win.end) : "--:--";
     let html =

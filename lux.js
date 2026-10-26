@@ -1070,13 +1070,14 @@
       { id: "chok", icon: "📜", label: "חוק לישראל", run: function () { if (typeof window.openChokLeIsraelModal === "function") window.openChokLeIsraelModal(); } },
       { id: "daf", icon: "📘", label: "דף היומי", run: function () {
         // אין פונקציה גלובלית — הקישור בדף מקבל onclick אחרי טעינת נתוני Hebcal
+        // תמיד לוחצים: לפני שנתוני Hebcal חוברו, מטפל הגיבוי ב-script.js טוען את הדף בעצמו — כמו ?open=daf (census א27)
         var l = document.getElementById("daf-yomi-link");
-        if (l && l.dataset && l.dataset.ready === "1") l.click();
+        if (l) l.click();
         else if (typeof window.showToast === "function") window.showToast("הדף היומי עדיין נטען — נסו שוב בעוד רגע", "info");
       } },
       { id: "shnayim", icon: "📖", label: "שניים מקרא", run: function () {
         var l = document.getElementById("shnayim-mikra-link");
-        if (l && l.dataset && l.dataset.ready === "1") l.click();
+        if (l) l.click();
         else if (typeof window.showToast === "function") window.showToast("פרשת השבוע עדיין נטענת — נסו שוב בעוד רגע", "info");
       } },
       { id: "wheel", icon: "🎡", label: "גלגל השנה", run: function () { if (typeof window.luxOpenYearWheel === "function") window.luxOpenYearWheel(); } },
@@ -2264,7 +2265,8 @@
     var tries = 0;
     var t = setInterval(function () {
       tries++;
-      if (tries > 30) { clearInterval(t); return; }
+      // הדשבורד לא עלה תוך 15 שנ' (רשת איטית) — פותחים בכל זאת; היעדים מטפלים בעצמם בנתונים חסרים (census א26)
+      if (tries > 30) { clearInterval(t); try { run(); } catch (e) {} return; }
       var ready = document.getElementById("dashboard-state") && !document.getElementById("dashboard-state").classList.contains("hidden");
       if (!ready) return;
       clearInterval(t);

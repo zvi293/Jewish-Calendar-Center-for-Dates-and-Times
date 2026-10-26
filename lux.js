@@ -4235,7 +4235,8 @@
         var nz = document.getElementById("lux-next-zman");
         var nextTxt = nz ? nz.textContent.replace(/^⏳\s*/, "") : "";
         var chips = [
-          { k: "sunrise", l: "הנץ" }, { k: "sofZmanShma", l: 'סו"ז ק"ש' },
+          // סוף זמן ק"ש לפי השיטה שבהגדרות (ברירת המחדל מג"א) — עד 10/2026 תמיד הגר"א (census א31)
+          { k: "sunrise", l: "הנץ" }, { k: (isGraMethod() || !z.times.sofZmanShmaMGA) ? "sofZmanShma" : "sofZmanShmaMGA", l: 'סו"ז ק"ש' },
           { k: "chatzot", l: "חצות" }, { k: "sunset", l: "שקיעה" }, { k: "tzeit7083deg", l: "צאת" }
         ].filter(function (c) { return z.times[c.k]; }).map(function (c) {
           return '<span class="lux-st-chip">' + c.l + " · <b>" + fmtTime(z.times[c.k]) + "</b></span>";

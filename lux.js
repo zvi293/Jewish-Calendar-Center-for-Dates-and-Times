@@ -2660,6 +2660,12 @@
       deb = setTimeout(function () { search(v); }, 140);
     });
     input.addEventListener("search", function () { if (!input.value) { panel.innerHTML = ""; panel.style.display = "none"; } });
+    // נגיעה מחוץ לתיבה ולפאנל — הפאנל נסגר; חזרה לתיבה עם טקסט — נפתח שוב (census א49א)
+    document.addEventListener("pointerdown", function (e) {
+      if (panel.style.display === "none" || e.target === input || panel.contains(e.target)) return;
+      panel.style.display = "none";
+    }, { passive: true });
+    input.addEventListener("focus", function () { if (input.value && !panel.innerHTML) search(input.value); else if (input.value && panel.innerHTML) panel.style.display = "block"; });
   });
 
   /* ── 26. תזכורת זמן קריטי (סוף זמן ק"ש / תפילה) ────────────────── */

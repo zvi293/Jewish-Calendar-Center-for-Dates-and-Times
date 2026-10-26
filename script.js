@@ -28355,7 +28355,9 @@ document.addEventListener("keydown", (e) => {
     if (document.activeElement === search) {
       search.blur();
       search.value = "";
-      if (typeof render === "function") render("all", "");
+      // אירוע input — הרשימה מתרנדרת (עם הצ'יפ הפעיל) והפאנל של החיפוש החכם (lux.js) נסגר; עד 10/2026 הפאנל
+      // נשאר עם תוצאות של שאילתה שנמחקה (census א49א)
+      search.dispatchEvent(new Event("input", { bubbles: true }));
     }
   }
 });

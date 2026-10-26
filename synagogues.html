@@ -2565,6 +2565,14 @@
               );
               return;
             }
+            // טלפון כשר (WebView) — לא נשלחה שאילתה ל-OpenStreetMap; המאגר המקומי לא נטען (census א78)
+            if (window.__jcWebView) {
+              setError(
+                "רשימת המקומות לא נטענה.\n"
+                + "בטלפון כשר מוצג רק המאגר שבאתר עצמו (בלי מפה). בדקו את החיבור ונסו שוב בעוד רגע."
+              );
+              return;
+            }
             const errMsg = lastError && lastError.message ? lastError.message : "כל השרתים לא הגיבו בזמן";
             setError(
               "שגיאה בטעינת נתונים מ-OpenStreetMap.\n"

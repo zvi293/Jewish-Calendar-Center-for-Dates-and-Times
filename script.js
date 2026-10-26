@@ -5736,8 +5736,9 @@ async function fetchLiveCalendarData() {
       (a, b) => new Date(a.date) - new Date(b.date),
     );
     window.FETCHED_YEARS = new Set([cy - 1, cy, cy + 1]);
-    localStorage.setItem("moadim_cached_events_v3", JSON.stringify(ALL_EVENTS));
-    localStorage.setItem(
+    // דרך safeCacheSetItem — באחסון מלא החריגה עצרה את הרענון באמצע (census א65)
+    safeCacheSetItem("moadim_cached_events_v3", JSON.stringify(ALL_EVENTS));
+    safeCacheSetItem(
       "moadim_cached_events_full_v3",
       JSON.stringify(window.ALL_EVENTS_FULL),
     );

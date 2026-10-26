@@ -7833,7 +7833,9 @@ function saveDayNotes(dateStr, value) {
 }
 
 function collectDayEvents(dateStr) {
-  return ALL_EVENTS.filter((eventItem) => eventItem.date === dateStr);
+  // מאותה רשימה כמו תאי הלוח (כולל ימים שעברו ושנה שנטענה מאוחר) — עד 10/2026 התא הציג אירועים
+  // והחלון "אין אירועים מובנים ביום זה." בלי פרשה (census א9)
+  return (window.ALL_EVENTS_FULL || ALL_EVENTS).filter((eventItem) => eventItem.date === dateStr);
 }
 
 function closeCalendarDay() {

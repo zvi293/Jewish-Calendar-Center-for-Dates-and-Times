@@ -7842,6 +7842,17 @@ function collectDayEvents(dateStr) {
   return (window.ALL_EVENTS_FULL || ALL_EVENTS).filter((eventItem) => eventItem.date === dateStr);
 }
 
+// סגירה ע"י המשתמש (✕, רקע, Escape) — דרך היסטוריה כמו שאר החלונות: ה-popstate סוגר רק את חלון היום
+// (הלוח שמאחור נשאר). closeCalendarDay הסינכרוני (replaceState) השאיר רשומה, ו"חזור" דרש לחיצה נוספת
+// (census א18); הוא נשאר לסגירה מתוך הקוד (openCalendarDay מחליף חלון קיים ודוחף מיד מצב חדש)
+function closeCalendarDayUser() {
+  if (_activeModals[_activeModals.length - 1] === "calendar-day-modal" && typeof window._closePopupViaBack === "function") {
+    window._closePopupViaBack("calendar-day-modal");
+  } else {
+    closeCalendarDay();
+  }
+}
+
 function closeCalendarDay() {
   const modal = document.getElementById("calendar-day-modal");
   if (modal) {
@@ -8013,7 +8024,8 @@ function openCalendarDay(dateStr) {
           : null;
       // Find parsha for this Shabbat
       const satStr = `${saturday.getFullYear()}-${String(saturday.getMonth() + 1).padStart(2, "0")}-${String(saturday.getDate()).padStart(2, "0")}`;
-      const parshaEvent = ALL_EVENTS.find(
+      // הפרשה — מאותה רשימה כמו התאים (גם לשבת שעברה, census א9)
+      const parshaEvent = (window.ALL_EVENTS_FULL || ALL_EVENTS).find(
         (e) => e.type === "parashat" && e.date === satStr,
       );
       if (candleTime || havdalahTime || parshaEvent) {
@@ -8048,7 +8060,7 @@ function openCalendarDay(dateStr) {
                 <div style="margin-top:0.35rem;color:#334155;font-size:0.94rem;">${gregorianDate}</div>
                 <div style="margin-top:0.2rem;color:#2563eb;font-weight:800;">${hebrewDate || ""}</div>
               </div>
-              <button type="button" onclick="closeCalendarDay()" style="width:2.35rem;height:2.35rem;border:none;border-radius:999px;background:rgba(15,23,42,0.06);color:#475569;font-size:1.1rem;cursor:pointer;">✕</button>
+              <button type="button" onclick="closeCalendarDayUser()" style="width:2.35rem;height:2.35rem;border:none;border-radius:999px;background:rgba(15,23,42,0.06);color:#475569;font-size:1.1rem;cursor:pointer;">✕</button>
             </div>
             ${shabbatHtml}
             <div style="margin-bottom:1rem;">
@@ -8074,7 +8086,7 @@ function openCalendarDay(dateStr) {
             <p style="margin:0.6rem 0 0;font-size:0.78rem;color:#64748b;line-height:1.6;">התזכורת נשמרת ביומן של הטלפון, וההתראה מגיעה מאפליקציית היומן.</p>
           </div>`;
   modal.addEventListener("click", (event) => {
-    if (event.target === modal) closeCalendarDay();
+    if (event.target === modal) closeCalendarDayUser();
   });
   document.body.appendChild(modal);
   lockBodyScroll();
@@ -28310,7 +28322,7 @@ function _injectWaButtons() {
 // ═══════════════════════════════════════════════════════
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && document.getElementById("calendar-day-modal")) {
-    closeCalendarDay();
+    closeCalendarDayUser();
     return;
   }
   // (10/2026, נגישות) Escape סוגר את החלון/התצוגה העליונים — בדיוק כמו "חזור" (כל החלונות

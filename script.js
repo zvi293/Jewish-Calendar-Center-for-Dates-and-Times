@@ -142,7 +142,18 @@ function _hebcalNetRequest(url, cacheKey, timeoutMs) {
   }
   const request = _jcFetch(url, timeoutMs)
     .then((res) =>
-      res.json().then((data) => {
+      res.json().catch((parseErr) => {
+        // תשובה ישירה שאינה JSON (דף חסימה של רשת מסוננת עם 200) — כמו כשל רשת: ניסיון דרך הפרוקסי שלנו (census א70)
+        const own = location.protocol === "https:" ? _jcOwnUrl(url) : null;
+        if (!own || _jcOwnOn()) throw parseErr;
+        return fetch(own, { signal: AbortSignal.timeout(timeoutMs || 20000) }).then((r2) =>
+          r2.json().then((d) => {
+            if (r2.ok) _jcOwnLearn();
+            res = r2;
+            return d;
+          }),
+        );
+      }).then((data) => {
         // תשובת שגיאה (4xx/5xx עם גוף JSON) מוחזרת למבקש כמו קודם (הקוראים בודקים
         // data.error), אבל לא נשמרת — שלא תידרס/תוחזק שגיאה במקום נתון תקין
         if (res.ok) {

@@ -2701,7 +2701,8 @@
     try {
       var dNum = parseInt(new Intl.DateTimeFormat("en-u-ca-hebrew", { day: "numeric" }).format(new Date()), 10);
       var mHe = new Intl.DateTimeFormat("he-u-ca-hebrew", { month: "long" }).format(new Date());
-      if (dNum === 1) msg = "🌒 ראש חודש " + mHe + " — אומרים יעלה ויבוא בתפילה";
+      // א' בתשרי הוא ראש השנה ולא ראש חודש — שורת החג מהאירועים למטה (census א2)
+      if (dNum === 1 && mHe !== "תשרי") msg = "🌒 ראש חודש " + mHe + " — אומרים יעלה ויבוא בתפילה";
       else if (dNum === 30) msg = "🌒 א' דראש חודש — אומרים יעלה ויבוא בתפילה";
     } catch (e) {}
     // אירוע של היום מהמטמון (צום / חג)

@@ -1105,7 +1105,7 @@
             role="button"
             tabindex="0"
             title="לחץ לצפייה בהילולות היום"
-            onkeydown="if(event.key==='Enter'||event.key===' ')openHilulotModal()"
+            onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openHilulotModal()}"
           >
             <h2
               class="dashboard-card-title-tight text-blue-300 text-[12px] md:text-[14px] font-bold uppercase tracking-widest opacity-90"
@@ -1170,7 +1170,7 @@
             title="לחץ לפתיחת ברכת הלבנה"
             role="button"
             tabindex="0"
-            onkeydown="if(event.key==='Enter'||event.key===' ')openPrayer('kiddush-levana','ברכת לבנה','Kiddush Levana')"
+            onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openPrayer('kiddush-levana','ברכת לבנה','Kiddush Levana')}"
           >
             <div class="flex items-center gap-1.5">
               <h2
@@ -1202,7 +1202,7 @@
             role="button"
             tabindex="0"
             title="לחץ לצפייה בדברי תורה"
-            onkeydown="if(event.key==='Enter'||event.key===' ')openMoadModal()"
+            onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openMoadModal()}"
           >
             <h2
               class="dashboard-card-title-tight text-blue-300 text-[12px] md:text-[14px] font-bold uppercase tracking-widest opacity-90"

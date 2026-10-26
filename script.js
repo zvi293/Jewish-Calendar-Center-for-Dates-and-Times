@@ -7786,10 +7786,14 @@ buildIcsContent = function (events) {
     const description = escapeIcsText(
       e.description || "Synced from the Jewish Moadim calendar",
     );
+    // UID קבוע לפי תאריך ושם — ייבוא חוזר מעדכן את האירוע ולא יוצר כפילות (census א18ב);
+    // DTSTAMP — רגע הייצוא, לא תאריך האירוע (census א17)
+    let _uidH = 5381;
+    for (let k = 0; k < String(e.name || "").length; k++) _uidH = ((_uidH * 33) ^ String(e.name).charCodeAt(k)) >>> 0;
     lines.push(
       "BEGIN:VEVENT",
-      `UID:${Date.now()}_${Math.random().toString(36).substring(2)}@moadim.app`,
-      `DTSTAMP:${dateStr}T000000Z`,
+      `UID:${dateStr}-${_uidH.toString(36)}@moadim.app`,
+      `DTSTAMP:${new Date().toISOString().replace(/-|:|\.\d+/g, "")}`,
       `DTSTART;VALUE=DATE:${dateStr}`,
       `DTEND;VALUE=DATE:${nextDateStr}`,
       `SUMMARY:${summary}`,

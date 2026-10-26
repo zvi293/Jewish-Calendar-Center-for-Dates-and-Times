@@ -1349,6 +1349,10 @@
         } else {
           tShul.classList.add("active");
         }
+        // aria-pressed לפי הלשונית ששוחזרה — קורא המסך הכריז "בתי כנסת" בלשונית אחרת (census א81)
+        [[tShul, "shul"], [tMikvah, "mikvah"], [tTzaddik, "tzaddik"]].forEach(([el, k]) => {
+          if (el) el.setAttribute("aria-pressed", currentTab === k ? "true" : "false");
+        });
         updateTzaddikPrayersVisibility();
       })();
       // ── Tzaddik Prayers modal ──────────────────────

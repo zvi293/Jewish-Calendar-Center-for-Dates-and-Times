@@ -25605,13 +25605,18 @@ function openShirHashirimPage() {
       const fetches = Array.from({ length: CHAPTERS }, (_, i) =>
         _sefariaJson(`https://www.sefaria.org/api/texts/Song_of_Songs.${i + 1}?lang=he&context=0`)
       );
-      const results = await Promise.all(fetches);
+      // פרק שנכשל לא מפיל את כל השמונה — מציגים את מה שנטען, ובפרק החסר הודעה (census א60); כולם נכשלו — שגיאה כרגיל
+      const settled = await Promise.allSettled(fetches);
+      if (!settled.some((r) => r.status === 'fulfilled')) throw settled[0].reason;
+      const results = settled.map((r) => (r.status === 'fulfilled' ? r.value : null));
 
       let html = '<div style="max-width:640px;margin:0 auto;padding:1.5rem 1.25rem 0.5rem;font-family:\'Frank Ruhl Libre\',\'David Libre\',serif;direction:rtl;text-align:center;color:#1a1a1a;">';
 
       results.forEach((data, idx) => {
-        const heTexts = data.he || [];
-        const verses = heTexts.map((v, i) => {
+        const heTexts = (data && data.he) || [];
+        const verses = !data
+          ? `<span style="color:#94a3b8;">${typeof _isOfflineNow === 'function' && _isOfflineNow() ? 'אין חיבור לאינטרנט — הפרק לא נטען' : 'הפרק לא נטען — נסו שוב מאוחר יותר'}</span>`
+          : heTexts.map((v, i) => {
           const clean = typeof v === 'string' ? v : Array.isArray(v) ? v.join('') : String(v);
           return `<span style="color:${COLOR};font-size:0.75em;font-weight:700;margin-left:0.3rem;">(${HEB_VERSE[i] || (i + 1)})</span>${clean}`;
         }).join(' &nbsp;');

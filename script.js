@@ -30055,7 +30055,7 @@ document.addEventListener("keydown", (e) => {
       '" ' +
       'style="background:rgba(139,92,246,0.2);border:1px solid rgba(139,92,246,0.4);' +
       'color:#c4b5fd;border-radius:0.75rem;padding:0.4rem 0.9rem;cursor:pointer;font-size:1.2rem;" ' +
-      'title="יום קודם">‹</button>' +
+      'title="יום קודם" aria-label="יום קודם">‹</button>' +
       '<span id="hil-datelabel" style="color:#94a3b8;font-size:0.85rem;">' +
       dateLabel +
       "</span>" +
@@ -30064,7 +30064,7 @@ document.addEventListener("keydown", (e) => {
       '" ' +
       'style="background:rgba(139,92,246,0.2);border:1px solid rgba(139,92,246,0.4);' +
       'color:#c4b5fd;border-radius:0.75rem;padding:0.4rem 0.9rem;cursor:pointer;font-size:1.2rem;" ' +
-      'title="יום הבא">›</button>' +
+      'title="יום הבא" aria-label="יום הבא">›</button>' +
       "</div>" +
       '<div id="hilulot-body">' +
       buildHilulotList(tzaddikim, info.key) +
@@ -30330,12 +30330,12 @@ document.addEventListener("keydown", (e) => {
       '<button onclick="window._hilCalNav(-1)" ' +
       'style="background:rgba(139,92,246,0.2);border:1px solid rgba(139,92,246,0.4);' +
       'color:#c4b5fd;border-radius:0.6rem;padding:0.3rem 0.8rem;cursor:pointer;font-size:1.2rem;" ' +
-      'title="חודש קודם">‹</button>' +
+      'title="חודש קודם" aria-label="חודש קודם">‹</button>' +
       '<div id="hil-cal-month-title" style="color:#c4b5fd;font-weight:700;font-size:1rem;direction:rtl;"></div>' +
       '<button onclick="window._hilCalNav(1)" ' +
       'style="background:rgba(139,92,246,0.2);border:1px solid rgba(139,92,246,0.4);' +
       'color:#c4b5fd;border-radius:0.6rem;padding:0.3rem 0.8rem;cursor:pointer;font-size:1.2rem;" ' +
-      'title="חודש הבא">›</button>' +
+      'title="חודש הבא" aria-label="חודש הבא">›</button>' +
       "</div>" +
       '<div style="text-align:center;margin-bottom:0.45rem;">' +
       '<button onclick="window._hilCalToday()" ' +

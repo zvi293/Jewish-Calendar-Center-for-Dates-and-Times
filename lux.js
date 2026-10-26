@@ -4906,8 +4906,9 @@
     function activeTheme() { return activeThemes()[0] || null; }
     var sel = 0;
     function hebNewYear() {
-      // שנת היעד: השנה העברית הבאה (בגימטריה, בלי האלפים)
-      var y = luxHebYear(new Date()) + 1;
+      // שנת היעד: השנה העברית הבאה (בגימטריה, בלי האלפים) — ומא' בתשרי השנה שכבר נכנסה (census א34)
+      var _now = new Date(), y = luxHebYear(_now) + 1;
+      try { if (/^Tishri$/.test(new Intl.DateTimeFormat("en-u-ca-hebrew", { month: "long" }).format(_now))) y -= 1; } catch (e) {}
       var n = y % 1000;
       var tbl = [[400, "ת"], [300, "ש"], [200, "ר"], [100, "ק"], [90, "צ"], [80, "פ"], [70, "ע"], [60, "ס"], [50, "נ"], [40, "מ"], [30, "ל"], [20, "כ"], [19, "יט"], [18, "יח"], [17, "יז"], [16, "טז"], [15, "טו"], [10, "י"], [9, "ט"], [8, "ח"], [7, "ז"], [6, "ו"], [5, "ה"], [4, "ד"], [3, "ג"], [2, "ב"], [1, "א"]];
       var out = "";

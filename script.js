@@ -32176,8 +32176,10 @@ document.addEventListener("keydown", (e) => {
   window._matchMoad = matchMoad;
   window._DT = DT;
   window._openMoadByName = function (name) {
+    // המועד שנלחץ — רק לפתיחה הזו; אחריה "המועד הבא" בדשבורד חוזר למועד הבא האמיתי (census א13)
+    var _prev = window._nextMoadName;
     window._nextMoadName = name;
-    window.openMoadModal();
+    try { window.openMoadModal(); } finally { window._nextMoadName = _prev; }
   };
 
   window.openMoadModal = function () {

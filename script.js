@@ -37117,6 +37117,8 @@ function openSefarimNosafimPage(_pageMode) {
     _bmRemove(_bk.id, key);
     buildBookBMPanel();
     buildBMPanel();
+    // אותו בלון "הסימנייה הוסרה" כמו בפאנל הכללי (census א55)
+    if (typeof showBookmarkRemovedToast === "function") showBookmarkRemovedToast();
   };
 
   // ── View management ──

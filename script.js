@@ -8278,7 +8278,10 @@ function applyFilter(t) {
 // בלי גלילה אל רשימת התוצאות בזמן ההקלדה (בקשת המשתמש 10/2026): הדף נשאר במקום,
 // וההצעות החכמות (ספרים, תפילות, ברכות, חגים — lux.js smartSearch) מוצגות מתחת לתיבה
 document.getElementById("mainSearch").addEventListener("input", (e) => {
-  render("all", e.target.value);
+  // עם המסנן הפעיל (הצ'יפ המודגש) — עד 10/2026 ההקלדה הציגה את כל הסוגים והצ'יפ נשאר מודגש (census א12)
+  const _chip = document.querySelector(".chip.active");
+  const _t = _chip && _chip.id && _chip.id.indexOf("btn-") === 0 ? _chip.id.slice(4) : "all";
+  render(_t, e.target.value);
 });
 
 function openCalendar() {

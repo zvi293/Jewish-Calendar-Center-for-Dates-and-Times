@@ -3008,6 +3008,8 @@ function toggleShmikraRashi() {
 }
 
 async function fetchRashiForShmikra(parshaName) {
+  // מצב הטעינה — בכשל מוצגת הודעה ולא "טוען פירוש רש״י..." לתמיד (census א56)
+  _shmikraData.rashiStatus = "loading";
   try {
     // Use the stored Torah ref to construct proper Rashi URL
     const torahRef = _shmikraData.torahRef;
@@ -3129,10 +3131,15 @@ async function fetchRashiForShmikra(parshaName) {
         }
       }
       _shmikraData.rashiVerses = rashiPerVerse;
+      _shmikraData.rashiStatus = "ok";
+    } else {
+      _shmikraData.rashiStatus = "failed";
     }
     renderShmikraContent();
   } catch (e) {
     console.warn("Rashi fetch error:", e);
+    _shmikraData.rashiStatus = "failed";
+    try { renderShmikraContent(); } catch (e2) {}
   }
 }
 
@@ -3229,7 +3236,9 @@ function renderShmikraContent() {
               </div>`;
       } else if (showRashi && rashiVerses.length === 0) {
         if (i === 0) {
-          textHtml += `<div style="margin-top:0.4rem;font-size:0.75rem;color:#7c3aed;font-style:italic;">טוען פירוש רש״י...</div>`;
+          textHtml += _shmikraData.rashiStatus === "failed"
+            ? `<div style="margin-top:0.4rem;font-size:0.75rem;color:#64748b;font-style:italic;">${typeof _isOfflineNow === "function" && _isOfflineNow() ? "אין חיבור לאינטרנט — פירוש רש״י לא נטען" : "פירוש רש״י לא נטען — נסו שוב מאוחר יותר"}</div>`
+            : `<div style="margin-top:0.4rem;font-size:0.75rem;color:#7c3aed;font-style:italic;">טוען פירוש רש״י...</div>`;
         }
       }
       textHtml += `</div>`;

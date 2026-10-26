@@ -5334,7 +5334,8 @@ async function fetchLiveCalendarData() {
         for (var pi = 0; pi < evs.length; pi++) {
           var pe = evs[pi];
           if (!pe || pe.type !== "parashat" || !pe.date) continue;
-          var pd = new Date(pe.date); pd.setHours(0, 0, 0, 0);
+          // תאריך בלי שעה = יום מקומי (new Date("YYYY-MM-DD") = חצות UTC — מערבית ל-UTC השבת עצמה נראתה כאתמול, census א4ג)
+          var pd = parseLocalDate(pe.date); pd.setHours(0, 0, 0, 0);
           if (pd < t0) continue;
           if (!best || pd < bestD) { best = pe; bestD = pd; }
         }
@@ -5356,7 +5357,9 @@ async function fetchLiveCalendarData() {
       const dow = today.getDay(); // 0=Sun
       // Find this week's Friday (for candle lighting)
       const friday = new Date(today);
-      friday.setDate(today.getDate() + ((5 - dow + 7) % 7));
+      // בשבת עצמה — השבת הזו (הדלקה אתמול, הבדלה היום), כמו הפרשה שלידן; עד 10/2026 הוצגו זמני השבוע הבא
+      // ליד פרשת השבת הנוכחית (census א5). אחרי צאת השבת todayDateUI כבר יום ראשון — השבוע הבא
+      friday.setDate(today.getDate() + (dow === 6 ? -1 : (5 - dow + 7) % 7));
       const kzFriday = computeKosherZmanim(friday);
       if (kzFriday && kzFriday.times && kzFriday.times.candleLighting) {
         c = formatTimeStr(kzFriday.times.candleLighting);

@@ -4630,9 +4630,9 @@ function computeKosherZmanim(dateObj) {
 async function ensureCityCoords() {
   if (GEO_LOCATION === "GPS" && GPS_COORDS) return;
   if (window._cityCoords) return;
-  const cached = localStorage.getItem("moadim_city_coords");
-  if (cached) {
-    window._cityCoords = JSON.parse(cached);
+  const cached = _jsonOr(_lsGet("moadim_city_coords"), null);
+  if (cached && isFinite(cached.lat) && isFinite(cached.lon)) {
+    window._cityCoords = cached;
     return;
   }
   // עיר ברירת המחדל (פתח תקווה, 293918): הקואורדינטות ידועות מראש וזהות בדיוק
@@ -4660,11 +4660,17 @@ async function ensureCityCoords() {
         tzid: data.location.timezone || "Asia/Jerusalem",
         elevation: data.location.elevation || 0,
       };
-      localStorage.setItem("moadim_city_coords", JSON.stringify(cityCoords));
+      safeCacheSetItem("moadim_city_coords", JSON.stringify(cityCoords));
       window._cityCoords = cityCoords;
+      return;
     }
   } catch (e) {
     console.warn("Could not resolve city coords:", e);
+  }
+  // העיר השמורה לא אותרה — הזמנים מחושבים לפי ברירת המחדל; אומרים זאת (פעם בביקור) ולא בשקט (census א68)
+  if (!window.__cityCoordsWarned && typeof showToast === "function") {
+    window.__cityCoordsWarned = true;
+    showToast("לא הצלחנו לאתר את מיקום העיר השמורה — הזמנים מוצגים לפי פתח תקווה. אפשר לעדכן מיקום (GPS) בהגדרות.", "info", 6000);
   }
 }
 

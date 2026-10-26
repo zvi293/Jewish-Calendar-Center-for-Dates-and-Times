@@ -37012,7 +37012,7 @@ function openSefarimNosafimPage(_pageMode) {
       if (!isNaN(p)) paraIdx = p;
     }
     // סימנייה לפסוק: "sbid|sec|chap|verse"
-    if (paraIdx !== null && parts.length >= 4 && /^d+$/.test(parts[3])) verseIdx = parseInt(parts[3]);
+    if (paraIdx !== null && parts.length >= 4 && /^\d+$/.test(parts[3])) verseIdx = parseInt(parts[3]);
     _bk = book;
     _sbk = (book.type === "multi" && sbid) ? (book.subBooks.find(function(s){ return s.id === sbid; })||null) : null;
     var panel = document.getElementById("sn-bm-panel");

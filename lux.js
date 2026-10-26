@@ -1876,7 +1876,8 @@
     function headerInfo() {
       var city = localStorage.getItem("moadim_city_name") || "";
       var heb = "";
-      try { heb = typeof window.getHebrewDateString === "function" ? window.getHebrewDateString(new Date()) : ""; } catch (e) {}
+      // התאריך העברי מתחלף בצאת, כמו בשאר הדף (census א25)
+      try { heb = luxHebDateStr(); } catch (e) {}
       var greg = new Date().toLocaleDateString("he-IL", { day: "numeric", month: "long", year: "numeric" });
       return { city: city, heb: heb, greg: greg };
     }
@@ -1971,8 +1972,9 @@
       var shabbatExit = (document.getElementById("shabbat-exit") || {}).textContent || "";
       var extra = "";
       if (shabbatEnter && shabbatEnter !== "--:--") {
+        // שורת היציאה רק כשיש לה זמן (לא "--:--", census א24)
         extra = "<tr><td>🕯️ כניסת שבת</td><td>" + shabbatEnter + "</td></tr>" +
-                "<tr><td>✨ יציאת שבת</td><td>" + shabbatExit + "</td></tr>";
+                (shabbatExit && shabbatExit !== "--:--" ? "<tr><td>✨ יציאת שבת</td><td>" + shabbatExit + "</td></tr>" : "");
       }
       sheet.innerHTML =
         '<div class="lux-pr-title">✡ זמני היום ✡</div>' +

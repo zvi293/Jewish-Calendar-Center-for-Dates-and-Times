@@ -2765,11 +2765,14 @@
           setTimeout(() => { try { _map.invalidateSize(); } catch (e) {} }, 80);
           _markersLayer.clearLayers();
           const bounds = [];
-          if (userLat != null) {
-            L.circleMarker([userLat, userLon], {
+          // במצב יישוב userLat הוא מרכז היישוב — "📍 המיקום שלך" רק על המיקום האמיתי (myLat), אם ידוע (census א79)
+          const _cityMap = !!(manualLocation && manualCity);
+          const _meLat = _cityMap ? myLat : userLat, _meLon = _cityMap ? myLon : userLon;
+          if (_meLat != null) {
+            L.circleMarker([_meLat, _meLon], {
               radius: 8, color: "#0284c7", fillColor: "#38bdf8", fillOpacity: 0.9, weight: 2.5
             }).bindPopup('<div style="direction:rtl;font-weight:800;">📍 המיקום שלך</div>').addTo(_markersLayer);
-            bounds.push([userLat, userLon]);
+            if (!_cityMap) bounds.push([userLat, userLon]);
           }
           const icon = currentTab === "shul" ? "🕍" : currentTab === "mikvah" ? "💧" : "🕯️";
           // כמה מקומות על אותה נקודה בדיוק (מקוואות שמיקומם לפי מרכז היישוב) — מפוזרים

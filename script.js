@@ -28346,6 +28346,15 @@ function _injectWaButtons() {
   );
 })();
 
+// שנת הפוטר — גם בזמן ריצה: build-year.mjs מעדכן אותה רק בדיפלוי, ובלי דיפלוי בשנה חדשה נשארה הישנה (census א98)
+(function () {
+  try {
+    var fy = document.getElementById("footer-year");
+    var y = String(new Date().getFullYear());
+    if (fy && /^\d{4}$/.test(fy.textContent) && +y > +fy.textContent) fy.textContent = y;
+  } catch (e) {}
+})();
+
 // ═══════════════════════════════════════════════════════
 // ✦  KEYBOARD SHORTCUT: Ctrl+K / ⌘+K → focus search
 // ═══════════════════════════════════════════════════════

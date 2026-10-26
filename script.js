@@ -3460,8 +3460,10 @@ async function fetchChokLeIsraelData() {
         .trim();
     }
     if (!parshaHe) {
-      // אין מקור לפרשה — נאפשר ניסיון חוזר בקריאה הבאה
+      // אין מקור לפרשה — נאפשר ניסיון חוזר בקריאה הבאה; בכרטיס לא "מחשב..." לתמיד (census א72)
       _chokLeIsraelFetchDate = null;
+      const _ct = document.getElementById('chok-israel-text');
+      if (_ct && /^מחשב/.test(_ct.textContent)) _ct.textContent = 'לחצו לפתיחה';
       return;
     }
     const textEl = document.getElementById('chok-israel-text');
@@ -5296,7 +5298,7 @@ async function fetchLiveCalendarData() {
     }
 
     const dafData = await _orLocal(_pDaf, () => _offlineDafData(hebrewDateFetchIso));
-    const dafEvent = (dafData.items || []).find(
+    const dafEvent = ((dafData && dafData.items) || []).find(
       (i) => i.category === "dafyomi",
     );
     if (dafEvent) {
@@ -5310,6 +5312,10 @@ async function fetchLiveCalendarData() {
         openSefariaModal(displayDaf, dafEvent.title, { daf: true });
       };
       document.getElementById("daf-yomi-link").dataset.ready = "1"; // סרגל הניווט התחתון בודק את זה
+    } else {
+      // אין נתון (רשת/מטמון) — לא "מחשב..." לתמיד; הלחיצה עוברת לרשת הביטחון שטוענת בעצמה (census א72)
+      const _dt = document.getElementById("daf-yomi-text");
+      if (_dt && /^מחשב/.test(_dt.textContent)) _dt.textContent = "לחצו לפתיחה";
     }
 
     // טעינת חוק לישראל (fire-and-forget)

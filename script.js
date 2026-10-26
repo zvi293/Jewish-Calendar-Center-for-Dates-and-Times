@@ -26548,7 +26548,8 @@ function openBenIshHaiPage() {
           if (resultsEl) {
             const btn = document.createElement("button");
             btn.style.cssText = "display:block;width:100%;text-align:right;padding:0.75rem 1rem;border:none;border-bottom:1px solid rgba(0,0,0,0.07);cursor:pointer;background:none;direction:rtl;transition:background 0.1s;";
-            const label = isDrashot ? parshiyot[p].he+" — סעיף "+toHeb(h+1) : parshiyot[p].he+" — הלכה "+toHeb(h+1);
+            // דרשה — "דרשה N" כמו בקורא (census א54)
+            const label = isDrashot ? parshiyot[p].he+" — דרשה "+toHeb(h+1) : parshiyot[p].he+" — הלכה "+toHeb(h+1);
             btn.innerHTML = '<span style="color:'+color+';font-size:0.75rem;font-weight:900;">'+label+'</span>'+
               '<p style="margin:0.2rem 0 0;font-size:0.83rem;color:#374151;line-height:1.5;">'+buildSnippet(stripped,q)+'</p>';
             btn.onmouseenter=()=>btn.style.background=document.documentElement.classList.contains("dark")?"rgba(255,255,255,0.06)":"#f1f5f9";

@@ -838,21 +838,24 @@ const SITE_SHARE_TEXT =
 const TODAY = new Date();
 let ALL_EVENTS = [];
 let CURRENT_OMER_DAY = 0;
-let GEO_LOCATION = localStorage.getItem("moadim_city") || "293918";
-let ZMANIM_METHOD = localStorage.getItem("moadim_method") || "MGA";
-let GPS_COORDS = JSON.parse(localStorage.getItem("moadim_gps")) || null;
+// אחסון חסום (מצב פרטי/מדיניות) או ערך פגום — ברירת מחדל ולא חריגה שעוצרת את כל הקובץ על "מסנכרן נתונים..." (census א64)
+function _lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+function _jsonOr(s, dflt) { try { const v = JSON.parse(s); return v == null ? dflt : v; } catch (e) { return dflt; } }
+let GEO_LOCATION = _lsGet("moadim_city") || "293918";
+let ZMANIM_METHOD = _lsGet("moadim_method") || "MGA";
+let GPS_COORDS = _jsonOr(_lsGet("moadim_gps"), null);
 let compassListener = null;
 let CALENDAR_DISPLAY_DATE = new Date();
 // (10/2026) "sky" = שמיים חיים (sky.js) — ברירת המחדל; "light"/"dark" — בחירה מפורשת בהגדרות
 let CURRENT_THEME = ["light", "dark", "sky"].includes(
-  localStorage.getItem("moadim_theme"),
+  _lsGet("moadim_theme"),
 )
-  ? localStorage.getItem("moadim_theme")
+  ? _lsGet("moadim_theme")
   : "sky";
 // האפליקציה בעברית בלבד — בורר השפות הוסר לבקשת בעל האתר
 let CURRENT_LANG = "he";
 try { localStorage.setItem("moadim_lang", "he"); } catch (e) {}
-let CURRENT_NUSACH = localStorage.getItem("moadim_nusach") || "mizrahi";
+let CURRENT_NUSACH = _lsGet("moadim_nusach") || "mizrahi";
 const DAY_NOTES_STORAGE_KEY = "moadim_day_notes";
 const FS_LABELS = ["רגיל", "גדול", "גדול מאוד", "ענק", "ענק מאוד"];
 
@@ -1168,11 +1171,11 @@ function initApp() {
   updateCurrentCityLabel();
   updateNotifStatusUI();
 
-  const cachedEvents = localStorage.getItem("moadim_cached_events_v3");
-  if (cachedEvents) {
-    ALL_EVENTS = JSON.parse(cachedEvents);
-    const cachedFull = localStorage.getItem("moadim_cached_events_full_v3");
-    window.ALL_EVENTS_FULL = cachedFull ? JSON.parse(cachedFull) : null;
+  const cachedEvents = _jsonOr(_lsGet("moadim_cached_events_v3"), null);
+  if (Array.isArray(cachedEvents) && cachedEvents.length) {
+    ALL_EVENTS = cachedEvents;
+    const cachedFull = _jsonOr(_lsGet("moadim_cached_events_full_v3"), null);
+    window.ALL_EVENTS_FULL = Array.isArray(cachedFull) ? cachedFull : null;
     const _todayY = new Date().getFullYear();
     window.FETCHED_YEARS =
       window.FETCHED_YEARS || new Set([_todayY - 1, _todayY, _todayY + 1]);

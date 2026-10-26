@@ -1007,14 +1007,18 @@ function generateOmerText(day) {
 }
 
 function shareApp() {
+  // בלי Web Share ובלי clipboard (או כשההעתקה נכשלה) — הודעה עם הקישור ולא שקט/שגיאה לא נתפסת (census א73)
+  const _failMsg = () => { if (typeof showToast === "function") showToast("לא ניתן לשתף אוטומטית — הקישור: " + SITE_URL, "info", 6000); };
   if (navigator.share) {
     navigator
       .share({ title: SITE_NAME, text: SITE_SHARE_TEXT, url: SITE_URL })
-      .catch(console.error);
-  } else {
+      .catch((e) => { if (!e || e.name !== "AbortError") _failMsg(); });
+  } else if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(`${SITE_SHARE_TEXT} ${SITE_URL}`).then(() => {
       alert("הקישור הועתק ללוח בצירוף טקסט קצר. אפשר להדביק בוואטסאפ!");
-    });
+    }, _failMsg);
+  } else {
+    _failMsg();
   }
 }
 
@@ -28295,7 +28299,9 @@ function shareEventWhatsApp(name, dateStr, heb, ev) {
   }
   text += `\n\nסנכרן מהלוח היהודי: ${SITE_URL}`;
   if (navigator.share && /iPhone|iPad|Android/i.test(navigator.userAgent)) {
-    navigator.share({ title: name, text, url: SITE_URL }).catch(() => {
+    // ביטול חלון השיתוף (AbortError) — לא פותחים וואטסאפ; רק כשל אמיתי עובר לוואטסאפ (census א74)
+    navigator.share({ title: name, text, url: SITE_URL }).catch((e) => {
+      if (e && e.name === "AbortError") return;
       window.open("https://wa.me/?text=" + encodeURIComponent(text), "_blank", "noopener,noreferrer");
     });
   } else {

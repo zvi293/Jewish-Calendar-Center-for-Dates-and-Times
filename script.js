@@ -29631,11 +29631,29 @@ document.addEventListener("keydown", (e) => {
     return out;
   };
 
-  function getSpecialDay(month, day) {
+  function getSpecialDay(month, day, date) {
     // Return a special-day label for the given Hebrew month name + day, or "" if none.
     // Covers ראש חודש, ערבי חגים, ימי החגים, חול המועד, ימים מיוחדים, וצומות.
     if (!month) return "";
     var m = month;
+    // חנוכה ויום הזיכרון/העצמאות — לפי הלוח (KosherZmanim) ולא לפי מספר היום: נרות ו'–ח' עברו לטבת/ר"ח
+    // והוסתרו ע"י כלל ראש החודש, בכסלו חסר נר ח' יצא גם בג' טבת, וימי אייר לא נדחו (census א7)
+    var _modern = false;
+    try {
+      var K = window.KosherZmanim;
+      if (date && K && K.JewishCalendar) {
+        var jc = new K.JewishCalendar(new Date(date.getFullYear(), date.getMonth(), date.getDate(), 12));
+        try { jc.setInIsrael(true); } catch (e) {}
+        try { jc.setUseModernHolidays(true); _modern = true; } catch (e) {}
+        var ch = jc.getDayOfChanukah();
+        if (ch > 0) return "חנוכה — נר " + "אבגדהוזח".charAt(ch - 1) + "׳" + (m.indexOf("טבת") !== -1 && day === 1 ? " (ר\"ח טבת)" : "");
+        if (_modern && m.indexOf("אייר") !== -1) {
+          var yti = jc.getYomTovIndex();
+          if (yti === K.JewishCalendar.YOM_HAZIKARON) return "יום הזיכרון";
+          if (yti === K.JewishCalendar.YOM_HAATZMAUT) return "יום העצמאות";
+        }
+      }
+    } catch (e) { _modern = false; }
     // ראש חודש — 1 of every month (except תשרי which is ראש השנה)
     if (day === 1 && m.indexOf("תשרי") === -1) return "ראש חודש";
     // 30 of months that have 30 days is also ראש חודש (1st day)
@@ -29654,14 +29672,15 @@ document.addEventListener("keydown", (e) => {
     }
     // ── אייר ──
     if (m.indexOf("אייר") !== -1) {
-      if (day === 5) return "יום העצמאות";
-      if (day === 4) return "יום הזיכרון";
+      if (!_modern && day === 5) return "יום העצמאות";
+      if (!_modern && day === 4) return "יום הזיכרון";
       if (day === 14) return "פסח שני";
       if (day === 18) return "ל\"ג בעומר";
       if (day === 28) return "יום ירושלים";
     }
     // ── סיון / שבועות ──
-    if (m.indexOf("סיון") !== -1) {
+    // Intl כותב "סיוון" (כתיב מלא) — שני הכתיבים (census א6)
+    if (m.indexOf("סיון") !== -1 || m.indexOf("סיוון") !== -1) {
       if (day === 5) return "ערב שבועות";
       if (day === 6) return "שבועות";
       if (day === 7) return "אסרו חג שבועות";
@@ -29782,7 +29801,7 @@ document.addEventListener("keydown", (e) => {
       key: monthKey + "-" + dayNum,
       date: d,
       gregStr: gregStr,
-      specialDay: getSpecialDay(monthKey, dayNum),
+      specialDay: getSpecialDay(monthKey, dayNum, d),
     };
   }
 

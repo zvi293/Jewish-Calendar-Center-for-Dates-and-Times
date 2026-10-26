@@ -3305,9 +3305,15 @@ async function openShnayimMikraModal(hebTitle, enRef) {
     );
     if (!torahData || !torahData.ref) throw new Error("No parsha data");
 
-    const onkelosData = await fetchHebcalWithCache(
-      `https://www.sefaria.org/api/texts/${_shmikraOnkelosRef(torahRef, torahData.ref)}?context=0`,
-    );
+    // כשל באונקלוס לא מפיל את הקורא — הפסוקים מוצגים בלי תרגום (census א57)
+    let onkelosData = null;
+    try {
+      onkelosData = await fetchHebcalWithCache(
+        `https://www.sefaria.org/api/texts/${_shmikraOnkelosRef(torahRef, torahData.ref)}?context=0`,
+      );
+    } catch (eOnk) {
+      console.warn("Onkelos fetch error:", eOnk);
+    }
 
     const flattenVerses = (arr) => {
       if (!arr) return [];

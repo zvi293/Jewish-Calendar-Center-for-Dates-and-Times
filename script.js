@@ -110,7 +110,10 @@ function _jcViaOwn(url) {
 // fetch לשירות חיצוני עם מעבר אוטומטי לפרוקסי שלנו (ראו למעלה); timeout נפרד לכל ניסיון
 function _jcFetch(url, timeoutMs) {
   url = String(url);
-  const go = (u) => fetch(u, { signal: AbortSignal.timeout(timeoutMs || 20000) });
+  const go = (u) => fetch(u, { signal: AbortSignal.timeout(timeoutMs || 20000) }).then(
+    (r) => { window.__jcNetFailAt = 0; return r; },
+    (e) => { window.__jcNetFailAt = Date.now(); throw e; },
+  );
   const own = location.protocol === "https:" ? _jcOwnUrl(url) : null;
   if (!own || _jcOwnOn()) return go(_jcViaOwn(url));
   return go(url).catch((err) => {
@@ -5008,8 +5011,12 @@ function _showNetPill(kind) {
 // כשטעינה נכשלת והמכשיר לא מחובר — במקום "שגיאה" / "לא נמצא טקסט" מסבירים מה קרה ומה עושים:
 // התוכן עוד לא נשמר במכשיר, ובפתיחה הבאה עם חיבור הוא יישמר לשימוש בלי אינטרנט.
 // בלי צבע קבוע — יורש את צבע הקורא (בהיר/כהה/שמיים).
+// "אין חיבור" גם ברשת מסוננת שבה onLine=true אבל כל הבקשות נכשלות ברמת הרשת — עד 60 שנ' אחרי כשל רשת
+// בלי הצלחה אחריו (_jcFetch מסמן). עד 10/2026 שם הוצגה "שגיאה" רגילה במקום הסבר האופליין (census א69)
 function _isOfflineNow() {
-  return navigator.onLine === false;
+  if (navigator.onLine === false) return true;
+  const t = window.__jcNetFailAt || 0;
+  return !!t && Date.now() - t < 60000;
 }
 function _offlineMsgHtml(what) {
   return (
@@ -24316,7 +24323,7 @@ window.openDonationModal = function() {
 
   window._openPlayDonation = function () {
     // תשלום ב-Google Play דורש חיבור — בלי אינטרנט הסבר ברור במקום חלון שלא יעבוד
-    if (typeof _isOfflineNow === "function" && _isOfflineNow()) {
+    if (navigator.onLine === false) {
       if (typeof showToast === "function") showToast("📴 אין חיבור לאינטרנט — תרומה דרך Google Play דורשת חיבור. אפשר לנסות שוב כשהחיבור יחזור.", "info", 4500);
       return;
     }

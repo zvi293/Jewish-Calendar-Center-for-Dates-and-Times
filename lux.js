@@ -1452,6 +1452,11 @@
         groupRep[base] = rep;
         events.push(rep);
       });
+      // עוד אין מטמון אירועים (ביקור ראשון, רשת איטית) — הודעה במקום גלגל ריק (census א28)
+      if (!events.length) {
+        if (typeof window.showToast === "function") window.showToast("רשימת המועדים עוד נטענת — נסו שוב בעוד רגע", "info");
+        return;
+      }
       var hebYear = "";
       try {
         var yNum = parseInt(new Intl.DateTimeFormat("en-u-ca-hebrew", { year: "numeric" }).format(new Date()), 10);

@@ -1326,7 +1326,7 @@
       { k: "sofZmanShmaMGA", l: "סו\"ז ק\"ש (מג\"א)" },
       { k: "sofZmanShma", l: "סו\"ז ק\"ש (גר\"א)" },
       { k: "sofZmanTfillaMGA", l: "סו\"ז תפילה (מג\"א)" },
-      { k: "sofZmanTfilla", l: "סו\"ז תפילה" },
+      { k: "sofZmanTfilla", l: "סו\"ז תפילה (גר\"א)" }, // כמו ק"ש — בלי השיטה נראה כאילו זו השיטה היחידה (census א29)
       { k: "chatzot", l: "חצות היום" },
       { k: "minchaGedola", l: "מנחה גדולה" },
       { k: "minchaKetana", l: "מנחה קטנה" },
@@ -2652,7 +2652,7 @@
       { k: "sofZmanShmaMGA", l: 'סוף זמן ק"ש (מג"א)' },
       { k: "sofZmanShma", l: 'סוף זמן ק"ש (גר"א)' },
       { k: "sofZmanTfillaMGA", l: 'סוף זמן תפילה (מג"א)' },
-      { k: "sofZmanTfilla", l: "סוף זמן תפילה" },
+      { k: "sofZmanTfilla", l: 'סוף זמן תפילה (גר"א)' }, // census א29
       { k: "sunset", l: "שקיעת החמה" }
     ];
     function check() {

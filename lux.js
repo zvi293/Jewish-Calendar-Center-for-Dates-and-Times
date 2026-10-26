@@ -1820,8 +1820,9 @@
     var main = document.getElementById("main-content");
     var nav = main ? main.querySelector("nav") : null;
     if (!main || !nav) return;
-    var start = new Date(new Date().getFullYear(), 0, 0);
-    var doy = Math.floor((Date.now() - start) / 86400000);
+    // היום בשנה לפי רכיבי התאריך המקומי — בשעון קיץ הפנינה התחלפה ב-01:00 ולא בחצות (census א3)
+    var _pn = new Date();
+    var doy = Math.round((Date.UTC(_pn.getFullYear(), _pn.getMonth(), _pn.getDate()) - Date.UTC(_pn.getFullYear(), 0, 0)) / 86400000);
     var p = PEARLS[doy % PEARLS.length];
     var el = document.createElement("aside");
     el.id = "lux-pearl";

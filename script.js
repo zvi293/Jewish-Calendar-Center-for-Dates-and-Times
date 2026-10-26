@@ -7702,7 +7702,8 @@ function getDaysDiff(d) {
   t.setHours(0, 0, 0, 0);
   const todayNoTime = new Date();
   todayNoTime.setHours(0, 0, 0, 0);
-  return Math.ceil((t - todayNoTime) / 86400000);
+  // round ולא ceil: מעבר משעון קיץ מאריך יום אחד ב-שעה, ו-ceil הוסיף יום שלם ("בעוד 66" במקום 65, census א4)
+  return Math.round((t - todayNoTime) / 86400000);
 }
 
 function escapeIcsText(value) {

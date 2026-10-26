@@ -2063,6 +2063,12 @@
       }
       startY = null; pulling = false;
     }, { passive: true });
+    // מגע שבוטל (שיחה נכנסת, מחווה של המערכת) — המחוון חוזר למקומו ולא נתקע חצי משוך (census א49ד)
+    document.addEventListener("touchcancel", function () {
+      if (!pulling && startY === null) return;
+      ind.style.top = "-64px";
+      startY = null; pulling = false;
+    }, { passive: true });
   });
 
   /* ── 21. רצף לימוד ─────────────────────────────────────────────── */

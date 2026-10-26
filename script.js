@@ -32953,10 +32953,14 @@ function openSefarimNosafimPage(_pageMode) {
     } catch (e) {
       // Quota exceeded – נסה לפנות מקום ע"י מחיקת cache ישן
       try {
-        for (var i = localStorage.length - 1; i >= 0 && i >= localStorage.length - 50; i--) {
+        // אוספים קודם את כל מפתחות המטמון ורק אז מוחקים — מחיקה תוך כדי מעבר על האינדקסים, ורק על 50
+        // המפתחות האחרונים (שאולי אינם של המטמון), לא פינתה כלום (census א62)
+        var ks = [];
+        for (var i = 0; i < localStorage.length; i++) {
           var k = localStorage.key(i);
-          if (k && k.indexOf(_SN_CACHE_PREFIX) === 0) localStorage.removeItem(k);
+          if (k && k.indexOf(_SN_CACHE_PREFIX) === 0) ks.push(k);
         }
+        ks.slice(0, Math.max(50, Math.ceil(ks.length / 2))).forEach(function (k2) { localStorage.removeItem(k2); });
         localStorage.setItem(_SN_CACHE_PREFIX + ref, JSON.stringify(data));
       } catch (e2) { /* skip caching */ }
     }

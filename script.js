@@ -2907,7 +2907,7 @@ async function renderDafContent() {
         talmud: true,   // אותו מנגנון שיבוץ כמו בקורא התלמוד (ספרים נוספים)
       });
     } else {
-      parasHtml += `<div style="margin-top:0.6rem;padding:0.45rem 0.7rem;border-radius:0.4rem;border:1px dashed rgba(124,58,237,0.3);color:#7c3aed;font-size:0.72rem;font-style:italic;text-align:center;">📝 לא נמצא רש"י על דף זה</div>`;
+      parasHtml += `<div style="margin-top:0.6rem;padding:0.45rem 0.7rem;border-radius:0.4rem;border:1px dashed rgba(124,58,237,0.3);color:#7c3aed;font-size:0.72rem;font-style:italic;text-align:center;">${typeof _isOfflineNow === "function" && _isOfflineNow() ? "📝 אין חיבור לאינטרנט — רש״י לא נטען" : "📝 לא נמצא רש\"י על דף זה"}</div>`; // אופליין ≠ אין פירוש (census א58)
     }
   }
   if (showTosafot) {
@@ -2922,7 +2922,7 @@ async function renderDafContent() {
         talmud: true,
       });
     } else {
-      parasHtml += `<div style="margin-top:0.6rem;padding:0.45rem 0.7rem;border-radius:0.4rem;border:1px dashed rgba(13,148,136,0.3);color:#0d9488;font-size:0.72rem;font-style:italic;text-align:center;">📜 לא נמצאו תוספות על דף זה</div>`;
+      parasHtml += `<div style="margin-top:0.6rem;padding:0.45rem 0.7rem;border-radius:0.4rem;border:1px dashed rgba(13,148,136,0.3);color:#0d9488;font-size:0.72rem;font-style:italic;text-align:center;">${typeof _isOfflineNow === "function" && _isOfflineNow() ? "📜 אין חיבור לאינטרנט — התוספות לא נטענו" : "📜 לא נמצאו תוספות על דף זה"}</div>`;
     }
   }
 

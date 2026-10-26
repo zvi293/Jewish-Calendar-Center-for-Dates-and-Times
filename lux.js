@@ -1698,8 +1698,11 @@
   function luxHebDateStr() {
     var d = new Date();
     try {
+      // צאת הכוכבים של היום עצמו (_prayerZman — לפי התאריך, גם בדף שנשאר פתוח מיום קודם). עד 10/2026
+      // ההשוואה הייתה לצאת של יום הטעינה, ומחצות עד הצאת התאריך הקדים ביום (census א19)
+      var tz0 = typeof window._prayerZman === "function" ? window._prayerZman(new Date(), "tzeit7083deg") : null;
       var z = window._lastZData;
-      var tzeit = z && z.times && z.times.tzeit7083deg ? new Date(z.times.tzeit7083deg).getTime() : null;
+      var tzeit = tz0 ? tz0.getTime() : (z && z.times && z.times.tzeit7083deg ? new Date(z.times.tzeit7083deg).getTime() : null);
       if (tzeit !== null) {
         if (Date.now() > tzeit) d = new Date(Date.now() + 86400000);
       } else if (d.getHours() >= 20) {
@@ -4324,9 +4327,10 @@
                 '<p class="lux-st-src">' + (ps ? ps.textContent : "") + "</p>"
         });
       }
-      // סליחות בעונה
-      var hm = luxHebMonth(new Date());
-      if (hm === "אלול" || (hm === "תשרי" && hd <= 9)) {
+      // סליחות בעונה — לפי היום העברי האפקטיבי (מתחלף בצאת) כמו שאר השקופיות: אחרי צאת ט' בתשרי כבר לא
+      // (census א33). התהילים נשארים לפי היום האזרחי — כמו בדף התהילים (_TEHILLIM_DAY_RANGE)
+      var hm = luxHebMonth(effDate), hdEff = luxHebDay(effDate) || hd;
+      if (hm === "אלול" || (hm === "תשרי" && hdEff <= 9)) {
         slides.push({
           cls: "lux-st-selichot",
           html: '<div class="lux-st-big">🕊️</div><h2>ימי הסליחות</h2>' +

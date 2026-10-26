@@ -3470,7 +3470,9 @@ async function fetchChokLeIsraelData() {
         'https://www.sefaria.org/api/collections/%D7%97%D7%A7-%D7%9C%D7%99%D7%A9%D7%A8%D7%90%D7%9C',
         { timeout: 12000 }
       );
-      _chokLeIsraelSheetsIndex = collData.sheets || [];
+      // אינדקס ריק (תשובה חלקית/שגויה) לא נשמר — הקריאה הבאה תנסה שוב (census א59)
+      _chokLeIsraelSheetsIndex = collData && collData.sheets && collData.sheets.length ? collData.sheets : null;
+      if (!_chokLeIsraelSheetsIndex) throw new Error("empty Chok LeIsrael index");
     }
 
     // Find sheet matching today's parasha + day of week

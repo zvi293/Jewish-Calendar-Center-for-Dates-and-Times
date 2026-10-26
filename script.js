@@ -6462,7 +6462,9 @@ async function computeHolidayWindow(name, dateStr) {
       coords.lat <= 33.5 &&
       coords.lon >= 34.2 &&
       coords.lon <= 35.9;
-    const offsetMin = isIsrael ? 20 : 18;
+    // אותו כלל כמו computeKosherZmanim — 40 דק' בירושלים (census א16)
+    const isJerusalem = typeof isInJerusalem === "function" && isInJerusalem(coords.lat, coords.lon);
+    const offsetMin = isJerusalem ? 40 : isIsrael ? 20 : 18;
     startIso = new Date(
       new Date(resPrev.times.sunset).getTime() - offsetMin * 60000,
     ).toISOString();

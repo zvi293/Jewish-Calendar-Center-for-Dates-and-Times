@@ -5815,8 +5815,17 @@ async function fetchLiveCalendarData() {
     _scheduleLiveDataRerun(_runSeq, _lateNet);
   } catch (err) {
     console.error(err);
-    // האירוע "online" ינסה שוב כשהחיבור יחזור
+    // האירוע "online" ינסה שוב כשהחיבור יחזור; ושגיאה כשמחוברים — ניסיון חוזר אחרי 30 שנ' (עד 6 ברצף,
+    // אותו מונה של הריענונים) — עד 10/2026 נשאר תקוע עד רענון ידני (census א67)
     _liveDataStale = true;
+    if (navigator.onLine !== false && _liveDataReruns < 6) {
+      const _seqAtErr = _liveDataRunSeq;
+      setTimeout(() => {
+        if (_seqAtErr !== _liveDataRunSeq) return;
+        _liveDataReruns++;
+        fetchLiveCalendarData();
+      }, 30000);
+    }
     if (ALL_EVENTS.length === 0)
       document.getElementById("loading-state").innerHTML =
         '<p class="text-red-400 font-bold">לא ניתן למשוך נתונים כעת. בדוק חיבור אינטרנט.</p>';

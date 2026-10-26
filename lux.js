@@ -1599,9 +1599,13 @@
           }
           var heb = "";
           try { heb = typeof window.getHebrewDateString === "function" ? window.getHebrewDateString(luxParseDate(ev.date)) : ""; } catch (e) {}
+          // ימים עד האירוע לפי ימים קלנדריים: היום → "היום", מחר → "מחר", שעבר → בלי (עד 10/2026 "בעוד 0/-1 ימים", census א22/א30)
+          var _t0 = new Date(); _t0.setHours(0, 0, 0, 0);
+          var _dd = Math.round((luxParseDate(ev.date) - _t0) / 86400000);
+          var _when = _dd === 0 ? " · היום" : _dd === 1 ? " · מחר" : _dd > 1 ? " · בעוד " + _dd + " ימים" : "";
           info.innerHTML =
             '<div class="lux-yw-evname">' + (ev.icon || "✨") + " " + ev.name + "</div>" +
-            '<div style="color:rgba(191,219,254,0.8);font-size:0.8rem;">' + dateStr + (heb ? " · " + heb : "") + " · בעוד " + Math.round(diff) + ' ימים</div>' +
+            '<div style="color:rgba(191,219,254,0.8);font-size:0.8rem;">' + dateStr + (heb ? " · " + heb : "") + _when + '</div>' +
             '<div class="lux-yw-ctas">' +
               '<button type="button" id="lux-yw-goto">פתח בלוח המועדים ↓</button>' +
               '<button type="button" id="lux-yw-cal">📅 פתח בלוח השנה</button>' +

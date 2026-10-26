@@ -717,16 +717,11 @@
     </footer>
 
     <script>
-      const savedTheme = localStorage.getItem("moadim_theme") || localStorage.getItem("theme");
-      const prefersDark = window.matchMedia(
-        "(prefers-color-scheme: dark)",
-      ).matches;
-
-      if (savedTheme === "dark" || (!savedTheme && prefersDark)) {
-        document.documentElement.classList.add("dark");
-      } else {
-        document.documentElement.classList.remove("dark");
-      }
+      // כמו בדף הבית: כהה רק כשנבחר "כהה"; "שמיים חיים" (ברירת המחדל) ו"בהיר" — רכיבי העיצוב הבהיר.
+      // בלי תלות ב-prefers-color-scheme (ה-TWA נפתח במצב כהה של כרום), ואחסון חסום לא זורק (census א87)
+      let savedTheme = null;
+      try { savedTheme = localStorage.getItem("moadim_theme") || localStorage.getItem("theme"); } catch (e) {}
+      document.documentElement.classList.toggle("dark", savedTheme === "dark");
     </script>
   </body>
 </html>

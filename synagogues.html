@@ -2627,7 +2627,8 @@
             if (!raw) continue;
             try {
               const obj = JSON.parse(raw);
-              if (obj && Array.isArray(obj.items) && obj.items.length > 0) {
+              // גיבוי — עד 90 יום (המטמון הרגיל 30); ישן יותר כבר לא מוצג כתוצאה (census א80)
+              if (obj && Array.isArray(obj.items) && obj.items.length > 0 && obj.ts && Date.now() - obj.ts <= 1000 * 60 * 60 * 24 * 90) {
                 if (!best || (obj.ts || 0) > (best.ts || 0)) best = obj;
               }
             } catch (e) {}

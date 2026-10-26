@@ -6566,7 +6566,9 @@ async function renderNextMoedTimes(e) {
     el.innerHTML = html;
     if (el.querySelector(".fast-live-countdown")) _ensureFastCountdownTicker();
   } catch (err) {
-    el.innerHTML = `<span class="opacity-80">✨ היום!</span>`;
+    // ביום צום — בלי "✨ היום!" (חגיגי) כשחישוב חלון הצום נכשל (census א14)
+    const _f = !!e && (e.type === "fast" || /צום|תענית|כיפור|באב/.test(e.name || ""));
+    el.innerHTML = _f ? "" : `<span class="opacity-80">✨ היום!</span>`;
   }
 }
 

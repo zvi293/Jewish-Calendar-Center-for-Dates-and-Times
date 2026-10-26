@@ -3219,7 +3219,8 @@
         list.innerHTML = arr.length
           ? arr.map(function (x, i) {
               var nd = nextDate(x);
-              var when = nd ? nd.date.toLocaleDateString("he-IL", { day: "numeric", month: "long" }) + " (בעוד " + nd.days + " ימים)" : "";
+              // "היום"/"מחר" — לא "בעוד 0/1 ימים" (census א30)
+              var when = nd ? nd.date.toLocaleDateString("he-IL", { day: "numeric", month: "long" }) + (nd.days === 0 ? " (היום)" : nd.days === 1 ? " (מחר)" : " (בעוד " + nd.days + " ימים)") : "";
               return '<div class="lux-nm-row"><span>' + esc(x.n) + " — " + toHebDayStr(x.d) + " ב" + esc(x.m) + (when ? " <small>" + when + "</small>" : "") + '</span><button type="button" data-i="' + i + '" aria-label="מחק">🗑️</button></div>';
             }).join("")
           : '<p class="lux-sheet-note" style="opacity:0.7;">אין עדיין תאריכים שמורים</p>';
@@ -4224,7 +4225,7 @@
         slides.push({
           cls: "lux-st-zman",
           html: '<div class="lux-st-big">🌾</div><h2>ספירת העומר</h2>' +
-                '<p class="lux-st-line">היום <b class="lux-st-range">' + window.CURRENT_OMER_DAY + '</b> ימים לעומר</p>' +
+                '<p class="lux-st-line">היום <b class="lux-st-range">' + (window.CURRENT_OMER_DAY === 1 ? "יום אחד" : window.CURRENT_OMER_DAY + "</b> ימים") + (window.CURRENT_OMER_DAY === 1 ? "</b>" : "") + ' לעומר</p>' + // census א30
                 '<p class="lux-st-sub">לא לשכוח לספור הערב! 🌙</p>'
         });
       }
@@ -4321,7 +4322,7 @@
           cls: "lux-st-holiday",
           html: '<div class="lux-st-big">' + (ev.icon || "✨") + "</div><h2>" + esc(ev.name) + "</h2>" +
                 // צום (גם יום כיפור) ויום זיכרון — "היום" בלי 🎉
-                '<p class="lux-st-line">' + (days === 0 ? (ev.type === "fast" ? "היום" : "היום! 🎉") : "בעוד <b>" + days + "</b> ימים") + "</p>" +
+                '<p class="lux-st-line">' + (days === 0 ? (ev.type === "fast" ? "היום" : "היום! 🎉") : days === 1 ? "<b>מחר</b>" : "בעוד <b>" + days + "</b> ימים") + "</p>" + // census א30
                 '<p class="lux-st-sub">' + luxParseDate(ev.date).toLocaleDateString("he-IL", { weekday: "long", day: "numeric", month: "long" }) + "</p>"
         });
       }

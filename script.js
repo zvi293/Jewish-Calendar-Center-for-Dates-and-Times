@@ -8414,7 +8414,8 @@ async function ensureYearFetched(year) {
     const data = await fetchHebcalWithCache(
       `https://www.hebcal.com/hebcal?v=1&cfg=json&year=${year}&i=on&maj=on&min=on&nx=on&mf=on&ss=on&mod=on&s=on`,
     );
-    if (!data || !data.items) return;
+    // תשובה בלי items — לא נעולה לכל הסשן: הפתיחה הבאה תנסה שוב (census א71)
+    if (!data || !data.items) { window.FETCHED_YEARS.delete(year); return; }
     const parsed = [];
     data.items.forEach(function (ev) {
       if (!ev.date || !ev.category) return;

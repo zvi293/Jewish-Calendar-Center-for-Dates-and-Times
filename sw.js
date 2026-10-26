@@ -392,9 +392,11 @@ self.addEventListener("fetch", (event) => {
             .then((r) => (r && r.ok ? cacheShellIfConsistent(key, r.clone()) : null))
             .catch(() => {})
             .then(release);
+          // אופליין בדף שלא נפתח קודם (credits.html וכו') — דף "אין חיבור" ולא דף הבית (census א77);
+          // ניווט לדף הבית עצמו (גם עם ?open=…) — עדיין index.html השמור
+          const isHome = url.pathname === "/" || url.pathname === "/index.html";
           return network.catch(() =>
-            caches
-              .match("/index.html")
+            (isHome ? caches.match("/index.html") : Promise.resolve(null))
               // גם הרשת נפלה וגם המטמון ריק (התקנה ראשונה אופליין / שרת פיתוח
               // באמצע רענון): בלי Response תקין respondWith זורק
               // "Failed to convert value to 'Response'" — מחזירים דף שגיאה מסודר
@@ -438,10 +440,15 @@ self.addEventListener("fetch", (event) => {
         .catch(() => null)
         .then((cached) => {
           if (!cached) return network.catch(() => Response.error());
+          // נתיבי הפרוקסי שלנו מעבירים שרתים חיצוניים (ספריא מחשבת טקסט ארוך) — חלון שפקע אינו עדות
+          // לחיבור איטי אל האתר, ולא מסמנים "רשת איטית" לדקה (census א76)
+          const viaProxy = /^\/(sefaria-api|hebcal-api|wikisource-api|benyehuda-api)\//.test(url.pathname);
           return raceNetworkWithCached(
             network.then((r) => (r && r.ok ? bodyReady(r) : Promise.reject(r))),
             cached,
             RUNTIME_NET_WINDOW_MS,
+            undefined,
+            !viaProxy,
           );
         }),
     );

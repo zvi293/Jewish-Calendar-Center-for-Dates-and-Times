@@ -30252,7 +30252,7 @@ document.addEventListener("keydown", (e) => {
       var cls = "hilc" + (c.isToday ? " hilc-today" : "") + (c.haH ? " hilc-has" : "");
       html +=
         "<div" +
-        (c.haH ? ' onclick="window._hilOpenFromCal(' + c.offset + ')" role="button" tabindex="0"' : "") +
+        (c.haH ? ' onclick="window._hilOpenFromCal(' + c.offset + ')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();window._hilOpenFromCal(' + c.offset + ')}" role="button" tabindex="0"' : "") + // Enter/רווח — census א96
         ' class="' + cls + '" title="' + (c.haH ? c.key + " · " + n + " הילולות" : "") + '">' +
         '<div class="hilc-heb">' + c.hebLetter + "</div>" +
         '<div class="hilc-greg">' + c.gregDay + "</div>" +
@@ -32151,11 +32151,11 @@ document.addEventListener("keydown", (e) => {
         (items.length > 1
           ? '<div style="display:flex;align-items:center;justify-content:space-between;direction:ltr;margin-bottom:1rem;">' +
             // קרוסלה מעגלית: החצים תמיד פעילים — מהאחרון ממשיכים לראשון ולהפך
-            '<button id="moad-prev" style="background:rgba(139,92,246,0.2);border:1px solid rgba(139,92,246,0.4);color:#c4b5fd;border-radius:0.75rem;padding:0.45rem 1rem;cursor:pointer;font-size:1.1rem;">‹</button>' +
+            '<button id="moad-prev" aria-label="דבר התורה הקודם" style="background:rgba(139,92,246,0.2);border:1px solid rgba(139,92,246,0.4);color:#c4b5fd;border-radius:0.75rem;padding:0.45rem 1rem;cursor:pointer;font-size:1.1rem;">‹</button>' +
             '<div style="display:flex;align-items:center;">' +
             dots +
             "</div>" +
-            '<button id="moad-next" style="background:rgba(139,92,246,0.2);border:1px solid rgba(139,92,246,0.4);color:#c4b5fd;border-radius:0.75rem;padding:0.45rem 1rem;cursor:pointer;font-size:1.1rem;">›</button>' +
+            '<button id="moad-next" aria-label="דבר התורה הבא" style="background:rgba(139,92,246,0.2);border:1px solid rgba(139,92,246,0.4);color:#c4b5fd;border-radius:0.75rem;padding:0.45rem 1rem;cursor:pointer;font-size:1.1rem;">›</button>' +
             "</div>" +
             '<p style="text-align:center;font-size:0.72rem;color:#475569;margin:0;">' +
             (i + 1) +

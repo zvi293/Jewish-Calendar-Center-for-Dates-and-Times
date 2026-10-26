@@ -8083,7 +8083,7 @@ function openCalendarDay(dateStr) {
                 <div style="margin-top:0.35rem;color:#334155;font-size:0.94rem;">${gregorianDate}</div>
                 <div style="margin-top:0.2rem;color:#2563eb;font-weight:800;">${hebrewDate || ""}</div>
               </div>
-              <button type="button" onclick="closeCalendarDayUser()" style="width:2.35rem;height:2.35rem;border:none;border-radius:999px;background:rgba(15,23,42,0.06);color:#475569;font-size:1.1rem;cursor:pointer;">✕</button>
+              <button type="button" onclick="closeCalendarDayUser()" aria-label="סגירת החלון" style="width:2.35rem;height:2.35rem;border:none;border-radius:999px;background:rgba(15,23,42,0.06);color:#475569;font-size:1.1rem;cursor:pointer;">✕</button>
             </div>
             ${shabbatHtml}
             <div style="margin-bottom:1rem;">

@@ -4313,12 +4313,15 @@
       // החג הקרוב
       var evs = (getCachedEvents() || []).filter(function (e) {
         if (e.type !== "major" && e.type !== "fast") return false;
-        var diff = (luxParseDate(e.date) - new Date()) / 86400000;
-        return diff > -0.5 && diff < 90;
+        // לפי ימים קלנדריים: החג של היום נשאר "היום" כל היום — עד 10/2026 הוא נעלם ב-12:00 (census א32)
+        var _t0 = new Date(); _t0.setHours(0, 0, 0, 0);
+        var diff = Math.round((luxParseDate(e.date) - _t0) / 86400000);
+        return diff >= 0 && diff < 90;
       });
       if (evs.length) {
         var ev = evs[0];
-        var days = Math.max(0, Math.ceil((luxParseDate(ev.date) - new Date()) / 86400000));
+        var _t1 = new Date(); _t1.setHours(0, 0, 0, 0);
+        var days = Math.max(0, Math.round((luxParseDate(ev.date) - _t1) / 86400000));
         slides.push({
           cls: "lux-st-holiday",
           html: '<div class="lux-st-big">' + (ev.icon || "✨") + "</div><h2>" + esc(ev.name) + "</h2>" +

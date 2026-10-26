@@ -8135,7 +8135,7 @@ function render(filter = "all", search = "") {
 
     // כרטיס לבנה: התאריך הוא יום תחילת הזמן בפועל (לפי המולד)
     const _cardDate = lvWin ? new Date(lvWin.start) : parseLocalDate(e.date);
-    const dateDisplay = `${ui.weekdayNames[_cardDate.getDay()]} | ${formatLocalizedDate(_cardDate, { day: "2-digit", month: "2-digit", year: "numeric" })} | <span class="text-slate-800 dark:text-slate-200 font-bold">${getHebrewDateString(lvWin ? _cardDate : new Date(e.date))}</span>`;
+    const dateDisplay = `${ui.weekdayNames[_cardDate.getDay()]} | ${formatLocalizedDate(_cardDate, { day: "2-digit", month: "2-digit", year: "numeric" })} | <span class="text-slate-800 dark:text-slate-200 font-bold">${getHebrewDateString(_cardDate)}</span>`;
 
     let extraTimesHtml = "";
     // ימי זיכרון (type "fast") — בלי זמני צום ובלי ספירה לסיום הצום

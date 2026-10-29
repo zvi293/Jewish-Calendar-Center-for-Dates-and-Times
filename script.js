@@ -354,7 +354,7 @@ function refreshLiveLanguageUI() {
   const omerModal = document.getElementById("omer-modal");
   if (omerModal && !omerModal.classList.contains("hidden")) {
     document.getElementById("omer-modal-text").textContent =
-      generateOmerText(CURRENT_OMER_DAY);
+      generateOmerText(_omerNightDay());
   }
 
   const calendarModal = document.getElementById("calendar-modal");
@@ -2469,12 +2469,33 @@ window._uxHideModal = _uxHideModal;
   };
 })();
 
+// הספירה שמוצגת בחלון העומר — של הלילה הקרוב (לפני הצאת) או של הלילה הנוכחי (אחריה), כמו
+// שהחלון אומר ("ספירת הלילה בעוד…", "הספירה המוצגת היא של הלילה הקרוב"). CURRENT_OMER_DAY הוא
+// של היום העברי של displayDate — לפני הצאת זה היום שנספר אמש (census א15: הוצגה ספירת אמש).
+// הלילה של TZEIT_TIME שייך ליום העברי של מחרתו — מזיזים לפי ההפרש בימים בינו לבין displayDate.
+function _omerNightDay() {
+  const n = CURRENT_OMER_DAY;
+  if (!(n >= 1 && n <= 49)) return n;
+  try {
+    const ctx = window._livePrayerContextData;
+    const tz = window.TZEIT_TIME;
+    if (!ctx || !(ctx.displayDate instanceof Date) || !(tz instanceof Date) || isNaN(tz.getTime())) return n;
+    const base = new Date(ctx.displayDate);
+    base.setHours(0, 0, 0, 0);
+    const night = new Date(tz.getFullYear(), tz.getMonth(), tz.getDate() + 1);
+    const m = n + Math.round((night - base) / 86400000);
+    return m >= 1 && m <= 49 ? m : n;
+  } catch (e) {
+    return n;
+  }
+}
+
 function openOmerModal() {
   const m = document.getElementById("omer-modal");
   // כבר פתוח (ghost-tap בנייד) — פתיחה שנייה הייתה מוסיפה נעילה ורשומה כפולות
   if (!m.classList.contains("hidden")) return;
   document.getElementById("omer-modal-text").textContent =
-    generateOmerText(CURRENT_OMER_DAY);
+    generateOmerText(_omerNightDay());
   _revealModalNoFreeze(m);
   lockBodyScroll();
   pushModalState("omer-modal");
@@ -29865,8 +29886,12 @@ document.addEventListener("keydown", (e) => {
     return "";
   }
 
-  function getHebInfo(offset) {
+  // "היום" של ההילולות (חצות של היום האזרחי שהיום העברי הנוכחי חל בו): אחרי צאת הכוכבים — מחר.
+  // משותף לחלון היום ולתאי הלוח החודשי (census א8) — עד 10/2026 הלוח חישב את ההפרש מהיום
+  // האזרחי, וחלון היום הוסיף עוד יום אחרי הצאת: לחיצה על תא פתחה את היום שאחריו.
+  function _hilBaseDate() {
     var d = new Date();
+    d.setHours(0, 0, 0, 0);
     // אחרי צאת הכוכבים – נחשב כיום הבא
     // נשתמש בקביעה הקיימת של המערכת (displayDate) שכבר מתחשבת בצאת הכוכבים
     // כפול fallback ל-TZEIT_TIME במקרה ש-displayDate עדיין לא נטען.
@@ -29891,6 +29916,11 @@ document.addEventListener("keydown", (e) => {
         }
       }
     } catch (e) {}
+    return d;
+  }
+
+  function getHebInfo(offset) {
+    var d = _hilBaseDate();
     d.setDate(d.getDate() + offset);
     var fmtM = new Intl.DateTimeFormat("he-IL-u-ca-hebrew", { month: "long" });
     var fmtD = new Intl.DateTimeFormat("he-IL-u-ca-hebrew", { day: "numeric" });
@@ -30231,13 +30261,10 @@ document.addEventListener("keydown", (e) => {
     // Day-of-week offset (Sunday=0 in JS)
     var dow = first.getDay();
 
-    // Today for highlighting
-    var todayStr = new Date().toDateString();
-
     var cells = [];
-    // Build date→offset map for today comparison
-    var today = new Date();
-    today.setHours(0, 0, 0, 0);
+    // הבסיס של "היום" — אותו בסיס כמו בחלון היום (אחרי צאת הכוכבים: מחר), census א8
+    var today = _hilBaseDate();
+    var todayStr = today.toDateString();
 
     for (var i = 0; i < len; i++) {
       var cellDate = new Date(first);
@@ -30338,7 +30365,7 @@ document.addEventListener("keydown", (e) => {
         _activeModals.pop();
     }
 
-    if (!_calRefDate) _calRefDate = new Date();
+    if (!_calRefDate) _calRefDate = _hilBaseDate();
 
     var modal = document.createElement("div");
     modal.id = "hilulot-cal-modal";
@@ -30429,7 +30456,7 @@ document.addEventListener("keydown", (e) => {
     renderCalendarBody(_calRefDate);
 
     window._hilCalToday = function () {
-      _calRefDate = new Date();
+      _calRefDate = _hilBaseDate();
       renderCalendarBody(_calRefDate);
     };
 

@@ -2707,10 +2707,13 @@
         el.innerHTML = '<span class="lux-crit-ico" aria-hidden="true">⏰</span><span class="lux-crit-txt"></span><button type="button" class="lux-crit-x" aria-label="סגור">✕</button>';
         document.body.appendChild(el);
         el.querySelector(".lux-crit-x").addEventListener("click", function () {
-          try { sessionStorage.setItem(dKey, "1"); } catch (e) {}
+          // הזמן שמוצג עכשיו (census א23) — לא זה שהיה ביצירת הגלולה: כששני זמנים קרובים
+          // (שעה זמנית קצרה מ-30 דק', בקווי רוחב צפוניים בחורף) ✕ דחה את הקודם והגלולה חזרה
+          try { sessionStorage.setItem(el.__luxDKey || dKey, "1"); } catch (e) {}
           el.remove();
         });
       }
+      el.__luxDKey = dKey;
       var critTxt = show.l + " בעוד " + mins + " דק' (" + fmtTime(show.iso) + ")";
       var critEl = el.querySelector(".lux-crit-txt");
       // כתיבה רק בשינוי — כתיבה זהה כל דקה מעירה observers ומייצרת עבודה מיותרת
@@ -5424,7 +5427,11 @@
         });
       } catch (e) {}
     }
+    // שנה עברית מעוברת (מחזור 19 שנה)
+    function isLeapHeb(y) { return ((7 * y + 1) % 19) < 7; }
     // המופעים הקרובים של תאריך עברי — עד maxN מופעים (סריקת ~6 שנים)
+    // census א36: "אדר א׳"/"אדר ב׳" — רק אותו חודש בשנה מעוברת (עד 10/2026 "אדר ב׳" החזיר את אדר א'),
+    // ובשנה פשוטה — אדר. "אדר" סתם — כמו קודם: האדר הראשון שמגיע
     function nextOccurrences(hMonth, hDay, maxN) {
       var target = normM(hMonth);
       var out = [];
@@ -5432,7 +5439,7 @@
         var d = new Date(Date.now() + i * 86400000);
         if (luxHebDay(d) !== hDay) continue;
         var m = normM(luxHebMonth(d));
-        if (m === target || (target.indexOf("אדר") === 0 && m.indexOf("אדר") === 0)) {
+        if (m === target || (target === "אדר" && m.indexOf("אדר") === 0) || (m === "אדר" && target.indexOf("אדר") === 0)) {
           out.push({ date: d, days: i });
           i += 300; // דילוג לשנה הבאה — אין שני מופעים באותה שנה (חוץ מאדר, וזה מספיק)
         }
@@ -5541,6 +5548,9 @@
             "<small>" + (fmtH(d) || hebStr) + "</small> " + daysChip(d) +
             eventsOnDate(d) +
             resultActions(fmtG(d) + " · " + hebStr, d, hebStr);
+        } else if (normM(hm) === "אדר" && isLeapHeb(hy)) {
+          // "אדר" בשנה מעוברת — יש שני חודשי אדר; לא "התאריך לא קיים" (census א36)
+          out.innerHTML = '<span style="color:#b45309;">בשנה זו (שנה מעוברת) יש אדר א׳ ואדר ב׳ — בחרו אחד מהם ברשימת החודשים</span>';
         } else {
           out.innerHTML = '<span style="color:#b45309;">התאריך לא קיים בשנה זו (למשל אדר ב׳ בשנה רגילה, או ל׳ בחודש חסר)</span>';
         }
@@ -5567,13 +5577,22 @@
         if (!v) { out.innerHTML = '<span style="color:#b45309;">בחרו קודם תאריך לידה</span>'; return; }
         var birth = new Date(v + "T12:00:00");
         var bd = luxHebDay(birth), bm2 = luxHebMonth(birth), by = luxHebYear(birth);
-        var age = curY - by;
-        var target = hebToGreg(by + years, bm2, bd);
-        // אדר בשנה מעוברת/רגילה — נסיון גיבוי
-        if (!target && normM(bm2).indexOf("אדר") === 0) {
-          target = hebToGreg(by + years, "אדר", bd) || hebToGreg(by + years, "אדר ב׳", bd);
+        // יום ההולדת העברי בשנה עברית נתונה — אותם גיבויים כמו לבר/בת המצווה
+        function bdayIn(y) {
+          var t = hebToGreg(y, bm2, bd);
+          // אדר בשנה מעוברת/רגילה — נסיון גיבוי
+          if (!t && normM(bm2).indexOf("אדר") === 0) {
+            t = hebToGreg(y, "אדר", bd) || hebToGreg(y, "אדר ב׳", bd);
+          }
+          if (!t && bd === 30) t = hebToGreg(y, bm2, 29);
+          return t;
         }
-        if (!target && bd === 30) target = hebToGreg(by + years, bm2, 29);
+        var age = curY - by;
+        // census א36: לפני יום ההולדת העברי של השנה — שנה אחת פחות (עד 10/2026 הגיל יצא גבוה באחד)
+        var thisBd = bdayIn(curY), t0 = new Date();
+        t0.setHours(0, 0, 0, 0);
+        if (thisBd) { thisBd = new Date(thisBd); thisBd.setHours(0, 0, 0, 0); if (thisBd > t0) age--; }
+        var target = bdayIn(by + years);
         if (target) {
           var title = "ה" + (years === 13 ? "בר" : "בת") + " מצווה";
           out.innerHTML =
@@ -5620,27 +5639,36 @@
       return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
     }
     function trackState(key) { return jget("lux_track_" + key, { last: null, streak: 0 }); }
-    function yesterdayStr() {
-      var yd = new Date(Date.now() - 86400000);
-      return yd.getFullYear() + "-" + String(yd.getMonth() + 1).padStart(2, "0") + "-" + String(yd.getDate()).padStart(2, "0");
+    // היום שלפני "YYYY-MM-DD" — לפי רכיבי התאריך המקומי (עמיד לשעון קיץ)
+    function dayBefore(iso) {
+      var p = String(iso || "").split("-");
+      var d = new Date(+p[0], +p[1] - 1, +p[2] - 1);
+      return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
     }
-    function markDone(key) {
+    function yesterdayStr() { return dayBefore(todayStr()); }
+    // census א49ב: day = היום שהקורא מציג (קורא שנשאר פתוח אחרי חצות מסמן את היום שלו, לא את היום החדש)
+    function markDone(key, day) {
       var s = trackState(key);
-      var t = todayStr();
-      if (s.last === t) return s;
-      s.streak = s.last === yesterdayStr() ? s.streak + 1 : 1;
+      var t = day || todayStr();
+      if (s.last === t || (s.last && s.last > t)) return s;
+      s.streak = s.last === dayBefore(t) ? s.streak + 1 : 1;
       s.last = t;
       jset("lux_track_" + key, s);
       return s;
     }
     // ביטול הסימון של היום — לחיצה שנייה על "סיימתי" מחזירה את המצב לאחור
-    function unmarkDone(key) {
+    function unmarkDone(key, day) {
       var s = trackState(key);
-      if (s.last !== todayStr()) return s;
+      var t = day || todayStr();
+      if (s.last !== t) return s;
       s.streak = Math.max(0, s.streak - 1);
-      s.last = s.streak > 0 ? yesterdayStr() : null;
+      s.last = s.streak > 0 ? dayBefore(t) : null;
       jset("lux_track_" + key, s);
       return s;
+    }
+    // הרצף שמוצג — רק אם נלמד היום או אתמול; אחרת הוא כבר נשבר (census א38, כמו lux_streak)
+    function liveStreak(s) {
+      return (s.last === todayStr() || s.last === yesterdayStr()) ? (s.streak || 0) : 0;
     }
     function localDateKey(d) {
       return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
@@ -5772,11 +5800,13 @@
       ov.querySelector("#lux-tr-fminus").addEventListener("click", function () { fs = Math.max(60, luxFsNow(fs) - 10); applyFs._user = true; applyFs(); });
       ov.querySelector(".lux-sel-close").addEventListener("click", function () { luxModalClose("lux-track-reader"); });
       var doneBtn = ov.querySelector("#lux-tr-done");
-      if (trackState(key).last === todayStr()) { doneBtn.classList.add("lux-tr-done-on"); doneBtn.textContent = "✓ הושלם היום"; }
+      // היום שהקורא מציג — הלחיצה נקשרת אליו גם אם הקורא נשאר פתוח אחרי חצות (census א49ב)
+      var openDay = todayStr();
+      if (trackState(key).last === openDay) { doneBtn.classList.add("lux-tr-done-on"); doneBtn.textContent = "✓ הושלם היום"; }
       doneBtn.addEventListener("click", function () {
         // לחיצה שנייה מבטלת את הסימון של היום
-        if (trackState(key).last === todayStr()) {
-          unmarkDone(key);
+        if (trackState(key).last === openDay) {
+          unmarkDone(key, openDay);
           doneBtn.classList.remove("lux-tr-done-on");
           doneBtn.textContent = "✓ סיימתי להיום";
           if (typeof window.showToast === "function") {
@@ -5785,7 +5815,7 @@
           renderCards();
           return;
         }
-        var s = markDone(key);
+        var s = markDone(key, openDay);
         doneBtn.classList.add("lux-tr-done-on");
         doneBtn.textContent = "✓ הושלם היום";
         luxConfetti();
@@ -5798,6 +5828,8 @@
         var item = map && map[tr.title];
         if (!item || !item.ref) {
           area.innerHTML = '<p style="text-align:center;color:#b45309;padding:2rem;">לא הצלחנו לטעון את הלימוד של היום.<br>בדקו את החיבור ונסו שוב.</p>';
+          // הכותרת לא נשארת "טוען..." אחרי השגיאה (census א44)
+          ov.querySelector("#lux-tr-ref").textContent = "הלימוד לא נטען";
           return;
         }
         ov.querySelector("#lux-tr-ref").textContent = item.he || item.ref;
@@ -5826,7 +5858,8 @@
         var s = trackState(key);
         var badge = c.querySelector(".lux-tc-badge");
         var done = s.last === todayStr();
-        badge.textContent = done ? "✓ הושלם היום" : (s.streak > 1 ? "🔥 " + s.streak + " ימים" : "מחכה לך");
+        var st = liveStreak(s);
+        badge.textContent = done ? "✓ הושלם היום" : (st > 1 ? "🔥 " + st + " ימים" : "מחכה לך");
         badge.classList.toggle("lux-tc-done", done);
       });
     }

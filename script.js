@@ -7086,7 +7086,9 @@ function toggleSettings() {
     // תמיד מראש ההגדרות (בקשת המשתמש 20/10/2026) — בלי לזכור גלילה מהפתיחה הקודמת;
     // אחרי החשיפה: על חלון מוסתר האיפוס לא חל וכרום מחזיר את המיקום הקודם
     m.querySelectorAll(".overflow-y-auto").forEach((el) => { el.scrollTop = 0; });
-    m.children[0].classList.remove("scale-95");
+    // הכרטיס — לא children[0]: מאז שה-✕ (#settings-close-x) עבר לשכבה לפניו, children[0] הוא ה-✕
+    // והכרטיס נשאר scale(0.95) (בודק jc-screens, 30/10/2026)
+    (m.querySelector(":scope > div") || m.children[0]).classList.remove("scale-95");
     lockBodyScroll();
     pushModalState("settings-modal");
   } else {
@@ -7098,7 +7100,7 @@ function toggleSettings() {
       return;
     }
     m.__closing = false;
-    _uxHideModal(m, m.children[0]);
+    _uxHideModal(m, m.querySelector(":scope > div") || m.children[0]);
     unlockBodyScroll();
   }
 }

@@ -9385,7 +9385,12 @@ html.dark #ben-ish-hai-modal [style*="rgb(250, 249, 246)"] {
 /* כרטיסי פופאפ (פרטי יום / צור קשר / בחירת נוסח) — כרטיס כהה על שכבה */
 html.dark #calendar-day-modal > div[style*="#faf9f6"],
 html.dark #contact-modal > div[style*="#faf9f6"],
-html.dark #nusach-selection-modal > div[style*="#faf9f6"] {
+html.dark #nusach-selection-modal > div[style*="#faf9f6"],
+/* בלי בורר-מאפיין: _uxEnter כותב will-change וה-style מסודר מחדש ("#faf9f6" → rgb), ואז הכרטיס
+   נשאר בהיר והטקסט מתבהר — לא קריא (בודק jc-screens, 30/10/2026). לכל חלון כרטיס אחד ישיר */
+html.dark #calendar-day-modal > div,
+html.dark #contact-modal > div,
+html.dark #nusach-selection-modal > div {
   background: #1e293b !important;
 }
 

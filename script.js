@@ -29827,12 +29827,14 @@ document.addEventListener("keydown", (e) => {
     // חנוכה ויום הזיכרון/העצמאות — לפי הלוח (KosherZmanim) ולא לפי מספר היום: נרות ו'–ח' עברו לטבת/ר"ח
     // והוסתרו ע"י כלל ראש החודש, בכסלו חסר נר ח' יצא גם בג' טבת, וימי אייר לא נדחו (census א7)
     var _modern = false;
+    var _byCal = false; // הלוח זמין — חנוכה והצומות הנדחים לפי הלוח, לא לפי מספר היום
     try {
       var K = window.KosherZmanim;
       if (date && K && K.JewishCalendar) {
         var jc = new K.JewishCalendar(new Date(date.getFullYear(), date.getMonth(), date.getDate(), 12));
         try { jc.setInIsrael(true); } catch (e) {}
         try { jc.setUseModernHolidays(true); _modern = true; } catch (e) {}
+        _byCal = true;
         var ch = jc.getDayOfChanukah();
         // ראש חודש טבת — ל' כסלו וא' טבת (ל' כסלו נשאר בלי הסימון עד 10/2026)
         if (ch > 0) return "חנוכה — נר " + "אבגדהוזח".charAt(ch - 1) + "׳" + ((m.indexOf("טבת") !== -1 && day === 1) || day === 30 ? " (ר\"ח טבת)" : "");
@@ -29841,8 +29843,18 @@ document.addEventListener("keydown", (e) => {
           if (yti === K.JewishCalendar.YOM_HAZIKARON) return "יום הזיכרון";
           if (yti === K.JewishCalendar.YOM_HAATZMAUT) return "יום העצמאות";
         }
+        // צומות שנדחים משבת — לפי הלוח (getYomTovIndex כבר מטפל בדחייה); לפי מספר היום התווית
+        // יצאה בשבת ויום הצום בפועל נשאר בלי תווית (בודק jc-screens, 30/10/2026)
+        var fyti = jc.getYomTovIndex();
+        if (fyti === K.JewishCalendar.FAST_OF_GEDALYAH) return "צום גדליה";
+        if (fyti === K.JewishCalendar.FAST_OF_ESTHER) return "תענית אסתר";
+        if (fyti === K.JewishCalendar.SEVENTEEN_OF_TAMMUZ) return "צום שבעה עשר בתמוז";
+        if (fyti === K.JewishCalendar.TISHA_BEAV) return "תשעה באב";
+        var jcNext = new K.JewishCalendar(new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1, 12));
+        try { jcNext.setInIsrael(true); } catch (e) {}
+        if (jcNext.getYomTovIndex() === K.JewishCalendar.TISHA_BEAV) return "ערב תשעה באב";
       }
-    } catch (e) { _modern = false; }
+    } catch (e) { _modern = false; _byCal = false; }
     // ראש חודש — 1 of every month (except תשרי which is ראש השנה)
     if (day === 1 && m.indexOf("תשרי") === -1) return "ראש חודש";
     // 30 of months that have 30 days is also ראש חודש (1st day)
@@ -29876,12 +29888,12 @@ document.addEventListener("keydown", (e) => {
     }
     // ── תמוז ──
     if (m.indexOf("תמוז") !== -1) {
-      if (day === 17) return "צום שבעה עשר בתמוז";
+      if (!_byCal && day === 17) return "צום שבעה עשר בתמוז";
     }
     // ── אב ──
     if (m.indexOf("אב") !== -1 && m.indexOf("שבט") === -1) {
-      if (day === 8) return "ערב תשעה באב";
-      if (day === 9) return "תשעה באב";
+      if (!_byCal && day === 8) return "ערב תשעה באב";
+      if (!_byCal && day === 9) return "תשעה באב";
       if (day === 15) return "ט\"ו באב";
     }
     // ── אלול ──
@@ -29892,7 +29904,7 @@ document.addEventListener("keydown", (e) => {
     if (m.indexOf("תשרי") !== -1) {
       if (day === 1) return "ראש השנה (א׳)";
       if (day === 2) return "ראש השנה (ב׳)";
-      if (day === 3) return "צום גדליה";
+      if (!_byCal && day === 3) return "צום גדליה";
       if (day === 9) return "ערב יום כיפור";
       if (day === 10) return "יום הכיפורים";
       if (day === 14) return "ערב סוכות";
@@ -29916,9 +29928,10 @@ document.addEventListener("keydown", (e) => {
     }
     // ── טבת ──
     if (m.indexOf("טבת") !== -1) {
-      if (day === 1) return "חנוכה — נר ז׳ (ר\"ח טבת)";
-      if (day === 2) return "חנוכה — נר ח׳";
-      if (day === 3) return "חנוכה — נר ח׳";
+      // בלי הלוח בלבד — עם הלוח getDayOfChanukah למעלה כבר קבע (ג' טבת אחרי כסלו מלא אינו חנוכה)
+      if (!_byCal && day === 1) return "חנוכה — נר ז׳ (ר\"ח טבת)";
+      if (!_byCal && day === 2) return "חנוכה — נר ח׳";
+      if (!_byCal && day === 3) return "חנוכה — נר ח׳";
       if (day === 10) return "צום עשרה בטבת";
     }
     // ── שבט ──
@@ -29933,7 +29946,7 @@ document.addEventListener("keydown", (e) => {
         if (day === 15) return "שושן פורים קטן";
         return "";
       }
-      if (day === 13) return "תענית אסתר";
+      if (!_byCal && day === 13) return "תענית אסתר";
       if (day === 14) return "פורים";
       if (day === 15) return "שושן פורים";
     }
@@ -30177,7 +30190,7 @@ document.addEventListener("keydown", (e) => {
       '<button id="hil-today-btn" style="background:rgba(251,191,36,0.15);border:1px solid rgba(251,191,36,0.45);color:#fbbf24;border-radius:0.5rem;padding:0.18rem 0.85rem;cursor:pointer;font-size:0.72rem;font-weight:700;margin:0.35rem auto 0.4rem;display:' +
       (_dayOffset !== 0 ? "inline-block" : "none") +
       ';">חזרה ליום הנוכחי</button>' +
-      '<p id="hil-greg-date" style="font-size:0.78rem;color:#475569;margin:0;direction:ltr;">' +
+      '<p id="hil-greg-date" dir="rtl" style="font-size:0.78rem;color:#475569;margin:0;">' +
       info.gregStr +
       (info.specialDay ? ' <span style="color:#fbbf24;font-weight:700;" dir="rtl">• ' + info.specialDay + '</span>' : '') +
       "</p>" +

@@ -30,6 +30,14 @@ function safeCacheSetItem(cacheKey, valueStr) {
   return false; // אין מקום גם אחרי פינוי (ערך ענק) — מוותרים על המטמון בשקט
 }
 
+// כתיבה של בחירת משתמש (גודל כתב, נוסח, סימניות, מתגי פירוש): באחסון מלא מפנה מטמון ישן,
+// ואם בכל זאת נכשל (מלא/חסום) — הודעה אחת, במקום לחיצה שלא עושה כלום (census א66)
+function _userSetItem(key, valueStr) {
+  if (safeCacheSetItem(key, String(valueStr))) return true;
+  if (typeof showToast === "function") showToast("⚠️ האחסון באתר מלא או חסום — השינוי לא נשמר", "error", 3500);
+  return false;
+}
+
 // ── מדיניות מטמון ה-API (09/2026 — אתר שנפתח תמיד, גם בלי אינטרנט / ברשת חלשה) ──
 // כל הכתובות שעוברות כאן מפורשות-תאריך (hebcal) או טקסט קבוע (ספריא) — התוכן של
 // כתובת נתונה לא משתנה, ולכן גם עותק ישן נכון: עותק שמור מוחזר תמיד מיד (בלי
@@ -1269,7 +1277,8 @@ function _updateOmerCountdownDisplay() {
 
   let targetMs, beforeTzeit;
 
-  if (now < todayTzeit) {
+  // אחרי הצאת TZEIT_TIME כבר של מחר, ואחרי חצות הוא של היום — "לילה" לפי _omerInNight (census א15)
+  if (_omerInNight(new Date(now)) !== true && now < todayTzeit) {
     // Daytime — count down to tonight's tzet
     targetMs = todayTzeit;
     beforeTzeit = true;
@@ -2469,22 +2478,38 @@ window._uxHideModal = _uxHideModal;
   };
 })();
 
-// הספירה שמוצגת בחלון העומר — של הלילה הקרוב (לפני הצאת) או של הלילה הנוכחי (אחריה), כמו
-// שהחלון אומר ("ספירת הלילה בעוד…", "הספירה המוצגת היא של הלילה הקרוב"). CURRENT_OMER_DAY הוא
-// של היום העברי של displayDate — לפני הצאת זה היום שנספר אמש (census א15: הוצגה ספירת אמש).
-// הלילה של TZEIT_TIME שייך ליום העברי של מחרתו — מזיזים לפי ההפרש בימים בינו לבין displayDate.
+// האם עכשיו לילה של ספירה — מצאת הכוכבים ועד עלות השחר (census א15). אחרי הצאת displayDate
+// כבר עבר ליום העברי הבא (ו-TZEIT_TIME איתו — הצאת של מחר); אחרי חצות ועד עלות השחר
+// displayDate הוא היום האזרחי, אבל עדיין הלילה שהתחיל אמש בצאת.
+function _omerInNight(now) {
+  now = now || new Date();
+  const ctx = window._livePrayerContextData;
+  if (!ctx || !(ctx.displayDate instanceof Date)) return null;
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const dd = new Date(ctx.displayDate);
+  dd.setHours(0, 0, 0, 0);
+  if (dd > today) return true;
+  let alot = null;
+  try {
+    const z = window._lastZData;
+    if (z && z.times && z.times.alotHaShachar) alot = new Date(z.times.alotHaShachar);
+  } catch (e) {}
+  alot = (!alot || isNaN(alot))
+    ? new Date(today.getFullYear(), today.getMonth(), today.getDate(), 4, 45)
+    : new Date(today.getFullYear(), today.getMonth(), today.getDate(), alot.getHours(), alot.getMinutes());
+  return now < alot;
+}
+
+// הספירה שמוצגת בחלון העומר — של הלילה הנוכחי (מהצאת ועד עלות השחר) או של הלילה הקרוב (ביום),
+// כמו שהחלון אומר ("הספירה המוצגת היא של הלילה הקרוב"). CURRENT_OMER_DAY הוא של היום העברי
+// של displayDate — ביום זה היום שנספר אמש (census א15: הוצגה ספירת אמש).
 function _omerNightDay() {
   const n = CURRENT_OMER_DAY;
   if (!(n >= 1 && n <= 49)) return n;
   try {
-    const ctx = window._livePrayerContextData;
-    const tz = window.TZEIT_TIME;
-    if (!ctx || !(ctx.displayDate instanceof Date) || !(tz instanceof Date) || isNaN(tz.getTime())) return n;
-    const base = new Date(ctx.displayDate);
-    base.setHours(0, 0, 0, 0);
-    const night = new Date(tz.getFullYear(), tz.getMonth(), tz.getDate() + 1);
-    const m = n + Math.round((night - base) / 86400000);
-    return m >= 1 && m <= 49 ? m : n;
+    const inNight = _omerInNight();
+    if (inNight !== false) return n;
+    return n < 49 ? n + 1 : n;
   } catch (e) {
     return n;
   }
@@ -24151,7 +24176,8 @@ let _prayerFontSize = parseInt(
 // גם קוראי lux.js (סליחות/מסלולים/סדר אישי) כותבים לאותו מפתח — לכן חובה
 // לרענן את המשתנה מהאחסון לפני כל שימוש, אחרת ערך ישן ידרוס את בחירת המשתמש
 function _syncPrayerFontFromStorage() {
-  const v = parseInt(localStorage.getItem(FONT_SIZE_KEY), 10);
+  let v = NaN;
+  try { v = parseInt(localStorage.getItem(FONT_SIZE_KEY), 10); } catch (e) {} // אחסון חסום (census א66)
   if (!isNaN(v)) _prayerFontSize = Math.max(60, Math.min(200, v));
 }
 // נקודת מוצא לשינוי גודל: כפולה של 10 בטווח, כדי ש-+/- יזיזו תמיד בדיוק 10%
@@ -25579,7 +25605,7 @@ function changePrayerFontSize(delta, targetSelector) {
   // (ערך חריג שנשמר בעבר גרם לקפיצה לא צפויה בלחיצה הראשונה)
   _syncPrayerFontFromStorage();
   _prayerFontSize = Math.max(60, Math.min(200, _fsStep(_prayerFontSize) + delta));
-  localStorage.setItem(FONT_SIZE_KEY, _prayerFontSize);
+  _userSetItem(FONT_SIZE_KEY, _prayerFontSize);
   // עוגן מיקום קריאה — נלכד לפני ההחלה (בכל הקוראים הגלויים שהשינוי נוגע בהם)
   // ומשוחזר אחרי שכולם קיבלו את הגודל החדש
   const _fsAnchor = delta !== 0 ? _fontScrollAnchorCaptureAll(targetSelector) : null;
@@ -25764,6 +25790,118 @@ function closeShirHashirimModal() {
 }
 
 // ── Dedicated Ben Ish Hai Page ────────────────────────────
+// שנות ההלכות של בן איש חי — ברמה העליונה כדי שגם החיפוש בספרייה ישתמש באותן רשימות (census א51).
+// שנה ב' בספריא: בלי במדבר ודברים ובלי מה שאחרי כי תבוא — כך במקור (census א63, נבדק מול האינדקס של ספריא 29/10/2026)
+var _BIH_YEARS = [
+  { he: "שנה ראשונה", en: "Halachot 1st Year", color: "#6366f1",
+    parshiyot: [
+      { he: "בראשית",       en: "Bereshit",            dr: "Bereshit" },
+      { he: "נח",            en: "Noach",               dr: "Noach" },
+      { he: "לך לך",         en: "Lech Lecha",          dr: "Lech Lecha" },
+      { he: "וירא",          en: "Vayera",              dr: "Vayera" },
+      { he: "חיי שרה",       en: "Chayei Sara",         dr: "Chayei Sara" },
+      { he: "תולדות",        en: "Toldot",              dr: "Toldot" },
+      { he: "ויצא",          en: "Vayetzei",            dr: "Vayetzei" },
+      { he: "וישלח",         en: "Vayishlach",          dr: "Vayishlach" },
+      { he: "וישב",          en: "Vayeshev",            dr: "Vayeshev" },
+      { he: "חנוכה",         en: "Chanukah",            dr: null },
+      { he: "מקץ",           en: "Miketz",              dr: "Miketz" },
+      { he: "ויגש",          en: "Vayigash",            dr: "Vayigash" },
+      { he: "ויחי",          en: "Vayechi",             dr: "Vayechi" },
+      { he: "שמות",          en: "Shemot",              dr: "Shemot" },
+      { he: "וארא",          en: "Vaera",               dr: "Vaera" },
+      { he: "בא",            en: "Bo",                  dr: "Bo" },
+      { he: "בשלח",          en: "Beshalach",           dr: "Beshalach" },
+      { he: "יתרו",          en: "Yitro",               dr: "Yitro" },
+      { he: "משפטים",        en: "Mishpatim",           dr: "Mishpatim" },
+      { he: "תרומה",         en: "Terumah",             dr: "Terumah" },
+      { he: "תצוה",          en: "Tetzaveh",            dr: "Tetzaveh" },
+      { he: "כי תשא",        en: "Ki Tisa",             dr: "Ki Tisa" },
+      { he: "ויקהל",         en: "Vayakhel",            dr: "Vayakhel" },
+      { he: "פקודי",         en: "Pekudei",             dr: "Pekudei" },
+      { he: "ויקרא",         en: "Vayikra",             dr: "Vayikra" },
+      { he: "צו",            en: "Tzav",                dr: "Tzav" },
+      { he: "שמיני",         en: "Shmini",              dr: "Shmini" },
+      { he: "תזריע-מצורע",   en: "Tazria Metzora",      dr: "Tazria" },
+      { he: "אחרי-קדושים",   en: "Achrei Mot Kedoshim", dr: "Achrei Mot" },
+      { he: "אמור",          en: "Emor",                dr: "Emor" },
+      { he: "בהר-בחקותי",    en: "Behar Bechukotai",    dr: "Behar" },
+      { he: "במדבר",         en: "Bamidbar",            dr: "Bamidbar" },
+      { he: "נשא",           en: "Nasso",               dr: "Nasso" },
+      { he: "בהעלותך",       en: "Beha'alotcha",        dr: "Beha'alotcha" },
+      { he: "שלח",           en: "Sh'lach",             dr: "Sh'lach" },
+      { he: "קרח",           en: "Korach",              dr: "Korach" },
+      { he: "חקת",           en: "Chukat",              dr: "Chukat" },
+      { he: "בלק",           en: "Balak",               dr: "Balak" },
+      { he: "פינחס",         en: "Pinchas",             dr: "Pinchas" },
+      { he: "מטות",          en: "Matot",               dr: "Matot" },
+      { he: "מסעי",          en: "Masei",               dr: "Masei" },
+      { he: "דברים",         en: "Devarim",             dr: "Devarim" },
+      { he: "ואתחנן",        en: "Vaetchanan",          dr: "Vaetchanan" },
+      { he: "עקב",           en: "Eikev",               dr: "Eikev" },
+      { he: "ראה",           en: "Re'eh",               dr: "Re'eh" },
+      { he: "שופטים",        en: "Shoftim",             dr: "Shoftim" },
+      { he: "כי תצא",        en: "Ki Teitzei",          dr: "Ki Teitzei" },
+      { he: "כי תבוא",       en: "Ki Tavo",             dr: "Ki Tavo" },
+      { he: "נצבים",         en: "Nitzavim",            dr: "Nitzavim" },
+      { he: "וילך",          en: "Vayeilech",           dr: "Vayeilech" },
+      { he: "האזינו",        en: "Ha'Azinu",            dr: "Ha'Azinu" },
+      { he: "וזאת הברכה",    en: "V'Zot HaBerachah",    dr: "V'Zot HaBerachah" },
+    ],
+  },
+  { he: "שנה שניה", en: "Halachot 2nd Year", color: "#f59e0b",
+    parshiyot: [
+      { he: "בראשית",       en: "Bereshit",            dr: "Bereshit" },
+      { he: "נח",            en: "Noach",               dr: "Noach" },
+      { he: "לך לך",         en: "Lech Lecha",          dr: "Lech Lecha" },
+      { he: "וירא",          en: "Vayera",              dr: "Vayera" },
+      { he: "חיי שרה",       en: "Chayei Sara",         dr: "Chayei Sara" },
+      { he: "תולדות",        en: "Toldot",              dr: "Toldot" },
+      { he: "ויצא",          en: "Vayetzei",            dr: "Vayetzei" },
+      { he: "וישלח",         en: "Vayishlach",          dr: "Vayishlach" },
+      { he: "וישב",          en: "Vayeshev",            dr: "Vayeshev" },
+      { he: "מקץ",           en: "Miketz",              dr: "Miketz" },
+      { he: "ויגש",          en: "Vayigash",            dr: "Vayigash" },
+      { he: "ויחי",          en: "Vayechi",             dr: "Vayechi" },
+      { he: "שמות",          en: "Shemot",              dr: "Shemot" },
+      { he: "וארא",          en: "Vaera",               dr: "Vaera" },
+      { he: "בא",            en: "Bo",                  dr: "Bo" },
+      { he: "בשלח",          en: "Beshalach",           dr: "Beshalach" },
+      { he: "יתרו",          en: "Yitro",               dr: "Yitro" },
+      { he: "משפטים",        en: "Mishpatim",           dr: "Mishpatim" },
+      { he: "תרומה",         en: "Terumah",             dr: "Terumah" },
+      { he: "תצוה",          en: "Tetzaveh",            dr: "Tetzaveh" },
+      { he: "כי תשא",        en: "Ki Tisa",             dr: "Ki Tisa" },
+      { he: "ויקהל",         en: "Vayakhel",            dr: "Vayakhel" },
+      { he: "פקודי",         en: "Pekudei",             dr: "Pekudei" },
+      { he: "ויקרא",         en: "Vayikra",             dr: "Vayikra" },
+      { he: "צו",            en: "Tzav",                dr: "Tzav" },
+      { he: "שמיני",         en: "Shmini",              dr: "Shmini" },
+      { he: "תזריע",         en: "Tazria",              dr: "Tazria" },
+      { he: "מצורע",         en: "Metzora",             dr: "Metzora" },
+      { he: "אחרי מות",      en: "Achrei Mot",          dr: "Achrei Mot" },
+      { he: "קדושים",        en: "Kedoshim",            dr: "Kedoshim" },
+      { he: "אמור",          en: "Emor",                dr: "Emor" },
+      { he: "בהר-בחקותי",    en: "Behar Bechukotai",    dr: "Behar" },
+      { he: "נשא",           en: "Nasso",               dr: "Nasso" },
+      { he: "בהעלותך",       en: "Beha'alotcha",        dr: "Beha'alotcha" },
+      { he: "שלח",           en: "Sh'lach",             dr: "Sh'lach" },
+      { he: "קרח",           en: "Korach",              dr: "Korach" },
+      { he: "חקת",           en: "Chukat",              dr: "Chukat" },
+      { he: "בלק",           en: "Balak",               dr: "Balak" },
+      { he: "פינחס",         en: "Pinchas",             dr: "Pinchas" },
+      { he: "מטות",          en: "Matot",               dr: "Matot" },
+      { he: "מסעי",          en: "Masei",               dr: "Masei" },
+      { he: "ואתחנן",        en: "Vaetchanan",          dr: "Vaetchanan" },
+      { he: "עקב",           en: "Eikev",               dr: "Eikev" },
+      { he: "ראה",           en: "Re'eh",               dr: "Re'eh" },
+      { he: "שופטים",        en: "Shoftim",             dr: "Shoftim" },
+      { he: "כי תצא",        en: "Ki Teitzei",          dr: "Ki Teitzei" },
+      { he: "כי תבוא",       en: "Ki Tavo",             dr: "Ki Tavo" },
+    ],
+  },
+];
+
 function openBenIshHaiPage() {
 
   function toHeb(n) {
@@ -25833,115 +25971,7 @@ function openBenIshHaiPage() {
   ];
 
   // dr = drashot key used as preface; null = no drashot (Chanukah)
-  const YEARS = [
-    { he: "שנה ראשונה", en: "Halachot 1st Year", color: "#6366f1",
-      parshiyot: [
-        { he: "בראשית",       en: "Bereshit",            dr: "Bereshit" },
-        { he: "נח",            en: "Noach",               dr: "Noach" },
-        { he: "לך לך",         en: "Lech Lecha",          dr: "Lech Lecha" },
-        { he: "וירא",          en: "Vayera",              dr: "Vayera" },
-        { he: "חיי שרה",       en: "Chayei Sara",         dr: "Chayei Sara" },
-        { he: "תולדות",        en: "Toldot",              dr: "Toldot" },
-        { he: "ויצא",          en: "Vayetzei",            dr: "Vayetzei" },
-        { he: "וישלח",         en: "Vayishlach",          dr: "Vayishlach" },
-        { he: "וישב",          en: "Vayeshev",            dr: "Vayeshev" },
-        { he: "חנוכה",         en: "Chanukah",            dr: null },
-        { he: "מקץ",           en: "Miketz",              dr: "Miketz" },
-        { he: "ויגש",          en: "Vayigash",            dr: "Vayigash" },
-        { he: "ויחי",          en: "Vayechi",             dr: "Vayechi" },
-        { he: "שמות",          en: "Shemot",              dr: "Shemot" },
-        { he: "וארא",          en: "Vaera",               dr: "Vaera" },
-        { he: "בא",            en: "Bo",                  dr: "Bo" },
-        { he: "בשלח",          en: "Beshalach",           dr: "Beshalach" },
-        { he: "יתרו",          en: "Yitro",               dr: "Yitro" },
-        { he: "משפטים",        en: "Mishpatim",           dr: "Mishpatim" },
-        { he: "תרומה",         en: "Terumah",             dr: "Terumah" },
-        { he: "תצוה",          en: "Tetzaveh",            dr: "Tetzaveh" },
-        { he: "כי תשא",        en: "Ki Tisa",             dr: "Ki Tisa" },
-        { he: "ויקהל",         en: "Vayakhel",            dr: "Vayakhel" },
-        { he: "פקודי",         en: "Pekudei",             dr: "Pekudei" },
-        { he: "ויקרא",         en: "Vayikra",             dr: "Vayikra" },
-        { he: "צו",            en: "Tzav",                dr: "Tzav" },
-        { he: "שמיני",         en: "Shmini",              dr: "Shmini" },
-        { he: "תזריע-מצורע",   en: "Tazria Metzora",      dr: "Tazria" },
-        { he: "אחרי-קדושים",   en: "Achrei Mot Kedoshim", dr: "Achrei Mot" },
-        { he: "אמור",          en: "Emor",                dr: "Emor" },
-        { he: "בהר-בחקותי",    en: "Behar Bechukotai",    dr: "Behar" },
-        { he: "במדבר",         en: "Bamidbar",            dr: "Bamidbar" },
-        { he: "נשא",           en: "Nasso",               dr: "Nasso" },
-        { he: "בהעלותך",       en: "Beha'alotcha",        dr: "Beha'alotcha" },
-        { he: "שלח",           en: "Sh'lach",             dr: "Sh'lach" },
-        { he: "קרח",           en: "Korach",              dr: "Korach" },
-        { he: "חקת",           en: "Chukat",              dr: "Chukat" },
-        { he: "בלק",           en: "Balak",               dr: "Balak" },
-        { he: "פינחס",         en: "Pinchas",             dr: "Pinchas" },
-        { he: "מטות",          en: "Matot",               dr: "Matot" },
-        { he: "מסעי",          en: "Masei",               dr: "Masei" },
-        { he: "דברים",         en: "Devarim",             dr: "Devarim" },
-        { he: "ואתחנן",        en: "Vaetchanan",          dr: "Vaetchanan" },
-        { he: "עקב",           en: "Eikev",               dr: "Eikev" },
-        { he: "ראה",           en: "Re'eh",               dr: "Re'eh" },
-        { he: "שופטים",        en: "Shoftim",             dr: "Shoftim" },
-        { he: "כי תצא",        en: "Ki Teitzei",          dr: "Ki Teitzei" },
-        { he: "כי תבוא",       en: "Ki Tavo",             dr: "Ki Tavo" },
-        { he: "נצבים",         en: "Nitzavim",            dr: "Nitzavim" },
-        { he: "וילך",          en: "Vayeilech",           dr: "Vayeilech" },
-        { he: "האזינו",        en: "Ha'Azinu",            dr: "Ha'Azinu" },
-        { he: "וזאת הברכה",    en: "V'Zot HaBerachah",    dr: "V'Zot HaBerachah" },
-      ],
-    },
-    { he: "שנה שניה", en: "Halachot 2nd Year", color: "#f59e0b",
-      parshiyot: [
-        { he: "בראשית",       en: "Bereshit",            dr: "Bereshit" },
-        { he: "נח",            en: "Noach",               dr: "Noach" },
-        { he: "לך לך",         en: "Lech Lecha",          dr: "Lech Lecha" },
-        { he: "וירא",          en: "Vayera",              dr: "Vayera" },
-        { he: "חיי שרה",       en: "Chayei Sara",         dr: "Chayei Sara" },
-        { he: "תולדות",        en: "Toldot",              dr: "Toldot" },
-        { he: "ויצא",          en: "Vayetzei",            dr: "Vayetzei" },
-        { he: "וישלח",         en: "Vayishlach",          dr: "Vayishlach" },
-        { he: "וישב",          en: "Vayeshev",            dr: "Vayeshev" },
-        { he: "מקץ",           en: "Miketz",              dr: "Miketz" },
-        { he: "ויגש",          en: "Vayigash",            dr: "Vayigash" },
-        { he: "ויחי",          en: "Vayechi",             dr: "Vayechi" },
-        { he: "שמות",          en: "Shemot",              dr: "Shemot" },
-        { he: "וארא",          en: "Vaera",               dr: "Vaera" },
-        { he: "בא",            en: "Bo",                  dr: "Bo" },
-        { he: "בשלח",          en: "Beshalach",           dr: "Beshalach" },
-        { he: "יתרו",          en: "Yitro",               dr: "Yitro" },
-        { he: "משפטים",        en: "Mishpatim",           dr: "Mishpatim" },
-        { he: "תרומה",         en: "Terumah",             dr: "Terumah" },
-        { he: "תצוה",          en: "Tetzaveh",            dr: "Tetzaveh" },
-        { he: "כי תשא",        en: "Ki Tisa",             dr: "Ki Tisa" },
-        { he: "ויקהל",         en: "Vayakhel",            dr: "Vayakhel" },
-        { he: "פקודי",         en: "Pekudei",             dr: "Pekudei" },
-        { he: "ויקרא",         en: "Vayikra",             dr: "Vayikra" },
-        { he: "צו",            en: "Tzav",                dr: "Tzav" },
-        { he: "שמיני",         en: "Shmini",              dr: "Shmini" },
-        { he: "תזריע",         en: "Tazria",              dr: "Tazria" },
-        { he: "מצורע",         en: "Metzora",             dr: "Metzora" },
-        { he: "אחרי מות",      en: "Achrei Mot",          dr: "Achrei Mot" },
-        { he: "קדושים",        en: "Kedoshim",            dr: "Kedoshim" },
-        { he: "אמור",          en: "Emor",                dr: "Emor" },
-        { he: "בהר-בחקותי",    en: "Behar Bechukotai",    dr: "Behar" },
-        { he: "נשא",           en: "Nasso",               dr: "Nasso" },
-        { he: "בהעלותך",       en: "Beha'alotcha",        dr: "Beha'alotcha" },
-        { he: "שלח",           en: "Sh'lach",             dr: "Sh'lach" },
-        { he: "קרח",           en: "Korach",              dr: "Korach" },
-        { he: "חקת",           en: "Chukat",              dr: "Chukat" },
-        { he: "בלק",           en: "Balak",               dr: "Balak" },
-        { he: "פינחס",         en: "Pinchas",             dr: "Pinchas" },
-        { he: "מטות",          en: "Matot",               dr: "Matot" },
-        { he: "מסעי",          en: "Masei",               dr: "Masei" },
-        { he: "ואתחנן",        en: "Vaetchanan",          dr: "Vaetchanan" },
-        { he: "עקב",           en: "Eikev",               dr: "Eikev" },
-        { he: "ראה",           en: "Re'eh",               dr: "Re'eh" },
-        { he: "שופטים",        en: "Shoftim",             dr: "Shoftim" },
-        { he: "כי תצא",        en: "Ki Teitzei",          dr: "Ki Teitzei" },
-        { he: "כי תבוא",       en: "Ki Tavo",             dr: "Ki Tavo" },
-      ],
-    },
-  ];
+  const YEARS = _BIH_YEARS;
 
   // _bihMode: "y0" = Year 1 halachot, "y1" = Year 2 halachot, "drashot" = Drashot
   let _bihMode = "y0";
@@ -26927,8 +26957,8 @@ function showNusachSelectionPopup(callback) {
           </div>`;
   window._selectNusachAndContinue = (nusach) => {
     CURRENT_NUSACH = nusach;
-    localStorage.setItem("moadim_nusach", nusach);
-    localStorage.setItem(NUSACH_CHOSEN_KEY, "true");
+    // נכשל (אחסון מלא/חסום) — התפילה נפתחת בכל זאת (census א66)
+    if (_userSetItem("moadim_nusach", nusach)) _userSetItem(NUSACH_CHOSEN_KEY, "true");
     // Update settings dropdown if visible
     const nusachEl = document.getElementById("settings-nusach");
     if (nusachEl) nusachEl.value = nusach;
@@ -33009,17 +33039,17 @@ function openSefarimNosafimPage(_pageMode) {
   // ── Bookmarks ──
   var BM_STORE = "sn-bm2";
   function _bmAll() { try { return JSON.parse(localStorage.getItem(BM_STORE) || "{}"); } catch(e) { return {}; } }
-  function _bmSave(d) { localStorage.setItem(BM_STORE, JSON.stringify(d)); }
+  function _bmSave(d) { return _userSetItem(BM_STORE, JSON.stringify(d)); }
   function _bmGet(bid) { return _bmAll()[bid] || []; }
   function _bmHas(bid, key) { return _bmGet(bid).some(function(b){ return b.key === key; }); }
   function _bmAdd(bid, key, label, sub) {
     var d = _bmAll(), arr = d[bid] || [];
     if (!arr.find(function(b){ return b.key === key; }))
       arr.unshift({ key: key, label: label, sub: sub || null, ts: Date.now() });
-    d[bid] = arr; _bmSave(d);
+    d[bid] = arr; return _bmSave(d);
   }
   function _bmRemove(bid, key) {
-    var d = _bmAll(); d[bid] = (d[bid] || []).filter(function(b){ return b.key !== key; }); _bmSave(d);
+    var d = _bmAll(); d[bid] = (d[bid] || []).filter(function(b){ return b.key !== key; }); return _bmSave(d);
   }
 
   // ── מיגרציה חד-פעמית (09/2026): לתיקון היסוד הוכנסו 3 קטעים אחרי קטע 8
@@ -36534,8 +36564,8 @@ function openSefarimNosafimPage(_pageMode) {
     var book = _snCurrentBook();
     return cms.filter(function(c){ return typeof c.title !== "function" || !!(book && c.title(book)); });
   }
-  function _snCMGet(id) { return localStorage.getItem("sn-show-cm-" + id) === "true"; }
-  function _snCMSet(id, v) { localStorage.setItem("sn-show-cm-" + id, v ? "true" : "false"); }
+  function _snCMGet(id) { try { return localStorage.getItem("sn-show-cm-" + id) === "true"; } catch (e) { return false; } }
+  function _snCMSet(id, v) { return _userSetItem("sn-show-cm-" + id, v ? "true" : "false"); }
   // הגירה חד-פעמית: המתגים הישנים של משנה ברורה / באר היטב → שכבות הפירוש הגנריות
   try {
     if (localStorage.getItem("sn-show-mb") === "true") localStorage.setItem("sn-show-cm-sa-mb", "true");
@@ -36898,7 +36928,7 @@ function openSefarimNosafimPage(_pageMode) {
 
   // Toggle a commentary on/off and re-render visible chapters
   window._snToggleCommentary = function(id) {
-    _snCMSet(id, !_snCMGet(id));
+    if (!_snCMSet(id, !_snCMGet(id))) return; // אחסון מלא/חסום — כבר הודיע (census א66)
     var cmDef = _snActiveCommentaries().find(function(c){ return c.id === id; });
     var cmName = "נושאי כלים — " + (cmDef ? cmDef.he : "פירוש");
     if (_snCMGet(id)) { if (window._btnToastOn) window._btnToastOn(cmName); }
@@ -37550,9 +37580,10 @@ function openSefarimNosafimPage(_pageMode) {
     // תנ"ך: "פרק א פסוק ג" (שם הספר כבר מוצג בשורת הסימנייה — בלי " — תהילים" שבשם הפרק)
     var label = _bk.id === "tanakh" ? String(s.he || "").replace(/ — .*$/, "") + " פסוק " + toHN(paraIdx + 1)
                                     : (s.he || "סעיף") + " — " + toHN(paraIdx + 1);
-    var wasAdded;
-    if (_bmHas(_bk.id, key)) { _bmRemove(_bk.id, key); wasAdded = false; }
-    else { _bmAdd(_bk.id, key, label, _sbk ? _sbk.he : null); wasAdded = true; }
+    var wasAdded, bmOk;
+    if (_bmHas(_bk.id, key)) { bmOk = _bmRemove(_bk.id, key); wasAdded = false; }
+    else { bmOk = _bmAdd(_bk.id, key, label, _sbk ? _sbk.he : null); wasAdded = true; }
+    if (!bmOk) return; // האחסון מלא/חסום — _userSetItem כבר הודיע, בלי "נשמרה" שקרי
     // Update this specific button's appearance
     var btn = document.getElementById("sn-parabm-" + secIdx + "-" + paraIdx);
     if (btn && btn.classList.contains("sn-vbm")) {
@@ -37580,9 +37611,10 @@ function openSefarimNosafimPage(_pageMode) {
     var s = sections[secIdx] || {he:""};
     var key = (_sbk ? _sbk.id : "") + "|" + secIdx + "|" + ci + "|" + vi;
     var label = (s.he ? s.he + " — " : "") + "פרק " + toHN(chapNum) + " פסוק " + toHN(vNum);
-    var wasAdded;
-    if (_bmHas(_bk.id, key)) { _bmRemove(_bk.id, key); wasAdded = false; }
-    else { _bmAdd(_bk.id, key, label, _sbk ? _sbk.he : null); wasAdded = true; }
+    var wasAdded, bmOk;
+    if (_bmHas(_bk.id, key)) { bmOk = _bmRemove(_bk.id, key); wasAdded = false; }
+    else { bmOk = _bmAdd(_bk.id, key, label, _sbk ? _sbk.he : null); wasAdded = true; }
+    if (!bmOk) return; // האחסון מלא/חסום — _userSetItem כבר הודיע, בלי "נשמרה" שקרי
     var btn = document.getElementById("sn-vbm-" + secIdx + "-" + ci + "-" + vi);
     if (btn) { btn.classList.toggle("on", wasAdded); btn.setAttribute("aria-pressed", String(wasAdded)); btn.textContent = wasAdded ? "🔖 מסומן" : "🔖 סמן"; }
     if (typeof buildBMPanel === "function") buildBMPanel();
@@ -38457,8 +38489,11 @@ function openSefarimNosafimPage(_pageMode) {
         parshList = ym.parshiyot.map(function(p){return p.dr;});
         parshListHe = ym.parshiyot.map(function(p){return p.he;});
       } else {
-        parshList = parshiyot1;
-        parshListHe = parshiyotHe1;
+        // אותן רשימות כמו בחלון בן איש חי (_bihOpenParsha לפי אינדקס) — לכל שנה הרשימה שלה (census א51):
+        // עד 10/2026 רשימה אחת לשתי השנים, ומ"מקץ" (שנה א') / "תזריע" (שנה ב') נפתחה פרשה לא נכונה
+        var yl = _BIH_YEARS[ym.yIdx] ? _BIH_YEARS[ym.yIdx].parshiyot : null;
+        parshList = yl ? yl.map(function(p){return p.en;}) : parshiyot1;
+        parshListHe = yl ? yl.map(function(p){return p.he;}) : parshiyotHe1;
       }
       parshList.forEach(function(pEn, pi) {
         bihTasks.push({ ym: ym, pi: pi, pEn: pEn, pHe: parshListHe[pi] });

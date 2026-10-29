@@ -3082,6 +3082,7 @@ function toggleShmikraRashi() {
 async function fetchRashiForShmikra(parshaName) {
   // מצב הטעינה — בכשל מוצגת הודעה ולא "טוען פירוש רש״י..." לתמיד (census א56)
   _shmikraData.rashiStatus = "loading";
+  const _tok = window.__sefReqTok; // נפתח בינתיים תוכן אחר בחלון — רש"י לא דורס אותו (census א61)
   try {
     // Use the stored Torah ref to construct proper Rashi URL
     const torahRef = _shmikraData.torahRef;
@@ -3207,10 +3208,12 @@ async function fetchRashiForShmikra(parshaName) {
     } else {
       _shmikraData.rashiStatus = "failed";
     }
+    if (_tok !== window.__sefReqTok) return;
     renderShmikraContent();
   } catch (e) {
     console.warn("Rashi fetch error:", e);
     _shmikraData.rashiStatus = "failed";
+    if (_tok !== window.__sefReqTok) return;
     try { renderShmikraContent(); } catch (e2) {}
   }
 }
@@ -3341,7 +3344,7 @@ function _shmikraOnkelosRef(torahRef, dataRef) {
 async function openShnayimMikraModal(hebTitle, enRef) {
   if (!enRef) return;
   // אותו חלון — תשובה מאוחרת של openSefariaModal קודם לא תדרוס את שניים מקרא (census א61)
-  window.__sefReqTok = (window.__sefReqTok || 0) + 1;
+  const _tok = window.__sefReqTok = (window.__sefReqTok || 0) + 1;
   const parshaName = _sefariaRefNormalize(enRef).replace(/^Parashat\s+/, "").replace(/ /g, "_");
 
   const m = document.getElementById("sefaria-modal");
@@ -3377,6 +3380,7 @@ async function openShnayimMikraModal(hebTitle, enRef) {
     const torahData = await fetchHebcalWithCache(
       `https://www.sefaria.org/api/texts/${torahRef}?context=0`,
     );
+    if (_tok !== window.__sefReqTok) return; // נפתח בינתיים תוכן אחר בחלון — לא דורסים (census א61)
     if (!torahData || !torahData.ref) throw new Error("No parsha data");
 
     // כשל באונקלוס לא מפיל את הקורא — הפסוקים מוצגים בלי תרגום (census א57)
@@ -3388,6 +3392,7 @@ async function openShnayimMikraModal(hebTitle, enRef) {
     } catch (eOnk) {
       console.warn("Onkelos fetch error:", eOnk);
     }
+    if (_tok !== window.__sefReqTok) return;
 
     const flattenVerses = (arr) => {
       if (!arr) return [];
@@ -3421,6 +3426,7 @@ async function openShnayimMikraModal(hebTitle, enRef) {
     }
   } catch (e) {
     console.error("Shnayim Mikra error:", e);
+    if (_tok !== window.__sefReqTok) return;
     document.getElementById("sefaria-modal-content").innerHTML = _isOfflineNow()
       ? _offlineMsgHtml("המקרא והתרגום של הפרשה")
       : "<p class='text-center text-rose-500 font-bold mt-10'>שגיאה בטעינת המקרא והתרגום. אנא בדוק חיבור לאינטרנט.</p>";
@@ -5159,6 +5165,19 @@ async function fetchLiveCalendarData() {
     const gm = String(todayDateUI.getMonth() + 1).padStart(2, "0");
     const gd = String(todayDateUI.getDate()).padStart(2, "0");
     const todayLocalIso = `${gy}-${gm}-${gd}`;
+    // מוצאי שבת (מצאת השבת ועד חצות): כרטיס השבת עובר לשבוע הבא — הפרשה והזמנים יחד (census א5).
+    // בשבת עצמה, עד ההבדלה — השבת הזו
+    let _afterShabbat = false;
+    if (todayDateUI.getDay() === 6) {
+      try {
+        const _kzS = computeKosherZmanim(todayDateUI);
+        const _tzS = _kzS && _kzS.times && _kzS.times.tzeit7083deg;
+        if (_tzS && now >= new Date(_tzS)) _afterShabbat = true;
+      } catch (eAS) {}
+    }
+    const _shabbatRefIso = _afterShabbat
+      ? (() => { const d = new Date(todayDateUI.getFullYear(), todayDateUI.getMonth(), todayDateUI.getDate() + 1); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); })()
+      : todayLocalIso;
 
     const prevDate = new Date(todayDateUI);
     prevDate.setDate(prevDate.getDate() - 1);
@@ -5263,7 +5282,7 @@ async function fetchLiveCalendarData() {
     );
     const _pShabbat = _quiet(
       fetchHebcalWithCache(
-        `https://www.hebcal.com/shabbat?cfg=json&${getGeoParams()}&m=50&date=${todayLocalIso}`,
+        `https://www.hebcal.com/shabbat?cfg=json&${getGeoParams()}&m=50&date=${_shabbatRefIso}`,
         _BOOT_NET,
       ),
     );
@@ -5465,8 +5484,8 @@ async function fetchLiveCalendarData() {
       // Find this week's Friday (for candle lighting)
       const friday = new Date(today);
       // בשבת עצמה — השבת הזו (הדלקה אתמול, הבדלה היום), כמו הפרשה שלידן; עד 10/2026 הוצגו זמני השבוע הבא
-      // ליד פרשת השבת הנוכחית (census א5). אחרי צאת השבת todayDateUI כבר יום ראשון — השבוע הבא
-      friday.setDate(today.getDate() + (dow === 6 ? -1 : (5 - dow + 7) % 7));
+      // ליד פרשת השבת הנוכחית (census א5). במוצאי שבת (עד חצות) — השבוע הבא, כמו הפרשה (_afterShabbat)
+      friday.setDate(today.getDate() + (dow === 6 ? (_afterShabbat ? 6 : -1) : (5 - dow + 7) % 7));
       const kzFriday = computeKosherZmanim(friday);
       if (kzFriday && kzFriday.times && kzFriday.times.candleLighting) {
         c = formatTimeStr(kzFriday.times.candleLighting);
@@ -7963,6 +7982,10 @@ function collectDayEvents(dateStr) {
 // (הלוח שמאחור נשאר). closeCalendarDay הסינכרוני (replaceState) השאיר רשומה, ו"חזור" דרש לחיצה נוספת
 // (census א18); הוא נשאר לסגירה מתוך הקוד (openCalendarDay מחליף חלון קיים ודוחף מיד מצב חדש)
 function closeCalendarDayUser() {
+  // כבר בדרך החוצה (דהיית היציאה) — נגיעה כפולה/Escape לא סוגרים שוב: closeCalendarDay היה
+  // משחרר נעילת גלילה נוספת, של הלוח החודשי שמאחור
+  const m = document.getElementById("calendar-day-modal");
+  if (!m || m.__closing || m.__uxClosing) return;
   if (_activeModals[_activeModals.length - 1] === "calendar-day-modal" && typeof window._closePopupViaBack === "function") {
     window._closePopupViaBack("calendar-day-modal");
   } else {
@@ -29811,7 +29834,8 @@ document.addEventListener("keydown", (e) => {
         try { jc.setInIsrael(true); } catch (e) {}
         try { jc.setUseModernHolidays(true); _modern = true; } catch (e) {}
         var ch = jc.getDayOfChanukah();
-        if (ch > 0) return "חנוכה — נר " + "אבגדהוזח".charAt(ch - 1) + "׳" + (m.indexOf("טבת") !== -1 && day === 1 ? " (ר\"ח טבת)" : "");
+        // ראש חודש טבת — ל' כסלו וא' טבת (ל' כסלו נשאר בלי הסימון עד 10/2026)
+        if (ch > 0) return "חנוכה — נר " + "אבגדהוזח".charAt(ch - 1) + "׳" + ((m.indexOf("טבת") !== -1 && day === 1) || day === 30 ? " (ר\"ח טבת)" : "");
         if (_modern && m.indexOf("אייר") !== -1) {
           var yti = jc.getYomTovIndex();
           if (yti === K.JewishCalendar.YOM_HAZIKARON) return "יום הזיכרון";

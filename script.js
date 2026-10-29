@@ -1166,7 +1166,7 @@ function _luxSkyEnsure() {
   if (document.getElementById("lux-sky-js")) return;
   const s = document.createElement("script");
   s.id = "lux-sky-js";
-  s.src = "sky.js?v=11";
+  s.src = "sky.js?v=12";
   s.async = true;
   document.body.appendChild(s);
 }

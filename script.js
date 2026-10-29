@@ -361,8 +361,7 @@ function refreshLiveLanguageUI() {
 
   const omerModal = document.getElementById("omer-modal");
   if (omerModal && !omerModal.classList.contains("hidden")) {
-    document.getElementById("omer-modal-text").textContent =
-      generateOmerText(_omerNightDay());
+    _omerSyncText(true);
   }
 
   const calendarModal = document.getElementById("calendar-modal");
@@ -1267,6 +1266,18 @@ function _updateOmerCountdownDisplay() {
 
   const now = Date.now();
   const todayTzeit = window.TZEIT_TIME ? window.TZEIT_TIME.getTime() : null;
+  const st = _omerState(new Date(now));
+  _omerSyncText(false);
+
+  // ה' סיון ביום / מחוץ לעונה — אין ספירה הלילה, ולכן גם אין ספירה לאחור
+  if (st.mode === "done" || st.mode === "off") {
+    display.textContent = "";
+    label.textContent = st.mode === "done" ? "✅ ספירת העומר הושלמה" : "אין ספירת העומר הלילה";
+    sublabel.textContent = st.mode === "done"
+      ? "אמש נספר היום האחרון — בליל שבועות אין ספירה"
+      : "סופרים מליל ט״ז בניסן ועד ערב שבועות";
+    return;
+  }
 
   if (!todayTzeit) {
     display.textContent = "--:--:--";
@@ -1278,7 +1289,7 @@ function _updateOmerCountdownDisplay() {
   let targetMs, beforeTzeit;
 
   // אחרי הצאת TZEIT_TIME כבר של מחר, ואחרי חצות הוא של היום — "לילה" לפי _omerInNight (census א15)
-  if (_omerInNight(new Date(now)) !== true && now < todayTzeit) {
+  if (st.mode === "day" || (st.inNight === null && now < todayTzeit)) {
     // Daytime — count down to tonight's tzet
     targetMs = todayTzeit;
     beforeTzeit = true;
@@ -2504,23 +2515,55 @@ function _omerInNight(now) {
 // כמו שהחלון אומר ("הספירה המוצגת היא של הלילה הקרוב"). CURRENT_OMER_DAY הוא של היום העברי
 // של displayDate — ביום זה היום שנספר אמש (census א15: הוצגה ספירת אמש).
 function _omerNightDay() {
+  return _omerState().day;
+}
+
+// מצב החלון (בודק jc-screens, 30/10/2026): night = הלילה הנוכחי, סופרים עכשיו; day = ביום, הספירה של
+// הלילה הקרוב; done = ה' סיון ביום — נספר אמש יום מ"ט, הלילה (שבועות) אין ספירה; off = מחוץ לעונה.
+// עד כאן ט"ו ניסן ביום הציג נוסח ריק עם "ספירת הלילה בעוד", ה' סיון — מ"ט כ"ספירת הלילה הקרוב",
+// ומחוץ לעונה הספירה לאחור רצה כל השנה מעל נוסח ריק.
+function _omerState(now) {
   const n = CURRENT_OMER_DAY;
-  if (!(n >= 1 && n <= 49)) return n;
-  try {
-    const inNight = _omerInNight();
-    if (inNight !== false) return n;
-    return n < 49 ? n + 1 : n;
-  } catch (e) {
-    return n;
+  let inNight = null;
+  try { inNight = _omerInNight(now); } catch (e) {}
+  if (n >= 1 && n <= 49) {
+    if (inNight !== false) return { day: n, mode: "night", inNight: inNight };
+    return n < 49 ? { day: n + 1, mode: "day", inNight: inNight } : { day: 49, mode: "done", inNight: inNight };
   }
+  // ט"ו ניסן ביום — הלילה הקרוב הוא יום א'
+  if (inNight === false && _omerIsNisan15()) return { day: 1, mode: "day", inNight: inNight };
+  return { day: 0, mode: "off", inNight: inNight };
+}
+
+function _omerIsNisan15() {
+  try {
+    const ctx = window._livePrayerContextData;
+    const K = window.KosherZmanim;
+    if (!ctx || !(ctx.displayDate instanceof Date) || !K || !K.JewishCalendar) return false;
+    const d = ctx.displayDate;
+    const jc = new K.JewishCalendar(new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12));
+    return jc.getJewishMonth() === K.JewishCalendar.NISSAN && jc.getJewishDayOfMonth() === 15;
+  } catch (e) {
+    return false;
+  }
+}
+
+// הנוסח בחלון — נכתב רק כשהיום המוצג משתנה (חלון שנשאר פתוח מעבר לעלות השחר/לצאת), כדי לא למחוק
+// סימוני מרקר בכל שנייה
+function _omerSyncText(force) {
+  const el = document.getElementById("omer-modal-text");
+  if (!el) return;
+  const day = _omerNightDay();
+  if (!force && el.__omerDay === day) return;
+  el.__omerDay = day;
+  el.textContent = generateOmerText(day);
 }
 
 function openOmerModal() {
   const m = document.getElementById("omer-modal");
   // כבר פתוח (ghost-tap בנייד) — פתיחה שנייה הייתה מוסיפה נעילה ורשומה כפולות
   if (!m.classList.contains("hidden")) return;
-  document.getElementById("omer-modal-text").textContent =
-    generateOmerText(_omerNightDay());
+  _omerSyncText(true);
   _revealModalNoFreeze(m);
   lockBodyScroll();
   pushModalState("omer-modal");

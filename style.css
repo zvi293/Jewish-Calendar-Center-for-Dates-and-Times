@@ -21,7 +21,8 @@
          (html.lux-copy). כפתורים בתוך הטקסט נשארים לא-ניתנים לסימון */
       html.lux-copy :is(#sefaria-modal-content, #chok-israel-modal-content, #sn-reader-content, #psalm-text-area,
         #bih-content-area, #shir-scroll-area, #lux-sel-area, #lux-tr-area, #prayer-modal-body, #lux-pl-area,
-        #motzei-tab-content, #hilulot-modal, #moad-torah-modal, #omer-modal-text) :not(button):not(button *) {
+        #motzei-tab-content, #hilulot-modal, #moad-torah-modal, #omer-modal-text) :not(button):not(button *),
+      html.lux-copy #omer-modal-text {
         -webkit-user-select: text;
         user-select: text;
         -webkit-touch-callout: default;
@@ -1872,7 +1873,7 @@ nav[aria-label="סינון וחיפוש"]::before {
 }
 
 /* ── מודאל עומר ── */
-#omer-modal > div {
+#omer-modal > div:not(.lux-progress) {
   border: 1px solid rgba(200, 155, 60, 0.2);
 }
 

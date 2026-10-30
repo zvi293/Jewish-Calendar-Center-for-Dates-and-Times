@@ -1490,8 +1490,8 @@
           '<button type="button" class="lux-yw-close" aria-label="סגור">✕</button>' +
           '<h3 class="lux-yw-title">🎡 גלגל השנה</h3>' +
           '<p class="lux-yw-sub">מסע של שנה — לחץ על חג כדי לגלות אותו</p>' +
-          '<svg id="lux-yw-svg" viewBox="0 0 340 340"></svg>' +
-          '<div id="lux-yw-info">✨ בחר חג מהגלגל ✨</div>' +
+          '<svg id="lux-yw-svg" viewBox="0 0 340 340" role="group" aria-label="גלגל השנה — החגים לאורך השנה"></svg>' +
+          '<div id="lux-yw-info" aria-live="polite">✨ בחר חג מהגלגל ✨</div>' +
         "</div>";
       var svg = overlay.querySelector("#lux-yw-svg");
       var CX = 170, CY = 170, R = 132, RL = 106;
@@ -1595,6 +1595,10 @@
         var x = CX + R * Math.cos(ang), y = CY + R * Math.sin(ang);
         var g = document.createElementNS("http://www.w3.org/2000/svg", "g");
         g.setAttribute("class", "lux-yw-evt");
+        // נגישות (בודק jc-screens, 30/10/2026): עד כאן click בלבד — בלי Tab, בלי מקשי טלפון ובלי תווית
+        g.setAttribute("role", "button");
+        g.setAttribute("tabindex", "0");
+        g.setAttribute("aria-label", ev.name + " — " + luxParseDate(ev.date).toLocaleDateString("he-IL", { day: "numeric", month: "long" }));
         g.innerHTML =
           '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="11" class="lux-yw-halo"/>' +
           '<text x="' + x.toFixed(1) + '" y="' + (y + 4.2).toFixed(1) + '" text-anchor="middle" font-size="12">' + (ev.icon || "✨") + "</text>";
@@ -1604,7 +1608,7 @@
         c.addEventListener("click", function (e) {
           e.stopPropagation();
           // לחיצה ראשונה על חודש צפוף — קודם מרחפים ומגדילים את כל אייקוני החודש
-          if (zoomedMonth !== evMonth) { zoomMonth(evMonth); return; }
+          if (zoomedMonth !== evMonth && !e.luxKey) { zoomMonth(evMonth); return; }
           var info = overlay.querySelector("#lux-yw-info");
           var dateStr = luxParseDate(ev.date).toLocaleDateString("he-IL", { day: "numeric", month: "long" });
           // חג רב-יומי מאוחד — מציגים את כל הטווח שלו
@@ -1660,6 +1664,14 @@
               }
             }, 180);
           });
+        });
+        // מקלדת/מקשי טלפון — פותח את החג ישר, בלי שלב הזום (שמזיז את האייקון ומאבד את הפוקוס)
+        c.addEventListener("keydown", function (e) {
+          if (e.key !== "Enter" && e.key !== " ") return;
+          e.preventDefault();
+          var ke = new MouseEvent("click", { bubbles: true, cancelable: true });
+          ke.luxKey = true;
+          c.dispatchEvent(ke);
         });
         svg.appendChild(c);
       });
@@ -3767,8 +3779,8 @@
       tip.innerHTML =
         '<div class="lux-tour-title">' + s.t + "</div>" +
         '<div class="lux-tour-desc">' + s.d + "</div>" +
-        '<div class="lux-tour-dots">' + STEPS.map(function (_, i) {
-          return '<span class="' + (i === idx ? "lux-td-on" : "") + '"></span>';
+        '<div class="lux-tour-dots" role="img" aria-label="שלב ' + (idx + 1) + " מתוך " + STEPS.length + '">' + STEPS.map(function (_, i) {
+          return '<span aria-hidden="true" class="' + (i === idx ? "lux-td-on" : "") + '"></span>';
         }).join("") + "</div>" +
         '<div class="lux-tour-btns">' +
           '<button type="button" class="lux-tour-skip">דלג</button>' +
@@ -3779,6 +3791,9 @@
       var pv = tip.querySelector(".lux-tour-prev");
       if (pv) pv.addEventListener("click", function () { if (!busy) go(idx - 1, -1); });
       tip.querySelector(".lux-tour-skip").addEventListener("click", endTour);
+      // הכרזה ופוקוס לשלב החדש (בודק jc-screens, 30/10/2026): עד כאן הכרטיס נכתב מחדש בשקט והפוקוס נשאר מאחור
+      tip.setAttribute("aria-live", "polite");
+      try { tip.querySelector(".lux-tour-next").focus({ preventScroll: true }); } catch (e) {}
     }
     // מעבר לשלב i בכיוון dir — שלב שהאלמנט שלו לא קיים/מוסתר (גם אחרי פתיחת ההקשר) מדולג
     function go(i, dir) {
@@ -4838,7 +4853,7 @@
       var ov = luxSheet("lux-hc-modal",
         '<h3 class="lux-sheet-title">🕰️ השעון ההלכתי</h3>' +
         '<div id="lux-hc-mode-badge" class="lux-hc-badge"></div>' +
-        '<svg id="lux-hc-svg" viewBox="0 0 340 340" style="width:min(78vw,300px);height:auto;display:block;margin:0 auto;"></svg>' +
+        '<svg id="lux-hc-svg" viewBox="0 0 340 340" role="img" aria-label="השעון ההלכתי — שעון של 12 שעות עם זמני היום בשעתם; הפירוט מתחת לשעון" style="width:min(78vw,300px);height:auto;display:block;margin:0 auto;"></svg>' +
         '<div id="lux-hc-info"></div>' +
         '<div class="lux-sheet-actions"><button type="button" class="lux-sheet-cancel">סגור</button></div>');
       if (!ov) return;

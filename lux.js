@@ -4306,12 +4306,14 @@
           });
         }
       }
-      // ספירת העומר
-      if (window.CURRENT_OMER_DAY && window.CURRENT_OMER_DAY > 0 && window.CURRENT_OMER_DAY <= 49) {
+      // ספירת העומר — CURRENT_OMER_DAY הוא let גלובלי ב-script.js ולא נמצא על window, ולכן
+      // window.CURRENT_OMER_DAY היה תמיד undefined והשקופית לא נבנתה אף פעם (בודק jc-screens, 30/10/2026)
+      var omerDay = typeof CURRENT_OMER_DAY !== "undefined" ? CURRENT_OMER_DAY : window.CURRENT_OMER_DAY;
+      if (omerDay && omerDay > 0 && omerDay <= 49) {
         slides.push({
           cls: "lux-st-zman",
           html: '<div class="lux-st-big">🌾</div><h2>ספירת העומר</h2>' +
-                '<p class="lux-st-line">היום <b class="lux-st-range">' + (window.CURRENT_OMER_DAY === 1 ? "יום אחד" : window.CURRENT_OMER_DAY + "</b> ימים") + (window.CURRENT_OMER_DAY === 1 ? "</b>" : "") + ' לעומר</p>' + // census א30
+                '<p class="lux-st-line">היום <b class="lux-st-range">' + (omerDay === 1 ? "יום אחד" : omerDay + "</b> ימים") + (omerDay === 1 ? "</b>" : "") + ' לעומר</p>' + // census א30
                 '<p class="lux-st-sub">לא לשכוח לספור הערב! 🌙</p>'
         });
       }

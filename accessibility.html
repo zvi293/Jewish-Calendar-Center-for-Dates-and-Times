@@ -203,14 +203,19 @@
 
         <section class="rounded-3xl bg-slate-50 dark:bg-slate-900/60 p-6">
           <h2 class="text-2xl font-black text-slate-900 dark:text-white">
-            מה הונגש באתר
+            מה הונגש <span class="jc-not-native">באתר</span><span class="jc-native-only">באפליקציה</span>
           </h2>
           <h3 class="mt-5 text-lg font-bold text-slate-900 dark:text-white">מבנה וניווט</h3>
-          <ul class="mt-3 space-y-2 leading-8 text-slate-700 dark:text-slate-300 list-disc pr-6">
+          <ul class="mt-3 space-y-2 leading-8 text-slate-700 dark:text-slate-300 list-disc pr-6 jc-not-native">
             <li>שפת הדף (עברית) וכיוון הכתיבה (מימין לשמאל) מוגדרים בכל הדפים.</li>
             <li>כותרות מסודרות לפי היררכיה, ואזורי הדף (כותרת, תוכן ראשי, ניווט, כותרת תחתונה) מסומנים.</li>
             <li>קישור "דלג לתוכן הראשי" בתחילת הדף הראשי, שמופיע בניווט במקלדת.</li>
             <li>בתחתית כל דף — קישורים לדף הבית, לבתי הכנסת ולדפי המידע.</li>
+          </ul>
+          <ul class="mt-3 space-y-2 leading-8 text-slate-700 dark:text-slate-300 list-disc pr-6 jc-native-only">
+            <li>שפת הממשק (עברית) וכיוון הכתיבה (מימין לשמאל) קבועים בכל המסכים.</li>
+            <li>כותרות המסכים והחלונות מסומנות ככותרות לקוראי המסך.</li>
+            <li>בתחתית דפי המידע — קישורים לדף הבית, לבתי הכנסת ולשאר דפי המידע.</li>
           </ul>
           <h3 class="mt-5 text-lg font-bold text-slate-900 dark:text-white">מקלדת<span class="jc-native-only"> ושלט</span></h3>
           <ul class="mt-3 space-y-2 leading-8 text-slate-700 dark:text-slate-300 list-disc pr-6 jc-not-native">
@@ -242,9 +247,9 @@
           </ul>
           <h3 class="mt-5 text-lg font-bold text-slate-900 dark:text-white">תנועה</h3>
           <ul class="mt-3 space-y-2 leading-8 text-slate-700 dark:text-slate-300 list-disc pr-6">
-            <li>האתר מכבד את הגדרת המערכת "הפחתת תנועה": רוב האנימציות נעצרות ורקע השמיים מוצג כתמונה
+            <li><span class="jc-not-native">האתר מכבד את הגדרת המערכת "הפחתת תנועה"</span><span class="jc-native-only">האפליקציה מכבדת את הגדרת המערכת "הסרת אנימציות"</span>: רוב האנימציות נעצרות ורקע השמיים מוצג כתמונה
               כמעט קבועה.</li>
-            <li>אין באתר תוכן שמהבהב מהר; הגלילה האוטומטית בקריאה מופעלת רק בידי המשתמש, עם שש מהירויות
+            <li>אין <span class="jc-not-native">באתר</span><span class="jc-native-only">באפליקציה</span> תוכן שמהבהב מהר; הגלילה האוטומטית בקריאה מופעלת רק בידי המשתמש, עם שש מהירויות
               ועצירה בכל רגע.</li>
           </ul>
         </section>
@@ -282,7 +287,7 @@
             <li><strong>יוצר כרטיסי הברכה</strong> מפיק תמונה, והטקסט שבה אינו נקרא בקוראי מסך.</li>
             <li><strong>הווידג'טים של אפליקציית האנדרואיד</strong> מוצגים בידי מסך הבית של הטלפון, וייתכן
               שאינם נתמכים במלואם בכל קוראי המסך.</li>
-            <li><strong>שירותים חיצוניים</strong> שהאתר מפנה אליהם (PayPal, Google Play, Waze ועוד) אינם
+            <li><strong>שירותים חיצוניים</strong> <span class="jc-not-native">שהאתר מפנה אליהם (PayPal, Google Play, Waze ועוד)</span><span class="jc-native-only">שהאפליקציה מפנה אליהם (Google Play, Waze ועוד)</span> אינם
               באחריותנו, ונגישותם תלויה בהם.</li>
           </ul>
         </section>
@@ -292,7 +297,7 @@
             הסדרי נגישות פיזיים
           </h2>
           <p class="mt-3 leading-8 text-slate-700 dark:text-slate-300">
-            השירות ניתן באינטרנט בלבד. לאתר אין משרד או שירות פיזי לקבלת קהל, ולכן אין הסדרי נגישות
+            <span class="jc-not-native">השירות ניתן באינטרנט בלבד. לאתר אין משרד</span><span class="jc-native-only">השירות ניתן באתר ובאפליקציה בלבד. אין משרד</span> או שירות פיזי לקבלת קהל, ולכן אין הסדרי נגישות
             פיזיים.
           </p>
         </section>
@@ -306,8 +311,8 @@
             <strong>Zstore Ai</strong>, בדוא"ל <a href="mailto:zstore.ai295@gmail.com" class="text-blue-600 dark:text-blue-400 underline">zstore.ai295@gmail.com</a>.
           </p>
           <p class="mt-3 leading-8 text-slate-700 dark:text-slate-300">
-            כדי שנוכל לטפל בפנייה במהירות, כדאי לציין: באיזה דף או חלון הבעיה, מה ניסיתם לעשות ומה
-            קרה, ובאיזה מכשיר, דפדפן וטכנולוגיה מסייעת (למשל קורא מסך) השתמשתם. נשתדל להשיב בהקדם.
+            כדי שנוכל לטפל בפנייה במהירות, כדאי לציין: באיזה <span class="jc-not-native">דף</span><span class="jc-native-only">מסך</span> או חלון הבעיה, מה ניסיתם לעשות ומה
+            קרה, ובאיזה מכשיר, <span class="jc-not-native">דפדפן</span><span class="jc-native-only">גרסת אנדרואיד</span> וטכנולוגיה מסייעת (למשל קורא מסך) השתמשתם. נשתדל להשיב בהקדם.
           </p>
         </section>
 

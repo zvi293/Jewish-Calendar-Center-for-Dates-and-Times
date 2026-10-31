@@ -9474,6 +9474,62 @@ html.dark #sn-modal [style*="background:#eef2ff"],
 html.dark #contact-modal [style*="background:#f1f5f9"] {
   background: rgba(255, 255, 255, 0.06) !important;
 }
+/* ספרים מוטמעים — סעודת אמנים, ברית מילה, שבע ברכות, סגולות ותפילות: תיבות הברכה והכרטיסים המדורגים
+   (ליטרל + התאום אחרי סריאליזציה של ה-style). הכתב בתוכם יורש #1e293b ← #f1f5f9, ולכן הרקע חייב להיות כהה */
+html.dark #sn-modal [style*="background:#faf5ff"],
+html.dark #sn-modal [style*="background:#f5f3ff"],
+html.dark #sn-modal [style*="background:linear-gradient(135deg,#faf5ff"],
+html.dark #sn-modal [style*="background: rgb(250, 245, 255)"],
+html.dark #sn-modal [style*="background: rgb(245, 243, 255)"],
+html.dark #sn-modal [style*="background: linear-gradient(135deg, rgb(250, 245, 255)"] {
+  background: rgba(139, 92, 246, 0.14) !important;
+}
+html.dark #sn-modal [style*="background:#ecfeff"],
+html.dark #sn-modal [style*="background: rgb(236, 254, 255)"] {
+  background: rgba(6, 182, 212, 0.13) !important;
+}
+html.dark #sn-modal [style*="background:#fff1f2"],
+html.dark #sn-modal [style*="background: rgb(255, 241, 242)"] {
+  background: rgba(244, 63, 94, 0.13) !important;
+}
+html.dark #sn-modal [style*="background:#fff7ed"],
+html.dark #sn-modal [style*="background: rgb(255, 247, 237)"] {
+  background: rgba(249, 115, 22, 0.13) !important;
+}
+html.dark #sn-modal [style*="background:linear-gradient(135deg,#fef3c7"],
+html.dark #sn-modal [style*="background: linear-gradient(135deg, rgb(254, 243, 199)"] {
+  background: rgba(245, 158, 11, 0.14) !important;
+}
+/* התאום של #fef3c7 (הכלל של הליטרל למעלה) */
+html.dark #sn-modal [style*="background: rgb(254, 243, 199)"] {
+  background: rgba(245, 158, 11, 0.14) !important;
+  color: #fcd34d !important;
+}
+/* כתב צבעוני כהה (כותרות, תוויות, הערות) בתוך התיבות שהוחשכו — גוון בהיר תואם */
+html.dark #sn-modal :is([style*="background:#faf5ff"], [style*="background:#f5f3ff"], [style*="background:linear-gradient(135deg,#faf5ff"], [style*="background: rgb(250, 245, 255)"], [style*="background: rgb(245, 243, 255)"], [style*="background: linear-gradient(135deg, rgb(250, 245, 255)"], [style*="background:#ecfeff"], [style*="background: rgb(236, 254, 255)"], [style*="background:#fff1f2"], [style*="background: rgb(255, 241, 242)"], [style*="background:#fff7ed"], [style*="background: rgb(255, 247, 237)"], [style*="background:linear-gradient(135deg,#fef3c7"], [style*="background: linear-gradient(135deg, rgb(254, 243, 199)"], .sn-head-card) :is([style*="color:#5b21b6"], [style*="color: rgb(91, 33, 182)"], [style*="color:#4c1d95"], [style*="color: rgb(76, 29, 149)"], [style*="color:#6b21a8"], [style*="color: rgb(107, 33, 168)"], [style*="color:#7c3aed"], [style*="color: rgb(124, 58, 237)"]),
+html.dark #sn-modal :is([style*="background:#faf5ff"], [style*="background:#f5f3ff"], [style*="background:linear-gradient(135deg,#faf5ff"], [style*="background: rgb(250, 245, 255)"], [style*="background: rgb(245, 243, 255)"], [style*="background: linear-gradient(135deg, rgb(250, 245, 255)"], [style*="background:#ecfeff"], [style*="background: rgb(236, 254, 255)"], [style*="background:#fff1f2"], [style*="background: rgb(255, 241, 242)"], [style*="background:#fff7ed"], [style*="background: rgb(255, 247, 237)"], [style*="background:linear-gradient(135deg,#fef3c7"], [style*="background: linear-gradient(135deg, rgb(254, 243, 199)"], .sn-head-card):is([style*="color:#5b21b6"], [style*="color: rgb(91, 33, 182)"], [style*="color:#4c1d95"], [style*="color: rgb(76, 29, 149)"], [style*="color:#6b21a8"], [style*="color: rgb(107, 33, 168)"], [style*="color:#7c3aed"], [style*="color: rgb(124, 58, 237)"]) {
+  color: #c4b5fd !important;
+}
+html.dark #sn-modal :is([style*="background:#faf5ff"], [style*="background:#f5f3ff"], [style*="background:linear-gradient(135deg,#faf5ff"], [style*="background: rgb(250, 245, 255)"], [style*="background: rgb(245, 243, 255)"], [style*="background: linear-gradient(135deg, rgb(250, 245, 255)"], [style*="background:#ecfeff"], [style*="background: rgb(236, 254, 255)"], [style*="background:#fff1f2"], [style*="background: rgb(255, 241, 242)"], [style*="background:#fff7ed"], [style*="background: rgb(255, 247, 237)"], [style*="background:linear-gradient(135deg,#fef3c7"], [style*="background: linear-gradient(135deg, rgb(254, 243, 199)"], .sn-head-card) :is([style*="color:#0e7490"], [style*="color: rgb(14, 116, 144)"], [style*="color:#155e75"], [style*="color: rgb(21, 94, 117)"], [style*="color:#0891b2"], [style*="color: rgb(8, 145, 178)"]),
+html.dark #sn-modal :is([style*="background:#faf5ff"], [style*="background:#f5f3ff"], [style*="background:linear-gradient(135deg,#faf5ff"], [style*="background: rgb(250, 245, 255)"], [style*="background: rgb(245, 243, 255)"], [style*="background: linear-gradient(135deg, rgb(250, 245, 255)"], [style*="background:#ecfeff"], [style*="background: rgb(236, 254, 255)"], [style*="background:#fff1f2"], [style*="background: rgb(255, 241, 242)"], [style*="background:#fff7ed"], [style*="background: rgb(255, 247, 237)"], [style*="background:linear-gradient(135deg,#fef3c7"], [style*="background: linear-gradient(135deg, rgb(254, 243, 199)"], .sn-head-card):is([style*="color:#0e7490"], [style*="color: rgb(14, 116, 144)"], [style*="color:#155e75"], [style*="color: rgb(21, 94, 117)"], [style*="color:#0891b2"], [style*="color: rgb(8, 145, 178)"]) {
+  color: #67e8f9 !important;
+}
+html.dark #sn-modal :is([style*="background:#faf5ff"], [style*="background:#f5f3ff"], [style*="background:linear-gradient(135deg,#faf5ff"], [style*="background: rgb(250, 245, 255)"], [style*="background: rgb(245, 243, 255)"], [style*="background: linear-gradient(135deg, rgb(250, 245, 255)"], [style*="background:#ecfeff"], [style*="background: rgb(236, 254, 255)"], [style*="background:#fff1f2"], [style*="background: rgb(255, 241, 242)"], [style*="background:#fff7ed"], [style*="background: rgb(255, 247, 237)"], [style*="background:linear-gradient(135deg,#fef3c7"], [style*="background: linear-gradient(135deg, rgb(254, 243, 199)"], .sn-head-card) :is([style*="color:#be185d"], [style*="color: rgb(190, 24, 93)"], [style*="color:#9f1239"], [style*="color: rgb(159, 18, 57)"], [style*="color:#831843"], [style*="color: rgb(131, 24, 67)"]),
+html.dark #sn-modal :is([style*="background:#faf5ff"], [style*="background:#f5f3ff"], [style*="background:linear-gradient(135deg,#faf5ff"], [style*="background: rgb(250, 245, 255)"], [style*="background: rgb(245, 243, 255)"], [style*="background: linear-gradient(135deg, rgb(250, 245, 255)"], [style*="background:#ecfeff"], [style*="background: rgb(236, 254, 255)"], [style*="background:#fff1f2"], [style*="background: rgb(255, 241, 242)"], [style*="background:#fff7ed"], [style*="background: rgb(255, 247, 237)"], [style*="background:linear-gradient(135deg,#fef3c7"], [style*="background: linear-gradient(135deg, rgb(254, 243, 199)"], .sn-head-card):is([style*="color:#be185d"], [style*="color: rgb(190, 24, 93)"], [style*="color:#9f1239"], [style*="color: rgb(159, 18, 57)"], [style*="color:#831843"], [style*="color: rgb(131, 24, 67)"]) {
+  color: #f9a8d4 !important;
+}
+html.dark #sn-modal :is([style*="background:#faf5ff"], [style*="background:#f5f3ff"], [style*="background:linear-gradient(135deg,#faf5ff"], [style*="background: rgb(250, 245, 255)"], [style*="background: rgb(245, 243, 255)"], [style*="background: linear-gradient(135deg, rgb(250, 245, 255)"], [style*="background:#ecfeff"], [style*="background: rgb(236, 254, 255)"], [style*="background:#fff1f2"], [style*="background: rgb(255, 241, 242)"], [style*="background:#fff7ed"], [style*="background: rgb(255, 247, 237)"], [style*="background:linear-gradient(135deg,#fef3c7"], [style*="background: linear-gradient(135deg, rgb(254, 243, 199)"], .sn-head-card) :is([style*="color:#0f766e"], [style*="color: rgb(15, 118, 110)"]),
+html.dark #sn-modal :is([style*="background:#faf5ff"], [style*="background:#f5f3ff"], [style*="background:linear-gradient(135deg,#faf5ff"], [style*="background: rgb(250, 245, 255)"], [style*="background: rgb(245, 243, 255)"], [style*="background: linear-gradient(135deg, rgb(250, 245, 255)"], [style*="background:#ecfeff"], [style*="background: rgb(236, 254, 255)"], [style*="background:#fff1f2"], [style*="background: rgb(255, 241, 242)"], [style*="background:#fff7ed"], [style*="background: rgb(255, 247, 237)"], [style*="background:linear-gradient(135deg,#fef3c7"], [style*="background: linear-gradient(135deg, rgb(254, 243, 199)"], .sn-head-card):is([style*="color:#0f766e"], [style*="color: rgb(15, 118, 110)"]) {
+  color: #5eead4 !important;
+}
+html.dark #sn-modal :is([style*="background:#faf5ff"], [style*="background:#f5f3ff"], [style*="background:linear-gradient(135deg,#faf5ff"], [style*="background: rgb(250, 245, 255)"], [style*="background: rgb(245, 243, 255)"], [style*="background: linear-gradient(135deg, rgb(250, 245, 255)"], [style*="background:#ecfeff"], [style*="background: rgb(236, 254, 255)"], [style*="background:#fff1f2"], [style*="background: rgb(255, 241, 242)"], [style*="background:#fff7ed"], [style*="background: rgb(255, 247, 237)"], [style*="background:linear-gradient(135deg,#fef3c7"], [style*="background: linear-gradient(135deg, rgb(254, 243, 199)"], .sn-head-card) :is([style*="color:#15803d"], [style*="color: rgb(21, 128, 61)"]),
+html.dark #sn-modal :is([style*="background:#faf5ff"], [style*="background:#f5f3ff"], [style*="background:linear-gradient(135deg,#faf5ff"], [style*="background: rgb(250, 245, 255)"], [style*="background: rgb(245, 243, 255)"], [style*="background: linear-gradient(135deg, rgb(250, 245, 255)"], [style*="background:#ecfeff"], [style*="background: rgb(236, 254, 255)"], [style*="background:#fff1f2"], [style*="background: rgb(255, 241, 242)"], [style*="background:#fff7ed"], [style*="background: rgb(255, 247, 237)"], [style*="background:linear-gradient(135deg,#fef3c7"], [style*="background: linear-gradient(135deg, rgb(254, 243, 199)"], .sn-head-card):is([style*="color:#15803d"], [style*="color: rgb(21, 128, 61)"]) {
+  color: #86efac !important;
+}
+html.dark #sn-modal :is([style*="background:#faf5ff"], [style*="background:#f5f3ff"], [style*="background:linear-gradient(135deg,#faf5ff"], [style*="background: rgb(250, 245, 255)"], [style*="background: rgb(245, 243, 255)"], [style*="background: linear-gradient(135deg, rgb(250, 245, 255)"], [style*="background:#ecfeff"], [style*="background: rgb(236, 254, 255)"], [style*="background:#fff1f2"], [style*="background: rgb(255, 241, 242)"], [style*="background:#fff7ed"], [style*="background: rgb(255, 247, 237)"], [style*="background:linear-gradient(135deg,#fef3c7"], [style*="background: linear-gradient(135deg, rgb(254, 243, 199)"], .sn-head-card) :is([style*="color:#92400e"], [style*="color: rgb(146, 64, 14)"], [style*="color:#78350f"], [style*="color: rgb(120, 53, 15)"]),
+html.dark #sn-modal :is([style*="background:#faf5ff"], [style*="background:#f5f3ff"], [style*="background:linear-gradient(135deg,#faf5ff"], [style*="background: rgb(250, 245, 255)"], [style*="background: rgb(245, 243, 255)"], [style*="background: linear-gradient(135deg, rgb(250, 245, 255)"], [style*="background:#ecfeff"], [style*="background: rgb(236, 254, 255)"], [style*="background:#fff1f2"], [style*="background: rgb(255, 241, 242)"], [style*="background:#fff7ed"], [style*="background: rgb(255, 247, 237)"], [style*="background:linear-gradient(135deg,#fef3c7"], [style*="background: linear-gradient(135deg, rgb(254, 243, 199)"], .sn-head-card):is([style*="color:#92400e"], [style*="color: rgb(146, 64, 14)"], [style*="color:#78350f"], [style*="color: rgb(120, 53, 15)"]) {
+  color: #fcd34d !important;
+}
 
 /* טקסטים: ליטרלים כהים ← בהירים (בתחומי המודאלים שהוחשכו בלבד) */
 html.dark #sefaria-modal [style*="color:#000000"], html.dark #sefaria-modal [style*="color:#1a1a1a"], html.dark #sefaria-modal [style*="color:#1e293b"], html.dark #sefaria-modal [style*="color:#0f172a"],
@@ -9484,6 +9540,8 @@ html.dark #sn-modal [style*="color:#000000"], html.dark #sn-modal [style*="color
 html.dark #bih-reading-pane [style*="color:#1e293b"], html.dark #bih-search-overlay [style*="color:#1e293b"],
 html.dark #calendar-day-modal [style*="color:#0f172a"],
 html.dark #contact-modal [style*="color:#1a1a1a"],
+html.dark #contact-modal [style*="color:#1e293b"], html.dark #contact-modal [style*="color: rgb(30, 41, 59)"],
+html.dark #contact-modal [style*="color:#0f172a"], html.dark #contact-modal [style*="color: rgb(15, 23, 42)"],
 html.dark #nusach-selection-modal [style*="color:#1a1a1a"],
 html.dark #shir-hashirim-modal [style*="color:#1a1a1a"],
 html.dark #shir-hashirim-modal [style*="color:#000000"] {
@@ -9498,7 +9556,8 @@ html.dark #chok-israel-modal [style*="color:#334155"], html.dark #chok-israel-mo
 html.dark #sn-modal [style*="color:#334155"], html.dark #sn-modal [style*="color:#374151"], html.dark #sn-modal [style*="color:#475569"],
 html.dark #ben-ish-hai-modal [style*="color:#374151"],
 html.dark #calendar-day-modal [style*="color:#334155"], html.dark #calendar-day-modal [style*="color:#475569"],
-html.dark #contact-modal [style*="color:#475569"] {
+html.dark #contact-modal [style*="color:#475569"],
+html.dark #contact-modal [style*="color:#334155"], html.dark #contact-modal [style*="color: rgb(51, 65, 85)"] {
   color: #cbd5e1 !important;
 }
 html.dark #sefaria-modal [style*="color:#64748b"],

@@ -3531,6 +3531,25 @@ function toggleChokBartenura() {
 window.toggleChokRashi = toggleChokRashi;
 window.toggleChokBartenura = toggleChokBartenura;
 
+// כתיב הפרשה של hebcal (חסר, עם מקף עברי) ← הכתיב בכותרות הגיליונות של חוק לישראל בספריא.
+// משמש רק בגיבוי (כשלוח ספריא לא זמין). נבדק מול כל 378 הגיליונות (10/2026);
+// פרשות מחוברות (בהר־בחקתי וכד') — אין להן גיליון משותף, ולכן נשארות כמו שהן.
+const _CHOK_SHEET_SPELL = {
+  'קדשים': 'קדושים',
+  'בחקתי': 'בחוקותי',
+  'בהעלתך': 'בהעלותך',
+  'מצרע': 'מצורע',
+  'שלח לך': 'שלח',
+};
+function _chokSheetParsha(name) {
+  let n = String(name || '').replace(/[֑-ֽֿ-ׇ]/g, '').trim();
+  // מקף עברי/רגיל בין שתי מילים של שם אחד (כי־תצא, לך־לך) ← רווח, כמו בגיליונות
+  const spaced = n.replace(/[־-]/g, ' ').replace(/\s+/g, ' ');
+  if (_CHOK_SHEET_SPELL[spaced]) return _CHOK_SHEET_SPELL[spaced];
+  if (/^(כי (תצא|תבוא)|לך לך)$/.test(spaced)) return spaced;
+  return _CHOK_SHEET_SPELL[n] || n;
+}
+
 async function fetchChokLeIsraelData() {
   try {
     const now = new Date();
@@ -3568,10 +3587,10 @@ async function fetchChokLeIsraelData() {
     }
     // Fallback חסין-תקלות: גזירת שם הפרשה מפרשת השבוע שכבר נטענה מ-Hebcal
     if (!parshaHe && window.SHABBAT_PARASHA_NAME) {
-      parshaHe = String(window.SHABBAT_PARASHA_NAME)
+      parshaHe = _chokSheetParsha(String(window.SHABBAT_PARASHA_NAME)
         .replace(/^פרשת\s+/, '')
         .replace(/^שבת\s+/, '')
-        .trim();
+        .trim());
     }
     if (!parshaHe) {
       // אין מקור לפרשה — נאפשר ניסיון חוזר בקריאה הבאה; בכרטיס לא "מחשב..." לתמיד (census א72)
@@ -10292,6 +10311,23 @@ window._buildSederMotzashFullHtml = function () {
       "<b>בָּרוּךְ אַתָּה יְהֹוָה אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, בּוֹרֵא פְּרִי הַגָּפֶן.</b><br><br>" +
       "<b>בָּרוּךְ אַתָּה יְהֹוָה אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, הַמַּבְדִּיל בֵּין קֹדֶשׁ לְחוֹל, וּבֵין אוֹר לְחֹשֶׁךְ, וּבֵין יִשְׂרָאֵל לָעַמִּים, וּבֵין יוֹם הַשְּׁבִיעִי לְשֵׁשֶׁת יְמֵי הַמַּעֲשֶׂה. בָּרוּךְ אַתָּה יְהֹוָה, הַמַּבְדִּיל בֵּין קֹדֶשׁ לְחוֹל.</b>";
   }
+
+  // ── ליל יום טוב שחל במוצאי שבת (פסח/שבועות ביום ראשון) — אין סדר הבדלה נפרד: ההבדלה
+  // נאמרת בקידוש של החג (יקנה"ז). כמו בערבית (_maarivMotzaeiState — context.isYomTov) ──
+  try {
+    var _ytCtx = resolveSeasonalPrayerContext();
+    if (_ytCtx && _ytCtx.isYomTov && !_ytCtx.isCholHamoed && !_ytCtx.isYomKippur &&
+        typeof isMotzaeiShabbatNow === "function" && isMotzaeiShabbatNow()) {
+      var _ytName = _ytCtx.isPesach ? "פסח" : _ytCtx.isShavuot ? "שבועות" : "יום טוב";
+      hvTitle = "הבדלה — ליל " + _ytName + " במוצאי שבת";
+      hv = '<span style="display:block;text-align:center;line-height:2;">' +
+        "<b>הלילה ליל " + _ytName + " שחל במוצאי שבת — אין סדר הבדלה בפני עצמו.</b><br>" +
+        "ההבדלה נאמרת בתוך הקידוש של החג, כסדר <b>יקנה\"ז</b>: יין, קידוש, נר, הבדלה, זמן — " +
+        "מברכים \"בּוֹרֵא מְאוֹרֵי הָאֵשׁ\" על נרות החג ו\"הַמַּבְדִּיל בֵּין קֹדֶשׁ לְקֹדֶשׁ\", ואין מברכים על הבשמים.<br>" +
+        "בתפילת ערבית של החג אומרים \"וַתּוֹדִיעֵנוּ\"." +
+        "</span>";
+    }
+  } catch (e) {}
 
   // ── ברכה אחרונה — מעין שלוש על הגפן ──
   var bracha;
@@ -26057,9 +26093,13 @@ function openBenIshHaiPage() {
   const BM_KEY = "bih_bookmarks_v1";
   function loadBMs() { try { return JSON.parse(localStorage.getItem(BM_KEY)||"[]"); } catch(e) { return []; } }
   function saveBMs(b) { try { localStorage.setItem(BM_KEY, JSON.stringify(b)); } catch(e) {} }
-  function addBM(y,p,h,label) { const b=loadBMs(); if(!b.some(x=>x.y===y&&x.p===p&&x.h===h)){b.push({y,p,h,label,mode:_bihMode,ts:Date.now()});saveBMs(b);} }
-  function removeBM(y,p,h) { saveBMs(loadBMs().filter(x=>!(x.y===y&&x.p===p&&x.h===h))); }
-  function isBM(y,p,h) { return loadBMs().some(x=>x.y===y&&x.p===p&&x.h===h); }
+  // סימנייה רגילה ≠ "מיקום אחרון" (isLastPos): הבדיקה, ההוספה וההסרה של סימנייה לא נוגעות בו —
+  // עד 10/2026 המיקום האחרון בדרשות נשמר עם y=0 ונחשב כסימנייה של שנה ראשונה באותה פרשה והלכה
+  // (הכפתור "מסומן", ולחיצה מחקה את המיקום), ו-✕ בשורת המיקום מחק גם סימנייה באותו מקום
+  function addBM(y,p,h,label) { const b=loadBMs(); if(!b.some(x=>!x.isLastPos&&x.y===y&&x.p===p&&x.h===h)){b.push({y,p,h,label,mode:_bihMode,ts:Date.now()});saveBMs(b);} }
+  function removeBM(y,p,h) { saveBMs(loadBMs().filter(x=>x.isLastPos||!(x.y===y&&x.p===p&&x.h===h))); }
+  function isBM(y,p,h) { return loadBMs().some(x=>!x.isLastPos&&x.y===y&&x.p===p&&x.h===h); }
+  const _lpModeOf = (x) => x.mode || (x.y === 2 ? "drashot" : x.y === 1 ? "y1" : "y0");
 
   // ── Helpers ──
   function getYIdx() { return _bihMode === "y1" ? 1 : 0; }
@@ -26271,7 +26311,8 @@ function openBenIshHaiPage() {
       const gotoJs = "window._bihBMPanelGo(" + b.p + "," + b.h + "," + fr + ")";
       const removeJs = "window._bihBMRemove(" + b.y + "," + b.p + "," + b.h + ")";
       if (b.isLastPos) {
-        return window._bmRowHtml({ label: b.label, isLastPos: true, ts: b.ts }, gotoJs, removeJs, "");
+        // ✕ של המיקום האחרון מוחק רק אותו (לפי הספר), לא סימנייה רגילה באותו מקום
+        return window._bmRowHtml({ label: b.label, isLastPos: true, ts: b.ts }, gotoJs, "window._bihLPRemove('" + _bmMode(b) + "')", "");
       }
       return window._bmRowHtml(
         { label: unitLabel + " " + toHeb(b.h + 1), ts: b.ts },
@@ -26353,7 +26394,8 @@ function openBenIshHaiPage() {
   // ── Save "last position" (called by floating button) ──
   window._bihSaveLastPosition = function() {
     if (!_loadedRange) return false;
-    const yIdx = getYIdx();
+    // מפתח לפי מצב: בדרשות y=2 (כמו הסימניות של הדרשות), לא y=0 של שנה ראשונה
+    const yIdx = _bihMode === "drashot" ? 2 : getYIdx();
     const cur = _bihCurrentVisibleHalacha();
     const pIdx = cur.p, hIdx = cur.h;
     const parshiyot = getParshiyot();
@@ -26626,12 +26668,67 @@ function openBenIshHaiPage() {
     }
     setupScrollLoader(contentArea);
     // אם הגענו לכאן מחיפוש — קפיצה והדגשה של המילה
+    // ההדגשה — בתוך ההלכה שנפתחה (מהחיפוש הפנימי) או ההלכה הראשונה בפרשה הזו שמכילה את המילים
+    // (מחיפוש הספרייה), לא המופע הראשון בכל הקורא: הפרשה הקודמת נטענת מעליה בגלילה
     var bihHl = window._bihPendingHighlight;
     window._bihPendingHighlight = null;
-    if (bihHl && bihHl.length && window._snHighlightAndScrollToMatch) {
-      setTimeout(function() { window._snHighlightAndScrollToMatch(contentArea, bihHl); }, 220);
+    if (bihHl && bihHl.length) {
+      setTimeout(function() { _bihHighlightIn(section, parshaIdx, scrollToHalacha, bihHl); }, 220);
     }
   };
+
+  // הדגשת תוצאת חיפוש בבן איש חי — עצמאית (לא תלויה בספרייה, שהפונקציה שלה נבנית רק כשהיא נפתחת)
+  function _bihHighlightIn(section, p, h, words) {
+    if (!section || !section.isConnected) return;
+    const ca = document.getElementById("bih-content-area") || section;
+    ca.querySelectorAll(".sn-search-hl").forEach(function(el) {
+      const par = el.parentNode;
+      while (el.firstChild) par.insertBefore(el.firstChild, el);
+      par.removeChild(el);
+      par.normalize();
+    });
+    const NIK = /[֑-ֽֿ-ׇ]/;
+    const norm = (t) => String(t || "").replace(/[֑-ֽֿ-ׇ]/g, "").replace(/\s+/g, " ").trim().toLowerCase();
+    const ws = (words || []).map(norm).filter(Boolean);
+    if (!ws.length) return;
+    const body = (el) => el.lastElementChild || el; // בלי שורת "הלכה N" והכפתור
+    const has = (el, all) => { const t = norm(body(el).textContent); return all ? ws.every((w) => t.includes(w)) : ws.some((w) => t.includes(w)); };
+    const items = Array.prototype.slice.call(section.querySelectorAll('[id^="bih-h-' + p + '-"]'));
+    let target = typeof h === "number" ? section.querySelector("#bih-h-" + p + "-" + h) : null;
+    if (!(target && has(target, false))) target = items.find((el) => has(el, true)) || items.find((el) => has(el, false)) || null;
+    if (!target) return;
+    const walker = document.createTreeWalker(body(target), NodeFilter.SHOW_TEXT, null, false);
+    let node;
+    while ((node = walker.nextNode())) {
+      const orig = node.nodeValue;
+      let n = "", map = [];
+      for (let i = 0; i < orig.length; i++) {
+        const c = orig[i];
+        if (NIK.test(c)) continue;
+        if (/\s/.test(c)) { if (n.endsWith(" ")) continue; n += " "; map.push(i); continue; }
+        n += c.toLowerCase(); map.push(i);
+      }
+      let pos = -1, len = 0;
+      ws.forEach((w) => { const k = n.indexOf(w); if (k >= 0 && (pos < 0 || k < pos)) { pos = k; len = w.length; } });
+      if (pos < 0) continue;
+      const start = map[pos];
+      let end = map[pos + len - 1] + 1;
+      while (end < orig.length && NIK.test(orig[end])) end++;
+      const span = document.createElement("span");
+      span.className = "sn-search-hl";
+      span.style.cssText = "background:#fde68a;border-radius:3px;padding:0 2px;box-shadow:0 0 0 2px #fbbf24aa;transition:background 1.4s ease;";
+      span.textContent = orig.slice(start, end);
+      const par = node.parentNode;
+      par.insertBefore(document.createTextNode(orig.slice(0, start)), node);
+      par.insertBefore(span, node);
+      par.insertBefore(document.createTextNode(orig.slice(end)), node);
+      par.removeChild(node);
+      span.scrollIntoView({ block: "center", behavior: "smooth" });
+      setTimeout(function() { span.style.background = "transparent"; span.style.boxShadow = "none"; }, 3000);
+      return;
+    }
+    target.scrollIntoView({ block: "start" });
+  }
 
   // Called by popstate when bihReadingPane state is popped
   window._bihOnReadingPaneClose = () => {
@@ -26684,9 +26781,22 @@ function openBenIshHaiPage() {
     });
   };
 
+  // החיפוש הפנימי — רשומה משלו בהיסטוריה (פופאפ קל רשום): "חזור" סוגר את החיפוש ולא את הקורא שמתחתיו
+  let _bihAfterSearch = null;
+  function _bihHideSearch() {
+    if (_searchAbort) { _searchAbort.abort(); _searchAbort = null; }
+    clearTimeout(_searchDebounce);
+    const ov = document.getElementById("bih-search-overlay");
+    if (ov) ov.style.display = "none";
+    const f = _bihAfterSearch;
+    _bihAfterSearch = null;
+    if (f) setTimeout(f, 0);
+  }
+  window._popupHideHandlers["bih-search-overlay"] = _bihHideSearch;
   window._bihOpenSearch = () => {
     const ov = document.getElementById("bih-search-overlay");
     if (ov) { ov.style.display = "flex"; ov.style.flexDirection = "column"; }
+    if (ov && _activeModals[_activeModals.length - 1] !== "bih-search-overlay") pushModalState("bih-search-overlay");
     const lbl = document.getElementById("bih-search-year-label");
     if (lbl) {
       const label = _bihMode==="drashot" ? "דרשות" : _bihMode==="y1" ? "שנה שניה" : "שנה ראשונה";
@@ -26694,11 +26804,15 @@ function openBenIshHaiPage() {
     }
     document.getElementById("bih-search-query")?.focus();
   };
-  window._bihCloseSearch = () => {
-    if (_searchAbort) { _searchAbort.abort(); _searchAbort = null; }
-    clearTimeout(_searchDebounce);
-    const ov = document.getElementById("bih-search-overlay");
-    if (ov) ov.style.display = "none";
+  // then — פעולה שרצה אחרי שהחיפוש ירד מההיסטוריה (פתיחת תוצאה), כדי שלא תידחף רשומה לפני ה-back
+  window._bihCloseSearch = (then) => {
+    _bihAfterSearch = typeof then === "function" ? then : null;
+    if (_activeModals[_activeModals.length - 1] === "bih-search-overlay") {
+      window._popupHistoryClose("bih-search-overlay");
+    } else {
+      window._popupSyncDismiss("bih-search-overlay");
+      _bihHideSearch();
+    }
   };
 
   window._bihSearchInput = (val) => {
@@ -26755,8 +26869,7 @@ function openBenIshHaiPage() {
             btn.onclick=()=>{
               // שמירת מילת החיפוש להדגשה אחרי טעינת הפרשה
               window._bihPendingHighlight = [_bihQ];
-              window._bihCloseSearch();
-              window._bihOpenParsha(cp,ch);
+              window._bihCloseSearch(function() { window._bihOpenParsha(cp,ch); });
             };
             resultsEl.appendChild(btn);
           }
@@ -26784,6 +26897,12 @@ function openBenIshHaiPage() {
       wasAdded ? window.showToast("🔖 הסימנייה נשמרה", "success", 2200) : showBookmarkRemovedToast();
     }
     if (window._bihRefreshReaderBMPanel) window._bihRefreshReaderBMPanel();
+  };
+  window._bihLPRemove = (mode) => {
+    saveBMs(loadBMs().filter(x => !(x.isLastPos && _lpModeOf(x) === mode)));
+    buildBMPanel();
+    if (window._bihRefreshReaderBMPanel) window._bihRefreshReaderBMPanel();
+    if (typeof showBookmarkRemovedToast === "function") showBookmarkRemovedToast();
   };
   window._bihBMRemove = (y,p,h) => {
     removeBM(y,p,h); buildBMPanel();
@@ -28201,6 +28320,12 @@ openTehillimPage = function () {
     const title = document.getElementById("psalm-title");
     const area = document.getElementById("psalm-text-area");
     if (!pane || !title || !area) return;
+    // פתיחת פרק כשהחלונית כבר פתוחה: מטפל הגלילה של הפתיחה הקודמת נשאר מחובר והוסיף פרקים
+    // (לפעמים בסדר הפוך) לקורא שמתמלא מחדש — מנתקים אותו מיד, ופתיחה קודמת שעוד באמצע
+    // הטעינה (await) לא ממשיכה להוסיף פרקים שכנים ולא מחברת מטפל משלה
+    area.onscroll = null;
+    const _thGen = (window._tehillimOpenGen = (window._tehillimOpenGen || 0) + 1);
+    const _thStale = () => window._tehillimOpenGen !== _thGen;
     if (_activeModals[_activeModals.length - 1] !== "tehillim-psalm-pane") {
       pushModalState("tehillim-psalm-pane");
     }
@@ -28218,11 +28343,14 @@ openTehillimPage = function () {
     // את מה שעל המסך; הבא נוסף מתחת. עד 09/2026 הקודם נטען ראשון: בכניסה לפרק נראה קודם הטקסט
     // של הפרק הקודם, ואחרי שהכול נטען הקורא "קפץ" לפרק המבוקש
     await loadPsalmChapter(chapter, area, false);
+    if (_thStale()) return;
     // Scroll to current chapter — לא אם כבר שינו גודל כתב בזמן הטעינה (השורה שנקראת נשמרה)
     const currentEl = document.getElementById(`psalm-chapter-${chapter}`);
     if (currentEl && !_fontScrollAnchorSince(area, _thOpenT)) currentEl.scrollIntoView({ block: "start" });
     if (chapter > 1) await loadPsalmChapter(chapter - 1, area, true, true);
+    if (_thStale()) return;
     if (chapter < 150) await loadPsalmChapter(chapter + 1, area, false);
+    if (_thStale()) return;
     // Infinite scroll: load more chapters on scroll
     // שמירת state ל-throttle ו-guard (מניעת race conditions בגלילה מהירה/אוטומטית)
     let _thScrollBusy = false;

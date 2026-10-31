@@ -2102,8 +2102,15 @@
       return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
     }
     function today() { return localIso(new Date()); }
+    // קריאה מוגנת: ערך פגום (מספר, מערך, מחרוזת, שדות שגויים) — איפוס. עד 10/2026 ערך כמו 5
+    // זרק ב-record() (השמת שדה על מספר ב-strict), ותהילים/בן איש חי/חוק לישראל/הספרייה לא נפתחו
     function get() {
-      try { return JSON.parse(localStorage.getItem(KEY) || "null") || { last: null, count: 0 }; } catch (e) { return { last: null, count: 0 }; }
+      var s = null;
+      try { s = JSON.parse(localStorage.getItem(KEY) || "null"); } catch (e) {}
+      if (!s || typeof s !== "object" || Array.isArray(s)) return { last: null, count: 0 };
+      var count = typeof s.count === "number" && isFinite(s.count) && s.count > 0 ? Math.floor(s.count) : 0;
+      var last = typeof s.last === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s.last) ? s.last : null;
+      return { last: last, count: last ? count : 0 };
     }
     // שקט בכוונה (census א66): נשמר בכל טעינה — הודעת "אחסון מלא" בכל כניסה תהיה מטרד
     function save(s) { try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (e) {} }
@@ -2130,6 +2137,9 @@
       if (/^Tevet/.test(m) && day === 10) return true;                                // עשרה בטבת
       if (/^Adar( II)?$/.test(m) && (day === 13 || day === 14 || day === 15 || (day === 11 && wd === 4))) return true; // תענית אסתר (כולל מוקדם), פורים ושושן
       if (/^Nisan/.test(m) && day >= 15 && day <= 21) return true;                    // פסח
+      // תענית בכורות — ערב פסח (וכשחל בשבת: הוקדמה לחמישי י"ב) — כמו במפה של Hebcal (subcat "fast").
+      // בלעדיה הבדיקה הראשונה בטעינה (לפני שהמפה נבנתה) שברה רצף של מי שלמד לפני ערב פסח
+      if (/^Nisan/.test(m) && (day === 14 || (day === 12 && wd === 4))) return true;
       if (/^Sivan/.test(m) && day === 6) return true;                                 // שבועות
       if (/^Tamuz/.test(m) && (day === 17 || (day === 18 && wd === 0))) return true;  // י"ז בתמוז (כולל נדחה)
       if (/^Av/.test(m) && (day === 9 || (day === 10 && wd === 0))) return true;      // ט' באב (כולל נדחה)
@@ -2199,11 +2209,17 @@
     ["openTehillimPage", "openBenIshHaiPage", "openChokLeIsraelModal", "openSefarimNosafimPage"].forEach(function (fn) {
       if (typeof window[fn] === "function") {
         var orig = window[fn];
-        window[fn] = function () { record(); return orig.apply(this, arguments); };
+        // כשל ברישום הרצף לעולם לא חוסם את פתיחת הלימוד עצמו
+        window[fn] = function () {
+          // בניית אינדקס החיפוש לבד (openSefarimNosafimPage("__index") — חיפוש חכם, בלי חלון) אינה יום לימוד
+          var indexOnly = fn === "openSefarimNosafimPage" && arguments[0] === "__index";
+          if (!indexOnly) { try { record(); } catch (e) {} }
+          return orig.apply(this, arguments);
+        };
       }
     });
     var daf = document.getElementById("daf-yomi-link");
-    if (daf) daf.addEventListener("click", record);
+    if (daf) daf.addEventListener("click", function () { try { record(); } catch (e) {} });
     // בדיקת האיפוס רצה גם אחרי שנתוני Hebcal נטענים (הם מגיעים כמה שניות אחרי הטעינה)
     enforceGap();
     setTimeout(function () { enforceGap(); renderPill(); }, 3000);
@@ -3262,8 +3278,13 @@
       var target = normM(item.m);
       function scan(day) {
         var exact = null, adarFallback = null;
+        // לפי ימים אזרחיים (setDate) בצהריים — צעדים של 24 שעות בלילה סמוך למעבר שעון
+        // דילגו על יום או ספרו אותו פעמיים
+        var base = new Date();
+        base.setHours(12, 0, 0, 0);
         for (var i = 0; i < 400; i++) {
-          var d = new Date(Date.now() + i * 86400000);
+          var d = new Date(base.getTime());
+          d.setDate(base.getDate() + i);
           if (hebDayNum(d) !== day) continue;
           var m = normM(hebMonthName(d));
           if (m === target && !exact) { exact = { date: d, days: i }; break; }
@@ -6300,6 +6321,13 @@
       });
     })();
     function unitsOf(bk) { return bk.units || bk.unit + "ים"; }
+    // יחיד ומין דקדוקי: "פרק אחד", "פרשה אחת", "יום אחד" — לא "פרשה אחד" / "1 ימים"
+    var FEM_UNITS = { "פרשה": 1, "הלכה": 1, "מצוה": 1, "מצווה": 1, "אות": 1, "תורה": 1, "משנה": 1, "דרשה": 1 };
+    function oneUnit(bk) { return bk.unit + (FEM_UNITS[bk.unit] ? " אחת" : " אחד"); }
+    function nUnits(n, bk) { return n === 1 ? oneUnit(bk) : n + " " + unitsOf(bk); }
+    function nDays(n) { return n === 1 ? "יום אחד" : n + " ימים"; }
+    function nChapters(n) { return n === 1 ? "פרק אחד" : n + " פרקים"; }
+    function nAmudim(n) { return n === 1 ? "עמוד אחד" : n + " עמודים"; }
     function findBook(id) {
       for (var i = 0; i < CATALOG.length; i++) if (CATALOG[i].id === id) return CATALOG[i];
       return null;
@@ -6473,7 +6501,7 @@
           if (typeof window.luxSiyum === "function") window.luxSiyum(bk.he);
           else if (typeof window.showToast === "function") window.showToast("🎉 מזל טוב! סיימתם את " + bk.he + " כולו!", "success", 4000);
         } else if (typeof window.showToast === "function") {
-          window.showToast("🎯 כל הכבוד! נותרו " + daysLeft(cur, bk) + " ימים לסיום " + bk.he, "success", 3000);
+          window.showToast("🎯 כל הכבוד! " + (daysLeft(cur, bk) === 1 ? "נותר יום אחד" : "נותרו " + daysLeft(cur, bk) + " ימים") + " לסיום " + bk.he, "success", 3000);
         }
         renderRow();
       });
@@ -6671,7 +6699,7 @@
       if (d === 7) return "שבוע";
       if (d === 14) return "שבועיים";
       if (d === 21) return "3 שבועות";
-      if (d < 30) return d + " ימים";
+      if (d < 30) return nDays(d);
       if (d === 30) return "חודש";
       if (d === 45) return "חודש וחצי";
       if (d === 60) return "חודשיים";
@@ -6833,7 +6861,7 @@
           return '<button type="button" class="lux-pw-book" data-id="' + b.id + '">' +
             '<span class="lux-pw-book-ico" aria-hidden="true">' + b.icon + "</span>" +
             '<span class="lux-pw-book-name">' + esc(b.he) + "</span>" +
-            '<small>' + b.count + " " + esc(unitsOf(b)) + "</small></button>";
+            '<small>' + esc(nUnits(b.count, b)) + "</small></button>";
         }).join("") + "</div>" +
         '<h4 class="lux-pw-step"><span class="lux-pw-stepnum">2</span> באיזה קצב?</h4>' +
         '<div class="lux-pw-modes">' +
@@ -6887,7 +6915,7 @@
           '<div class="lux-pw-sum-grid">' +
             '<div class="lux-pw-sum-cell"><b>' + c.perDay + "</b><span>" + esc(c.perDay > 1 ? unitsOf(selBook) : selBook.unit) + " ביום</span></div>" +
             '<div class="lux-pw-sum-cell"><b>~' + c.estMin + "</b><span>דקות ביום</span></div>" +
-            '<div class="lux-pw-sum-cell"><b>' + c.totalDays + "</b><span>ימים לסיום</span></div>" +
+            '<div class="lux-pw-sum-cell"><b>' + c.totalDays + "</b><span>" + (c.totalDays === 1 ? "יום לסיום" : "ימים לסיום") + "</span></div>" +
           "</div>" +
           '<div class="lux-pw-sum-date">🗓️ סיום בסביבות <b>' + (hd || gd) + "</b>" +
             (hd ? ' <span class="lux-pw-sum-greg">(' + gd + ")</span>" : "") + " בע\"ה</div>";
@@ -6959,7 +6987,7 @@
               '<button type="button" class="lux-pw-pick-grpall" data-grpall="' + grp[1] + '" aria-pressed="false">הכל · ' + gUnits + " פרקים</button></div>" +
               '<div class="lux-pw-pick-grid">' + TAN_BOOKS.map(function (b, i) {
                 if (b[3] !== grp[1]) return "";
-                return chip(i, b[1], b[2] + " פרקים");
+                return chip(i, b[1], nChapters(b[2]));
               }).join("") + "</div>";
           });
         } else {
@@ -6968,7 +6996,7 @@
             var chips = TAL_BOOKS.map(function (t, i) {
               if (t[2] !== si) return "";
               sUnits += amudim(t);
-              return chip(i, t[1], amudim(t) + " עמודים");
+              return chip(i, t[1], nAmudim(amudim(t)));
             }).join("");
             if (!chips) return;
             html += '<div class="lux-pw-pick-grp"><span>סדר ' + sname + "</span>" +
@@ -7020,8 +7048,8 @@
           idxs.forEach(function (bi) { units += isTan ? books[bi][2] : amudim(books[bi]); });
           okBtn.disabled = false;
           okBtn.textContent = "✓ המשך — " + (isTan
-            ? (idxs.length === 1 ? "ספר אחד" : idxs.length + " ספרים") + " · " + units + " פרקים"
-            : (idxs.length === 1 ? "מסכת אחת" : idxs.length + " מסכתות") + " · " + units + " עמודים");
+            ? (idxs.length === 1 ? "ספר אחד" : idxs.length + " ספרים") + " · " + nChapters(units)
+            : (idxs.length === 1 ? "מסכת אחת" : idxs.length + " מסכתות") + " · " + nAmudim(units));
         }
         pv.addEventListener("click", function (e) {
           if (e.target.closest(".lux-pw-pick-x")) { luxModalClose("lux-pw-pick"); return; }
@@ -7051,7 +7079,7 @@
             ov.querySelectorAll(".lux-pw-book").forEach(function (x) { x.classList.toggle("lux-pw-book-on", x === card); });
             resetGroupCards();
             var s = card.querySelector("small");
-            if (s) s.textContent = "✓ " + bk2.he + " · " + bk2.count + " " + unitsOf(bk2);
+            if (s) s.textContent = "✓ " + bk2.he + " · " + nUnits(bk2.count, bk2);
             luxModalClose("lux-pw-pick");
             repaint();
           }
@@ -7119,7 +7147,8 @@
       plans().forEach(function (p) { if (p.id === id) pl = p; });
       var bk = pl ? bookOf(pl.bookId) : null;
       if (!pl || !bk) return;
-      var maxU = Math.max(1, Math.min(bk.count, 120));
+      // התקרה 120 ליום — אבל סדר קיים מהיר יותר לא נחתך בשמירה (בלי לגעת במחוון)
+      var maxU = Math.max(1, Math.min(bk.count, Math.max(120, pl.perDay || 1)));
       var ov = luxSheet("lux-plan-pace",
         '<h3 class="lux-sheet-title">⚙️ שינוי קצב הלימוד</h3>' +
         '<p class="lux-sheet-note">' + bk.icon + " <b>" + esc(bk.he) + "</b> — כמה " + esc(unitsOf(bk)) + " ללמוד בכל יום?</p>" +
@@ -7142,7 +7171,7 @@
         var endD = new Date();
         endD.setDate(endD.getDate() + leftDays);
         var hd = hebDateFull(endD);
-        sum.innerHTML = '<span class="lux-dt-big">' + (v === 1 ? esc(bk.unit) + " אחד" : v + " " + esc(unitsOf(bk))) + " ביום</span> · ~" + fmtMin(v * bk.min) + " ביום · סיום בעוד כ־" + leftDays + " ימים בע\"ה" +
+        sum.innerHTML = '<span class="lux-dt-big">' + esc(nUnits(v, bk)) + " ביום</span> · ~" + fmtMin(v * bk.min) + " ביום · סיום בעוד " + (leftDays === 1 ? "יום אחד" : "כ־" + leftDays + " ימים") + " בע\"ה" +
           (hd ? '<div class="lux-pp-end">🗓️ בסביבות ' + hd + "</div>" : "");
       }
       rng.addEventListener("input", upd);
@@ -7156,7 +7185,7 @@
         savePlans(all);
         luxModalClose("lux-plan-pace");
         renderRow();
-        if (window._btnToastVal) window._btnToastVal("קצב חדש: " + v + " " + unitsOf(bk) + " ביום ✓");
+        if (window._btnToastVal) window._btnToastVal("קצב חדש: " + nUnits(v, bk) + " ביום ✓");
       });
       ov.querySelector(".lux-sheet-cancel").addEventListener("click", function () { luxModalClose("lux-plan-pace"); });
     }
@@ -7216,7 +7245,7 @@
           var status = finished ? "" :
             gap >= 0 ? '<span class="lux-plan-status ok">✓ בקצב מצוין</span>' :
             gap >= -pl.perDay ? '<span class="lux-plan-status ok">כמעט בקצב</span>' :
-            '<span class="lux-plan-status warn">להשלמה: ' + (-gap) + " " + esc(unitsOf(bk)) + "</span>";
+            '<span class="lux-plan-status warn">להשלמה: ' + esc(nUnits(-gap, bk)) + "</span>";
           return '<div class="lux-plan-card" data-pl="' + pl.id + '">' +
             '<div class="lux-plan-top">' +
               '<span class="lux-plan-name"><span class="lux-plan-ico">' + bk.icon + "</span> " + esc(bk.he) +
@@ -7234,10 +7263,10 @@
             '<div class="lux-plan-stats">' +
               "<span>" + pl.done + "/" + bk.count + " " + esc(unitsOf(bk)) +
                 (finished ? "" : " · יום " + dayNum + "/" + totalDays) + "</span>" +
-              "<span>" + (finished ? "🎉 הושלם!" : "נותרו כ־" + left + " ימים") + "</span>" +
+              "<span>" + (finished ? "🎉 הושלם!" : left === 1 ? "נותר יום אחד" : "נותרו כ־" + left + " ימים") + "</span>" +
             "</div>" +
             (status ? '<div class="lux-plan-statusrow">' + status +
-              '<span class="lux-plan-pace">' + (pl.perDay === 1 ? esc(bk.unit) + " אחד" : pl.perDay + " " + esc(unitsOf(bk))) + " ביום · ~" + fmtMin(pl.perDay * bk.min) + "</span></div>" : "") +
+              '<span class="lux-plan-pace">' + esc(nUnits(pl.perDay, bk)) + " ביום · ~" + fmtMin(pl.perDay * bk.min) + "</span></div>" : "") +
             (finished
               ? '<button type="button" class="lux-plan-open" data-open="' + pl.id + '">📖 עיון חוזר</button>'
               : '<button type="button" class="lux-plan-open' + (doneToday ? " lux-plan-open-done" : "") + '" data-open="' + pl.id + '">' + (doneToday ? "✓ הלימוד של היום הושלם" : "📖 ללימוד של היום") + "</button>") +
@@ -7268,7 +7297,7 @@
             '<h3 class="lux-sheet-title">🗑️ מחיקת סדר לימוד</h3>' +
             '<p class="lux-sheet-note">האם למחוק את הסדר <b>' + esc(bk ? bk.he : "הזה") + "</b>?" +
               (pl && pl.done
-                ? "<br>ההתקדמות שנצברה (" + pl.done + " " + esc(bk ? unitsOf(bk) : "") + ") תימחק לצמיתות."
+                ? "<br>ההתקדמות שנצברה (" + (bk ? esc(nUnits(pl.done, bk)) : pl.done) + ") תימחק לצמיתות."
                 : "<br>הפעולה אינה ניתנת לביטול.") + "</p>" +
             '<div class="lux-sheet-actions">' +
               '<button type="button" class="lux-plan-del-yes">🗑️ כן, למחוק</button>' +

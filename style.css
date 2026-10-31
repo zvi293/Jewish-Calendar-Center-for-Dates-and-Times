@@ -9531,6 +9531,46 @@ html.dark #sn-modal :is([style*="background:#faf5ff"], [style*="background:#f5f3
   color: #fcd34d !important;
 }
 
+/* כותרות h2/h3 צבעוניות-כהות ישירות על רקע הקורא (ספרים מוטמעים: סעודת אמנים, ברית מילה, שבע ברכות,
+   סגולות ותפילות) — גוון בהיר; רק כותרות, כך שתיבה בהירה עם צבע משלה לא נפגעת */
+html.dark #sn-modal h2[style*="color:#5b21b6"],
+html.dark #sn-modal h2[style*="color: rgb(91, 33, 182)"],
+html.dark #sn-modal h3[style*="color:#5b21b6"],
+html.dark #sn-modal h3[style*="color: rgb(91, 33, 182)"],
+html.dark #sn-modal h2[style*="color:#6b21a8"],
+html.dark #sn-modal h2[style*="color: rgb(107, 33, 168)"],
+html.dark #sn-modal h3[style*="color:#6b21a8"],
+html.dark #sn-modal h3[style*="color: rgb(107, 33, 168)"],
+html.dark #sn-modal h2[style*="color:#4c1d95"],
+html.dark #sn-modal h2[style*="color: rgb(76, 29, 149)"],
+html.dark #sn-modal h3[style*="color:#4c1d95"],
+html.dark #sn-modal h3[style*="color: rgb(76, 29, 149)"] {
+  color: #c4b5fd !important;
+}
+html.dark #sn-modal h2[style*="color:#155e75"],
+html.dark #sn-modal h2[style*="color: rgb(21, 94, 117)"],
+html.dark #sn-modal h3[style*="color:#155e75"],
+html.dark #sn-modal h3[style*="color: rgb(21, 94, 117)"] {
+  color: #67e8f9 !important;
+}
+html.dark #sn-modal h2[style*="color:#831843"],
+html.dark #sn-modal h2[style*="color: rgb(131, 24, 67)"],
+html.dark #sn-modal h3[style*="color:#831843"],
+html.dark #sn-modal h3[style*="color: rgb(131, 24, 67)"],
+html.dark #sn-modal h2[style*="color:#be185d"],
+html.dark #sn-modal h2[style*="color: rgb(190, 24, 93)"],
+html.dark #sn-modal h3[style*="color:#be185d"],
+html.dark #sn-modal h3[style*="color: rgb(190, 24, 93)"] {
+  color: #f9a8d4 !important;
+}
+/* חוק לישראל — ביאור הזוהר (טורקיז כהה) והתווית שלו ← טורקיז בהיר; רק בתוך בלוק הטקסט (.lux-mblock) —
+   תג הסעיף "#155e75 על #ecfeff" בהיר גם בכהה ונשאר כמו שהוא */
+html.dark #chok-israel-modal .lux-mblock [style*="color:#155e75"], html.dark #chok-israel-modal .lux-mblock [style*="color: rgb(21, 94, 117)"] {
+  color: #67e8f9 !important;
+}
+html.dark #chok-israel-modal .lux-mblock [style*="color:#0891b2"], html.dark #chok-israel-modal .lux-mblock [style*="color: rgb(8, 145, 178)"] {
+  color: #22d3ee !important;
+}
 /* טקסטים: ליטרלים כהים ← בהירים (בתחומי המודאלים שהוחשכו בלבד) */
 html.dark #sefaria-modal [style*="color:#000000"], html.dark #sefaria-modal [style*="color:#1a1a1a"], html.dark #sefaria-modal [style*="color:#1e293b"], html.dark #sefaria-modal [style*="color:#0f172a"],
 html.dark #chok-israel-modal [style*="color:#000000"], html.dark #chok-israel-modal [style*="color:#1a1a1a"], html.dark #chok-israel-modal [style*="color:#1e293b"],
@@ -9539,7 +9579,8 @@ html.dark #tehillim-modal [style*="color:#000000"], html.dark #tehillim-modal [s
 html.dark #sn-modal [style*="color:#000000"], html.dark #sn-modal [style*="color:#1a1a1a"], html.dark #sn-modal [style*="color:#1e293b"], html.dark #sn-modal [style*="color:#0f172a"],
 html.dark #bih-reading-pane [style*="color:#1e293b"], html.dark #bih-search-overlay [style*="color:#1e293b"],
 html.dark #calendar-day-modal [style*="color:#0f172a"],
-html.dark #contact-modal [style*="color:#1a1a1a"],
+/* כפתורי התרומה הזהובים (רקע #fbbf24) — הכתב נשאר כהה כמו בבהיר */
+html.dark #contact-modal [style*="color:#1a1a1a"]:not([style*="#fbbf24"]):not([style*="rgb(251, 191, 36)"]),
 html.dark #contact-modal [style*="color:#1e293b"], html.dark #contact-modal [style*="color: rgb(30, 41, 59)"],
 html.dark #contact-modal [style*="color:#0f172a"], html.dark #contact-modal [style*="color: rgb(15, 23, 42)"],
 html.dark #nusach-selection-modal [style*="color:#1a1a1a"],

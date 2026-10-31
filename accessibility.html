@@ -112,6 +112,7 @@
     <style>
       html.jc-app .jc-web-pay { display: none !important; }
       html:not(.jc-app) .jc-app-only { display: none !important; }
+      .jc-native-only{display:none!important}
       body {
         font-family: "Assistant", sans-serif;
         transition:
@@ -147,7 +148,7 @@
           class="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-bold text-white/90 transition-colors hover:bg-white/15"
         >
           <span aria-hidden="true">←</span>
-          <span>חזרה לאתר</span>
+          <span><span class="jc-not-native">חזרה לאתר</span><span class="jc-native-only">חזרה</span></span>
         </a>
 
         <div class="mt-8">
@@ -189,10 +190,14 @@
             הנגישות של ארגון W3C ‏(<strong>WCAG 2.0</strong>), ברמה <strong>AA</strong>, ונבדק גם מול
             הנחיות WCAG 2.1.
           </p>
-          <p class="mt-3 leading-8 text-slate-700 dark:text-slate-300">
+          <p class="mt-3 leading-8 text-slate-700 dark:text-slate-300 jc-not-native">
             הבדיקה נעשתה בכלי בדיקה אוטומטי (axe-core) ובבדיקה ידנית — במחשב ובתצוגת טלפון, בדפדפן
             Chrome, בערכות התצוגה "בהיר" ו"כהה", בדף הראשי, בכל החלונות הראשיים (תפילות,
             לוח שנה, ספרייה וקורא הספרים, ספירת העומר, הגדרות ועוד) ובכל דפי המידע.
+          </p>
+          <p class="mt-3 leading-8 text-slate-700 dark:text-slate-300 jc-native-only">
+            האפליקציה נבדקה בכלי הבדיקה Accessibility Scanner ובבדיקה ידנית עם קורא
+            המסך TalkBack.
           </p>
         </section>
 
@@ -207,11 +212,15 @@
             <li>קישור "דלג לתוכן הראשי" בתחילת הדף הראשי, שמופיע בניווט במקלדת.</li>
             <li>בתחתית כל דף — קישורים לדף הבית, לבתי הכנסת ולדפי המידע.</li>
           </ul>
-          <h3 class="mt-5 text-lg font-bold text-slate-900 dark:text-white">מקלדת</h3>
-          <ul class="mt-3 space-y-2 leading-8 text-slate-700 dark:text-slate-300 list-disc pr-6">
+          <h3 class="mt-5 text-lg font-bold text-slate-900 dark:text-white">מקלדת<span class="jc-native-only"> ושלט</span></h3>
+          <ul class="mt-3 space-y-2 leading-8 text-slate-700 dark:text-slate-300 list-disc pr-6 jc-not-native">
             <li>כל הכפתורים, הקישורים והשדות נגישים במקש Tab, עם מסגרת פוקוס בולטת.</li>
             <li>מקש Escape וכפתור "חזור" של הטלפון סוגרים כל חלון ומחזירים לשלב הקודם.</li>
             <li>בטלפונים עם מקלדת ובלי מסך מגע אפשר לנווט באתר כולו בחיצים ובמקש OK.</li>
+          </ul>
+          <ul class="mt-3 space-y-2 leading-8 text-slate-700 dark:text-slate-300 list-disc pr-6 jc-native-only">
+            <li>במקלדת או בשלט אפשר לנווט בכל המסכים בחיצים ובמקש OK.</li>
+            <li>כפתור "חזור" של הטלפון סוגר כל חלון ומחזיר לשלב הקודם.</li>
           </ul>
           <h3 class="mt-5 text-lg font-bold text-slate-900 dark:text-white">קוראי מסך</h3>
           <ul class="mt-3 space-y-2 leading-8 text-slate-700 dark:text-slate-300 list-disc pr-6">
@@ -222,9 +231,10 @@
           </ul>
           <h3 class="mt-5 text-lg font-bold text-slate-900 dark:text-white">תצוגה וקריאות</h3>
           <ul class="mt-3 space-y-2 leading-8 text-slate-700 dark:text-slate-300 list-disc pr-6">
-            <li>הגדלת כיתוב בחמש דרגות (⚙️ הגדרות ← גודל כיתוב) — כל הדף גדל ומתארגן מחדש, בלי גלילה
+            <li><span class="jc-not-native">הגדלת כיתוב בחמש דרגות (⚙️ הגדרות ← גודל כיתוב) — כל הדף גדל ומתארגן מחדש, בלי גלילה
               לרוחב; באתר בדפדפן גם הגדלת התצוגה (zoom) של הדפדפן מותרת. באפליקציה ההגדלה היא דרך גודל
-              הכיתוב ודרך כפתורי +/− בקוראים (בלי הגדלה בצביטה).</li>
+              הכיתוב ודרך כפתורי +/− בקוראים (בלי הגדלה בצביטה).</span><span class="jc-native-only">הגדלת כיתוב בחמש דרגות (⚙️ הגדרות ← גודל כיתוב), ובנוסף האפליקציה
+              מכבדת את גודל הגופן שנבחר בהגדרות הטלפון; בקוראים יש גם כפתורי +/−.</span></li>
             <li>ערכות תצוגה: "בהיר", "כהה" ו"שמיים חיים", ובחירת גופן קריאה לספרים ולתפילות.</li>
             <li>ניגודיות צבעים של 4.5:1 לפחות לטקסט רגיל בערכות "בהיר" ו"כהה".</li>
             <li>קישורים בתוך טקסט מסומנים בקו תחתון, ולא רק בצבע.</li>
@@ -243,9 +253,14 @@
           <h2 class="text-2xl font-black text-slate-900 dark:text-white">
             אפליקציית האנדרואיד
           </h2>
-          <p class="mt-3 leading-8 text-slate-700 dark:text-slate-300">
+          <p class="mt-3 leading-8 text-slate-700 dark:text-slate-300 jc-not-native">
             האפליקציה מציגה את האתר עצמו, ולכן כל התאמות הנגישות שלמעלה חלות גם עליה. כפתור "חזור"
             של הטלפון סוגר חלונות ומחזיר לשלב הקודם, כמו בכל אפליקציה.
+          </p>
+          <p class="mt-3 leading-8 text-slate-700 dark:text-slate-300 jc-native-only">
+            האפליקציה נכתבה כאפליקציה ייעודית, עם רכיבי הנגישות של מערכת ההפעלה
+            (TalkBack). כפתור "חזור" של הטלפון סוגר חלונות ומחזיר לשלב הקודם, כמו בכל
+            אפליקציה.
           </p>
         </section>
 
@@ -300,8 +315,11 @@
           <h2 class="text-2xl font-black text-slate-900 dark:text-white">
             עדכון ההצהרה
           </h2>
-          <p class="mt-3 leading-8 text-slate-700 dark:text-slate-300">
+          <p class="mt-3 leading-8 text-slate-700 dark:text-slate-300 jc-not-native">
             הצהרה זו עודכנה לאחרונה ב-20 באוקטובר 2026, ותתעדכן עם כל שינוי מהותי באתר.
+          </p>
+          <p class="mt-3 leading-8 text-slate-700 dark:text-slate-300 jc-native-only">
+            הצהרה זו עודכנה לאחרונה ב-31 באוקטובר 2026, ותתעדכן עם כל שינוי מהותי באפליקציה.
           </p>
         </section>
       </div>

@@ -112,6 +112,7 @@
     <style>
       html.jc-app .jc-web-pay { display: none !important; }
       html:not(.jc-app) .jc-app-only { display: none !important; }
+      .jc-native-only{display:none!important}
       body {
         font-family: "Assistant", sans-serif;
         transition:
@@ -147,7 +148,7 @@
           class="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-bold text-white/90 transition-colors hover:bg-white/15"
         >
           <span aria-hidden="true">←</span>
-          <span>חזרה לאתר</span>
+          <span><span class="jc-not-native">חזרה לאתר</span><span class="jc-native-only">חזרה</span></span>
         </a>
 
         <div class="mt-8">
@@ -156,8 +157,9 @@
           </p>
           <h1 class="mt-3 text-4xl md:text-5xl font-black">מדיניות פרטיות</h1>
           <p class="mt-4 max-w-3xl text-lg text-slate-200 leading-8">
-            עמוד זה מפרט כיצד האתר "הלוח היהודי" אוסף, משתמש ומגן על המידע שלך
-            במסגרת השימוש באתר ובשירותיו.
+            <span class="jc-not-native">עמוד זה מפרט כיצד האתר "הלוח היהודי" אוסף, משתמש ומגן על המידע שלך
+            במסגרת השימוש באתר ובשירותיו.</span><span class="jc-native-only">עמוד זה מפרט כיצד האפליקציה "הלוח היהודי" אוספת, משתמשת ומגינה
+            על המידע שלך במסגרת השימוש באפליקציה ובשירותיה.</span>
           </p>
         </div>
       </div>
@@ -172,7 +174,7 @@
           <h2 class="text-2xl font-black text-slate-900 dark:text-white">
             כללי
           </h2>
-          <p class="mt-3 leading-8 text-slate-700 dark:text-slate-300">
+          <p class="mt-3 leading-8 text-slate-700 dark:text-slate-300 jc-not-native">
             האתר <strong>"הלוח היהודי"</strong> (jewishcalendar.co.il)
             מכבד את פרטיותך ומחויב להגן על המידע האישי שלך. מדיניות פרטיות זו
             מסבירה אילו נתונים נאספים במסגרת השימוש באתר, כיצד הם מאוחסנים,
@@ -180,12 +182,22 @@
             הצגת תאריכים, חגים, זמני היום, ספירת העומר, פרשת השבוע, דף יומי
             ואפשרות ייצוא ליומן.
           </p>
-          <p class="mt-3 leading-8 text-slate-700 dark:text-slate-300">
-            האתר מופעל על ידי <strong>Zstore Ai</strong> (מפעיל פרטי, ישראל).
-            לפניות בענייני פרטיות: zstore.ai295@gmail.com.
+          <p class="mt-3 leading-8 text-slate-700 dark:text-slate-300 jc-native-only">
+            האפליקציה <strong>"הלוח היהודי"</strong> מכבדת את פרטיותך ומחויבת להגן
+            על המידע האישי שלך. מדיניות פרטיות זו מסבירה אילו נתונים נאספים במסגרת
+            השימוש באפליקציה, כיצד הם מאוחסנים, ולאילו מטרות הם משמשים. האפליקציה
+            מספקת לוח שנה עברי-לועזי הכולל הצגת תאריכים, חגים, זמני היום, ספירת
+            העומר, פרשת השבוע, דף יומי וסנכרון ליומן הטלפון.
           </p>
           <p class="mt-3 leading-8 text-slate-700 dark:text-slate-300">
+            <span class="jc-not-native">האתר מופעל</span><span class="jc-native-only">האפליקציה מופעלת</span> על ידי <strong>Zstore Ai</strong> (מפעיל פרטי, ישראל).
+            לפניות בענייני פרטיות: zstore.ai295@gmail.com.
+          </p>
+          <p class="mt-3 leading-8 text-slate-700 dark:text-slate-300 jc-not-native">
             עדכון אחרון: 26 באוקטובר 2026.
+          </p>
+          <p class="mt-3 leading-8 text-slate-700 dark:text-slate-300 jc-native-only">
+            עדכון אחרון: 31 באוקטובר 2026.
           </p>
         </section>
 
@@ -194,7 +206,7 @@
           <h2 class="text-2xl font-black text-slate-900 dark:text-white">
             מידע שנאסף
           </h2>
-          <p class="mt-3 leading-8 text-slate-700 dark:text-slate-300">
+          <p class="mt-3 leading-8 text-slate-700 dark:text-slate-300 jc-not-native">
             האתר <strong>אינו דורש הרשמה או התחברות</strong>, ואינו שומר
             בשרתיו מידע אישי מזהה על גולשיו. נתונים אישיים שתזין מיוזמתך (כגון
             שם) נשמרים במכשירך בלבד, כמפורט להלן. החריג היחיד הוא
@@ -206,14 +218,22 @@
             האנדרואיד" להלן. גם האפליקציה אינה שולחת אלינו מידע אישי, ואין בה
             כלי פרסום, ניתוח תנועה (אנליטיקה) או מעקב.
           </p>
+          <p class="mt-3 leading-8 text-slate-700 dark:text-slate-300 jc-native-only">
+            האפליקציה <strong>אינה דורשת הרשמה או התחברות</strong>, ואינה שומרת
+            בשרתים מידע אישי מזהה. כל מה שתזין בה (כגון שם) נשמר במכשירך בלבד,
+            כמפורט להלן. <strong>אין באפליקציה מזהה התראות ואין חשבון משתמש</strong>,
+            ואין בה כלי פרסום, ניתוח תנועה (אנליטיקה) או מעקב. מדיניות זו חלה גם על
+            הווידג'טים למסך הבית, על הסנכרון ליומן הטלפון ועל אפליקציית השעון
+            (Wear OS), כמפורט בסעיף "אפליקציית האנדרואיד" להלן.
+          </p>
           <p class="mt-3 leading-8 text-slate-700 dark:text-slate-300">
-            עם זאת, במסגרת פעולתו התקינה, האתר עשוי לשמור ולעבד את סוגי המידע
+            עם זאת, במסגרת <span class="jc-not-native">פעולתו התקינה, האתר עשוי</span><span class="jc-native-only">פעולתה התקינה, האפליקציה עשויה</span> לשמור ולעבד את סוגי המידע
             הבאים:
           </p>
 
           <div class="mt-4 space-y-4">
             <div
-              class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5"
+              class="jc-not-native rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5"
             >
               <h3 class="text-lg font-bold text-slate-900 dark:text-white">
                 אחסון מקומי (localStorage)
@@ -236,9 +256,30 @@
                 לב: הפעולה תמחק גם את ההעדפות וההתקדמות שלך).
               </p>
             </div>
+            <div
+              class="jc-native-only rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5"
+            >
+              <h3 class="text-lg font-bold text-slate-900 dark:text-white">
+                אחסון מקומי (במכשיר)
+              </h3>
+              <p class="mt-2 leading-7 text-slate-700 dark:text-slate-300">
+                האפליקציה שומרת באחסון הפנימי שלה, על מכשירך בלבד, את הנתונים הבאים:
+                העדפות תצוגה (עיר נבחרת, שיטת חישוב זמנים MGA/GRA, ערכת תצוגה, גודל
+                כיתוב, נוסח תפילה); קואורדינטות מיקום שאישרת; הגדרות התזכורות; וכן
+                נתונים שאתה מזין מיוזמתך — שם פרטי לברכה אישית, תזכורות, שמות לתפילה
+                (למשל לרפואה שלמה או לעילוי נשמת), הילולות ויארצייטים, סימניות והתקדמות
+                בלימוד (תהילים, דף יומי, תוכניות לימוד) — ומטמון של טקסטים, של מקומות
+                ושל אריחי מפה. מידע זה <strong>נשמר אך ורק על המכשיר שלך</strong> ואינו
+                נגיש לנו. הנתונים האישיים שאתה מזין אינם נשלחים לשום שרת; הקואורדינטות
+                נשלחות רק לשירותי המפות והמקומות, כמפורט בסעיף "נתוני מיקום". באפשרותך
+                למחוק את המידע בכל עת באמצעות "ניקוי נתונים" של האפליקציה בהגדרות
+                הטלפון, או בהסרת האפליקציה (שים לב: הפעולה תמחק גם את ההעדפות
+                וההתקדמות שלך).
+              </p>
+            </div>
 
             <div
-              class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5"
+              class="jc-not-native rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5"
             >
               <h3 class="text-lg font-bold text-slate-900 dark:text-white">
                 נתוני מיקום (Geolocation)
@@ -260,21 +301,44 @@
               </p>
             </div>
             <div
+              class="jc-native-only rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5"
+            >
+              <h3 class="text-lg font-bold text-slate-900 dark:text-white">
+                נתוני מיקום
+              </h3>
+              <p class="mt-2 leading-7 text-slate-700 dark:text-slate-300">
+                האפליקציה מבקשת גישה למיקומך דרך הרשאת המיקום של הטלפון, <strong>רק
+                לאחר אישורך המפורש</strong>, ומשתמשת בו לחישוב זמני היום במכשיר עצמו
+                ולאיתור בתי כנסת בקרבתך. המיקום מתקבל משירות המיקום של אנדרואיד, בלי
+                שירותי Google Play. הקואורדינטות נשמרות במכשירך, והן נשלחות רק אל:
+                Nominatim מבית OpenStreetMap (זיהוי שם היישוב בחו"ל — בארץ שם היישוב
+                נקבע מרשימה שבאפליקציה, בלי פנייה לרשת; ובעמוד בתי הכנסת — המרה לכתובת
+                משוערת ברמת רחוב, שנשמרת במכשירך), Overpass API (חיפוש מקומות בעמוד
+                בתי הכנסת) ושרת האריחים של OpenStreetMap (האזור המוצג במפה).
+                הקואורדינטות אינן נשלחות ל-Hebcal ואינן נשמרות אצלנו. פירוט בסעיף
+                "שירותי צד שלישי".
+              </p>
+            </div>
+            <div
               class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5"
             >
               <h3 class="text-lg font-bold text-slate-900 dark:text-white">
                 חיישני המכשיר (מצפן)
               </h3>
-              <p class="mt-2 leading-7 text-slate-700 dark:text-slate-300">
+              <p class="mt-2 leading-7 text-slate-700 dark:text-slate-300 jc-not-native">
                 המצפן לכיוון ירושלים משתמש בחיישני הכיוון של המכשיר
                 (DeviceOrientation), רק כשאתה פותח אותו ולאחר אישורך כשהדפדפן מבקש
                 זאת. נתוני החיישנים מעובדים במכשיר בלבד, ואינם נשמרים או נשלחים.
+              </p>
+              <p class="mt-2 leading-7 text-slate-700 dark:text-slate-300 jc-native-only">
+                המצפן לכיוון ירושלים משתמש בחיישני הכיוון של המכשיר רק כשהוא פתוח.
+                נתוני החיישנים מעובדים במכשיר בלבד, ואינם נשמרים או נשלחים.
               </p>
             </div>
 
 
             <div
-              class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5"
+              class="jc-not-native rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5"
             >
               <h3 class="text-lg font-bold text-slate-900 dark:text-white">
                 Service Worker ומטמון
@@ -293,9 +357,21 @@
                 לשיפור הביצועים, ונמחק בעת ניקוי נתוני האתר בדפדפן.
               </p>
             </div>
+            <div
+              class="jc-native-only rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5"
+            >
+              <h3 class="text-lg font-bold text-slate-900 dark:text-white">
+                מטמון במכשיר
+              </h3>
+              <p class="mt-2 leading-7 text-slate-700 dark:text-slate-300">
+                טקסטים מספריא, נתוני מקומות ואריחי מפה שנטענו נשמרים במטמון במכשירך,
+                כדי שיהיו זמינים גם ללא חיבור לאינטרנט. מידע זה נשמר על מכשירך בלבד,
+                ונמחק בניקוי נתוני האפליקציה או בהסרתה.
+              </p>
+            </div>
 
             <div
-              class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5"
+              class="jc-not-native rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5"
             >
               <h3 class="text-lg font-bold text-slate-900 dark:text-white">
                 הרשמה להתראות (Push)
@@ -319,17 +395,35 @@
               </p>
             </div>
             <div
+              class="jc-native-only rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5"
+            >
+              <h3 class="text-lg font-bold text-slate-900 dark:text-white">
+                תזכורות מקומיות
+              </h3>
+              <p class="mt-2 leading-7 text-slate-700 dark:text-slate-300">
+                התזכורות לספירת העומר ולהדלקת נרות חנוכה, וכן התזכורות האישיות,
+                מתוזמנות במכשיר עצמו לפי העיר שבחרת. שום פרט אינו נשלח לשרת, ואין מזהה
+                התראות. אפשר לבטל את הרשאת ההתראות בכל עת בהגדרות הטלפון.
+              </p>
+            </div>
+            <div
               class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5"
             >
               <h3 class="text-lg font-bold text-slate-900 dark:text-white">
                 אפליקציית האנדרואיד
               </h3>
-              <p class="mt-2 leading-7 text-slate-700 dark:text-slate-300">
+              <p class="mt-2 leading-7 text-slate-700 dark:text-slate-300 jc-not-native">
                 <strong>ווידג'טים:</strong> האפליקציה שומרת בטלפון עותק של ההגדרות
                 שבחרת באתר (עיר וקואורדינטות, נוסח, שיטת החישוב, דקות הדלקת הנרות,
                 סדרי הלימוד ורשימת ההילולות), כדי שהווידג'טים יחשבו את הזמנים
                 בטלפון עצמו, גם ללא חיבור. ההגדרות עוברות מהאתר לאפליקציה בתוך
                 הטלפון בלבד, ואינן נשלחות לשום שרת.
+              </p>
+              <p class="mt-2 leading-7 text-slate-700 dark:text-slate-300 jc-native-only">
+                <strong>ווידג'טים:</strong> הווידג'טים משתמשים בהגדרות שבחרת באפליקציה
+                (עיר וקואורדינטות, נוסח, שיטת החישוב, דקות הדלקת הנרות, סדרי הלימוד
+                ורשימת ההילולות), כדי לחשב את הזמנים בטלפון עצמו, גם ללא חיבור.
+                ההגדרות נשמרות בטלפון בלבד, ואינן נשלחות לשום שרת.
               </p>
               <p class="mt-2 leading-7 text-slate-700 dark:text-slate-300">
                 <strong>סנכרון ליומן הטלפון (רק אם הפעלת אותו):</strong> הרשאת
@@ -358,15 +452,23 @@
                 וההתראה עצמה מגיעה מאפליקציית היומן. התזכורת נשמרת ביומן בלבד — היא
                 אינה נשלחת אלינו ולא לשום שרת (אלא אם היומן עצמו מסונכרן לחשבון, לפי
                 הגדרות הטלפון), ואפשר לערוך או למחוק אותה ביומן כמו כל אירוע אחר.
-                באתר בדפדפן התזכורת מורדת כקובץ יומן (ICS) שנפתח ביומן של המכשיר.
+                <span class="jc-not-native">באתר בדפדפן התזכורת מורדת כקובץ יומן (ICS) שנפתח ביומן של המכשיר.</span>
               </p>
-              <p class="mt-2 leading-7 text-slate-700 dark:text-slate-300">
+              <p class="mt-2 leading-7 text-slate-700 dark:text-slate-300 jc-not-native">
                 <strong>הרשאות נוספות:</strong> התראות — לתזכורות ספירת העומר ונר חנוכה;
                 שעונים ותזכורות והפעלה עם הדלקת הטלפון — רק כדי שהווידג'טים
                 יתעדכנו בזמן (למשל התאריך העברי בשקיעה); מצב הרשת — כדי לזהות
                 חיבור בפתיחה הראשונה. המיקום מתבקש דרך הדפדפן, כמו באתר. הסרת
                 האפליקציה או ניקוי נתוניה מוחקים את כל המידע שנשמר בה (אירועים
                 שכבר נכתבו ליומן נשארים בו עד שתכבה את הסנכרון או תמחק אותם).
+              </p>
+              <p class="mt-2 leading-7 text-slate-700 dark:text-slate-300 jc-native-only">
+                <strong>הרשאות נוספות:</strong> התראות — לתזכורות ספירת העומר, נרות
+                חנוכה והתזכורות האישיות; שעונים ותזכורות והפעלה עם הדלקת הטלפון — רק
+                כדי שהווידג'טים יתעדכנו בזמן (למשל התאריך העברי בשקיעה); מיקום — רק
+                באישורך, כמפורט בסעיף "נתוני מיקום". הסרת האפליקציה או ניקוי נתוניה
+                מוחקים את כל המידע שנשמר בה (אירועים שכבר נכתבו ליומן נשארים בו עד
+                שתכבה את הסנכרון או תמחק אותם).
               </p>
               <p class="mt-2 leading-7 text-slate-700 dark:text-slate-300">
                 <strong>אפליקציית השעון (Wear OS) ופני השעון:</strong> אם התקנת
@@ -388,7 +490,7 @@
             מסירת מידע — וולונטרית ומטרות השימוש
           </h2>
           <p class="mt-3 leading-8 text-slate-700 dark:text-slate-300">
-            לא חלה עליך כל חובה חוקית למסור מידע לצורך שימוש באתר. הזנת נתונים
+            לא חלה עליך כל חובה חוקית למסור מידע לצורך שימוש <span class="jc-not-native">באתר</span><span class="jc-native-only">באפליקציה</span>. הזנת נתונים
             (שם, שמות לתפילה, יארצייטים, הערות) ומתן הרשאת מיקום או התראות
             תלויות ברצונך החופשי בלבד, ונועדו אך ורק להפעלת התכונות המתוארות
             במדיניות זו. לא נעשה במידע שימוש לפרסום, לדיוור או להעברה מסחרית.
@@ -401,13 +503,13 @@
             שירותי צד שלישי
           </h2>
           <p class="mt-3 leading-8 text-slate-700 dark:text-slate-300">
-            האתר מסתמך על שירותי צד שלישי לצורך פעולתו התקינה. כל שירות כפוף
+            <span class="jc-not-native">האתר מסתמך על שירותי צד שלישי לצורך פעולתו התקינה.</span><span class="jc-native-only">האפליקציה מסתמכת על שירותי צד שלישי לצורך פעולתה התקינה.</span> כל שירות כפוף
             למדיניות הפרטיות שלו. להלן פירוט השירותים:
           </p>
 
           <div class="mt-4 space-y-4">
             <div
-              class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5"
+              class="jc-not-native rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5"
             >
               <h3 class="text-lg font-bold text-slate-900 dark:text-white">
                 Hebcal API
@@ -427,7 +529,7 @@
             </div>
 
             <div
-              class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5"
+              class="jc-not-native rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5"
             >
               <h3 class="text-lg font-bold text-slate-900 dark:text-white">
                 גופנים (Google Fonts)
@@ -451,7 +553,7 @@
             </div>
 
             <div
-              class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5"
+              class="jc-not-native rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5"
             >
               <h3 class="text-lg font-bold text-slate-900 dark:text-white">
                 רשתות CDN — unpkg ו-jsDelivr
@@ -471,7 +573,7 @@
               <h3 class="text-lg font-bold text-slate-900 dark:text-white">
                 Netlify (אירוח)
               </h3>
-              <p class="mt-2 leading-7 text-slate-700 dark:text-slate-300">
+              <p class="mt-2 leading-7 text-slate-700 dark:text-slate-300 jc-not-native">
                 האתר מתארח על פלטפורמת Netlify. כחלק מהתשתית, Netlify עשויה
                 לאסוף נתונים טכניים כגון כתובת IP, סוג דפדפן וזמני גישה למטרות
                 אבטחה וביצועים. כשהחיבור הישיר לספריא נכשל, הבקשה לטקסט עוברת דרך
@@ -489,10 +591,23 @@
                   >למדיניות הפרטיות של Netlify</a
                 >.
               </p>
+              <p class="mt-2 leading-7 text-slate-700 dark:text-slate-300 jc-native-only">
+                האפליקציה פונה לשרת האתר (Netlify) רק לעדכון מאגר בתי הכנסת, ולשרת
+                המתווך של ספריא כשהגישה הישירה לספריא חסומה (למשל ברשת מסוננת). השרת
+                עשוי לרשום נתונים טכניים כגון כתובת IP וזמן הגישה, ובבקשה דרך השרת
+                המתווך — גם את שם הטקסט המבוקש. השימוש כפוף
+                <a
+                  href="https://www.netlify.com/privacy/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="text-blue-600 dark:text-blue-400 underline"
+                  >למדיניות הפרטיות של Netlify</a
+                >.
+              </p>
             </div>
 
             <div
-              class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5"
+              class="jc-not-native rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5"
             >
               <h3 class="text-lg font-bold text-slate-900 dark:text-white">
                 OneSignal (התראות Push)
@@ -523,7 +638,7 @@
               <h3 class="text-lg font-bold text-slate-900 dark:text-white">
                 OpenStreetMap, Nominatim ו-Overpass (עמוד בתי הכנסת)
               </h3>
-              <p class="mt-2 leading-7 text-slate-700 dark:text-slate-300">
+              <p class="mt-2 leading-7 text-slate-700 dark:text-slate-300 jc-not-native">
                 בעמוד "בתי כנסת" נטענת מפה משרתי OpenStreetMap
                 (tile.openstreetmap.org), החושפים את כתובת ה-IP שלך ואת אזור
                 המפה הנצפה; חיפוש בתי כנסת נשלח לשרתי Overpass API
@@ -531,6 +646,24 @@
                 וכולל את קואורדינטות אזור החיפוש; ושירות Nominatim ממיר
                 קואורדינטות לשם יישוב. שירותים אלה פועלים בעיקר באיחוד
                 האירופי, בכפוף
+                <a
+                  href="https://osmfoundation.org/wiki/Privacy_Policy"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="text-blue-600 dark:text-blue-400 underline"
+                  >למדיניות הפרטיות של קרן OpenStreetMap</a
+                >. כפתור הניווט לבית כנסת או למקווה פותח את Waze עם מיקום היעד, בכפוף
+                למדיניות הפרטיות של Waze.
+              </p>
+              <p class="mt-2 leading-7 text-slate-700 dark:text-slate-300 jc-native-only">
+                בעמוד "בתי כנסת" נטענים אריחי מפה משרתי OpenStreetMap
+                (tile.openstreetmap.org), החושפים את כתובת ה-IP שלך ואת אזור המפה
+                הנצפה; האריחים נשמרים במטמון במכשירך. חיפוש בתי כנסת נשלח לשרתי
+                Overpass API (overpass-api.de, z.overpass-api.de, overpass.kumi.systems)
+                וכולל את קואורדינטות אזור החיפוש; ושירות Nominatim
+                (nominatim.openstreetmap.org) ממיר קואורדינטות לשם יישוב בחו"ל, ובעמוד
+                בתי הכנסת — לכתובת משוערת. שירותים אלה פועלים בעיקר באיחוד האירופי,
+                בכפוף
                 <a
                   href="https://osmfoundation.org/wiki/Privacy_Policy"
                   target="_blank"
@@ -548,7 +681,7 @@
               <h3 class="text-lg font-bold text-slate-900 dark:text-white">
                 Sefaria (ספריא) ומקורות תוכן תורניים
               </h3>
-              <p class="mt-2 leading-7 text-slate-700 dark:text-slate-300">
+              <p class="mt-2 leading-7 text-slate-700 dark:text-slate-300 jc-not-native">
                 טקסטים תורניים המוצגים באתר (תנ"ך, תפילות, תהילים, דף יומי,
                 משנה ופירושים) נטענים ישירות מהדפדפן שלך משרתי צד שלישי:
                 ה-API של ספריא (sefaria.org / sefaria.org.il, שרתים בארה"ב), ויקיטקסט העברי
@@ -558,6 +691,17 @@
                 דרך שירותי Proxy צד-שלישיים (corsproxy.io, allorigins.win,
                 codetabs.com) הרואים אף הם את כתובת ה-IP ואת כתובת הטקסט. כל
                 שירות כפוף למדיניות הפרטיות שלו.
+              </p>
+              <p class="mt-2 leading-7 text-slate-700 dark:text-slate-300 jc-native-only">
+                טקסטים תורניים המוצגים באפליקציה (תנ"ך, תפילות, תהילים, דף יומי,
+                משנה ופירושים) נטענים ישירות מהמכשיר שלך משרתי צד שלישי:
+                ה-API של ספריא (sefaria.org / sefaria.org.il, שרתים בארה"ב), ויקיטקסט העברי
+                (he.wikisource.org, מבית קרן ויקימדיה), פרויקט בן-יהודה
+                (benyehuda.org) ואתר תורת אמת. בקשות אלו כוללות את כתובת ה-IP
+                שלך ואת שם הטקסט המבוקש, ומה שנטען נשמר במכשירך. חלק מהבקשות לפרויקט
+                בן-יהודה מנותבות דרך שירותי Proxy צד-שלישיים (corsproxy.io,
+                allorigins.win, codetabs.com) הרואים אף הם את כתובת ה-IP ואת כתובת
+                הטקסט. כל שירות כפוף למדיניות הפרטיות שלו.
               </p>
             </div>
 
@@ -593,13 +737,17 @@
           <h2 class="text-2xl font-black text-slate-900 dark:text-white">
             עוגיות (Cookies)
           </h2>
-          <p class="mt-3 leading-8 text-slate-700 dark:text-slate-300">
+          <p class="mt-3 leading-8 text-slate-700 dark:text-slate-300 jc-not-native">
             האתר עצמו אינו מגדיר עוגיות למעקב או לפרסום, ואינו משתמש בכלי ניתוח
             תנועה (אנליטיקה), פרסום או מעקב. עם זאת, שירותי צד
             שלישי הפועלים באתר — ובפרט שירות ההתראות OneSignal, וכן Google
             Fonts, רשתות CDN ופלטפורמת האירוח — עשויים להגדיר עוגיות או
             להשתמש באחסון מקומי מטעמם לצרכים תפעוליים, בהתאם למדיניותם. ניתן
             לחסום או למחוק עוגיות אלו בהגדרות הדפדפן.
+          </p>
+          <p class="mt-3 leading-8 text-slate-700 dark:text-slate-300 jc-native-only">
+            האפליקציה אינה משתמשת בעוגיות, בכלי ניתוח תנועה (אנליטיקה), בפרסומות
+            או במעקב.
           </p>
         </section>
 
@@ -608,9 +756,13 @@
           <h2 class="text-2xl font-black text-slate-900 dark:text-white">
             משך שמירת המידע
           </h2>
-          <p class="mt-3 leading-8 text-slate-700 dark:text-slate-300">
+          <p class="mt-3 leading-8 text-slate-700 dark:text-slate-300 jc-not-native">
             נתונים הנשמרים באחסון המקומי נשמרים על מכשירך ללא הגבלת זמן, עד
             שתמחק אותם ביוזמתך דרך הגדרות הדפדפן או דרך ממשק האתר.
+          </p>
+          <p class="mt-3 leading-8 text-slate-700 dark:text-slate-300 jc-native-only">
+            הנתונים הנשמרים במכשירך נשמרים בו ללא הגבלת זמן, עד שתמחק את נתוני
+            האפליקציה או תסיר אותה.
           </p>
         </section>
 
@@ -619,11 +771,16 @@
           <h2 class="text-2xl font-black text-slate-900 dark:text-white">
             העברת מידע אל מחוץ לישראל
           </h2>
-          <p class="mt-3 leading-8 text-slate-700 dark:text-slate-300">
+          <p class="mt-3 leading-8 text-slate-700 dark:text-slate-300 jc-not-native">
             חלק מספקי השירות פועלים מחוץ לישראל, בעיקר בארה"ב ובאיחוד האירופי
             (Sefaria, Google, OneSignal, Netlify, רשתות CDN ושירותי
             OpenStreetMap). גלישה באתר כרוכה בהעברת נתונים טכניים (כגון כתובת
             IP) לספקים אלה.
+          </p>
+          <p class="mt-3 leading-8 text-slate-700 dark:text-slate-300 jc-native-only">
+            חלק מספקי השירות פועלים מחוץ לישראל, בעיקר בארה"ב ובאיחוד האירופי
+            (Sefaria, Netlify ושירותי OpenStreetMap). השימוש באפליקציה כרוך
+            בהעברת נתונים טכניים (כגון כתובת IP) לספקים אלה.
           </p>
         </section>
 
@@ -632,13 +789,20 @@
           <h2 class="text-2xl font-black text-slate-900 dark:text-white">
             אבטחת מידע
           </h2>
-          <p class="mt-3 leading-8 text-slate-700 dark:text-slate-300">
+          <p class="mt-3 leading-8 text-slate-700 dark:text-slate-300 jc-not-native">
             האתר מוגש באמצעות פרוטוקול HTTPS מאובטח, המבטיח הצפנת התקשורת בין
             הדפדפן שלך לבין שרת האתר. מאחר שהאתר אינו שומר מידע אישי בשרתיו
             (למעט מזהי מנויי ההתראות, המאובטחים במערכות OneSignal), הסיכון
             לדליפת מידע אישי מהאתר עצמו הוא מזערי. במקרה של אירוע אבטחה
             הנוגע למידע אישי נפעל בהתאם להוראות הדין, לרבות דיווח לרשות
             להגנת הפרטיות ככל שנדרש.
+          </p>
+          <p class="mt-3 leading-8 text-slate-700 dark:text-slate-300 jc-native-only">
+            התקשורת בין האפליקציה לבין השירותים שהיא פונה אליהם מוצפנת בפרוטוקול
+            HTTPS מאובטח. מאחר שאין בשרתים שלנו מידע אישי על המשתמשים, הסיכון
+            לדליפת מידע אישי מאיתנו הוא מזערי. במקרה של אירוע אבטחה הנוגע למידע
+            אישי נפעל בהתאם להוראות הדין, לרבות דיווח לרשות להגנת הפרטיות ככל
+            שנדרש.
           </p>
         </section>
 
@@ -647,7 +811,7 @@
           <h2 class="text-2xl font-black text-slate-900 dark:text-white">
             זכויות המשתמש
           </h2>
-          <p class="mt-3 leading-8 text-slate-700 dark:text-slate-300">
+          <p class="mt-3 leading-8 text-slate-700 dark:text-slate-300 jc-not-native">
             על פי חוק הגנת הפרטיות, התשמ"א-1981 (כולל תיקון 13), עומדת לך זכות לעיין במידע
             אישי המוחזק עליך ולבקש את תיקונו או מחיקתו. באתר עצמו אין מאגר
             מידע על גולשים; המידע היחיד המזוהה עם מכשירך הוא רשומת מנוי
@@ -658,6 +822,14 @@
             עת למחוק אותן באמצעות ניקוי נתוני הדפדפן או מחיקת נתוני האתר דרך
             הגדרות הדפדפן שלך. כמו כן, תוכל לבטל את הרשאת המיקום בכל עת דרך
             הגדרות הדפדפן.
+          </p>
+          <p class="mt-3 leading-8 text-slate-700 dark:text-slate-300 jc-native-only">
+            על פי חוק הגנת הפרטיות, התשמ"א-1981 (כולל תיקון 13), עומדת לך זכות לעיין במידע
+            אישי המוחזק עליך ולבקש את תיקונו או מחיקתו. לאפליקציה אין מאגר מידע על
+            משתמשים, והמידע כולו נשמר במכשירך: תוכל למחוק אותו בכל עת באמצעות "ניקוי
+            נתונים" של האפליקציה בהגדרות הטלפון או בהסרתה, ולבטל את הרשאות המיקום
+            וההתראות בהגדרות הטלפון. לכל שאלה תוכל לפנות אלינו בדוא"ל שבסעיף "יצירת
+            קשר", ונטפל בפנייה ללא דיחוי.
           </p>
           <p class="mt-3 leading-8 text-slate-700 dark:text-slate-300">
             אם לדעתך נפגעה פרטיותך, ניתן לפנות אלינו בדוא"ל, וכן עומדת לך זכות
@@ -671,8 +843,9 @@
             פרטיות ילדים
           </h2>
           <p class="mt-3 leading-8 text-slate-700 dark:text-slate-300">
-            האתר אינו אוסף ביודעין מידע אישי מילדים מתחת לגיל 13. האתר פתוח
-            לשימוש הציבור הרחב ואינו מכיל תוכן שאינו הולם לכל גיל.
+            <span class="jc-not-native">האתר אינו אוסף ביודעין מידע אישי מילדים מתחת לגיל 13. האתר פתוח
+            לשימוש הציבור הרחב ואינו מכיל תוכן שאינו הולם לכל גיל.</span><span class="jc-native-only">האפליקציה אינה אוספת ביודעין מידע אישי מילדים מתחת לגיל 13.
+            האפליקציה פתוחה לשימוש הציבור הרחב ואינה מכילה תוכן שאינו הולם לכל גיל.</span>
           </p>
         </section>
 
@@ -683,7 +856,7 @@
           </h2>
           <p class="mt-3 leading-8 text-slate-700 dark:text-slate-300">
             אנו שומרים את הזכות לעדכן מדיניות פרטיות זו מעת לעת. שינויים מהותיים
-            יפורסמו בעמוד זה עם תאריך עדכון חדש. המשך השימוש באתר לאחר עדכון
+            יפורסמו בעמוד זה עם תאריך עדכון חדש. המשך השימוש <span class="jc-not-native">באתר</span><span class="jc-native-only">באפליקציה</span> לאחר עדכון
             המדיניות מהווה הסכמה לתנאים המעודכנים.
           </p>
         </section>

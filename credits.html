@@ -112,6 +112,7 @@
     <style>
       html.jc-app .jc-web-pay { display: none !important; }
       html:not(.jc-app) .jc-app-only { display: none !important; }
+      .jc-native-only{display:none!important}
       body {
         font-family: "Assistant", sans-serif;
         transition:
@@ -147,7 +148,7 @@
           class="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-bold text-white/90 transition-colors hover:bg-white/15"
         >
           <span aria-hidden="true">←</span>
-          <span>חזרה לאתר</span>
+          <span><span class="jc-not-native">חזרה לאתר</span><span class="jc-native-only">חזרה</span></span>
         </a>
 
         <div class="mt-8">
@@ -156,9 +157,9 @@
           </p>
           <h1 class="mt-3 text-4xl md:text-5xl font-black">קרדיטים וזכויות</h1>
           <p class="mt-4 max-w-3xl text-lg text-slate-200 leading-8">
-            בעמוד זה מרוכז מידע כללי על פיתוח האתר, מקורות נתונים, רכיבים
-            גרפיים, טכנולוגיות ושירותים חיצוניים שבהם האתר עושה שימוש או עשוי
-            להסתמך עליהם במסגרת פעילותו.
+            בעמוד זה מרוכז מידע כללי על פיתוח <span class="jc-not-native">האתר</span><span class="jc-native-only">האפליקציה</span>, מקורות נתונים, רכיבים
+            גרפיים, טכנולוגיות ושירותים חיצוניים שבהם <span class="jc-not-native">האתר עושה שימוש או עשוי
+            להסתמך עליהם במסגרת פעילותו.</span><span class="jc-native-only">האפליקציה עושה שימוש.</span>
           </p>
         </div>
       </div>
@@ -171,14 +172,22 @@
         <!-- פיתוח האתר -->
         <section class="rounded-3xl bg-slate-50 dark:bg-slate-900/60 p-6">
           <h2 class="text-2xl font-black text-slate-900 dark:text-white">
-            פיתוח האתר
+            פיתוח <span class="jc-not-native">האתר</span><span class="jc-native-only">האפליקציה</span>
           </h2>
-          <p class="mt-3 leading-8 text-slate-700 dark:text-slate-300">
+          <p class="mt-3 leading-8 text-slate-700 dark:text-slate-300 jc-not-native">
             האתר, מבנה הממשק, התאמות התצוגה, סידור ה-RTL, חוויית המשתמש,
             החיבורים הטכניים והטמעת הפונקציונליות פותחו עבור פרויקט
             <strong>"הלוח היהודי"</strong> על ידי <strong>Zstore Ai</strong>. הקוד,
             השילוב בין הרכיבים וההתאמות הייעודיות בוצעו כחלק מהקמת האתר והפעלתו.
             כל הזכויות בעיצוב, במבנה ובקוד המקורי של האתר שמורות ל-Zstore Ai.
+          </p>
+          <p class="mt-3 leading-8 text-slate-700 dark:text-slate-300 jc-native-only">
+            האפליקציה, מבנה הממשק, התאמות התצוגה, סידור ה-RTL, חוויית המשתמש
+            והחישובים פותחו עבור פרויקט <strong>"הלוח היהודי"</strong> על ידי
+            <strong>Zstore Ai</strong>, ונכתבו מחדש כאפליקציה ייעודית (React Native).
+            הקוד, השילוב בין הרכיבים וההתאמות הייעודיות בוצעו כחלק מהקמת
+            האפליקציה והפעלתה. כל הזכויות בעיצוב, במבנה ובקוד המקורי של האפליקציה
+            שמורות ל-Zstore Ai.
           </p>
           <p class="mt-3 leading-8 text-slate-700 dark:text-slate-300">
             גם ערכת העיצוב "שמיים חיים" (רקע שמיים חי לפי זמני היום ההלכתיים,
@@ -200,7 +209,7 @@
               <h3 class="text-lg font-bold text-slate-900 dark:text-white">
                 Hebcal
               </h3>
-              <p class="mt-2 leading-7 text-slate-700 dark:text-slate-300">
+              <p class="mt-2 leading-7 text-slate-700 dark:text-slate-300 jc-not-native">
                 האתר מסתמך על שירות
                 <a
                   href="https://www.hebcal.com/"
@@ -216,6 +225,21 @@
                 ולבעליו. הנתונים מופצים ברישיון Creative Commons Attribution 4.0,
                 והשימוש כפוף לתנאי השימוש של Hebcal.
               </p>
+              <p class="mt-2 leading-7 text-slate-700 dark:text-slate-300 jc-native-only">
+                האפליקציה משתמשת בספריות הקוד הפתוח של
+                <a
+                  href="https://www.hebcal.com/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="text-blue-600 dark:text-blue-400 underline"
+                  >Hebcal</a
+                >
+                — @hebcal/core (רישיון GPL-2.0 ואילך) ו-@hebcal/learning (רישיון
+                BSD-2) — לחישוב הלוח העברי, המרת תאריכים (לועזי-עברי), מועדי חגים
+                ושבתות, זמני הדלקת נרות, פרשת השבוע והדף היומי. החישוב נעשה במכשיר
+                עצמו, בלי פנייה לשרתי Hebcal. כל הזכויות בספריות שייכות ליוצריהן
+                בהתאם לרישיונות הקוד הפתוח שלהן.
+              </p>
             </div>
 
             <div
@@ -224,7 +248,7 @@
               <h3 class="text-lg font-bold text-slate-900 dark:text-white">
                 KosherZmanim (KosherJava)
               </h3>
-              <p class="mt-2 leading-7 text-slate-700 dark:text-slate-300">
+              <p class="mt-2 leading-7 text-slate-700 dark:text-slate-300 jc-not-native">
                 האתר משתמש בספריית
                 <a
                   href="https://github.com/BehindTheMath/KosherZmanim"
@@ -264,6 +288,30 @@
                 הזמנים מחושבים בטלפון עצמו בספריית KosherJava המקורית (Java),
                 ברישיון LGPL 2.1.
               </p>
+              <p class="mt-2 leading-7 text-slate-700 dark:text-slate-300 jc-native-only">
+                האפליקציה משתמשת בספריית
+                <a
+                  href="https://github.com/BehindTheMath/KosherZmanim"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="text-blue-600 dark:text-blue-400 underline"
+                  >KosherZmanim</a
+                >
+                (גרסת JavaScript של KosherJava) לחישוב זמנים הלכתיים מדויקים
+                (זריחה, שקיעה, זמני תפילה, צאת הכוכבים ועוד) על בסיס מיקום
+                גיאוגרפי. הספרייה מבוססת על הפרויקט
+                <a
+                  href="https://kosherjava.com/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="text-blue-600 dark:text-blue-400 underline"
+                  >KosherJava</a
+                >
+                מאת Eliyahu Hershfeld, והיא ארוזה באפליקציה עצמה. כל הזכויות בספרייה
+                שייכות ליוצריה בהתאם לרישיון הקוד הפתוח שלה (LGPL-3.0). בווידג'טים
+                ובסנכרון ליומן הזמנים מחושבים בספריית KosherJava המקורית (Java),
+                ברישיון LGPL 2.1.
+              </p>
             </div>
 
             <div
@@ -293,7 +341,7 @@
                 ספריא (Sefaria)
               </h3>
               <p class="mt-2 leading-7 text-slate-700 dark:text-slate-300">
-                הטקסטים התורניים המוצגים באתר — תהילים, תפילות, שיר השירים,
+                הטקסטים התורניים המוצגים <span class="jc-not-native">באתר</span><span class="jc-native-only">באפליקציה</span> — תהילים, תפילות, שיר השירים,
                 חוק לישראל, פרשת השבוע, בן איש חי ועוד — מתקבלים מספריית
                 <a
                   href="https://www.sefaria.org.il/"
@@ -312,9 +360,9 @@
               class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5"
             >
               <h3 class="text-lg font-bold text-slate-900 dark:text-white">
-                OpenStreetMap (Overpass, Nominatim) ו-Leaflet
+                OpenStreetMap (Overpass, Nominatim) ו-<span class="jc-not-native">Leaflet</span><span class="jc-native-only">MapLibre</span>
               </h3>
-              <p class="mt-2 leading-7 text-slate-700 dark:text-slate-300">
+              <p class="mt-2 leading-7 text-slate-700 dark:text-slate-300 jc-not-native">
                 נתוני בתי הכנסת, המקוואות, ציוני הצדיקים והמיקומים בעמוד "בתי כנסת ומקוואות"
                 מבוססים על נתוני © תורמי
                 <a
@@ -333,6 +381,27 @@
                   >Leaflet</a
                 >
                 (רישיון BSD-2), המאוחסנת באתר.
+              </p>
+              <p class="mt-2 leading-7 text-slate-700 dark:text-slate-300 jc-native-only">
+                נתוני בתי הכנסת, המקוואות, ציוני הצדיקים והמיקומים בעמוד "בתי כנסת ומקוואות"
+                מבוססים על נתוני © תורמי
+                <a
+                  href="https://www.openstreetmap.org/copyright"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="text-blue-600 dark:text-blue-400 underline"
+                  >OpenStreetMap</a
+                >, הזמינים תחת רישיון ODbL, ומתקבלים באמצעות שירותי Overpass
+                API ו-Nominatim (גם להמרת כתובות המקוואות למיקום). המפה מצוירת באמצעות
+                ספריית הקוד הפתוח
+                <a
+                  href="https://maplibre.org/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="text-blue-600 dark:text-blue-400 underline"
+                  >MapLibre Native</a
+                >
+                (רישיון BSD-2), עם אריחי המפה של OpenStreetMap.
               </p>
             </div>
 
@@ -365,7 +434,7 @@
                 ויקיטקסט העברי, פרויקט בן-יהודה ותורת אמת
               </h3>
               <p class="mt-2 leading-7 text-slate-700 dark:text-slate-300">
-                חלק מהטקסטים התורניים והתפילות באתר מתקבלים גם
+                חלק מהטקסטים התורניים והתפילות <span class="jc-not-native">באתר</span><span class="jc-native-only">באפליקציה</span> מתקבלים גם
                 מ<a
                   href="https://he.wikisource.org/"
                   target="_blank"
@@ -403,7 +472,7 @@
           </h2>
           <p class="mt-3 leading-8 text-slate-700 dark:text-slate-300">
             האייקונים, תמונות הייצוג, קובצי התצוגה, הסמלים והנכסים החזותיים
-            המשולבים באתר נועדו לשרת את זהות המוצר ואת חוויית המשתמש של האתר.
+            המשולבים <span class="jc-not-native">באתר</span><span class="jc-native-only">באפליקציה</span> נועדו לשרת את זהות המוצר ואת חוויית המשתמש של <span class="jc-not-native">האתר</span><span class="jc-native-only">האפליקציה</span>.
             ככל שנעשה שימוש בצורות גיאומטריות כלליות, סמלים ציבוריים, אלמנטים
             חזותיים בסיסיים או מוטיבים מקובלים, אין בכך טענה לבעלות בלעדית על
             עצם הצורה או הסמל הכללי כשלעצמם.
@@ -415,12 +484,19 @@
           <h2 class="text-2xl font-black text-slate-900 dark:text-white">
             תמונת שיתוף ומיתוג
           </h2>
-          <p class="mt-3 leading-8 text-slate-700 dark:text-slate-300">
+          <p class="mt-3 leading-8 text-slate-700 dark:text-slate-300 jc-not-native">
             תמונת השיתוף (Open Graph), האייקונים וקובצי הייצוג של האתר משמשים
             להצגת <strong>"הלוח היהודי"</strong> בדפדפנים, ברשתות חברתיות, במסכי
             שיתוף, בקיצורי דרך ובממשקי התקנה (PWA). ככל שמשולבים בהם רכיבים
             שמקורם בשירותים, פונטים, כלים או תשתיות צד שלישי, הזכויות באותם
             רכיבים נשמרות לבעליהן ובהתאם לתנאים החלים עליהם.
+          </p>
+          <p class="mt-3 leading-8 text-slate-700 dark:text-slate-300 jc-native-only">
+            האייקון, תמונות החנות וקובצי הייצוג של האפליקציה משמשים להצגת
+            <strong>"הלוח היהודי"</strong> במסך הבית של הטלפון, בחנות האפליקציות
+            ובמסכי שיתוף. ככל שמשולבים בהם רכיבים שמקורם בשירותים, פונטים, כלים
+            או תשתיות צד שלישי, הזכויות באותם רכיבים נשמרות לבעליהן ובהתאם
+            לתנאים החלים עליהם.
           </p>
         </section>
 
@@ -429,14 +505,19 @@
           <h2 class="text-2xl font-black text-slate-900 dark:text-white">
             טכנולוגיות ושירותים
           </h2>
-          <p class="mt-3 leading-8 text-slate-700 dark:text-slate-300">
+          <p class="mt-3 leading-8 text-slate-700 dark:text-slate-300 jc-not-native">
             האתר עושה שימוש בטכנולוגיות Web ובשירותים מקובלים. להלן פירוט
             הטכנולוגיות העיקריות:
+          </p>
+          <p class="mt-3 leading-8 text-slate-700 dark:text-slate-300 jc-native-only">
+            האפליקציה בנויה על React Native ו-Expo (רישיון MIT), ומשתמשת גם
+            ברכיבים MMKV, SQLite, Skia ו-react-native-svg. להלן פירוט הרכיבים
+            והשירותים העיקריים:
           </p>
 
           <div class="mt-4 space-y-4">
             <div
-              class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5"
+              class="jc-not-native rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5"
             >
               <h3 class="text-lg font-bold text-slate-900 dark:text-white">
                 Tailwind CSS
@@ -457,7 +538,7 @@
             </div>
 
             <div
-              class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5"
+              class="jc-not-native rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5"
             >
               <h3 class="text-lg font-bold text-slate-900 dark:text-white">
                 Google Fonts
@@ -482,9 +563,23 @@
                 Frank Ruhl Libre פותח על ידי Yanek Iontef ומורשה תחת אותו רישיון.
               </p>
             </div>
+            <div
+              class="jc-native-only rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5"
+            >
+              <h3 class="text-lg font-bold text-slate-900 dark:text-white">
+                גופנים
+              </h3>
+              <p class="mt-2 leading-7 text-slate-700 dark:text-slate-300">
+                הגופנים שבאפליקציה — <strong>Assistant</strong>, <strong>Frank Ruhl Libre</strong>,
+                David Libre, Suez One, Secular One, Amatic SC, Noto Serif Hebrew, Alef ו-Tinos —
+                ארוזים באפליקציה עצמה, ואין פנייה לשרתי Google. כולם ברישיון SIL Open Font
+                License 1.1, מלבד Tinos (רישיון Apache 2.0). גופן Assistant פותח על ידי
+                Ben Nathan, וגופן Frank Ruhl Libre פותח על ידי Yanek Iontef.
+              </p>
+            </div>
 
             <div
-              class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5"
+              class="jc-not-native rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5"
             >
               <h3 class="text-lg font-bold text-slate-900 dark:text-white">
                 Service Worker (PWA)
@@ -497,7 +592,7 @@
             </div>
 
             <div
-              class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5"
+              class="jc-not-native rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5"
             >
               <h3 class="text-lg font-bold text-slate-900 dark:text-white">
                 Geolocation API
@@ -507,9 +602,21 @@
                 המשתמש) לצורך חישוב זמנים מדויקים עבור מיקום המשתמש.
               </p>
             </div>
+            <div
+              class="jc-native-only rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5"
+            >
+              <h3 class="text-lg font-bold text-slate-900 dark:text-white">
+                הרשאת המיקום
+              </h3>
+              <p class="mt-2 leading-7 text-slate-700 dark:text-slate-300">
+                הרשאת המיקום של מערכת ההפעלה משמשת, רק באישורך, לחישוב זמני היום
+                לפי מיקומך ולאיתור בתי כנסת בקרבתך. המיקום מתקבל משירות המיקום של
+                אנדרואיד, ופועל גם בלי שירותי Google.
+              </p>
+            </div>
 
             <div
-              class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5"
+              class="jc-not-native rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5"
             >
               <h3 class="text-lg font-bold text-slate-900 dark:text-white">
                 Intl API
@@ -522,7 +629,7 @@
             </div>
 
             <div
-              class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5"
+              class="jc-not-native rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5"
             >
               <h3 class="text-lg font-bold text-slate-900 dark:text-white">
                 Netlify
@@ -539,9 +646,27 @@
                 שייכות ל-Netlify, Inc.
               </p>
             </div>
+            <div
+              class="jc-native-only rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5"
+            >
+              <h3 class="text-lg font-bold text-slate-900 dark:text-white">
+                Netlify
+              </h3>
+              <p class="mt-2 leading-7 text-slate-700 dark:text-slate-300">
+                <a
+                  href="https://www.netlify.com/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="text-blue-600 dark:text-blue-400 underline"
+                  >Netlify</a
+                >
+                מארחת את אתר הלוח היהודי, את השרת המתווך לספריא ואת עדכוני מאגר
+                בתי הכנסת שהאפליקציה טוענת. כל הזכויות בשירות שייכות ל-Netlify, Inc.
+              </p>
+            </div>
 
             <div
-              class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5"
+              class="jc-not-native rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5"
             >
               <h3 class="text-lg font-bold text-slate-900 dark:text-white">
                 OneSignal
@@ -591,7 +716,7 @@
             </div>
 
             <div
-              class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5"
+              class="jc-not-native rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5"
             >
               <h3 class="text-lg font-bold text-slate-900 dark:text-white">
                 אפליקציית האנדרואיד
@@ -607,6 +732,25 @@
                 >
                 (רישיון Apache 2.0). הזמנים בווידג'טים ובסנכרון ליומן מחושבים
                 בספריית <a
+                  href="https://kosherjava.com/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="text-blue-600 dark:text-blue-400 underline"
+                  >KosherJava</a
+                > (LGPL 2.1).
+                Android ו-Google Play הם סימנים מסחריים של Google LLC.
+              </p>
+            </div>
+            <div
+              class="jc-native-only rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5"
+            >
+              <h3 class="text-lg font-bold text-slate-900 dark:text-white">
+                אפליקציית האנדרואיד
+              </h3>
+              <p class="mt-2 leading-7 text-slate-700 dark:text-slate-300">
+                האפליקציה נכתבה כאפליקציה ייעודית (נייטיב) ב-React Native. הזמנים
+                בווידג'טים, בסנכרון ליומן ובאפליקציית השעון (Wear OS) מחושבים בספריית
+                <a
                   href="https://kosherjava.com/"
                   target="_blank"
                   rel="noopener noreferrer"

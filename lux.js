@@ -2756,6 +2756,8 @@
       if (!el) {
         el = document.createElement("div");
         el.id = "lux-crit-pill";
+        // קורא מסך מקריא את התזכורת כשהיא מופיעה ומתעדכנת (החלטת המשתמש 1/11, M1 — כמו באפליקציה)
+        el.setAttribute("role", "status");
         el.innerHTML = '<span class="lux-crit-ico" aria-hidden="true">⏰</span><span class="lux-crit-txt"></span><button type="button" class="lux-crit-x" aria-label="סגור">✕</button>';
         document.body.appendChild(el);
         el.querySelector(".lux-crit-x").addEventListener("click", function () {

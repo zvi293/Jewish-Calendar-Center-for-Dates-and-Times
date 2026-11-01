@@ -1452,9 +1452,12 @@
       rawEvents.forEach(function (e) {
         var base = baseOf(e.name || "");
         if (!base) { events.push(e); return; }
-        if (groupRep[base]) {
-          // חבר נוסף באותו חג — רק מרחיבים את טווח התאריכים לתצוגה
-          if (e.date > groupRep[base].until) groupRep[base].until = e.date;
+        // חבר נוסף באותו חג — רק מרחיבים את טווח התאריכים לתצוגה. רק אם הוא צמוד (עד שבוע אחרי
+        // הסוף הנוכחי): החלון מגיע עד 363 ימים, ופסח/חנוכה של השנה הבאה הרחיבו את האייקון של
+        // השנה הזו ("22 באפריל – 17 באפריל"). מופע מאוחר יותר נפתח כקבוצה חדשה (11/2026).
+        var g = groupRep[base];
+        if (g && (luxParseDate(e.date) - luxParseDate(g.until)) / 86400000 <= 7) {
+          if (e.date > g.until) g.until = e.date;
           return;
         }
         var rep = { name: base, date: e.date, until: e.date, icon: e.icon, type: e.type };

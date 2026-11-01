@@ -4447,51 +4447,51 @@ html.dark .lux-sel-chip { color: #d9c48a; border-color: rgba(224, 183, 79, 0.35)
 }
 .lux-th-readchip:active { transform: scale(0.95); }
 
-/* ── לוח שנה במובייל: כפתור ה-✕ נשאר בפנים, בלי לבלגן את הכפתורים ── */
-@media (max-width: 560px) {
-  #calendar-modal > div > div:first-child {
-    padding: 0.7rem 0.5rem;
-    gap: 0.25rem;
-  }
-  #calendar-modal > div > div:first-child > div:first-child {
-    gap: 0.25rem !important;
-    flex: 1;
-    min-width: 0;
-  }
-  #calendar-modal > div > div:first-child > div:first-child > .text-center {
-    min-width: 0 !important;
-    flex-shrink: 1;
-  }
-  #cal-month-title { font-size: 1.02rem !important; }
-  #cal-month-heb { font-size: 0.66rem !important; }
-  #calendar-modal > div > div:first-child button[onclick="changeMonth(-1)"],
-  #calendar-modal > div > div:first-child button[onclick="changeMonth(1)"] {
-    padding: 0.4rem !important;
-    flex-shrink: 0;
-  }
-  #calendar-modal button[onclick="resetMonth()"],
-  #calendar-modal button[onclick="downloadBulkICS()"] {
-    padding: 0.35rem 0.5rem !important;
-    font-size: 0.68rem !important;
-    flex-shrink: 0;
-    white-space: nowrap;
-  }
-  /* מירכוז "היום"+"סנכרן" ברווח שבין חיצי החודשים לכפתור ה-✕ */
-  #calendar-modal button[onclick="resetMonth()"] {
-    margin-left: 0 !important;
-    margin-right: auto !important;
-  }
-  #calendar-modal button[onclick="downloadBulkICS()"] {
-    margin-left: auto !important;
-  }
-  #calendar-modal > div > div:first-child > button[aria-label="סגור"] {
-    padding: 0.45rem !important;
-    flex-shrink: 0;
-  }
-  #calendar-modal > div > div:first-child > button[aria-label="סגור"] svg {
-    width: 1.15rem;
-    height: 1.15rem;
-  }
+/* ── לוח שנה במובייל: כפתור ה-✕ נשאר בפנים, בלי לבלגן את הכפתורים ──
+   לפי הרוחב האפקטיבי (lux-ew-560) ולא לפי רוחב המסך: בטלפון/טאבלט 561–700px עם כיתוב גדול
+   ה-✕ נחתך בקצה הכרטיס (11/2026). הרוחב האפקטיבי ≤ רוחב המסך תמיד, כך שבכל מסך עד 560px זה חל כמו קודם. ── */
+html.lux-ew-560 #calendar-modal > div > div:first-child {
+  padding: 0.7rem 0.5rem;
+  gap: 0.25rem;
+}
+html.lux-ew-560 #calendar-modal > div > div:first-child > div:first-child {
+  gap: 0.25rem !important;
+  flex: 1;
+  min-width: 0;
+}
+html.lux-ew-560 #calendar-modal > div > div:first-child > div:first-child > .text-center {
+  min-width: 0 !important;
+  flex-shrink: 1;
+}
+html.lux-ew-560 #cal-month-title { font-size: 1.02rem !important; }
+html.lux-ew-560 #cal-month-heb { font-size: 0.66rem !important; }
+html.lux-ew-560 #calendar-modal > div > div:first-child button[onclick="changeMonth(-1)"],
+html.lux-ew-560 #calendar-modal > div > div:first-child button[onclick="changeMonth(1)"] {
+  padding: 0.4rem !important;
+  flex-shrink: 0;
+}
+html.lux-ew-560 #calendar-modal button[onclick="resetMonth()"],
+html.lux-ew-560 #calendar-modal button[onclick="downloadBulkICS()"] {
+  padding: 0.35rem 0.5rem !important;
+  font-size: 0.68rem !important;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+/* מירכוז "היום"+"סנכרן" ברווח שבין חיצי החודשים לכפתור ה-✕ */
+html.lux-ew-560 #calendar-modal button[onclick="resetMonth()"] {
+  margin-left: 0 !important;
+  margin-right: auto !important;
+}
+html.lux-ew-560 #calendar-modal button[onclick="downloadBulkICS()"] {
+  margin-left: auto !important;
+}
+html.lux-ew-560 #calendar-modal > div > div:first-child > button[aria-label="סגור"] {
+  padding: 0.45rem !important;
+  flex-shrink: 0;
+}
+html.lux-ew-560 #calendar-modal > div > div:first-child > button[aria-label="סגור"] svg {
+  width: 1.15rem;
+  height: 1.15rem;
 }
 
 /* ═══════════════════════════════════════════════════════════════════

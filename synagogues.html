@@ -824,7 +824,7 @@
       </div>
 
       <!-- ══════ Status / Results ══════ -->
-      <div id="status-area" class="flex flex-col items-center justify-center py-12 text-center">
+      <div id="status-area" class="flex flex-col items-center justify-center py-12 text-center" role="status" aria-live="polite">
         <div class="spinner mb-4"></div>
         <div class="text-slate-300/90 text-sm" id="status-text">מאתר מיקום…</div>
       </div>
@@ -2288,6 +2288,7 @@
 
         const header = document.createElement("div");
         header.className = "text-slate-300/80 text-sm mb-2 px-1";
+        header.setAttribute("role", "status");
         const cityMode = !!(manualLocation && manualCity);
         // במצב יישוב בלי מיקום ידוע של המשתמש — אין "מרחק ממני" להציג
         const showDist = !cityMode || myLat != null;
@@ -2385,6 +2386,7 @@
         if (!text) return;
         const hint = document.createElement("div");
         hint.className = "refresh-hint flex items-center justify-center gap-2 mb-2 py-1.5 text-cyan-200/90 text-xs";
+        hint.setAttribute("role", "status");
         const sp = document.createElement("div");
         sp.className = "spinner-small";
         sp.setAttribute("aria-hidden", "true");
@@ -2403,6 +2405,7 @@
         if (!text) return;
         const n = document.createElement("div");
         n.className = "stale-notice text-amber-300/90 text-xs mb-2 px-1 text-center";
+        n.setAttribute("role", "status");
         n.textContent = text;
         out.insertBefore(n, out.firstChild);
       }

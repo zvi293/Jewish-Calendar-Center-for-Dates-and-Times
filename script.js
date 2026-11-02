@@ -27330,7 +27330,7 @@ openPrayer = async function (key, heLabel, enLabel, opts) {
         } else {
           body.innerHTML = `
                 <div class="holy-text-style" style="direction:rtl;text-align:center;">
-                  ${content.seasonalHtml ? '<div style="background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.18);border-radius:0.75rem;padding:0.7rem 0.85rem;margin-bottom:1.25rem;font-size:0.82em;color:#1e40af;line-height:1.65;border-right:3px solid rgba(37,99,235,0.4);">' + content.seasonalHtml + "</div>" : ""}
+                  ${content.seasonalHtml ? '<div class="pr-seasonal-wrap" style="background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.18);border-radius:0.75rem;padding:0.7rem 0.85rem;margin-bottom:1.25rem;font-size:0.82em;color:#1e40af;line-height:1.65;border-right:3px solid rgba(37,99,235,0.4);">' + content.seasonalHtml + "</div>" : ""}
                   ${content.html}
                 </div>
                 ${occ ? "" : _prayerNextCtaHtml(key)}

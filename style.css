@@ -9761,6 +9761,15 @@ html.dark .prayer-richtext .seasonal-block {
 }
 html.dark .prayer-richtext .seasonal-block strong { color: #93c5fd; }
 html.dark .prayer-richtext .seasonal-block div { color: #93c5fd; }
+/* תיבת התוספות לפי היום (ראש חודש, חנוכה…) בחלון התפילה יושבת מחוץ ל-.prayer-richtext עם צבע inline —
+   בכהה נשארה כחול כהה #1e40af על רקע כהה (עד 11/2026) */
+html.dark .pr-seasonal-wrap {
+  background: rgba(59, 130, 246, 0.14) !important;
+  border-color: rgba(96, 165, 250, 0.35) !important;
+  color: #bfdbfe !important;
+}
+html.dark .pr-seasonal-wrap strong,
+html.dark .pr-seasonal-wrap div { color: #93c5fd !important; }
 html.dark .prayer-supplement {
   background: rgba(59, 130, 246, 0.13);
   border-color: rgba(96, 165, 250, 0.3);

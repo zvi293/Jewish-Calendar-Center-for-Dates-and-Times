@@ -24452,9 +24452,13 @@ window.openDonationModal = function() {
 
   function thanks(overlay) {
     overlay.innerHTML = card(
-      '<div style="font-size:2.6rem;margin-bottom:0.5rem;">💛</div>' +
-      '<h3 style="color:#fde68a;font-size:1.35rem;font-weight:900;margin:0 0 0.7rem;">תודה רבה!</h3>' +
-      '<p style="color:#e2e8f0;font-size:0.95rem;line-height:1.75;margin:0;">התרומה התקבלה — תזכו למצוות.</p>');
+      '<div role="status" aria-live="polite">' +
+      '<div style="font-size:2.6rem;margin-bottom:0.5rem;" aria-hidden="true">💛</div>' +
+      '<h3 id="jc-play-thanks-h" tabindex="-1" style="color:#fde68a;font-size:1.35rem;font-weight:900;margin:0 0 0.7rem;outline:none;">תודה רבה!</h3>' +
+      '<p style="color:#e2e8f0;font-size:0.95rem;line-height:1.75;margin:0;">התרומה התקבלה — תזכו למצוות.</p></div>');
+    // הכפתור שהיה בפוקוס נהרס עם הכרטיס — הפוקוס עובר לכותרת התודה
+    var h = document.getElementById("jc-play-thanks-h");
+    if (h) try { h.focus({ preventScroll: true }); } catch (e) {}
   }
 
   function donate(sku, btn) {
@@ -27244,10 +27248,13 @@ window.copyContactEmail = function (btn) {
     if (toast) toast.remove();
     toast = document.createElement("div");
     toast.id = "contact-copy-toast";
-    toast.textContent = "✓ הכתובת הועתקה ללוח";
+    // אזור חי — הטקסט נכתב אחרי ההוספה כדי שקורא המסך יקריא אותו
+    toast.setAttribute("role", "status");
+    toast.setAttribute("aria-live", "polite");
     toast.style.cssText =
       "position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9999;background:#16a34a;color:white;font-weight:700;padding:0.85rem 1.5rem;border-radius:1rem;box-shadow:0 10px 30px rgba(0,0,0,0.25);font-size:0.95rem;direction:rtl;animation:fadeInOut 1.6s ease forwards;";
     document.body.appendChild(toast);
+    setTimeout(() => { toast.textContent = "✓ הכתובת הועתקה ללוח"; }, 30);
     setTimeout(() => {
       if (toast && toast.parentNode) toast.remove();
     }, 1600);

@@ -38115,10 +38115,25 @@ function openSefarimNosafimPage(_pageMode) {
     // נסה לסמן את המופע באמצעות עטיפת ה-text node
     try {
       var orig = foundNode.nodeValue;
-      // עבוד עם אינדקס בטקסט המקורי (לא הנורמלי), קח חיפוש פשוט
-      var realPos = orig.toLowerCase().indexOf(foundWord.toLowerCase());
-      if (realPos < 0) realPos = foundIdx;
-      var endPos = realPos + foundWord.length;
+      // המיקום נמצא בטקסט המנורמל (בלי ניקוד וטעמים, רווחים מכווצים) — ממפים אותו חזרה לטקסט המקורי.
+      // עד 11/2026 נלקח foundIdx כמו שהוא, ובטקסט מנוקד ההדגשה נפלה על אותיות אחרות ("ענוה" → "לִ")
+      var MARK = /[\u0591-\u05BD\u05BF-\u05C7]/, map = [], norm = "", prevSp = true;
+      for (var ci = 0; ci < orig.length; ci++) {
+        var ch = orig.charAt(ci);
+        if (MARK.test(ch)) continue;
+        if (/\s/.test(ch)) { if (prevSp) continue; prevSp = true; ch = " "; } else prevSp = false;
+        map.push(ci); norm += ch.toLowerCase();
+      }
+      var wl = normalize(foundWord).length, realPos = -1, endPos = -1;
+      if (norm.replace(/ $/, "") === normalize(orig) && map[foundIdx] != null && map[foundIdx + wl - 1] != null) {
+        realPos = map[foundIdx];
+        endPos = map[foundIdx + wl - 1] + 1;
+        while (endPos < orig.length && MARK.test(orig.charAt(endPos))) endPos++; // הניקוד של האות האחרונה
+      } else {
+        realPos = orig.toLowerCase().indexOf(foundWord.toLowerCase());
+        if (realPos < 0) realPos = foundIdx;
+        endPos = realPos + foundWord.length;
+      }
       var before = orig.slice(0, realPos);
       var match = orig.slice(realPos, endPos);
       var after = orig.slice(endPos);

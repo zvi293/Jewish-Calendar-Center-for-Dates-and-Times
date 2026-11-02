@@ -8374,6 +8374,8 @@
   /* ── 48. ניצוצות קודש — התפרצות ניצוצות זהב בלחיצת "למדתי" ────── */
   safe("holySparks", function () {
     function burst(x, y) {
+      // תנועה מופחתת — בלי ניצוצות (עם animation:none הן נשארו נקודות קבועות שנייה שלמה)
+      try { if (matchMedia("(prefers-reduced-motion: reduce)").matches) return; } catch (e) {}
       var box = document.createElement("div");
       box.className = "lux-sparks";
       box.setAttribute("aria-hidden", "true");

@@ -11154,5 +11154,8 @@ html.dark #cal-days-grid > div.border-blue-500 > div > span.font-black { color: 
   body.lux-erev #countdown-label,
   #lux-shabbat-banner .lux-sb-candles,
   .lux-sbs-glow,
-  .lux-erev-halo { animation: none !important; }
+  .lux-erev-halo,
+  .lux-erev-dust i,
+  #lux-siyum,
+  .lux-siyum-card { animation: none !important; }
 }

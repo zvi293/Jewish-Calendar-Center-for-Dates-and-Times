@@ -2751,7 +2751,7 @@ async function openSefariaModal(hebTitle, enRef, opts) {
         "<p class='text-center text-rose-500 font-bold mt-10'>לא נמצא טקסט עבור מועד זה במאגר הפתוח.</p>";
     }
     // קרדיט בסוף הטקסט
-    textHtml += '<div style="margin-top:2rem;padding-top:0.85rem;border-top:1px solid rgba(0,0,0,0.08);color:#94a3b8;font-size:0.72rem;text-align:center;direction:rtl;">מקור הטקסט: <a href="https://www.sefaria.org.il/" target="_blank" rel="noopener" style="color:#3b82f6;">Sefaria.org</a> · ברישיון פתוח</div>';
+    textHtml += '<div style="margin-top:2rem;padding-top:0.85rem;border-top:1px solid rgba(0,0,0,0.08);color:#94a3b8;font-size:0.72rem;text-align:center;direction:rtl;">מקור הטקסט: <a href="https://www.sefaria.org.il/" target="_blank" rel="noopener" style="color:#3b82f6;text-decoration:underline;">Sefaria.org</a> · ברישיון פתוח</div>';
     document.getElementById("sefaria-modal-content").innerHTML = textHtml;
     applyPrayerFontSize("#sefaria-modal-content");
     _uxSoftFirst(_sefCont);
@@ -3050,7 +3050,7 @@ async function renderDafContent() {
 
   html +=
     parasHtml +
-    '<div style="margin-top:2rem;padding-top:0.85rem;border-top:1px solid rgba(0,0,0,0.08);color:#94a3b8;font-size:0.72rem;text-align:center;direction:rtl;">מקור הטקסט: <a href="https://www.sefaria.org.il/" target="_blank" rel="noopener" style="color:#3b82f6;">Sefaria.org</a> · ברישיון פתוח</div>';
+    '<div style="margin-top:2rem;padding-top:0.85rem;border-top:1px solid rgba(0,0,0,0.08);color:#94a3b8;font-size:0.72rem;text-align:center;direction:rtl;">מקור הטקסט: <a href="https://www.sefaria.org.il/" target="_blank" rel="noopener" style="color:#3b82f6;text-decoration:underline;">Sefaria.org</a> · ברישיון פתוח</div>';
   cont.innerHTML = html;
   applyPrayerFontSize("#sefaria-modal-content");
   _uxSoftFirst(cont);
@@ -3373,7 +3373,7 @@ function renderShmikraContent() {
       "<p class='text-center text-rose-500 font-bold mt-10'>לא נמצא טקסט עבור פרשה זו.</p>";
   }
   // קרדיט בסוף הטקסט
-  textHtml += '<div style="margin-top:2rem;padding-top:0.85rem;border-top:1px solid rgba(0,0,0,0.08);color:#94a3b8;font-size:0.72rem;text-align:center;direction:rtl;">מקור הטקסט: <a href="https://www.sefaria.org.il/" target="_blank" rel="noopener" style="color:#3b82f6;">Sefaria.org</a> · ברישיון פתוח</div>';
+  textHtml += '<div style="margin-top:2rem;padding-top:0.85rem;border-top:1px solid rgba(0,0,0,0.08);color:#94a3b8;font-size:0.72rem;text-align:center;direction:rtl;">מקור הטקסט: <a href="https://www.sefaria.org.il/" target="_blank" rel="noopener" style="color:#3b82f6;text-decoration:underline;">Sefaria.org</a> · ברישיון פתוח</div>';
   el.innerHTML = textHtml;
   // Re-apply font size after content render
   applyPrayerFontSize("#sefaria-modal-content");
@@ -4317,7 +4317,7 @@ function renderChokContent() {
   }
   html += '</div>';
   // קרדיט בסוף הטקסט
-  html += '<div class="chok-meta" style="margin-top:2rem;padding-top:0.85rem;border-top:1px solid rgba(0,0,0,0.08);font-size:0.72rem;text-align:center;direction:rtl;">מקור הטקסט: <a href="https://www.sefaria.org/collections/%D7%97%D7%A7-%D7%9C%D7%99%D7%A9%D7%A8%D7%90%D7%9C" target="_blank" rel="noopener" style="color:#3b82f6;">Sefaria.org</a> · ברישיון פתוח</div>';
+  html += '<div class="chok-meta" style="margin-top:2rem;padding-top:0.85rem;border-top:1px solid rgba(0,0,0,0.08);font-size:0.72rem;text-align:center;direction:rtl;">מקור הטקסט: <a href="https://www.sefaria.org/collections/%D7%97%D7%A7-%D7%9C%D7%99%D7%A9%D7%A8%D7%90%D7%9C" target="_blank" rel="noopener" style="color:#3b82f6;text-decoration:underline;">Sefaria.org</a> · ברישיון פתוח</div>';
   contentEl.innerHTML = html || '<p class="text-center text-slate-500 py-10">לא נמצא תוכן</p>';
   // Force Rashi colors via JS setProperty (overrides .holy-text-style inheritance reliably)
   // תלוי-ערכה: inline+!important גובר על כללי ה-dark שבסוף style.css, לכן הצבע נקבע כאן לפי הערכה
@@ -27324,7 +27324,7 @@ openPrayer = async function (key, heLabel, enLabel, opts) {
                     ${content.html}
                   </div>
                   <div style="border-top:1px solid rgba(0,0,0,0.08);margin-top:0.85rem;padding-top:0.75rem;color:#94a3b8;font-size:0.72rem;text-align:center;">
-                    מקור התוכן: <strong>${content.sourceLabel}</strong>${content.sourceUrl ? ` · <a href="${content.sourceUrl}" target="_blank" rel="noopener noreferrer" style="color:#1d4ed8;">קישור למקור</a>` : ""}
+                    מקור התוכן: <strong>${content.sourceLabel}</strong>${content.sourceUrl ? ` · <a href="${content.sourceUrl}" target="_blank" rel="noopener noreferrer" style="color:#1d4ed8;text-decoration:underline;">קישור למקור</a>` : ""}
                   </div>
                 </div>`;
         } else {
@@ -27335,7 +27335,7 @@ openPrayer = async function (key, heLabel, enLabel, opts) {
                 </div>
                 ${occ ? "" : _prayerNextCtaHtml(key)}
                 <div style="border-top:1px solid rgba(0,0,0,0.08);margin-top:1.5rem;padding-top:0.75rem;color:#94a3b8;font-size:0.72rem;text-align:center;">
-                  מקור התוכן: <strong>${content.sourceLabel}</strong>${content.sourceUrl ? ` · <a href="${content.sourceUrl}" target="_blank" rel="noopener noreferrer" style="color:#3b82f6;">קישור למקור</a>` : ""}
+                  מקור התוכן: <strong>${content.sourceLabel}</strong>${content.sourceUrl ? ` · <a href="${content.sourceUrl}" target="_blank" rel="noopener noreferrer" style="color:#3b82f6;text-decoration:underline;">קישור למקור</a>` : ""}
                 </div>`;
         }
       }

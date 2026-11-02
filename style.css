@@ -11133,3 +11133,17 @@ html.dark {
 }
 /* תאריך היום בלוח החודשי — זהב בהיר במצב כהה (הזהב הכהה של הבהיר לא קריא על כהה) */
 html.dark #cal-days-grid > div.border-blue-500 > div > span.font-black { color: #f2d98a !important; }
+
+/* תנועה מופחתת (11/2026): הנפשות אינסופיות שרצו גם כאן — טבעת גלגל השנה, האייקון הצף בסטוריז,
+   ה-∞ של כיול המצפן, הבהוב הנר בספירה והילות הנרות. בסוף הקובץ ועם !important כי חלק מהכללים
+   המקוריים (body.lux-erev #countdown-label) מופיעים מאוחר ובאותו משקל. סמני טעינה (loader/skeleton) — נשארים */
+@media (prefers-reduced-motion: reduce) {
+  .lux-yw-dashring,
+  .lux-st-big,
+  .cmp-calib-dot,
+  .lux-erev-shabbat #countdown-label,
+  body.lux-erev #countdown-label,
+  #lux-shabbat-banner .lux-sb-candles,
+  .lux-sbs-glow,
+  .lux-erev-halo { animation: none !important; }
+}

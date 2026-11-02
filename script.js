@@ -4518,12 +4518,11 @@ function getLocationCoords() {
     };
   }
   // Try cached city coords
+  // ערך פגום במפתח זרק כאן בכל ריצה (בלי זמנים ובלי דשבורד) — עכשיו נחשב "אין קואורדינטות"
   const cached =
     window._cityCoords ||
-    (localStorage.getItem("moadim_city_coords")
-      ? JSON.parse(localStorage.getItem("moadim_city_coords"))
-      : null);
-  if (cached) {
+    _jsonOr(_lsGet("moadim_city_coords"), null);
+  if (cached && isFinite(cached.lat) && isFinite(cached.lon)) {
     window._cityCoords = cached;
     return cached;
   }

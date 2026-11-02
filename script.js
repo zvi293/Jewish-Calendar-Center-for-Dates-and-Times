@@ -39014,32 +39014,29 @@ function closeSefarimNosafimModal() {
     setTimeout(function(){ t.classList.remove("show"); setTimeout(function(){ t.remove(); }, 350); }, 2200);
   }
 
-  function flashButtonGreen() {
+  // הבהוב ירוק/אדום של 📌 — טיימר אחד משותף והרקע המקורי נשמר פעם אחת: שמירה ואז הסרה בתוך 3 שנ'
+  // ("לחיצה נוספת תסיר") השאירה רקע ירוק — כל הבהוב שמר את הרקע של אותו רגע (ממצא jc-screens 16, 2/11/2026)
+  function _lpFlash(bg, border, ms) {
     var btn = document.getElementById("floating-lastpos-btn");
     if (!btn) return;
-    var origBg = btn.style.background;
-    btn.style.background = "linear-gradient(135deg,rgba(16,185,129,0.95),rgba(34,197,94,0.95))";
-    btn.style.borderColor = "rgba(16,185,129,0.7)";
+    if (btn.__lpFlashT) clearTimeout(btn.__lpFlashT);
+    else btn.__lpBaseBg = btn.style.background;
+    btn.style.background = bg;
+    btn.style.borderColor = border;
     btn.style.color = "#ffffff";
-    setTimeout(function() {
-      btn.style.background = origBg;
+    btn.__lpFlashT = setTimeout(function() {
+      btn.__lpFlashT = 0;
+      btn.style.background = btn.__lpBaseBg || "";
       btn.style.borderColor = "rgba(245,158,11,0.6)";
       btn.style.color = "#1e293b";
-    }, 3000);
+    }, ms);
+  }
+  function flashButtonGreen() {
+    _lpFlash("linear-gradient(135deg,rgba(16,185,129,0.95),rgba(34,197,94,0.95))", "rgba(16,185,129,0.7)", 3000);
   }
 
   function flashButtonRed() {
-    var btn = document.getElementById("floating-lastpos-btn");
-    if (!btn) return;
-    var origBg = btn.style.background;
-    btn.style.background = "linear-gradient(135deg,rgba(239,68,68,0.95),rgba(244,63,94,0.95))";
-    btn.style.borderColor = "rgba(239,68,68,0.7)";
-    btn.style.color = "#ffffff";
-    setTimeout(function() {
-      btn.style.background = origBg;
-      btn.style.borderColor = "rgba(245,158,11,0.6)";
-      btn.style.color = "#1e293b";
-    }, 1600);
+    _lpFlash("linear-gradient(135deg,rgba(239,68,68,0.95),rgba(244,63,94,0.95))", "rgba(239,68,68,0.7)", 1600);
   }
 
   // לחיצה ראשונה שומרת מיקום; לחיצה שנייה באותו מיקום מסירה (טוגל — בקשת משתמש 09/2026).

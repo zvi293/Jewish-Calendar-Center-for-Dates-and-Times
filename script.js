@@ -8257,7 +8257,7 @@ function openCalendarDay(dateStr) {
   const nonParshaEvents = dayEvents.filter((e) => e.type !== "parashat");
   const eventsHtml = nonParshaEvents.length
     ? `<ul style="display:flex;flex-direction:column;gap:0.6rem;margin:0;padding:0;list-style:none;">${nonParshaEvents.map((eventItem) => `<li style="padding:0.8rem 0.9rem;border:1px solid rgba(59,130,246,0.14);border-radius:0.9rem;background:rgba(255,255,255,0.78);"><strong style="display:block;color:#0f172a;">${eventItem.name}</strong><span style="display:block;color:#475569;font-size:0.86rem;margin-top:0.25rem;">${eventItem.titleStr || eventItem.heb || ""}</span></li>`).join("")}</ul>`
-    : `<p style="margin:0;color:#64748b;">אין אירועים מובנים ביום זה.</p>`;
+    : `<p class="day-noev" style="margin:0;color:#617187;">אין אירועים מובנים ביום זה.</p>`;
 
   const modal = document.createElement("div");
   modal.id = "calendar-day-modal";
@@ -8294,7 +8294,7 @@ function openCalendarDay(dateStr) {
               <button type="button" onclick="_calReminderSubmit('${dateStr}')" style="border:none;border-radius:999px;background:#2563eb;color:#fff;padding:0.72rem 1.15rem;font-weight:800;cursor:pointer;"><span class="jc-rem-only">➕ הוספה ליומן הטלפון</span><span class="jc-rem-web">📅 הוספה ליומן</span></button>
               <button type="button" onclick="syncSingleDayToCalendar('${dateStr}')" style="border:none;border-radius:999px;background:#0f766e;color:#fff;padding:0.72rem 1.15rem;font-weight:800;cursor:pointer;">סנכרן ליומן</button>
             </div>
-            <p style="margin:0.6rem 0 0;font-size:0.78rem;color:#64748b;line-height:1.6;">התזכורת נשמרת ביומן של הטלפון, וההתראה מגיעה מאפליקציית היומן.</p>
+            <p class="day-noev" style="margin:0.6rem 0 0;font-size:0.78rem;color:#63738a;line-height:1.6;">התזכורת נשמרת ביומן של הטלפון, וההתראה מגיעה מאפליקציית היומן.</p>
           </div>`;
   modal.addEventListener("click", (event) => {
     if (event.target === modal) closeCalendarDayUser();
@@ -8432,14 +8432,14 @@ function render(filter = "all", search = "") {
                             <div class="w-14 h-14 md:w-16 md:h-16 shrink-0 bg-white dark:bg-slate-700/50 text-2xl md:text-3xl flex items-center justify-center rounded-2xl md:rounded-3xl shadow-md border border-${color}-100 dark:border-${color}-500/20" style="box-shadow:0 4px 15px rgba(0,0,0,0.06);" aria-hidden="true">${e.icon}</div>
                             <div class="flex-1 min-w-0">
                                 <h3 class="font-black text-slate-900 dark:text-white text-xl md:text-2xl mb-1 hover:text-${color}-600 dark:hover:text-${color}-400 transition-colors truncate"><button type="button" class="ev-name-btn" data-ev-name="${escapeHtml(e.name)}" data-ev-type="${e.type}" data-ev-date="${e.date}" onclick="_evTitleOpen(this)" aria-haspopup="dialog">${escapeHtml(e.name)}</button></h3>
-                                <div class="text-slate-500 dark:text-slate-400 font-medium text-sm">${dateDisplay}</div>
+                                <div class="ev-date-line dark:text-slate-400 font-medium text-sm">${dateDisplay}</div>
                                 ${extraTimesHtml}
                                 ${lvWin ? _levanaDetailsHtml(lvWin, { live: lvLive }) : ""}
                             </div>
                         </div>
                         <div class="flex md:flex-col items-center justify-between w-full md:w-auto md:items-end md:justify-center border-t border-slate-100/80 dark:border-slate-700/50 md:border-t-0 pt-3 md:pt-0 mt-2 md:mt-0 gap-2 md:gap-2">
                             <div class="${isToday && !isMoonOpen ? `bg-${color}-600 text-white shadow-lg` : isMoonOpen ? `bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300` : `bg-${color}-50 dark:bg-${color}-500/15 text-${color}-700 dark:text-${color}-300`} px-4 py-2 rounded-xl text-sm font-black md:mb-1 transition-all ev-countdown">${badgeText}</div>
-                            <button onclick="downloadICS('${str}')" class="flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500 hover:text-${color}-600 dark:hover:text-${color}-400 font-bold uppercase tracking-wider transition-all bg-white/70 dark:bg-slate-900/40 hover:bg-${color}-50 dark:hover:bg-${color}-900/20 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-${color}-200 dark:hover:border-${color}-700">
+                            <button onclick="downloadICS('${str}')" class="flex items-center gap-1.5 text-xs ev-sync-btn hover:text-${color}-600 dark:hover:text-${color}-400 font-bold uppercase tracking-wider transition-all bg-white/70 dark:bg-slate-900/40 hover:bg-${color}-50 dark:hover:bg-${color}-900/20 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-${color}-200 dark:hover:border-${color}-700">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg> <span data-i18n-key="sync_mobile">סנכרן</span>
                             </button>
                             ${window._matchMoad && window._matchMoad(e.name) && window._DT[window._matchMoad(e.name)] ? `<button data-moad-name="${e.name.replace(/"/g, "&quot;")}" onclick="window._openMoadByName(this.dataset.moadName);event.stopPropagation();" class="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider transition-all bg-violet-50 dark:bg-violet-900/30 hover:bg-violet-100 dark:hover:bg-violet-900/50 text-violet-600 dark:text-violet-400 px-3 py-2 rounded-xl border border-violet-200 dark:border-violet-700">📖 דבר תורה</button>` : ""}
@@ -11847,7 +11847,7 @@ function openMotzeiShabbatModal(activeTab) {
     const active = t.id === tab;
     // min-width:0 + גלישת מילים: שש לשוניות לעולם לא גולשות אופקית (הגלישה
     // האופקית של הכרטיס הייתה אחד ממקורות ה"בריחה" של המודאל לצד)
-    return `<button type="button" data-motzei-tab="${t.id}" onclick="openMotzeiShabbatModal('${t.id}')" style="flex:1;min-width:0;padding:7px 2px;border:none;border-radius:10px;font-size:0.72rem;font-weight:700;line-height:1.25;cursor:pointer;transition:background .2s,color .2s;white-space:normal;overflow:hidden;background:${active ? "rgba(255,255,255,0.2)" : "transparent"};color:${active ? "#fff" : "rgba(255,255,255,0.5)"};"><span style="display:block;font-size:1.05rem;line-height:1.2;margin-bottom:2px;">${t.icon}</span>${t.label}</button>`;
+    return `<button type="button" data-motzei-tab="${t.id}" onclick="openMotzeiShabbatModal('${t.id}')" style="flex:1;min-width:0;padding:7px 2px;border:none;border-radius:10px;font-size:0.72rem;font-weight:700;line-height:1.25;cursor:pointer;transition:background .2s,color .2s;white-space:normal;overflow:hidden;background:${active ? "rgba(255,255,255,0.2)" : "transparent"};color:${active ? "#fff" : "rgba(255,255,255,0.52)"};"><span style="display:block;font-size:1.05rem;line-height:1.2;margin-bottom:2px;">${t.icon}</span>${t.label}</button>`;
   }
 
   function block(titleHtml, bodyHtml, accent) {
@@ -30376,11 +30376,11 @@ document.addEventListener("keydown", (e) => {
       " " +
       info.year +
       "</h2>" +
-      '<p style="font-size:0.78rem;color:#64748b;margin:0 0 0.15rem;">יארצייט ויום הסתלקות צדיקים</p>' +
+      '<p style="font-size:0.78rem;color:#6f8097;margin:0 0 0.15rem;">יארצייט ויום הסתלקות צדיקים</p>' +
       '<button id="hil-today-btn" style="background:rgba(251,191,36,0.15);border:1px solid rgba(251,191,36,0.45);color:#fbbf24;border-radius:0.5rem;padding:0.18rem 0.85rem;cursor:pointer;font-size:0.72rem;font-weight:700;margin:0.35rem auto 0.4rem;display:' +
       (_dayOffset !== 0 ? "inline-block" : "none") +
       ';">חזרה ליום הנוכחי</button>' +
-      '<p id="hil-greg-date" dir="rtl" style="font-size:0.78rem;color:#475569;margin:0;">' +
+      '<p id="hil-greg-date" dir="rtl" style="font-size:0.78rem;color:#6d809c;margin:0;">' +
       info.gregStr +
       (info.specialDay ? ' <span style="color:#fbbf24;font-weight:700;" dir="rtl">• ' + info.specialDay + '</span>' : '') +
       "</p>" +
@@ -30636,7 +30636,7 @@ document.addEventListener("keydown", (e) => {
 
     var dowHtml = DOW_LABELS.map(function (l) {
       return (
-        '<div style="text-align:center;font-size:0.72rem;color:#64748b;font-weight:600;">' +
+        '<div style="text-align:center;font-size:0.72rem;color:#718299;font-weight:600;">' +
         l +
         "</div>"
       );
@@ -30657,7 +30657,7 @@ document.addEventListener("keydown", (e) => {
       '<div style="text-align:center;margin-bottom:1rem;">' +
       '<div style="font-size:1.5rem;margin-bottom:0.3rem;">📅</div>' +
       '<h2 style="font-size:1.3rem;font-weight:700;color:#e2e8f0;margin:0 0 0.2rem;letter-spacing:0.01em;">לוח הילולות</h2>' +
-      '<p style="font-size:0.75rem;color:#64748b;margin:0;">לחץ על יום מסומן לצפייה בהילולות</p>' +
+      '<p style="font-size:0.75rem;color:#6f8097;margin:0;">לחץ על יום מסומן לצפייה בהילולות</p>' +
       "</div>" +
       // Month nav — direction:ltr so ‹ is left (prev), › is right (next)
       '<div style="display:flex;align-items:center;justify-content:space-between;' +
@@ -30678,7 +30678,7 @@ document.addEventListener("keydown", (e) => {
       "color:#fbbf24;border-radius:0.6rem;padding:0.18rem 0.9rem;cursor:pointer;" +
       'font-size:0.78rem;font-weight:600;" title="חזור להיום">חזרה ליום הנוכחי</button>' +
       "</div>" +
-      '<p id="hil-cal-greg-month" style="text-align:center;font-size:0.72rem;color:#475569;' +
+      '<p id="hil-cal-greg-month" style="text-align:center;font-size:0.72rem;color:#6d809c;' +
       'margin:0 0 0.6rem;direction:ltr;"></p>' +
       // Day-of-week header
       '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:4px;">' +

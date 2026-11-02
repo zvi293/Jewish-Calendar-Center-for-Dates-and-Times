@@ -1359,9 +1359,9 @@ html.dark .lev-count.done, html.dark .levana-siman-tov-box .lev-count.done { col
 .lv-dot-s { background: #34d399; }
 .lv-dot-e { background: #fb7185; }
 .lv-dot-m { background: #fbbf24; }
-.lv-heb { color: #64748b; }
+.lv-heb { color: #5e6d83; }
 .lv-notes { padding-top: 0.45rem; border-top: 1px solid #f1f5f9; }
-.lv-notes p { margin: 0 0 0.2rem; font-size: 0.7rem; line-height: 1.5; color: #64748b; font-weight: 500; }
+.lv-notes p { margin: 0 0 0.2rem; font-size: 0.7rem; line-height: 1.5; color: #5b6a7f; font-weight: 500; }
 .lv-notes p:last-child { margin-bottom: 0; }
 /* באנר הזמנים בראש תפילת ברכת הלבנה — גופן ממשק (לא גופן הקריאה) */
 .lv-prayer-times { margin-top: 0.6rem; text-align: right; font-family: "Assistant", sans-serif; font-weight: 600; }
@@ -1832,7 +1832,7 @@ nav[aria-label="סינון וחיפוש"]::before {
   border-bottom: 1px solid rgba(232, 193, 90, 0.22);
 }
 #calendar-modal button[onclick="resetMonth()"] {
-  background: linear-gradient(135deg, #b98a2e, #96691f) !important;
+  background: linear-gradient(135deg, #926d24, #96691f) !important;
   border: 1px solid rgba(253, 243, 208, 0.25);
   color: #fffaf0 !important;
   box-shadow: 0 3px 12px rgba(150, 105, 31, 0.4);
@@ -3352,7 +3352,7 @@ body.lux-shabbat #shabbat-countdown-bar {
 }
 .dark #lux-pearl .lux-pearl-text { color: #f1e9d2; }
 #lux-pearl .lux-pearl-src {
-  color: #a1762a;
+  color: #916a26;
   font-size: 0.78rem;
   font-weight: 800;
   margin: 0 0 0.6rem;
@@ -3468,7 +3468,7 @@ body.lux-shabbat #shabbat-countdown-bar {
 }
 .lux-sheet-note {
   margin: 0 0 1rem;
-  color: #64748b;
+  color: #5f6e84;
   font-size: 0.82rem;
   line-height: 1.6;
 }
@@ -3524,7 +3524,7 @@ body.lux-shabbat #shabbat-countdown-bar {
 .lux-sheet-cancel {
   background: none;
   border: none;
-  color: #94a3b8;
+  color: #5f738f;
   font-size: 0.85rem;
   font-weight: 700;
   cursor: pointer;
@@ -5066,7 +5066,7 @@ body.lux-shabbat-scene-on #countdown-display {
 #lux-hc-btn {
   border: 1px solid rgba(224, 183, 79, 0.5);
   background: rgba(232, 193, 90, 0.1);
-  color: #c9993a;
+  color: #cda149;
   font-size: 0.72rem;
   font-weight: 800;
   padding: 0.3rem 0.7rem;
@@ -5140,16 +5140,14 @@ body.lux-shabbat-scene-on #countdown-display {
   text-align: center;
   font-weight: 800;
   font-size: 0.92rem;
-  color: #a1762a;
+  color: #8b6624;
   background: rgba(232, 193, 90, 0.12);
   border: 1px solid rgba(201, 153, 58, 0.35);
   border-radius: 999px;
   padding: 0.45rem 1rem;
   margin-bottom: 0.6rem;
 }
-html.dark .lux-hc-next { color: #f2d98a; }
-.lux-hc-next b { color: #b45309; }
-html.dark .lux-hc-next b { color: #fdf3d0; }
+.lux-hc-next b { color: #b05109; }
 .lux-hc-pbar {
   height: 7px;
   border-radius: 4px;
@@ -5181,7 +5179,6 @@ html.dark .lux-hc-next b { color: #fdf3d0; }
   color: inherit;
 }
 .lux-hc-row b { color: #b45309; }
-html.dark .lux-hc-row b { color: #f2d98a; }
 .lux-hc-note {
   margin-top: 0.6rem;
   font-size: 0.75rem;
@@ -5541,10 +5538,9 @@ html.dark .ush-p { color: #f8fafc; }
 .lux-dt-sec h4 {
   font-size: 0.88rem;
   font-weight: 800;
-  color: #a1762a;
+  color: #8f6925;
   margin: 0 0 0.45rem;
 }
-html.dark .lux-dt-sec h4 { color: #f2d98a; }
 .lux-dt-out {
   margin-top: 0.45rem;
   padding: 0.6rem 0.8rem;
@@ -5555,8 +5551,7 @@ html.dark .lux-dt-sec h4 { color: #f2d98a; }
   line-height: 1.7;
   min-height: 1.4rem;
 }
-.lux-dt-out b { color: #b45309; }
-html.dark .lux-dt-out b { color: #f2d98a; }
+.lux-dt-out b { color: #ad5009; }
 
 /* ── מסלולי הלימוד היומיים ── */
 #lux-tracks-row { margin: 0 0 1.6rem; }
@@ -5610,7 +5605,7 @@ html.dark .lux-tc-name { color: #f2d98a; }
 .lux-tc-badge {
   font-size: 0.7rem;
   font-weight: 800;
-  color: #a1762a;
+  color: #876323;
   background: rgba(232, 193, 90, 0.15);
   border: 1px solid rgba(201, 153, 58, 0.3);
   padding: 0.18rem 0.6rem;
@@ -5646,7 +5641,6 @@ html.dark .lux-tc-name { color: #f2d98a; }
   margin: 0 0 0.55rem;
   text-align: center;
 }
-html.dark .lux-hc-sched-title { color: #f2d98a; }
 .lux-hc-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -5686,8 +5680,8 @@ html.dark .lux-hc-sched-title { color: #f2d98a; }
   flex-shrink: 0;
   direction: ltr;
 }
-.lux-hc-zpast { opacity: 0.55; }
-.lux-hc-zpast .lux-hc-ztime { color: #059669; }
+.lux-hc-zpast { opacity: 0.85; }
+.lux-hc-zpast .lux-hc-ztime { color: #036849; }
 .lux-hc-znext {
   background: linear-gradient(135deg, #f9edc8, #f2dfa4);
   border-color: #c9993a;
@@ -5703,20 +5697,6 @@ html.dark .lux-hc-sched-title { color: #f2d98a; }
   border-radius: 999px;
   white-space: nowrap;
   flex-shrink: 0;
-}
-html.dark .lux-hc-zrow {
-  background: linear-gradient(135deg, #16233f, #101a35);
-  border-color: rgba(224, 183, 79, 0.22);
-  color: #e2e8f0;
-}
-html.dark .lux-hc-ztime { color: #f2d98a; }
-html.dark .lux-hc-znext {
-  background: linear-gradient(135deg, #2a2410, #3a3012);
-  border-color: #c9993a;
-}
-html.dark .lux-hc-zin {
-  background: rgba(0, 0, 0, 0.35);
-  color: #f2d98a;
 }
 
 /* ── מחולל כרטיסי הברכה: בחירת פונט ── */
@@ -5744,11 +5724,6 @@ html.dark .lux-hc-zin {
   border-color: #a1762a;
   box-shadow: 0 3px 10px rgba(224, 183, 79, 0.4);
 }
-html.dark .lux-sn-f { background: #16233f; color: #e2e8f0; }
-html.dark .lux-sn-f-on {
-  background: linear-gradient(135deg, #e0b74f, #c9993a);
-  color: #211603;
-}
 /* צ'יפים לבחירת חג (.lux-sn-h) ונוסח ברכה (.lux-sn-g) — באותו מראה של צ'יפ פונט */
 .lux-sn-h, .lux-sn-g {
   border: 1.5px solid rgba(201, 153, 58, 0.4);
@@ -5766,11 +5741,6 @@ html.dark .lux-sn-f-on {
   color: #211603;
   border-color: #a1762a;
   box-shadow: 0 3px 10px rgba(224, 183, 79, 0.4);
-}
-html.dark .lux-sn-h, html.dark .lux-sn-g { background: #16233f; color: #e2e8f0; }
-html.dark .lux-sn-h.lux-sn-f-on, html.dark .lux-sn-g.lux-sn-f-on {
-  background: linear-gradient(135deg, #e0b74f, #c9993a);
-  color: #211603;
 }
 /* ── כפתור סגירה אוניברסלי — מוזרק לכל פופאפ בלי X עליון משלו ──
    קבוע בפינה השמאלית-עליונה של המסך, מעל הרקע המוחשך: לא דורס תוכן,
@@ -5824,11 +5794,10 @@ html.dark .lux-sn-h.lux-sn-f-on, html.dark .lux-sn-g.lux-sn-f-on {
 .lux-sn-lbl {
   font-size: 0.8rem;
   font-weight: 800;
-  color: #8a6d2f;
+  color: #85692d;
   margin: 0.5rem 0 0.25rem;
   text-align: center;
 }
-html.dark .lux-sn-lbl { color: #d9bb6d; }
 
 /* ── המרת תאריכים: תוצאות מעוצבות ── */
 .lux-dt-big {
@@ -5838,7 +5807,6 @@ html.dark .lux-sn-lbl { color: #d9bb6d; }
   color: #3d2f0e;
   margin-bottom: 0.2rem;
 }
-html.dark .lux-dt-big { color: #f2d98a; }
 .lux-dt-chip {
   display: inline-block;
   font-size: 0.68rem;
@@ -5857,13 +5825,10 @@ html.dark .lux-dt-big { color: #f2d98a; }
   border-color: rgba(22, 163, 74, 0.4);
 }
 .lux-dt-chip-past {
-  color: #6b7280;
+  color: #636976;
   background: rgba(229, 231, 235, 0.6);
   border-color: rgba(107, 114, 128, 0.3);
 }
-html.dark .lux-dt-chip { background: rgba(30, 58, 138, 0.4); color: #93c5fd; }
-html.dark .lux-dt-chip-today { background: rgba(20, 83, 45, 0.5); color: #86efac; }
-html.dark .lux-dt-chip-past { background: rgba(55, 65, 81, 0.5); color: #9ca3af; }
 .lux-dt-evs {
   display: flex;
   flex-wrap: wrap;
@@ -5879,7 +5844,6 @@ html.dark .lux-dt-chip-past { background: rgba(55, 65, 81, 0.5); color: #9ca3af;
   padding: 0.14rem 0.6rem;
   border-radius: 999px;
 }
-html.dark .lux-dt-ev { color: #f2d98a; background: rgba(232, 193, 90, 0.12); }
 .lux-dt-actions {
   display: flex;
   gap: 0.4rem;
@@ -5897,7 +5861,6 @@ html.dark .lux-dt-ev { color: #f2d98a; background: rgba(232, 193, 90, 0.12); }
   transition: all 0.15s ease;
 }
 .lux-dt-mini:active { transform: scale(0.95); }
-html.dark .lux-dt-mini { background: #16233f; color: #f2d98a; border-color: rgba(224, 183, 79, 0.35); }
 .lux-dt-occ-list {
   display: flex;
   flex-direction: column;
@@ -5920,8 +5883,6 @@ html.dark .lux-dt-mini { background: #16233f; color: #f2d98a; border-color: rgba
   border-color: #c9993a;
   font-weight: 800;
 }
-html.dark .lux-dt-occ { background: #16233f; color: #e2e8f0; border-color: rgba(224, 183, 79, 0.2); }
-html.dark .lux-dt-occ-first { background: linear-gradient(135deg, #2a2410, #3a3012); border-color: #c9993a; }
 
 /* ── סידור כפתורי התפילות: גרירה חלקה ── */
 .po-tile { transition: none; }
@@ -6422,15 +6383,13 @@ html.dark .lux-plan-streak { color: #fbbf24; background: rgba(251, 191, 36, 0.12
   margin: 0 0 0.55rem;
   font-weight: 600;
 }
-html.dark .lux-dt-help { color: #b8a97a; }
 .lux-dt-lbl {
   display: block;
   font-size: 0.68rem;
   font-weight: 800;
-  color: #8a7434;
+  color: #836e31;
   margin: 0 0 0.2rem;
 }
-html.dark .lux-dt-lbl { color: #d9c48a; }
 
 /* ── סדר לימוד אישי — כרטיסים בדף הראשי ── */
 #lux-plan-row {
@@ -6457,7 +6416,7 @@ html.dark .lux-dt-lbl { color: #d9c48a; }
 @media (hover: hover) {
   .lux-plan-empty:hover { border-color: #c9993a; box-shadow: 0 6px 20px rgba(224, 183, 79, 0.25); }
 }
-.lux-plan-empty small { color: #8a7434; font-weight: 600; }
+.lux-plan-empty small { color: #7f6b30; font-weight: 600; }
 .lux-plan-plus {
   flex-shrink: 0;
   width: 2.6rem;
@@ -9031,7 +8990,7 @@ html.dark #chok-israel-modal.chok-dark-skin .chok-targum b {
   transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
 }
 .hilc-heb { font-size: 0.76rem; color: #94a3b8; font-weight: 500; line-height: 1.2; }
-.hilc-greg { font-size: 0.58rem; color: #64748b; line-height: 1.1; margin: 1px 0; }
+.hilc-greg { font-size: 0.58rem; color: #8c99ac; line-height: 1.1; margin: 1px 0; }
 .hilc-pad { height: 13px; }
 .hilc-has {
   cursor: pointer;
@@ -11159,3 +11118,22 @@ html.dark #cal-days-grid > div.border-blue-500 > div > span.font-black { color: 
   #lux-siyum,
   .lux-siyum-card { animation: none !important; }
 }
+
+/* ניגודיות (D13, 11/2026): ההכרעה — הכהיה מינימלית באותו גוון עד 4.5:1 מול הרקע הגרוע שנמדד.
+   כאן — מה שלא נכנס לכלל הבסיסי: כותרת המסלולים יושבת פעם על כהה ופעם על שמנת, תגית "מחכה לך" בכהה,
+   כפתור הסנכרון ושורת התאריך בכרטיסי המועדים, "אין אירועים" והערת התזכורת בחלון היום והאפורים בבלוק ה-SEO.
+   בערכת השמיים יש כללים משלה (בלוק "התאמת הדף הראשי") — לכן תחת :not(.lux-sky) */
+html:not(.dark):not(.lux-sky) #lux-tracks-row .lux-tracks-title { color: #b6852f; }
+html:not(.dark):not(.lux-sky) #lux-plan-row .lux-tracks-title { color: #8a6524; }
+html.dark .lux-tc-badge:not(.lux-tc-done) { color: #bc8a31; }
+.ev-sync-btn { color: #5a6d88; }
+html.dark .ev-sync-btn { color: #6f8097; }
+.ev-date-line { color: #5b6a7f; }
+html.dark .day-noev { color: #8291a5 !important; }
+html:not(.dark):not(.lux-sky) #seo-about [class~="text-slate-500"] { color: #5f6e84; }
+/* יריעות lux (כלי התאריכים, השעון ההלכתי, כרטיס הברכה, השם, ההישגים…) בהירות בכל הערכות — גם בכהה
+   (11/2026). עד כה הכתב בהן ירש את צבע הגוף הכהה (#e2e8f0) וכללי html.dark צבעו בתוכן זהב בהיר
+   ואריחים כחולים — 1.08–2.9 על השמנת. כללי הכהה נמחקו; היריעות הכהות היחידות — אשף סדר הלימוד */
+html.dark .lux-sheet { color: #1e293b; }
+html.dark :is(#lux-plan-wizard, #lux-plan-pace, #lux-pw-pick) .lux-sheet { color: #e2e8f0; }
+html.dark :is(#lux-plan-wizard, #lux-plan-pace, #lux-pw-pick) .lux-sheet-cancel { color: #94a3b8; }

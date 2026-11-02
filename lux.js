@@ -5214,6 +5214,10 @@
       if (!actives.length) actives = [THEMES[0]];
       var theme = actives[0];
       var selForm = "p"; // נוסח ברירת מחדל — משפחה/רבים
+      // העיצוב והגופן נשמרים בין פתיחות (sel/selFont) — השבבים מסומנים לפיהם, כך שמה שמסומן הוא מה שמצויר
+      // (עד 11/2026 השבבים חזרו ל"מלכותי"/"קלאסי" והכרטיס צויר בבחירה הקודמת)
+      if (!(sel >= 0 && sel < DESIGNS.length)) sel = 0;
+      if (!(selFont >= 0 && selFont < CARD_FONTS.length)) selFont = 0;
       var name = "";
       try { name = localStorage.getItem("lux_user_name") || ""; } catch (e) {}
       var ov = luxSheet("lux-shana-maker",
@@ -5228,11 +5232,11 @@
           : "") +
         '<div class="lux-sn-lbl">🎨 עיצוב ורקע הכרטיס</div>' +
         '<div class="lux-sn-designs">' + DESIGNS.map(function (d, i) {
-          return '<button type="button" class="lux-sn-d' + (i === 0 ? " lux-sn-d-on" : "") + '" data-i="' + i + '" style="background:linear-gradient(160deg,' + d.bg[0] + "," + d.bg[2] + ');color:' + d.ink + ';">' + d.l + "</button>";
+          return '<button type="button" class="lux-sn-d' + (i === sel ? " lux-sn-d-on" : "") + '" data-i="' + i + '" style="background:linear-gradient(160deg,' + d.bg[0] + "," + d.bg[2] + ');color:' + d.ink + ';">' + d.l + "</button>";
         }).join("") + "</div>" +
         '<div class="lux-sn-lbl">🖋️ סגנון הכתב (פונט)</div>' +
         '<div class="lux-sn-fonts">' + CARD_FONTS.map(function (f, i) {
-          return '<button type="button" class="lux-sn-f' + (i === 0 ? " lux-sn-f-on" : "") + '" data-i="' + i + '" style="font-family:' + f.fam + ';">' + f.l + "</button>";
+          return '<button type="button" class="lux-sn-f' + (i === selFont ? " lux-sn-f-on" : "") + '" data-i="' + i + '" style="font-family:' + f.fam + ';">' + f.l + "</button>";
         }).join("") + "</div>" +
         '<div class="lux-sn-lbl">✍️ נוסח הברכה — למי היא מיועדת?</div>' +
         '<div class="lux-sn-fonts">' +

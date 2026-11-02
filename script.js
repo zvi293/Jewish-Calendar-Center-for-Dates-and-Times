@@ -30376,11 +30376,11 @@ document.addEventListener("keydown", (e) => {
       " " +
       info.year +
       "</h2>" +
-      '<p style="font-size:0.78rem;color:#6f8097;margin:0 0 0.15rem;">יארצייט ויום הסתלקות צדיקים</p>' +
+      '<p style="font-size:0.78rem;color:#72839a;margin:0 0 0.15rem;">יארצייט ויום הסתלקות צדיקים</p>' +
       '<button id="hil-today-btn" style="background:rgba(251,191,36,0.15);border:1px solid rgba(251,191,36,0.45);color:#fbbf24;border-radius:0.5rem;padding:0.18rem 0.85rem;cursor:pointer;font-size:0.72rem;font-weight:700;margin:0.35rem auto 0.4rem;display:' +
       (_dayOffset !== 0 ? "inline-block" : "none") +
       ';">חזרה ליום הנוכחי</button>' +
-      '<p id="hil-greg-date" dir="rtl" style="font-size:0.78rem;color:#6d809c;margin:0;">' +
+      '<p id="hil-greg-date" dir="rtl" style="font-size:0.78rem;color:#70839e;margin:0;">' +
       info.gregStr +
       (info.specialDay ? ' <span style="color:#fbbf24;font-weight:700;" dir="rtl">• ' + info.specialDay + '</span>' : '') +
       "</p>" +
@@ -30636,7 +30636,7 @@ document.addEventListener("keydown", (e) => {
 
     var dowHtml = DOW_LABELS.map(function (l) {
       return (
-        '<div style="text-align:center;font-size:0.72rem;color:#718299;font-weight:600;">' +
+        '<div style="text-align:center;font-size:0.72rem;color:#72839a;font-weight:600;">' +
         l +
         "</div>"
       );
@@ -30657,7 +30657,7 @@ document.addEventListener("keydown", (e) => {
       '<div style="text-align:center;margin-bottom:1rem;">' +
       '<div style="font-size:1.5rem;margin-bottom:0.3rem;">📅</div>' +
       '<h2 style="font-size:1.3rem;font-weight:700;color:#e2e8f0;margin:0 0 0.2rem;letter-spacing:0.01em;">לוח הילולות</h2>' +
-      '<p style="font-size:0.75rem;color:#6f8097;margin:0;">לחץ על יום מסומן לצפייה בהילולות</p>' +
+      '<p style="font-size:0.75rem;color:#72839a;margin:0;">לחץ על יום מסומן לצפייה בהילולות</p>' +
       "</div>" +
       // Month nav — direction:ltr so ‹ is left (prev), › is right (next)
       '<div style="display:flex;align-items:center;justify-content:space-between;' +
@@ -30678,7 +30678,7 @@ document.addEventListener("keydown", (e) => {
       "color:#fbbf24;border-radius:0.6rem;padding:0.18rem 0.9rem;cursor:pointer;" +
       'font-size:0.78rem;font-weight:600;" title="חזור להיום">חזרה ליום הנוכחי</button>' +
       "</div>" +
-      '<p id="hil-cal-greg-month" style="text-align:center;font-size:0.72rem;color:#6d809c;' +
+      '<p id="hil-cal-greg-month" style="text-align:center;font-size:0.72rem;color:#70839e;' +
       'margin:0 0 0.6rem;direction:ltr;"></p>' +
       // Day-of-week header
       '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:4px;">' +

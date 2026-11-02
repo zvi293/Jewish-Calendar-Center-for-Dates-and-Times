@@ -10601,11 +10601,11 @@ html.lux-sky main .event-card {
 }
 /* ── טקסט בתוך הזכוכית: צבעי Tailwind לפי טוקן מדויק → צבעי השלב (יום/לילה) ── */
 html.lux-sky main :is(.event-card, nav[class~="bg-white"], #lux-pearl, .lux-track-card, .lux-plan-empty, #lux-shana-entry) :is([class~="text-slate-900"], [class~="text-slate-800"], [class~="text-slate-700"]):not(.ev-countdown) { color: var(--skyc-ink) !important; }
-html.lux-sky main :is(.event-card, nav[class~="bg-white"], #lux-pearl, .lux-track-card, .lux-plan-empty, #lux-shana-entry) :is([class~="text-slate-600"], [class~="text-slate-500"]):not(.ev-countdown) { color: var(--skyc-ink2) !important; }
+html.lux-sky main :is(.event-card, nav[class~="bg-white"], #lux-pearl, .lux-track-card, .lux-plan-empty, #lux-shana-entry) :is([class~="text-slate-600"], [class~="text-slate-500"], .ev-date-line):not(.ev-countdown) { color: var(--skyc-ink2) !important; }
 html.lux-sky main :is(.event-card, nav[class~="bg-white"]) [class~="text-slate-400"] { color: var(--skyc-ink3) !important; }
 html.lux-sky main .event-card .ev-name-btn { color: inherit; }
 /* כפתור "סנכרן ליומן" שומר על גלולה בהירה (bg-white/70) — הטקסט בו נשאר כהה גם בלילה */
-html.lux-sky main .event-card button[class~="text-slate-400"] { color: #475569 !important; }
+html.lux-sky main .event-card :is(button[class~="text-slate-400"], .ev-sync-btn) { color: #475569 !important; }
 /* הלימוד היומי שלי */
 html.lux-sky .lux-tc-ref { color: var(--skyc-ink3); }
 html.lux-sky:not([data-sky="day"]) .lux-tc-name { color: #ffffff; }
@@ -11139,3 +11139,4 @@ html:not(.dark):not(.lux-sky) #seo-about [class~="text-slate-500"] { color: #5f6
 html.dark .lux-sheet { color: #1e293b; }
 html.dark :is(#lux-plan-wizard, #lux-plan-pace, #lux-pw-pick) .lux-sheet { color: #e2e8f0; }
 html.dark :is(#lux-plan-wizard, #lux-plan-pace, #lux-pw-pick) .lux-sheet-cancel { color: #94a3b8; }
+html.dark :is(#lux-plan-wizard, #lux-plan-pace, #lux-pw-pick) :is(.lux-dt-big, .lux-dt-out b) { color: #f2d98a; }

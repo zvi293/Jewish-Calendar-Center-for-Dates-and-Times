@@ -3573,10 +3573,25 @@ body.lux-shabbat #shabbat-countdown-bar {
   color: #7a5b13;
   box-shadow: 0 0 0 3px rgba(224, 183, 79, 0.18);
 }
-.lux-pp-chip .lux-pp-x {
-  margin-right: 0.35rem;
+.lux-pp-item {
+  position: relative;
+  display: inline-flex;
+}
+.lux-pp-chip.lux-pp-has-x {
+  padding-left: 1.9rem;
+}
+.lux-pp-item .lux-pp-x {
+  position: absolute;
+  left: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: 0;
+  padding: 0.1rem 0.2rem;
   color: #b91c1c;
   font-weight: 900;
+  font-size: 0.85rem;
+  line-height: 1;
   cursor: pointer;
 }
 .lux-pp-custom-row {

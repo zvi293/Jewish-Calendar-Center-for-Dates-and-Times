@@ -2901,6 +2901,11 @@
           bar.id = "lux-th-progress";
           bar.title = "לחיצה מציגה את כל הפרקים שנקראו";
           bar.setAttribute("role", "button");
+          // גישה מהמקלדת: role=button בלי tabindex לא היה נגיש, ו"📖 הפרקים שקראתי" לא נפתח
+          bar.tabIndex = 0;
+          bar.addEventListener("keydown", function (e) {
+            if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openReadList(); }
+          });
           bar.innerHTML = '<div class="lux-thp-txt"></div><div class="lux-thp-track"><div class="lux-thp-fill"></div></div>';
           header.insertAdjacentElement("afterend", bar);
           updateProgress();
@@ -3099,21 +3104,24 @@
         grid.innerHTML = allPurposes().map(function (p) {
           var on = selPurposes.indexOf(p) >= 0;
           var isCustom = customs.indexOf(p) >= 0;
-          return '<button type="button" class="lux-pp-chip' + (on ? " lux-on" : "") + '" data-p="' + esc(p) + '" aria-pressed="' + (on ? "true" : "false") + '">' +
-            (on ? "✓ " : "") + esc(p) +
-            (isCustom ? '<span class="lux-pp-x" data-del="' + esc(p) + '" title="הסרת המטרה מהרשימה" role="button" aria-label="הסרת המטרה">✕</span>' : "") +
-            "</button>";
+          var chip = '<button type="button" class="lux-pp-chip' + (on ? " lux-on" : "") + (isCustom ? " lux-pp-has-x" : "") + '" data-p="' + esc(p) + '" aria-pressed="' + (on ? "true" : "false") + '">' +
+            (on ? "✓ " : "") + esc(p) + "</button>";
+          // ה-✕ של מטרה מותאמת — כפתור אח שיושב בתוך הצ'יפ (לא span בתוך ה-button: שם לא היה נגיש מהמקלדת)
+          return isCustom
+            ? '<span class="lux-pp-item">' + chip + '<button type="button" class="lux-pp-x" data-del="' + esc(p) + '" title="הסרת המטרה מהרשימה" aria-label="הסרת המטרה ' + esc(p) + '">✕</button></span>'
+            : chip;
         }).join("");
+        grid.querySelectorAll(".lux-pp-x").forEach(function (x) {
+          x.addEventListener("click", function () {
+            // הסרת מטרה מותאמת-אישית מהרשימה (וגם מהבחירה הנוכחית)
+            var del = x.getAttribute("data-del");
+            jset(CKEY, customPurposes().filter(function (v) { return v !== del; }));
+            selPurposes = selPurposes.filter(function (v) { return v !== del; });
+            drawChips(); syncTrigger();
+          });
+        });
         grid.querySelectorAll(".lux-pp-chip").forEach(function (chip) {
-          chip.addEventListener("click", function (e) {
-            var del = e.target.getAttribute && e.target.getAttribute("data-del");
-            if (del) {
-              // הסרת מטרה מותאמת-אישית מהרשימה (וגם מהבחירה הנוכחית)
-              jset(CKEY, customPurposes().filter(function (x) { return x !== del; }));
-              selPurposes = selPurposes.filter(function (x) { return x !== del; });
-              drawChips(); syncTrigger();
-              return;
-            }
+          chip.addEventListener("click", function () {
             var p = chip.getAttribute("data-p");
             var i = selPurposes.indexOf(p);
             if (i >= 0) selPurposes.splice(i, 1); else selPurposes.push(p);

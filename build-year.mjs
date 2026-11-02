@@ -198,7 +198,7 @@ function buildTable(items, tableHebYear, tableLabel) {
 ${tr}
             </tbody>
           </table>
-          <p class="mt-2 text-xs text-slate-400 dark:text-slate-500">התאריכים לפי הלוח הנהוג בארץ ישראל. ללוח המלא, לזמני החגים המדויקים ולייצוא ליומן — השתמשו בלוח האינטראקטיבי שבראש הדף.</p>
+          <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">התאריכים לפי הלוח הנהוג בארץ ישראל. ללוח המלא, לזמני החגים המדויקים ולייצוא ליומן — השתמשו בלוח האינטראקטיבי שבראש הדף.</p>
         </div>`;
   return { html, rows };
 }

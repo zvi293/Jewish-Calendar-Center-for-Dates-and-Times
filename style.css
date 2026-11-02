@@ -10639,8 +10639,8 @@ html.lux-sky main .event-card {
   html.lux-sky main .event-card:hover { box-shadow: 0 26px 60px -16px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(201, 153, 58, 0.55); }
 }
 /* ── טקסט בתוך הזכוכית: צבעי Tailwind לפי טוקן מדויק → צבעי השלב (יום/לילה) ── */
-html.lux-sky main :is(.event-card, nav[class~="bg-white"], #lux-pearl, .lux-track-card, .lux-plan-empty, #lux-shana-entry) :is([class~="text-slate-900"], [class~="text-slate-800"], [class~="text-slate-700"]) { color: var(--skyc-ink) !important; }
-html.lux-sky main :is(.event-card, nav[class~="bg-white"], #lux-pearl, .lux-track-card, .lux-plan-empty, #lux-shana-entry) :is([class~="text-slate-600"], [class~="text-slate-500"]) { color: var(--skyc-ink2) !important; }
+html.lux-sky main :is(.event-card, nav[class~="bg-white"], #lux-pearl, .lux-track-card, .lux-plan-empty, #lux-shana-entry) :is([class~="text-slate-900"], [class~="text-slate-800"], [class~="text-slate-700"]):not(.ev-countdown) { color: var(--skyc-ink) !important; }
+html.lux-sky main :is(.event-card, nav[class~="bg-white"], #lux-pearl, .lux-track-card, .lux-plan-empty, #lux-shana-entry) :is([class~="text-slate-600"], [class~="text-slate-500"]):not(.ev-countdown) { color: var(--skyc-ink2) !important; }
 html.lux-sky main :is(.event-card, nav[class~="bg-white"]) [class~="text-slate-400"] { color: var(--skyc-ink3) !important; }
 html.lux-sky main .event-card .ev-name-btn { color: inherit; }
 /* כפתור "סנכרן ליומן" שומר על גלולה בהירה (bg-white/70) — הטקסט בו נשאר כהה גם בלילה */

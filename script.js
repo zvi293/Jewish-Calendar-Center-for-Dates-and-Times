@@ -2953,6 +2953,11 @@ async function renderDafContent() {
   const st = window._dafState;
   const cont = document.getElementById("sefaria-modal-content");
   if (!st || !cont) return;
+  // אסימון רינדור: שתי לחיצות מהירות על מתגי רש"י/תוספות — הרינדור שהסתיים אחרון דרס את החדש (דף ישן מעל טקסט חדש).
+  // רק הרינדור האחרון, ורק אם לא נפתח בינתיים תוכן אחר בחלון, כותב (jc-screens site 432, 2/11/2026; כמו census א61)
+  const _dTok = (window.__dafRenderTok = (window.__dafRenderTok || 0) + 1);
+  const _sTok = window.__sefReqTok;
+  const _stale = () => _dTok !== window.__dafRenderTok || _sTok !== window.__sefReqTok || window._dafState !== st;
   const showRashi = localStorage.getItem("daf_show_rashi") === "true";
   const showTosafot = localStorage.getItem("daf_show_tosafot") === "true";
   // סימון שורה — המרקר האחיד של כל הספרים (lux.js universalMarker: כפתור 🖍️ בכותרת,
@@ -3012,6 +3017,7 @@ async function renderDafContent() {
   }
   if (showRashi) {
     const r = await _fetchDafCommentary("Rashi", st.ref);
+    if (_stale()) return;
     if (r) {
       parasHtml = _buildTextWithInlineComments(parasHtml, r, {
         label: 'רש"י',
@@ -3027,6 +3033,7 @@ async function renderDafContent() {
   }
   if (showTosafot) {
     const t = await _fetchDafCommentary("Tosafot", st.ref);
+    if (_stale()) return;
     if (t) {
       parasHtml = _buildTextWithInlineComments(parasHtml, t, {
         label: "תוספות",

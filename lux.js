@@ -6582,13 +6582,26 @@
           var badge = document.getElementById("lux-pl-cm-badge");
           if (badge) { badge.textContent = cmOn.length; badge.style.display = cmOn.length ? "" : "none"; }
         }
-        function plCmToggle(open) {
-          var willOpen = typeof open === "boolean" ? open : cmPop.style.display === "none";
-          if (willOpen) plCmRender();
-          cmPop.style.display = willOpen ? "" : "none";
-          cmBd.style.display = willOpen ? "" : "none";
+        // הסתרה/הצגה בפועל — בלי לגעת בהיסטוריה
+        function plCmShow(on) {
+          if (on) plCmRender();
+          cmPop.style.display = on ? "" : "none";
+          cmBd.style.display = on ? "" : "none";
           var btn = document.getElementById("lux-pl-cm-btn");
-          if (btn) btn.setAttribute("aria-expanded", willOpen ? "true" : "false");
+          if (btn) btn.setAttribute("aria-expanded", on ? "true" : "false");
+        }
+        // (11/2026) היסטוריה-בטוח כמו בוררי נושאי הכלים של script.js: "חזור"/Escape סוגרים
+        // את החלונית בלבד ולא את הקורא שמתחתיה; סגירה יזומה (✕/רקע/כפתור) — דרך ההיסטוריה
+        if (window._popupHideHandlers) window._popupHideHandlers["lux-pl-cm-pop"] = function () { plCmShow(false); };
+        function plCmToggle(open) {
+          var isOpen = cmPop.style.display !== "none";
+          var willOpen = typeof open === "boolean" ? open : !isOpen;
+          if (willOpen === isOpen) return;
+          if (willOpen) {
+            plCmShow(true);
+            if (typeof window.pushModalState === "function") window.pushModalState("lux-pl-cm-pop");
+          } else if (typeof window._popupHistoryClose === "function") window._popupHistoryClose("lux-pl-cm-pop");
+          else plCmShow(false);
         }
         cmBar.addEventListener("click", function (e) {
           if (e.target.closest("#lux-pl-cm-btn")) plCmToggle();

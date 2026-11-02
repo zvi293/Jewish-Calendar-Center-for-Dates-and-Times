@@ -10352,12 +10352,14 @@ body > [id$="-modal"].opacity-0:not(.hidden) > * {
   opacity: 0;
   transition: opacity 0.11s ease-out;
 }
+/* (11/2026) חלון "תוספות היום" (#pr-adds-pop) מוחרג — יש לו דהייה משלו (pra-fade/pra-out), והכלל הזה
+   (1-1-1) דרס אותה: ההכהיה קפצה בפתיחה ונעלמה בבת אחת בסגירה.
 /* פופאפים קטנים ופאנלים (סימניות, בורר מפרשים) — האלמנט עצמו, פעם אחת בכל הופעה. ה-X
    האוניברסלי (body > .lux-ux) בכוונה בלי אנימציה: הוא מתחלף עם ה-X של התצוגה באותו מקום */
 [id$="-bm-panel"],
 #sn-cm-popover,
 #lux-pl-cm-pop,
-body > [id$="-pop"]:not(#lux-moon-pop),
+body > [id$="-pop"]:not(#lux-moon-pop):not(#pr-adds-pop),
 .rf-pop {
   animation: ux-pop 0.22s cubic-bezier(0.22, 1, 0.36, 1);
 }
@@ -10380,7 +10382,7 @@ details[open] > :not(summary) {
   [id$="-bm-panel"],
   #sn-cm-popover,
   #lux-pl-cm-pop,
-  body > [id$="-pop"]:not(#lux-moon-pop),
+  body > [id$="-pop"]:not(#lux-moon-pop):not(#pr-adds-pop),
   .rf-pop,
   #prayer-more-grid:not(.hidden),
   details[open] > :not(summary) {

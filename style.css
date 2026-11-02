@@ -5983,11 +5983,13 @@ html.dark .lux-dt-occ-first { background: linear-gradient(135deg, #2a2410, #3a30
   stroke-width: 1.5;
   filter: drop-shadow(0 0 6px rgba(232, 193, 90, 0.7));
 }
-/* תנועה מופחתת: היפוך החודש בלוח, הזום של גלגל השנה וכניסת הברכה — עד 11/2026 רצו גם כאן */
+/* תנועה מופחתת: היפוך החודש בלוח, הזום של גלגל השנה, כניסת הברכה והכרטיסים — עד 11/2026 רצו גם כאן */
 @media (prefers-reduced-motion: reduce) {
   #cal-days-grid.lux-flip { animation: none; }
   #lux-yw-svg .lux-yw-evt { transition: none; }
   #lux-greeting { animation: none; opacity: 1; transform: none; }
+  /* כניסת כרטיס הסליחות, הכרטיסים העונתיים וסצנת השבת (lux-selc-in) */
+  #lux-selichot-card, .lux-seas-card, #lux-shabbat-scene { animation: none; }
 }
 
 /* ── סדר לימוד אישי — נושאי כלים בקורא ── */

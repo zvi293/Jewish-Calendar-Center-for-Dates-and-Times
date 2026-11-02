@@ -9418,6 +9418,19 @@ html.dark #calendar-day-modal div[style*="#eff6ff"] span[style*="#7c3aed"] {
 html.dark #calendar-day-modal div[style*="#eff6ff"] div[style*="#4338ca"] {
   color: #a5b4fc !important;
 }
+/* ההערה ששמרת (הערה ישנה): רקע #fffbeb inline והכתב מתבהר → בהיר על בהיר (בודק jc-screens, 2/11) */
+html.dark #calendar-day-modal div[style*="#fffbeb"] {
+  background: rgba(120, 53, 15, 0.25) !important;
+  border-color: rgba(251, 191, 36, 0.35) !important;
+}
+html.dark #calendar-day-modal div[style*="#fffbeb"] div[style*="#92400e"] {
+  color: #fcd34d !important;
+}
+html.dark #calendar-day-modal div[style*="#fffbeb"] button {
+  background: rgba(15, 23, 42, 0.5) !important;
+  color: #fcd34d !important;
+  border-color: rgba(251, 191, 36, 0.45) !important;
+}
 
 /* לבן מלא (שדות קלט, כרטיסי לוח ברכות וכו') — כרטיס כהה */
 html.dark #sefaria-modal [style*="background:#fff;"],

@@ -5574,10 +5574,10 @@
         '<div class="lux-dt-sec"><h4>📅 מלועזי לעברי</h4>' +
           '<p class="lux-dt-help">בחרו תאריך רגיל (לועזי) — ומיד תראו איזה תאריך עברי חל בו, כולל חגים ומועדים שחלים באותו יום.</p>' +
           '<div style="display:flex;gap:0.4rem;align-items:center;">' +
-            '<input type="date" id="lux-dt-g" class="lux-sheet-input" style="flex:1;">' +
+            '<input type="date" id="lux-dt-g" class="lux-sheet-input" style="flex:1;" aria-label="תאריך לועזי">' +
             '<button type="button" id="lux-dt-today" class="lux-dt-mini" style="flex-shrink:0;">🎯 היום</button>' +
           "</div>" +
-          '<div class="lux-dt-out" id="lux-dt-g-out"></div>' +
+          '<div class="lux-dt-out" id="lux-dt-g-out" aria-live="polite"></div>' +
         "</div>" +
         '<div class="lux-dt-sec"><h4>✡️ מעברי ללועזי</h4>' +
           '<p class="lux-dt-help">בחרו יום, חודש ושנה עבריים — ותקבלו את התאריך הלועזי המדויק שבו הם חלים.</p>' +
@@ -5591,11 +5591,11 @@
             '<div style="flex:1;"><label class="lux-dt-lbl" for="lux-dt-hy">שנה</label>' +
               '<select id="lux-dt-hy" class="lux-sheet-input" style="width:100%;">' + yearOpts + "</select></div>" +
           "</div>" +
-          '<div class="lux-dt-out" id="lux-dt-h-out"></div>' +
+          '<div class="lux-dt-out" id="lux-dt-h-out" aria-live="polite"></div>' +
         "</div>" +
         '<div class="lux-dt-sec"><h4>🕯️ מתי זה יוצא? — יארצייט ויום הולדת עברי</h4>' +
           '<p class="lux-dt-help">לפי היום והחודש העבריים שבחרתם למעלה — הנה חמשת המופעים הקרובים בלוח הרגיל. אפשר להעתיק או להוסיף ליומן בלחיצה.</p>' +
-          '<div class="lux-dt-out" id="lux-dt-next-out"></div>' +
+          '<div class="lux-dt-out" id="lux-dt-next-out" aria-live="polite"></div>' +
         "</div>" +
         '<div class="lux-dt-sec"><h4>🎉 מחשבון בר/בת מצווה וגיל עברי</h4>' +
           '<p class="lux-dt-help">הזינו תאריך לידה (לועזי), בחרו בר או בת מצווה — ותקבלו את התאריך המדויק לפי הלוח העברי, יחד עם הגיל העברי הנוכחי.</p>' +
@@ -5605,7 +5605,7 @@
             '<button type="button" class="lux-sheet-secondary" id="lux-dt-bar" style="flex:1;">👦 בר מצווה (13)</button>' +
             '<button type="button" class="lux-sheet-secondary" id="lux-dt-bat" style="flex:1;">👧 בת מצווה (12)</button>' +
           "</div>" +
-          '<div class="lux-dt-out" id="lux-dt-bm-out"></div>' +
+          '<div class="lux-dt-out" id="lux-dt-bm-out" aria-live="polite"></div>' +
         "</div>" +
         '<div class="lux-sheet-actions"><button type="button" class="lux-sheet-cancel">סגור</button></div>');
       if (!ov) return;
@@ -8569,7 +8569,8 @@
       var all = root.querySelectorAll("*");
       for (var i = 0; i < all.length; i++) {
         var el = all[i];
-        if (el.namespaceURI === "http://www.w3.org/2000/svg" && el.tagName !== "svg") continue;
+        // ילדי SVG — רק כשהם מוגדרים לחיצים בעצמם (tabindex, כמו סמלי החגים בגלגל השנה)
+        if (el.namespaceURI === "http://www.w3.org/2000/svg" && el.tagName !== "svg" && !el.hasAttribute("tabindex")) continue;
         var r = el.getBoundingClientRect();
         if (r.width < 8 || r.height < 8 || r.bottom <= 2 || r.top >= vh - 2 || r.right <= 2 || r.left >= vw - 2) continue;
         var ok = el.matches(SEL) && !el.disabled;

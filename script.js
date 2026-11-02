@@ -1151,6 +1151,7 @@ function applyTheme(theme) {
     } else {
       el.classList.remove("theme-circle-active");
     }
+    el.setAttribute("aria-pressed", t === nextTheme ? "true" : "false"); // קורא מסך: העיגול הנבחר
   });
 }
 
@@ -28671,6 +28672,9 @@ function _injectWaButtons() {
 // ═══════════════════════════════════════════════════════
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && document.getElementById("calendar-day-modal")) {
+    // באמצע הקלדה (שדה התזכורת/ההערה) — לא סוגרים: עד 11/2026 הטקסט אבד
+    const ae0 = document.activeElement;
+    if (ae0 && /^(INPUT|TEXTAREA)$/.test(ae0.tagName) && ae0.value) return;
     closeCalendarDayUser();
     return;
   }

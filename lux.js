@@ -1547,8 +1547,10 @@
       parts.push('<text class="lux-yw-year" x="170" y="166" text-anchor="middle">' + (hebYear || "") + "</text>");
       var todayHeb = luxHebDateStr();
       parts.push('<text class="lux-yw-today" x="170" y="190" text-anchor="middle">' + (todayHeb || "היום") + "</text>");
-      // סמן "היום" פועם על הטבעת
-      parts.push('<circle class="lux-yw-now" cx="170" cy="38" r="5"><animate attributeName="r" values="4.5;6.5;4.5" dur="2.2s" repeatCount="indefinite"/></circle>');
+      // סמן "היום" פועם על הטבעת — בתנועה מופחתת בלי הפעימה (SMIL, ו-CSS לא עוצר אותו)
+      var ywRM = false;
+      try { ywRM = matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) {}
+      parts.push('<circle class="lux-yw-now" cx="170" cy="38" r="5">' + (ywRM ? "" : '<animate attributeName="r" values="4.5;6.5;4.5" dur="2.2s" repeatCount="indefinite"/>') + "</circle>");
       parts.push('<text class="lux-yw-monthlabel" x="170" y="24" text-anchor="middle" style="fill:#fff;font-weight:900;">היום</text>');
       svg.innerHTML = parts.join("");
       // ── זום חודשי: לחיצה על אייקון מרחפת ומגדילה את כל אייקוני אותו

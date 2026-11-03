@@ -26987,8 +26987,12 @@ window.openPrayerNavPopup = function () {
   function _stripNikud(s) {
     return (s || "").replace(/[֑-ׇ]/g, "").trim();
   }
+  // (11/2026) בלי סעיפים (למשל ערבית בנוסח ספרד ברוב הימים) — הודעה במקום כפתור שלא עושה כלום
+  function _noSections() {
+    if (typeof window.showToast === "function") window.showToast("בתפילה הזו אין סעיפים לדילוג", "info", 2500);
+  }
   var headers = body.querySelectorAll("big > b, big b");
-  if (!headers || headers.length === 0) return;
+  if (!headers || headers.length === 0) { _noSections(); return; }
   var items = [];
   var seen = new Set();
   for (var i = 0; i < headers.length; i++) {
@@ -27011,7 +27015,7 @@ window.openPrayerNavPopup = function () {
     seen.add(dedupKey);
     items.push({ label: displayLabel, targetId: pEl.id });
   }
-  if (items.length === 0) return;
+  if (items.length === 0) { _noSections(); return; }
   window._openChapterNavPopup({
     title: "תפריט תפילה",
     subtitle: "דילוג לסעיף בתפילה",
@@ -28144,8 +28148,23 @@ openTehillimPage = function () {
     }
     return bestV;
   }
+  // הפרק שבראש אזור הקריאה כרגע — הקורא טוען פרקים ברצף בגלילה, ולכן הפרק שנפתח
+  // (_tehillimCurrentChapter) אינו בהכרח הפרק שקוראים בו (11/2026)
+  function thVisibleChapter() {
+    var area = document.getElementById("psalm-text-area");
+    if (!area) return null;
+    var line = area.getBoundingClientRect().top + 40, best = null;
+    var chs = area.querySelectorAll('[id^="psalm-chapter-"]');
+    for (var i = 0; i < chs.length; i++) {
+      var r = chs[i].getBoundingClientRect();
+      if (r.height && r.top <= line && r.bottom > line) { best = chs[i]; break; }
+      if (r.height && r.top <= line) best = chs[i];
+    }
+    var n = best ? parseInt(best.id.slice(14), 10) : NaN;
+    return isFinite(n) ? n : null;
+  }
   window._thSaveLastPosition = function() {
-    var ch = window._tehillimCurrentChapter;
+    var ch = thVisibleChapter() || window._tehillimCurrentChapter;
     if (!ch) return false;
     var v = thCurrentVisibleVerse(ch);
     // טוגל: אם כבר שמור מיקום אחרון באותו פרק ופסוק — הלחיצה מסירה אותו

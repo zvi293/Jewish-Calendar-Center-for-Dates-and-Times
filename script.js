@@ -12078,7 +12078,7 @@ function openMotzeiShabbatModal(activeTab) {
     existingOverlay.querySelectorAll("[data-motzei-tab]").forEach((b) => {
       const on = b.getAttribute("data-motzei-tab") === tab;
       b.style.background = on ? "rgba(255,255,255,0.2)" : "transparent";
-      b.style.color = on ? "#fff" : "rgba(255,255,255,0.5)";
+      b.style.color = on ? "#fff" : "rgba(255,255,255,0.52)";
     });
     _applyMotzeiFont();
     return;
@@ -27344,6 +27344,9 @@ openPrayer = async function (key, heLabel, enLabel, opts) {
                 </div>`;
         }
       }
+      // הגודל השמור חל גם על התוכן: עד 11/2026 applyPrayerFontSize רץ רק על השלד (renderPrayerModalShell), לפני
+      // שה-.holy-text-style של התוכן נוצר — התפילה נפתחה תמיד ב-100% (+/− המשיכו מהערך השמור)
+      if (!isPopup) applyPrayerFontSize(".holy-text-style");
       // מנחה / ברכת המזון נפתחות ישר בעוגן — כבר לפני הציור הראשון. עד 09/2026 רק אחרי 120ms:
       // הטקסט הופיע מראשו ואז "קפץ" לעוגן. (הקריאות ב-120/500ms למטה נשארות כבדיקה חוזרת)
       const _anchor = key === "mincha" ? "mincha-korbanot-start" : key === "birkat-hamazon" ? "birkat-hamazon-start" : null;
@@ -38328,6 +38331,10 @@ function openSefarimNosafimPage(_pageMode) {
           var locBase = locBar2.getAttribute("data-base") || locBar2.textContent;
           var locTxt = locBase + " · פרק " + toHN(parseInt(curChap, 10));
           if (locBar2.textContent !== locTxt) locBar2.textContent = locTxt;
+        } else if (locBar2 && locBar2.hasAttribute("data-base")) {
+          // מעל כותרת הפרק הראשון — בלי "· פרק X" (עד 11/2026 נשאר הפרק הקודם אחרי גלילה חזרה למעלה)
+          var locBase0 = locBar2.getAttribute("data-base");
+          if (locBar2.textContent !== locBase0) locBar2.textContent = locBase0;
         }
       }
       } finally {

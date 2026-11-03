@@ -3286,6 +3286,19 @@
       var tbl = ["", "א'", "ב'", "ג'", "ד'", "ה'", "ו'", "ז'", "ח'", "ט'", "י'", 'י"א', 'י"ב', 'י"ג', 'י"ד', 'ט"ו', 'ט"ז', 'י"ז', 'י"ח', 'י"ט', "כ'", 'כ"א', 'כ"ב', 'כ"ג', 'כ"ד', 'כ"ה', 'כ"ו', 'כ"ז', 'כ"ח', 'כ"ט', "ל'"];
       return tbl[n] || n;
     }
+    // היום שממנו סופרים: היום האזרחי, ואחרי צאת הכוכבים (7.083°) — מחר; בצהריים. אותו כלל כמו הברכה בראש הדף
+    function yzBaseDate() {
+      var b = new Date();
+      try {
+        var tz0 = typeof window._prayerZman === "function" ? window._prayerZman(new Date(), "tzeit7083deg") : null;
+        var z = window._lastZData;
+        var tzeit = tz0 ? tz0.getTime() : (z && z.times && z.times.tzeit7083deg ? new Date(z.times.tzeit7083deg).getTime() : null);
+        // היום האזרחי הבא (setDate) — לא ‎+24 שעות: בערב המעבר לשעון קיץ, 23:00–24:00, זה יצא מחרתיים
+        if (tzeit !== null ? Date.now() > tzeit : b.getHours() >= 20) b.setDate(b.getDate() + 1);
+      } catch (e) {}
+      b.setHours(12, 0, 0, 0);
+      return b;
+    }
     // מציאת התאריך הלועזי הקרוב של יארצייט (סריקת 400 יום קדימה)
     // census א35: "אדר א'/ב'" בשנה פשוטה — אדר של השנה הזו (לא קפיצה לאדר ב' של שנה הבאה); ל' בחודש שהשנה יש
     // בו כ"ט ימים — כ"ט באותו חודש עם הערה (missing30), ולא בלי תאריך ובלי תזכורת
@@ -3294,9 +3307,9 @@
       function scan(day) {
         var exact = null, adarFallback = null;
         // לפי ימים אזרחיים (setDate) בצהריים — צעדים של 24 שעות בלילה סמוך למעבר שעון
-        // דילגו על יום או ספרו אותו פעמיים
-        var base = new Date();
-        base.setHours(12, 0, 0, 0);
+        // דילגו על יום או ספרו אותו פעמיים. מצאת הכוכבים — מהיום של מחר (היום העברי מתחלף בצאת,
+        // כמו התאריך בראש הדף; עד 11/2026 לפי התאריך הלועזי — בערב היארצייט הוצג "מחר")
+        var base = yzBaseDate();
         for (var i = 0; i < 400; i++) {
           var d = new Date(base.getTime());
           d.setDate(base.getDate() + i);
@@ -3402,6 +3415,13 @@
       field.querySelector("#lux-yz-btn").addEventListener("click", openEditor);
     }
     setTimeout(renderBanner, 2500);
+    // הבאנר מתחלף בדף פתוח כשהיום העברי מתחלף (צאת הכוכבים) — בלי לחכות לטעינה מחדש
+    var yzLastBase = null;
+    setInterval(function () {
+      var k = yzBaseDate().toDateString();
+      if (yzLastBase !== null && k !== yzLastBase && items().length) renderBanner();
+      yzLastBase = k;
+    }, 60000);
   });
 
   /* ── 31. הישגים ────────────────────────────────────────────────── */

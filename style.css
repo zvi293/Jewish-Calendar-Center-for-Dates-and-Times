@@ -9729,8 +9729,9 @@ html.dark .pr-seasonal-wrap {
   border-color: rgba(96, 165, 250, 0.35) !important;
   color: #bfdbfe !important;
 }
-html.dark .pr-seasonal-wrap strong,
-html.dark .pr-seasonal-wrap div { color: #93c5fd !important; }
+/* בלי באנר הלבנה (.lv-prayer-times): יש לו צבעים משלו (.lv-prayer-title, .lv-row) — הכלל הרחב צבע גם אותם ב-#93c5fd (3/11) */
+html.dark .pr-seasonal-wrap:not(:has(.lv-prayer-times)) strong,
+html.dark .pr-seasonal-wrap:not(:has(.lv-prayer-times)) div { color: #93c5fd !important; }
 html.dark .prayer-supplement {
   background: rgba(59, 130, 246, 0.13);
   border-color: rgba(96, 165, 250, 0.3);
@@ -9816,7 +9817,8 @@ html.dark #chok-israel-modal .bg-black\/5 { background-color: rgba(255, 255, 255
 html.dark #chok-israel-modal-content .chok-meta { color: #cbd5e1 !important; }
 html.dark #chok-israel-modal-content .chok-meta a { color: #93c5fd !important; }
 html.dark #chok-israel-modal .chok-rashi-dibur { color: #fbbf24 !important; }
-html.dark #chok-israel-modal .chok-rashi-sep { color: #cbd5e1 !important; }
+/* גם בדף היומי (#sefaria-modal) — עד 11/2026 שם נשאר #374151 על רקע כהה */
+html.dark .chok-rashi-sep { color: #cbd5e1 !important; }
 html.dark #chok-israel-modal .chok-rashi-rest { color: #e2e8f0 !important; }
 html.dark #chok-israel-modal .chok-rashi-label { color: #a78bfa !important; }
 html.dark #chok-israel-modal .chok-targum,
@@ -9875,7 +9877,7 @@ html.dark .lv-prayer-title { color: #c4b5fd; }
 html.dark .lv-fold summary { color: #c4b5fd; }
 /* עטיפת הבאנר העונתי בראש התפילה (סגנון inline כחול-כהה לנייר בהיר) — בתפילת ברכת הלבנה */
 html.dark #prayer-modal [style*="background:rgba(59,130,246,0.06)"]:has(.lv-prayer-times) {
-  background: rgba(59, 130, 246, 0.12) !important;
+  background: rgba(59, 130, 246, 0.14) !important; /* כמו .pr-seasonal-wrap (7a3d9f5) — רקע אחד לכל התיבות העונתיות */
   border-color: rgba(96, 165, 250, 0.35) !important;
   color: #bfdbfe !important;
 }

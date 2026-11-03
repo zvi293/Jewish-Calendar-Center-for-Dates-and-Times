@@ -9099,6 +9099,7 @@ html.dark #chok-israel-modal.chok-dark-skin .chok-targum b {
   color: #1e3a8a;
   letter-spacing: 0.04em;
 }
+html.dark .mincha-main-title big b { color: #93c5fd; }
 
 /* ── ברכת מעין שלוש ובורא נפשות — הכותרת גבוהה יותר במובייל ── */
 @media (max-width: 640px) {

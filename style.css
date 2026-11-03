@@ -5066,7 +5066,7 @@ body.lux-shabbat-scene-on #countdown-display {
 #lux-hc-btn {
   border: 1px solid rgba(224, 183, 79, 0.5);
   background: rgba(232, 193, 90, 0.1);
-  color: #cda149;
+  color: #d0a653;
   font-size: 0.72rem;
   font-weight: 800;
   padding: 0.3rem 0.7rem;
@@ -11125,7 +11125,9 @@ html.dark #cal-days-grid > div.border-blue-500 > div > span.font-black { color: 
    כאן — מה שלא נכנס לכלל הבסיסי: כותרת המסלולים יושבת פעם על כהה ופעם על שמנת, תגית "מחכה לך" בכהה,
    כפתור הסנכרון ושורת התאריך בכרטיסי המועדים, "אין אירועים" והערת התזכורת בחלון היום והאפורים בבלוק ה-SEO.
    בערכת השמיים יש כללים משלה (בלוק "התאמת הדף הראשי") — לכן תחת :not(.lux-sky) */
-html:not(.dark):not(.lux-sky) #lux-tracks-row .lux-tracks-title { color: #b6852f; }
+html:not(.dark):not(.lux-sky) #lux-tracks-row .lux-tracks-title { color: #876323; }
+/* ראשונה ב-main היא יושבת על הגל הכהה של ההירו; כשמשהו קודם לה (ערב שבת, כרטיס עונתי) — על השמנת */
+html:not(.dark):not(.lux-sky) #main-content > #lux-tracks-row:first-child .lux-tracks-title { color: #b6852f; }
 html:not(.dark):not(.lux-sky) #lux-plan-row .lux-tracks-title { color: #8a6524; }
 html.dark .lux-tc-badge:not(.lux-tc-done) { color: #bc8a31; }
 .ev-sync-btn { color: #5a6d88; }

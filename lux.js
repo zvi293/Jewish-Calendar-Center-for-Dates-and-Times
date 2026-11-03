@@ -3847,6 +3847,7 @@
         render();
         scrollToStep(list);
         place();
+        overlay.style.visibility = "";
         // ממתינים לגלילה/לאנימציית הפתיחה ואז ממקמים שוב
         setTimeout(place, 350);
         setTimeout(place, 750);
@@ -3860,6 +3861,10 @@
       CTX.settings.close();
       overlay = document.createElement("div");
       overlay.id = "lux-tour-overlay";
+      // (11/2026) השלב הראשון מגיע רק אחרי שההגדרות נסגרות — עד אז השכבה מוסתרת ובלי אנימציית
+      // הכניסה של _uxEnter, אחרת כרטיס ריק עולה בראש המסך והמסך מוחשך בלי הסבר
+      overlay.setAttribute("data-ux-instant", "");
+      overlay.style.visibility = "hidden";
       overlay.innerHTML = '<div id="lux-tour-hi"></div><div id="lux-tour-tip"></div>';
       document.body.appendChild(overlay);
       hi = overlay.querySelector("#lux-tour-hi");

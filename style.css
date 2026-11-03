@@ -507,8 +507,9 @@
         from { opacity: 0; transform: translateY(16px); }
         to   { opacity: 1; transform: translateY(0); }
       }
+      /* both (11/2026): בלי מילוי לאחור כרטיסים 2–4 נראו בזמן ההשהיה, קפצו ל-0 ונכנסו — הבהוב קצר */
       #dashboard-state > div {
-        animation: fadeSlideUp 0.5s ease forwards;
+        animation: fadeSlideUp 0.5s ease both;
       }
       #dashboard-state > div:nth-child(1) { animation-delay: 0.05s; }
       #dashboard-state > div:nth-child(2) { animation-delay: 0.12s; }

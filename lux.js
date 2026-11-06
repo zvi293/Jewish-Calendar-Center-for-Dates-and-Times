@@ -2391,6 +2391,14 @@
         if (typeof d !== "string" || d.charAt(0) !== "{") return;
         try {
           var m = JSON.parse(d);
+          // מעבר לאפליקציה החדשה (1.2.1, 11/2026): עותק מלא של ה-localStorage — האפליקציה שומרת אותו בקובץ, והגרסה
+          // החדשה (React Native, אותה חבילה) מייבאת אותו פעם אחת אחרי העדכון. בכל פתיחה, כדי שהעותק יהיה עדכני
+          if (m && m.t === "export-req") {
+            var ls = {};
+            try { for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); ls[k] = localStorage.getItem(k); } } catch (e4) {}
+            port.postMessage(JSON.stringify({ t: "export", v: 1, src: "twa", at: Date.now(), ls: ls }));
+            return;
+          }
           if (m && m.t === "caps" && m.cal) {
             document.documentElement.classList.add("jc-cal-sync");
             try { sessionStorage.setItem("moadim_cal_sync", "1"); } catch (e2) {}

@@ -59,8 +59,8 @@ android {
         // (הכרעת המשתמש 16/10/2026 — לא לכבות את ההגנה). לפני כן 23 — billing 1.2.0 / PBL 8.3.
         minSdkVersion 24
         targetSdkVersion 36
-        versionCode 21
-        versionName "1.2.0"
+        versionCode 22
+        versionName "1.2.1"
 
         // The name for the application
         resValue "string", "appName", twaManifest.name

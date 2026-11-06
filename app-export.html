@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#0f172a">
+  <title>מעבירים את הנתונים | הלוח היהודי</title>
+  <style>
+    html, body { margin: 0; height: 100%; }
+    body { display: flex; align-items: center; justify-content: center; padding: 24px; box-sizing: border-box;
+      background: linear-gradient(160deg, #050b1a 0%, #0c1530 55%, #16233f 100%); color: #e2e8f0;
+      font-family: Assistant, "Segoe UI", Arial, sans-serif; text-align: center; }
+    main { max-width: 420px; padding: 28px 22px; border-radius: 20px; border: 1px solid rgba(242, 217, 138, 0.35);
+      background: rgba(255, 255, 255, 0.05); }
+    h1 { margin: 0 0 10px; font-size: 22px; color: #f2d98a; }
+    p { margin: 0 0 14px; line-height: 1.6; color: #cbd5e1; }
+    a.btn { display: none; margin-top: 6px; padding: 12px 22px; border-radius: 999px; text-decoration: none; font-weight: 800;
+      color: #211603; background: linear-gradient(135deg, #e0b74f, #c9993a); }
+    .show { display: inline-block !important; }
+  </style>
+  <script>
+    // מעבר לאפליקציה החדשה (11/2026, ‏android-sky-pages §E — 905/894): האפליקציה החדשה (אותה חבילה כמו האפליקציה
+    // הקודמת) פותחת את הדף הזה פעם אחת ב-Custom Tab — אותו אחסון של כרום שבו האפליקציה הקודמת שמרה הכול — ומבקשת ערוץ
+    // PostMessage (המקור מאומת ב-assetlinks, use_as_origin). כרום מוסר את ה-port בהודעת פתיחה; האפליקציה שולחת
+    // "jc-export-hello", והדף מחזיר עותק של ה-localStorage. optout=1 — גם ביטול המינוי לפוש של האתר (באפליקציה החדשה
+    // התזכורות מקומיות; בלי זה היו מגיעות פעמיים). בסוף {"t":"done"} — והאפליקציה חוזרת לחזית.
+    (function () {
+      var port = null, sent = false;
+      var q = new URLSearchParams(location.search);
+      var optout = q.get("optout") === "1";
+      function post(o) { try { port && port.postMessage(JSON.stringify(o)); } catch (e) {} }
+      function dump() {
+        var ls = {};
+        try { for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); ls[k] = localStorage.getItem(k); } } catch (e) {}
+        return { t: "export", v: 1, src: "tab", at: Date.now(), ls: ls };
+      }
+      function finish() {
+        post({ t: "done" });
+        var s = document.getElementById("st");
+        if (s) s.textContent = "הנתונים הועברו. אפשר לחזור לאפליקציה.";
+        var b = document.getElementById("back");
+        if (b) b.classList.add("show");
+      }
+      function unsubscribe(done) {
+        if (!optout) return done();
+        var timer = setTimeout(done, 8000);
+        window.OneSignalDeferred = window.OneSignalDeferred || [];
+        OneSignalDeferred.push(async function (OneSignal) {
+          try {
+            // אותן הגדרות כמו בדף הראשי (index.html) — אותו מנוי
+            await OneSignal.init({ appId: "eb49147f-b7e7-4173-894d-27872508b775", notifyButton: { enable: false }, serviceWorkerPath: "OneSignalSDKWorker.js" });
+            if (OneSignal.User && OneSignal.User.PushSubscription && OneSignal.User.PushSubscription.optedIn) {
+              await OneSignal.User.PushSubscription.optOut();
+            }
+            try { localStorage.setItem("moadim_notifications_enabled", "false"); } catch (e) {}
+          } catch (e) {}
+          clearTimeout(timer);
+          done();
+        });
+        var s = document.createElement("script");
+        s.src = "https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js";
+        s.defer = true;
+        document.head.appendChild(s);
+      }
+      window.addEventListener("message", function (e) {
+        if (!e || !e.ports || !e.ports[0]) return;
+        var o = e.origin || "";
+        if (o && o !== location.origin && o.indexOf("android-app://") !== 0) return;
+        port = e.ports[0];
+        port.onmessage = function (ev) {
+          if (ev.data !== "jc-export-hello" || sent) return;
+          sent = true;
+          post(dump());
+          unsubscribe(finish);
+        };
+      });
+      // לא נפתח מהאפליקציה (או שהערוץ לא אומת) — כפתור חזרה ידני
+      setTimeout(function () {
+        if (sent) return;
+        var s = document.getElementById("st");
+        if (s) s.textContent = "הדף הזה משמש את האפליקציה להעברת הנתונים.";
+        var b = document.getElementById("back");
+        if (b) b.classList.add("show");
+      }, 8000);
+    })();
+  </script>
+</head>
+<body>
+  <main>
+    <h1>הלוח היהודי</h1>
+    <p id="st">מעבירים את ההגדרות והנתונים שלכם לאפליקציה החדשה…</p>
+    <a class="btn" id="back" href="jewishcalendar:///">חזרה לאפליקציה</a>
+  </main>
+</body>
+</html>

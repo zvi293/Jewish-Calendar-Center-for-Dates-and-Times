@@ -26,11 +26,16 @@ public final class Sync {
     public static final String CAPS = "{\"t\":\"caps\",\"cal\":1,\"rem\":1}";
 
     public static void onMessage(Context c, String msg) {
-        if (msg == null || msg.length() > 2_000_000 || !msg.startsWith("{")) return;
+        if (msg == null || msg.length() > 8_000_000 || !msg.startsWith("{")) return;
         final Context app = c.getApplicationContext();
         new Thread(() -> {
             try {
                 JSONObject j = new JSONObject(msg);
+                // 1.2.1: עותק ה-localStorage לאפליקציה החדשה (il.co.jewishcalendar.twa.Migrate)
+                if ("export".equals(j.optString("t"))) {
+                    il.co.jewishcalendar.twa.Migrate.save(app, msg);
+                    return;
+                }
                 if (!"sync".equals(j.optString("t"))) return;
                 if (Prefs.saveSync(app, j)) Updater.updateAll(app);
                 // אפליקציית השעון (1.1.4+) — אותן הגדרות; ערכים שלא השתנו לא יוצרים שינוי ב-Data Layer

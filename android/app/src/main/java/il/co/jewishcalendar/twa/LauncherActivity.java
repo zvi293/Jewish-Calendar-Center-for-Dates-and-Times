@@ -366,6 +366,8 @@ public class LauncherActivity
                     dbg("channel ready, postMessage=" + s.postMessage(Sync.HELLO, null));
                     // היכולות של הגרסה (סנכרון ליומן) — הדף מציג לפיהן את כפתור "ליומן הטלפון"
                     dbg("caps=" + s.postMessage(Sync.CAPS, null));
+                    // 1.2.1: עותק מלא של ה-localStorage לאפליקציה החדשה (Migrate) — בכל פתיחה, כדי שיהיה עדכני
+                    dbg("export-req=" + s.postMessage(Migrate.REQUEST, null));
                 }
             }
 

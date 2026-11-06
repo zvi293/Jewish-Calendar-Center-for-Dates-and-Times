@@ -186,6 +186,21 @@ public class KosherWebActivity extends Activity {
         @Override
         public void onPageFinished(WebView view, String url) {
             markApp(view, url);
+            // 1.2.1: עותק של ה-localStorage של ה-WebView לאפליקציה החדשה (Migrate) — בכל טעינה של דף מהאתר
+            if (url != null && isSite(Uri.parse(url))) {
+                view.evaluateJavascript(Migrate.DUMP_JS, raw -> {
+                    String s = null;
+                    try {
+                        Object v = new org.json.JSONTokener(raw == null ? "null" : raw).nextValue();
+                        if (v instanceof String) s = (String) v;
+                    } catch (Throwable ignored) {
+                    }
+                    if (s != null && !s.isEmpty()) {
+                        final String msg = s;
+                        new Thread(() -> Migrate.save(getApplicationContext(), msg), "jc-migrate").start();
+                    }
+                });
+            }
             if (debuggable()) {
                 view.evaluateJavascript("JSON.stringify({ref:document.referrer,cls:document.documentElement.className,"
                         + "app:!!window.__jcInApp,wv:!!window.__jcWebView,online:navigator.onLine,url:location.href,"

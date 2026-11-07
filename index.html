@@ -507,7 +507,6 @@
     <link rel="preconnect" href="https://www.sefaria.org" crossorigin>
     <link rel="dns-prefetch" href="https://www.hebcal.com">
     <link rel="dns-prefetch" href="https://www.sefaria.org">
-    <link rel="dns-prefetch" href="https://cdn.onesignal.com">
 
     <link rel="stylesheet" href="tailwind.css?v=2" />
     <!-- KosherZmanim 0.9.0 — אחסון עצמי (אותו קובץ בדיוק כמו ב-unpkg, אותו hash SRI):
@@ -532,7 +531,7 @@
          הכותרת "קפצה" באמצע מסך הפתיחה בטלפון. -->
     <link rel="preload" href="/fonts/frank-ruhl-libre-hebrew.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="/fonts.css?v=1" />
-    <link rel="stylesheet" href="style.css?v=158" />
+    <link rel="stylesheet" href="style.css?v=159" />
     <!-- בלי ציור ראשון של "חצי הירו": הסקריפט של באנר היום (לפני ה-h1) גורם למפרסר לפנות
          את התור, ו-Chrome צייר את ההירו חלקי — ואז קו הגל שבתחתיתו קפץ למטה (CLS). כאן
          הציור הראשון מחכה עד שכל ההירו נפרסר (עד #main-content — מילישניות בודדות).
@@ -549,116 +548,9 @@
     <!-- הקוד הראשי יורד מוקדם (preload) אך מוזרק ומתבצע רק אחרי הציור הראשון —
          ראו הטוען בסוף ה-body. ה-?v= כאן חייב להיות זהה לזה שבטוען וב-sw.js.
          fetchpriority=low: שלא יתחרו ברוחב-הפס עם ה-CSS החוסם (FCP) — כמו defer. -->
-    <link rel="preload" href="script.js?v=163" as="script" fetchpriority="low" />
-    <link rel="preload" href="lux.js?v=122" as="script" fetchpriority="low" />
+    <link rel="preload" href="script.js?v=164" as="script" fetchpriority="low" />
+    <link rel="preload" href="lux.js?v=123" as="script" fetchpriority="low" />
 
-    <!-- OneSignal Web Push SDK -->
-    <script>
-      // Readiness flag — true only AFTER OneSignal.init() resolves successfully.
-      // This is checked synchronously when the user clicks the notifications
-      // toggle, so that if init failed (or hasn't happened yet) we fall back to
-      // the native Notification API immediately while still inside the user
-      // gesture (otherwise the browser silently blocks the permission prompt).
-      window.OneSignalReady = false;
-    </script>
-    <script>
-      // טעינה עצלה של OneSignal: ה-SDK (43KB + קוקיז צד-ג') נטען רק למשתמשים
-      // שכבר הפעילו התראות (או שיש הרשאה בדפדפן), וכן ברגע שמשתמש לוחץ על
-      // מתג ההתראות (script.js → requestNotificationPermission). מבקר חדש לא
-      // מוריד אותו כלל — פחות JS בטעינה ואפס קוקיז צד-ג' לפני הסכמה.
-      window.__loadOneSignal = function () {
-        if (window.__oneSignalLoading || window.__jcWebView) return; // ב-WebView (טלפון כשר) אין פוש — ובלי דומיין חיצוני
-        window.__oneSignalLoading = true;
-        var s = document.createElement("script");
-        s.src = "https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js";
-        s.defer = true;
-        s.onerror = function () { window.__oneSignalLoading = false; };
-        document.head.appendChild(s);
-      };
-      try {
-        var _osWanted =
-          localStorage.getItem("moadim_notifications_enabled") === "true" ||
-          ("Notification" in window && Notification.permission === "granted");
-        if (_osWanted) {
-          window.addEventListener("load", function () {
-            setTimeout(window.__loadOneSignal, 2500);
-          });
-        }
-      } catch (e) {}
-    </script>
-    <script>
-      window.OneSignalDeferred = window.OneSignalDeferred || [];
-      OneSignalDeferred.push(async function (OneSignal) {
-        // אפליקציית OneSignal מוגדרת לדומיין הייצור בלבד — בפיתוח מקומי
-        // (Live Server וכד') האתחול תמיד נכשל ומרעיש בקונסול. מדלגים בשקט.
-        var _h = location.hostname;
-        if (_h === "localhost" || _h === "127.0.0.1" || /^192\.168\./.test(_h) || location.protocol === "file:") {
-          console.info("[OneSignal] skipped on dev host: " + _h);
-          return;
-        }
-        try {
-          await OneSignal.init({
-            appId: "eb49147f-b7e7-4173-894d-27872508b775",
-            allowLocalhostAsSecureOrigin: true,
-            notifyButton: { enable: false },
-            // ה-worker של OneSignal: האפליקציה ב-OneSignal מוגדרת "Typical Site", ובמצב הזה ה-SDK
-            // לוקח את הנתיב וההיקף מהדשבורד (OneSignalSDKWorker.js על "/") ומתעלם מפרמטרים כאן —
-            // לכן OneSignalSDKWorker.js טוען בעצמו גם את sw.js (מנגנון האופליין), והרישום של sw.js
-            // בסוף הדף לא דורס אותו. לא להעביר להיקף אחר: המנויים הקיימים רשומים על "/".
-            serviceWorkerPath: "OneSignalSDKWorker.js",
-          });
-          window.OneSignalReady = true;
-          // Sync localStorage preference to actual OneSignal subscription state
-          // (handles the case where the user accepted via OneSignal's own Slide
-          // Prompt — we never wrote `true` to localStorage in that flow).
-          // Require BOTH optedIn AND browser permission granted, otherwise the
-          // toggle would show "on" after the user resets Chrome permissions
-          // while OneSignal still has cached optedIn=true.
-          try {
-            var subscribed =
-              OneSignal.User &&
-              OneSignal.User.PushSubscription &&
-              !!OneSignal.User.PushSubscription.optedIn;
-            var permOk =
-              "Notification" in window &&
-              Notification.permission === "granted";
-            localStorage.setItem(
-              "moadim_notifications_enabled",
-              subscribed && permOk ? "true" : "false"
-            );
-          } catch (e) {}
-          // Sync UI with current subscription state once SDK is ready
-          if (typeof window.updateNotifStatusUI === "function") {
-            window.updateNotifStatusUI();
-          }
-          // React to subscription changes from any source
-          if (
-            OneSignal.User &&
-            OneSignal.User.PushSubscription &&
-            typeof OneSignal.User.PushSubscription.addEventListener === "function"
-          ) {
-            OneSignal.User.PushSubscription.addEventListener("change", function () {
-              try {
-                var nowSubscribed = !!OneSignal.User.PushSubscription.optedIn;
-                var nowPermOk =
-                  "Notification" in window &&
-                  Notification.permission === "granted";
-                localStorage.setItem(
-                  "moadim_notifications_enabled",
-                  nowSubscribed && nowPermOk ? "true" : "false"
-                );
-              } catch (e) {}
-              if (typeof window.updateNotifStatusUI === "function") {
-                window.updateNotifStatusUI();
-              }
-            });
-          }
-        } catch (err) {
-          window.OneSignalReady = false;
-          console.warn("[OneSignal] init failed:", err);
-        }
-      });
-    </script>
   </head>
   <body
     class="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200 pb-24"
@@ -1412,17 +1304,6 @@
             data-i18n-key="omer_btn"
           >
             לנוסח הברכה והספירה המלא
-          </button>
-          <!-- מוצג רק כשהתראות ספירת העומר כבויות (script.js → updateNotifStatusUI) -->
-          <button
-            id="omer-notif-btn"
-            type="button"
-            hidden
-            onclick="enableOmerNotifications()"
-            class="text-white px-6 py-2.5 rounded-xl text-sm font-bold transition-all hover:shadow-lg"
-            style="margin:0.5rem 0.25rem 0;background:rgba(232,193,90,0.22);border:1px solid rgba(232,193,90,0.5);"
-          >
-            🔔 הפעלת התראות לספירת העומר
           </button>
         </div>
         <!-- Circular progress ring -->
@@ -2591,44 +2472,6 @@
             </button>
           </div>
 
-          <div class="pt-4 border-t border-slate-100 dark:border-slate-700">
-            <div class="flex items-center justify-between gap-3 mb-4">
-              <span
-                class="font-bold text-slate-800 dark:text-white"
-                data-i18n-key="notif_settings_title"
-                >תזכורות: ספירת העומר ונר חנוכה</span
-              >
-              <div id="notif-master-control" class="notification-toggle-row">
-                <span
-                  id="notif-master-status"
-                  class="text-xs font-bold text-slate-600 dark:text-slate-300"
-                  >כבוי</span
-                >
-                <button
-                  id="notif-master-toggle"
-                  type="button"
-                  role="switch"
-                  aria-label="תזכורות: ספירת העומר ונר חנוכה"
-                  aria-checked="false"
-                  onclick="toggleNotificationsMaster()"
-                  class="relative inline-flex h-6 w-11 items-center rounded-full bg-slate-300 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500/30"
-                >
-                  <span
-                    id="notif-master-toggle-knob"
-                    class="inline-block h-5 w-5 translate-x-0.5 transform rounded-full bg-white shadow transition-transform duration-200"
-                  ></span>
-                </button>
-              </div>
-            </div>
-            <p
-              id="notif-omer-note"
-              class="text-sm text-slate-600 dark:text-slate-300"
-            >
-              תזכורת לספירה בכל ערב בצאת הכוכבים, בימי ספירת העומר.
-              ובשמונת לילות חנוכה — תזכורת להדלקת הנר בשקיעה (בערב שבת — שעה לפני השקיעה, במוצאי שבת — אחרי צאת השבת).
-            </p>
-          </div>
-
           <button
             onclick="saveSettings()"
             class="w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl hover:bg-blue-700 transition-colors"
@@ -2924,8 +2767,8 @@
           // כבר מצוירים מתחת למסך הפתיחה ואנימציית הכניסה מתוזמנת לדהייתו. בהיר/כהה לא טוענים אותו.
           // אותו ?v= כמו ב-_luxSkyEnsure (script.js) וב-sw.js.
           if (document.documentElement.classList.contains("lux-sky")) addScript("sky.js?v=12", { id: "lux-sky-js" });
-          addScript("script.js?v=163");
-          addScript("lux.js?v=122");
+          addScript("script.js?v=164");
+          addScript("lux.js?v=123");
         }
         function afterFirstPaint() {
           // rAF אחד (רץ ממש לפני ציור הפריים הראשון) ואז setTimeout(0) — משימה
@@ -2948,9 +2791,8 @@
     <script>
       if ("serviceWorker" in navigator) {
         window.addEventListener("load", function () {
-          // מי שהפעיל התראות: OneSignal ("Typical Site" בדשבורד) רושם את OneSignalSDKWorker.js על
-          // ההיקף "/" במקום sw.js — והקובץ הזה כבר טוען את sw.js (importScripts), כלומר זה אותו
-          // מנגנון אופליין. לא רושמים את sw.js מעליו: עד 10/2026 כל ביקור החליף ביניהם הלוך ושוב,
+          // מי שהפעיל פעם התראות (OneSignal, עד 11/2026): הרישום על ההיקף "/" הוא OneSignalSDKWorker.js
+          // ולא sw.js — והקובץ הזה טוען את sw.js (importScripts), כלומר זה אותו מנגנון אופליין. לא רושמים את sw.js מעליו: עד 10/2026 כל ביקור החליף ביניהם הלוך ושוב,
           // ואחרי סגירת האפליקציה נשאר פעיל worker של OneSignal בלי מטמון (פתיחה בלי אינטרנט =
           // "אין חיבור"). במקום רישום — בדיקת עדכון, שמביאה גם גרסה חדשה של sw.js.
           navigator.serviceWorker.getRegistration("/")

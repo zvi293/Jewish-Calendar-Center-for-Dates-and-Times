@@ -322,28 +322,6 @@
         line-height: 0;
       }
       .wave-divider svg { display: block; width: 100%; }
-      .notification-toggle-row {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        min-width: 8.5rem;
-        flex-shrink: 0;
-        justify-content: flex-end;
-      }
-      #notif-master-status {
-        min-width: 4.75rem;
-        text-align: center;
-        white-space: nowrap;
-      }
-      #notif-master-toggle {
-        direction: ltr;
-      }
-      html[dir="rtl"] .notification-toggle-row {
-        flex-direction: row-reverse;
-      }
-      html[dir="ltr"] .notification-toggle-row {
-        flex-direction: row;
-      }
       .loader {
         border: 4px solid rgba(255, 255, 255, 0.1);
         border-top: 4px solid #e0b74f;
@@ -5230,6 +5208,8 @@ body.lux-shabbat-scene-on #countdown-display {
    נחתך בדיוק על הגל — חצי על הכחול וחצי על הרקע הבהיר. הגל בגובה 60px קבוע (6px–66px מראש ה-main,
    הכחול יורד בו עד ~45px) — מורידים את הכרטיס כולו אל מתחת לגל, עם מרווח נקי */
 #main-content > #lux-shana-entry:first-child { margin-top: 4.5rem; }
+/* בשמיים חיים אין גל (כבוי, רקע אחד) — בלי ההורדה הכרטיס צמוד לטבלת הזמנים, כמו כרטיסי העונה ושורת הלימוד */
+html.lux-sky #main-content > #lux-shana-entry:first-child { margin-top: 0; }
 .lux-se-emo { font-size: 1.7rem; flex-shrink: 0; }
 .lux-se-txt { flex: 1; display: flex; flex-direction: column; }
 .lux-se-txt b { color: #a1762a; font-size: 0.98rem; }

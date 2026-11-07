@@ -229,7 +229,6 @@ const i18nDict = {
     compass: "מצפן לירושלים",
     settings_language: "שפה",
     language_switch: "החלף שפה",
-    notif_settings_title: "תזכורות: ספירת העומר ונר חנוכה",
   },
 };
 
@@ -356,7 +355,6 @@ function refreshLiveLanguageUI() {
   updateCompassDirectionLabels();
   updateCalendarWeekdayHeaders();
   updateCurrentCityLabel();
-  updateNotifStatusUI();
   updateCompassStatusText();
 
   const omerModal = document.getElementById("omer-modal");
@@ -1195,7 +1193,6 @@ function initApp() {
   }
 
   updateCurrentCityLabel();
-  updateNotifStatusUI();
 
   const cachedEvents = _jsonOr(_lsGet("moadim_cached_events_v3"), null);
   if (Array.isArray(cachedEvents) && cachedEvents.length) {
@@ -7105,7 +7102,6 @@ function useGPS() {
 function toggleSettings() {
   const m = document.getElementById("settings-modal");
   if (m.classList.contains("hidden")) {
-    updateNotifStatusUI();
     _fsLockReset(); // עיגון מהפעם הקודמת (שינוי גודל הכיתוב) — הכרטיס חוזר למרכז
     // חשיפה בלי מעבר opacity (ראו _revealModalNoFreeze) — הדהייה באה מאנימציית הפתיחה האחידה
     _revealModalNoFreeze(m);
@@ -8849,228 +8845,6 @@ function buildMonthCalendar() {
                     </div>`);
   }
   grid.innerHTML = _cells.join("");
-}
-
-// --- Web Notifications Logic ---
-const NOTIF_MASTER_KEY = "moadim_notifications_enabled";
-
-function getNotifMasterPreference() {
-  return localStorage.getItem(NOTIF_MASTER_KEY) === "true";
-}
-
-function setNotifMasterPreference(enabled) {
-  localStorage.setItem(NOTIF_MASTER_KEY, enabled ? "true" : "false");
-}
-
-function getNotifStatusLabel(enabled) {
-  if (CURRENT_LANG === "en") return enabled ? "On" : "Off";
-  if (CURRENT_LANG === "fr") return enabled ? "Actif" : "Inactif";
-  return enabled ? "פעיל" : "כבוי";
-}
-
-// ── OneSignal helpers ──
-// Considered "ready" only when init() actually completed successfully.
-// The window.OneSignalReady flag is set true in index.html after init.
-function isOneSignalReady() {
-  return (
-    typeof window !== "undefined" &&
-    window.OneSignalReady === true &&
-    window.OneSignal &&
-    window.OneSignal.User &&
-    window.OneSignal.User.PushSubscription
-  );
-}
-
-function isOneSignalSubscribed() {
-  try {
-    if (!isOneSignalReady()) return false;
-    return !!window.OneSignal.User.PushSubscription.optedIn;
-  } catch (e) {
-    return false;
-  }
-}
-
-function isNotifMasterActive() {
-  // Hard requirement: browser must actually have permission granted.
-  // Without this, OneSignal can show optedIn=true (cached state) even
-  // after the user reset Chrome's notification permission — leaving the
-  // toggle visually "on" while no notifications can actually arrive.
-  const permGranted =
-    "Notification" in window && Notification.permission === "granted";
-  if (!permGranted) return false;
-  if (isOneSignalReady()) {
-    return getNotifMasterPreference() && isOneSignalSubscribed();
-  }
-  return getNotifMasterPreference();
-}
-
-function toggleNotificationsMaster() {
-  // If currently active → opt out of OneSignal and disable.
-  if (isNotifMasterActive()) {
-    setNotifMasterPreference(false);
-    if (isOneSignalReady()) {
-      try {
-        window.OneSignal.User.PushSubscription.optOut();
-      } catch (e) {
-        console.warn("[OneSignal] optOut failed:", e);
-      }
-    }
-    updateNotifStatusUI();
-    if (typeof showToast === "function") {
-      showToast("התזכורות לספירת העומר ולנר חנוכה בוטלו", "info", 2500);
-    }
-    return;
-  }
-
-  if (!("Notification" in window)) {
-    setNotifMasterPreference(false);
-    updateNotifStatusUI();
-    alert("הדפדפן שלך אינו תומך בהתראות פוש.");
-    return;
-  }
-
-  if (Notification.permission === "denied") {
-    setNotifMasterPreference(false);
-    updateNotifStatusUI();
-    alert("ההתראות חסומות בדפדפן. אפשר לשנות זאת בהגדרות הדפדפן.");
-    return;
-  }
-
-  requestNotificationPermission();
-}
-
-function requestNotificationPermission() {
-  if (!("Notification" in window)) {
-    setNotifMasterPreference(false);
-    updateNotifStatusUI();
-    alert("הדפדפן שלך אינו תומך בהתראות פוש.");
-    return;
-  }
-
-  // Prefer OneSignal flow (handles permission prompt + push subscription).
-  const useOneSignal = () => {
-    try {
-      window.OneSignalDeferred = window.OneSignalDeferred || [];
-      window.OneSignalDeferred.push(async function (OneSignal) {
-        try {
-          await OneSignal.User.PushSubscription.optIn();
-          const subscribed = !!OneSignal.User.PushSubscription.optedIn;
-          setNotifMasterPreference(subscribed);
-          updateNotifStatusUI();
-          if (subscribed && Notification.permission === "granted") {
-            if (typeof showToast === "function") {
-              showToast("התזכורות לספירת העומר ולנר חנוכה הופעלו!", "success", 3000);
-            }
-            _showLocalNotif(SITE_NAME, "התזכורות לספירת העומר ולנר חנוכה הופעלו בהצלחה!");
-          }
-        } catch (err) {
-          console.warn("[OneSignal] optIn failed, falling back:", err);
-          fallbackBrowserPermission();
-        }
-      });
-    } catch (e) {
-      console.warn("[OneSignal] deferred enqueue failed:", e);
-      fallbackBrowserPermission();
-    }
-  };
-
-  const fallbackBrowserPermission = () => {
-    Notification.requestPermission().then((permission) => {
-      setNotifMasterPreference(permission === "granted");
-      updateNotifStatusUI();
-      if (permission === "granted") {
-        if (typeof showToast === "function") {
-          showToast("התזכורות לספירת העומר ולנר חנוכה הופעלו!", "success", 3000);
-        }
-        _showLocalNotif(SITE_NAME, "התזכורות לספירת העומר ולנר חנוכה הופעלו בהצלחה!");
-        // ה-SDK של OneSignal נטען עצל (index.html). ההרשאה כבר ניתנה — משלימים
-        // את רישום ה-push ברקע ברגע שה-init של ה-SDK מסתיים (לא נדרשת מחווה).
-        try {
-          window.OneSignalDeferred = window.OneSignalDeferred || [];
-          window.OneSignalDeferred.push(async function (OneSignal) {
-            for (let t = 0; t < 40 && window.OneSignalReady !== true; t++) {
-              await new Promise((r) => setTimeout(r, 250));
-            }
-            if (window.OneSignalReady !== true) return;
-            try {
-              await OneSignal.User.PushSubscription.optIn();
-            } catch (e) {}
-          });
-        } catch (e) {}
-      }
-    });
-  };
-
-  // Only route through OneSignal if init() actually succeeded.
-  // If init failed (or hasn't completed), fall back to the native API
-  // immediately so we keep the user-gesture context for permission prompt.
-  if (typeof window !== "undefined" && window.OneSignalReady === true) {
-    useOneSignal();
-  } else {
-    // ה-SDK נטען עצל: מתחילים להוריד אותו עכשיו; בקשת ההרשאה עצמה נעשית מיד
-    // ב-API המקורי (בתוך מחוות המשתמש), והרישום ל-push מושלם ברקע אחרי האישור.
-    if (typeof window.__loadOneSignal === "function") {
-      try {
-        window.__loadOneSignal();
-      } catch (e) {}
-    }
-    fallbackBrowserPermission();
-  }
-}
-
-// Expose for OneSignal init callback
-window.updateNotifStatusUI = updateNotifStatusUI;
-
-function updateNotifStatusUI() {
-  const enabled = isNotifMasterActive();
-  // כפתור ההפעלה בכרטיס ספירת העומר — רק למי שעוד לא הפעיל ושהדפדפן שלו תומך בהתראות
-  const omerBtn = document.getElementById("omer-notif-btn");
-  if (omerBtn) omerBtn.hidden = enabled || !("Notification" in window);
-  const btn = document.getElementById("notif-master-toggle");
-  const knob = document.getElementById("notif-master-toggle-knob");
-  const status = document.getElementById("notif-master-status");
-  const control = document.getElementById("notif-master-control");
-  if (!btn || !knob || !status || !control) return;
-
-  btn.className =
-    "relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500/30";
-  btn.classList.remove("bg-slate-300", "bg-green-500", "dark:bg-slate-600");
-  knob.className =
-    "inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform duration-200";
-  knob.classList.remove("translate-x-0.5", "translate-x-5");
-  btn.setAttribute("aria-checked", enabled ? "true" : "false");
-  control.className = "notification-toggle-row";
-
-  if (enabled) {
-    btn.classList.add("bg-green-500");
-    knob.classList.add("translate-x-5");
-    status.textContent = getNotifStatusLabel(true);
-  } else {
-    btn.classList.add("bg-slate-300", "dark:bg-slate-600");
-    knob.classList.add("translate-x-0.5");
-    status.textContent = getNotifStatusLabel(false);
-  }
-}
-
-// כפתור "הפעלת התראות" בכרטיס ספירת העומר ובשאלה שבתחילת הספירה (lux.js)
-function enableOmerNotifications() {
-  if (!isNotifMasterActive()) toggleNotificationsMaster();
-}
-
-// התראת האישור המקומית ("הופעלו בהצלחה") דרך ה-Service Worker: בכרום לאנדרואיד (וגם
-// באפליקציה) new Notification() זורק "Illegal constructor". תזכורת הספירה עצמה נשלחת
-// כפוש מהשרת בכל ערב (netlify/functions/omer-reminder.mjs) — גם כשהאתר סגור
-function _showLocalNotif(title, body) {
-  const opts = { body, icon: "/icon-192.png", badge: "/notif-badge.png", lang: "he" };
-  if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {
-    navigator.serviceWorker.ready
-      .then((reg) => reg.showNotification(title, opts))
-      .catch(() => {});
-    return;
-  }
-  try {
-    new Notification(title, opts);
-  } catch (e) {}
 }
 
 // הספירה של התאריך העברי שחל ביום האזרחי d: ט"ז ניסן = 1 … ה' סיון = 49, אחרת 0.

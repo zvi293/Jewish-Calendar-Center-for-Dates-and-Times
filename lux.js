@@ -7458,64 +7458,6 @@
     }, 1500);
   });
 
-  /* ── 45ב. ספירת העומר: "להפעיל תזכורת לספירה?" ───────────────────
-     פעם אחת בכל עונת עומר (המפתח שומר את השנה), רק למי שהתראות העומר שלו
-     כבויות ושהדפדפן שלו תומך בהן ולא חסם אותן. מי שסירב — יש לו כפתור הפעלה
-     בכרטיס ספירת העומר (#omer-notif-btn) ובהגדרות. בדיקה: ?omer=5 */
-  safe("omerNotifAsk", function () {
-    var KEY = "moadim_omer_notif_asked";
-    var year = String(new Date().getFullYear());
-    var force = false;
-    try { force = !!new URLSearchParams(location.search).get("omer"); } catch (e) {}
-    function due() {
-      if (!("Notification" in window) || Notification.permission === "denied") return false;
-      if (typeof window.isNotifMasterActive !== "function" || window.isNotifMasterActive()) return false;
-      if (force) return true;
-      var d = typeof window._omerTonight === "function" ? window._omerTonight() : 0;
-      return d >= 1 && d <= 49;
-    }
-    if (!force) {
-      try { if (localStorage.getItem(KEY) === year) return; } catch (e) { return; }
-    }
-    var tries = 0;
-    var t;
-    setTimeout(function () {
-      t = setInterval(function () {
-        tries++;
-        if (tries > 90) { clearInterval(t); return; }
-        // מחכים למסך נקי: בלי מסך פתיחה, פופאפ, יריעה או סיור מודרך פתוחים
-        if (document.getElementById("lux-splash") || document.getElementById("lux-tour-overlay")) return;
-        var ds = document.getElementById("dashboard-state");
-        if (!ds || ds.classList.contains("hidden")) return;
-        if (document.body.style.position === "fixed") return;
-        if (document.documentElement.classList.contains("lux-modal-open")) return;
-        if (document.querySelector(".lux-sheet-overlay")) return;
-        clearInterval(t);
-        if (!due()) return;
-        try { localStorage.setItem(KEY, year); } catch (e) {}
-        var ov = luxSheet("lux-omer-notif-ask",
-          '<h3 class="lux-sheet-title">✨ ספירת העומר</h3>' +
-          '<p class="lux-sheet-note">רוצים תזכורת לספור את העומר בכל ערב, בצאת הכוכבים?</p>' +
-          '<div class="lux-sheet-actions">' +
-            '<button type="button" class="lux-sheet-primary" id="lux-on-yes">🔔 כן, הפעילו תזכורת</button>' +
-            '<button type="button" class="lux-sheet-cancel" id="lux-on-no">לא תודה</button>' +
-          "</div>");
-        if (!ov) return;
-        ov.querySelector("#lux-on-yes").addEventListener("click", function () {
-          // בקשת ההרשאה חייבת לצאת בתוך מחוות הלחיצה — לפני סגירת היריעה
-          try { window.enableOmerNotifications(); } catch (e) {}
-          luxModalClose("lux-omer-notif-ask");
-        });
-        ov.querySelector("#lux-on-no").addEventListener("click", function () {
-          luxModalClose("lux-omer-notif-ask");
-          if (typeof window.showToast === "function") {
-            window.showToast("💡 אפשר להפעיל תזכורת בכל זמן — בכרטיס ספירת העומר או ב-⚙️ ההגדרות", "info", 4800);
-          }
-        });
-      }, 2000);
-    }, 4000);
-  });
-
   /* ── 46. כפתור סגירה עליון בכל פופאפ — ערובה אוניברסלית ──────────
      כל שכבת-על שנפתחת (מודאל, יריעה, קורא) חייבת כפתור X נגיש בחלק
      העליון. פופאפ שכבר יש לו כפתור סגירה עליון משלו — לא נוגעים בו;

@@ -23,12 +23,11 @@
     // מעבר לאפליקציה החדשה (11/2026, ‏android-sky-pages §E — 905/894): האפליקציה החדשה (אותה חבילה כמו האפליקציה
     // הקודמת) פותחת את הדף הזה פעם אחת ב-Custom Tab — אותו אחסון של כרום שבו האפליקציה הקודמת שמרה הכול — ומבקשת ערוץ
     // PostMessage (המקור מאומת ב-assetlinks, use_as_origin). כרום מוסר את ה-port בהודעת פתיחה; האפליקציה שולחת
-    // "jc-export-hello", והדף מחזיר עותק של ה-localStorage. optout=1 — גם ביטול המינוי לפוש של האתר (באפליקציה החדשה
-    // התזכורות מקומיות; בלי זה היו מגיעות פעמיים). בסוף {"t":"done"} — והאפליקציה חוזרת לחזית.
+    // "jc-export-hello", והדף מחזיר עותק של ה-localStorage. בסוף {"t":"done"} — והאפליקציה חוזרת לחזית.
+    // (ביטול המינוי לפוש הוסר 11/2026 — האתר כבר לא שולח פוש בכלל; התזכורות באפליקציה מקומיות.)
     (function () {
       var port = null, sent = false;
       var q = new URLSearchParams(location.search);
-      var optout = q.get("optout") === "1";
       function post(o) { try { port && port.postMessage(JSON.stringify(o)); } catch (e) {} }
       function dump() {
         var ls = {};
@@ -42,27 +41,6 @@
         var b = document.getElementById("back");
         if (b) b.classList.add("show");
       }
-      function unsubscribe(done) {
-        if (!optout) return done();
-        var timer = setTimeout(done, 8000);
-        window.OneSignalDeferred = window.OneSignalDeferred || [];
-        OneSignalDeferred.push(async function (OneSignal) {
-          try {
-            // אותן הגדרות כמו בדף הראשי (index.html) — אותו מנוי
-            await OneSignal.init({ appId: "eb49147f-b7e7-4173-894d-27872508b775", notifyButton: { enable: false }, serviceWorkerPath: "OneSignalSDKWorker.js" });
-            if (OneSignal.User && OneSignal.User.PushSubscription && OneSignal.User.PushSubscription.optedIn) {
-              await OneSignal.User.PushSubscription.optOut();
-            }
-            try { localStorage.setItem("moadim_notifications_enabled", "false"); } catch (e) {}
-          } catch (e) {}
-          clearTimeout(timer);
-          done();
-        });
-        var s = document.createElement("script");
-        s.src = "https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js";
-        s.defer = true;
-        document.head.appendChild(s);
-      }
       window.addEventListener("message", function (e) {
         if (!e || !e.ports || !e.ports[0]) return;
         var o = e.origin || "";
@@ -72,7 +50,7 @@
           if (ev.data !== "jc-export-hello" || sent) return;
           sent = true;
           post(dump());
-          unsubscribe(finish);
+          finish();
         };
       });
       // לא נפתח מהאפליקציה (או שהערוץ לא אומת) — כפתור חזרה ידני

@@ -1,4 +1,4 @@
-const STATIC_CACHE = "moadim-static-v251";
+const STATIC_CACHE = "moadim-static-v252";
 // מטמון ריצה: תשובות API וקבצים חיצוניים (ספריא, hebcal, פונטים, ספריות CDN)
 // נשמרים אחרי הצפייה הראשונה — כך האתר, התפילות והספרים עובדים גם בלי אינטרנט.
 const RUNTIME_CACHE = "moadim-runtime-v1";
@@ -15,10 +15,10 @@ const STATIC_ASSETS = [
   // חשוב: ה-?v= כאן חייב להיות זהה לזה שב-index.html — כך ההתקנה נענית
   // מ-HTTP cache (בלי הורדה כפולה של ~3MB) והבקשות מהדף פוגעות במטמון
   // בדיוק; סטייה עתידית מכוסה ע"י ה-fallback עם ignoreSearch.
-  "/script.js?v=163",
-  "/lux.js?v=122",
+  "/script.js?v=164",
+  "/lux.js?v=123",
   "/sky.js?v=12",
-  "/style.css?v=158",
+  "/style.css?v=159",
   "/tailwind.css?v=2",
   "/fonts.css?v=1",
   "/fonts/assistant-hebrew.woff2",
@@ -44,7 +44,6 @@ const RUNTIME_CACHE_ORIGINS = [
   "https://fonts.gstatic.com",
   "https://unpkg.com",
   "https://cdn.jsdelivr.net",
-  "https://cdn.onesignal.com",
   "https://he.wikisource.org",
   // nominatim (גיאוקוד הפוך) במכוון לא כאן: ה-URL מכיל קואורדינטות מדויקות של
   // המשתמש ואין טעם לשמר אותן במטמון ללא תפוגה; החיפוש ממילא דורש חיבור.
@@ -579,12 +578,9 @@ self.addEventListener("fetch", (event) => {
   );
 });
 
-// לחיצה על התראה מקומית (אישור הפעלת התראות העומר — script.js → _showLocalNotif;
-// פוש התזכורת עצמו מטופל ב-worker של OneSignal ופותח את /?open=omer):
+// לחיצה על התראה (11/2026 — האתר כבר לא שולח פוש; נשאר לכל התראה ישנה שעוד מוצגת):
 // מביאים לחזית חלון פתוח של האתר, ואם אין — פותחים אותו.
-// כשהקובץ הזה רץ בתוך OneSignalSDKWorker.js (מי שהפעיל התראות) — ה-handler של OneSignal
-// כבר מטפל בכל לחיצה; שני handlers היו פותחים/ממקדים שני חלונות.
-if (!self.__jcOneSignal) self.addEventListener("notificationclick", (event) => {
+self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {

@@ -5210,6 +5210,8 @@ body.lux-shabbat-scene-on #countdown-display {
 #main-content > #lux-shana-entry:first-child { margin-top: 4.5rem; }
 /* בשמיים חיים אין גל (כבוי, רקע אחד) — בלי ההורדה הכרטיס צמוד לטבלת הזמנים, כמו כרטיסי העונה ושורת הלימוד */
 html.lux-sky #main-content > #lux-shana-entry:first-child { margin-top: 0; }
+/* ובמחשב — אותו ריפוד תחתון להירו כמו בטלפון (6rem; ה-9rem של pb-36 נועד לגל) — כך הכרטיס הראשון בתוכן צמוד לטבלת הזמנים */
+@media (min-width: 768px) { html.lux-sky #hero-section { padding-bottom: 6rem !important; } }
 .lux-se-emo { font-size: 1.7rem; flex-shrink: 0; }
 .lux-se-txt { flex: 1; display: flex; flex-direction: column; }
 .lux-se-txt b { color: #a1762a; font-size: 0.98rem; }
